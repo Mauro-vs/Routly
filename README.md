@@ -136,4 +136,4 @@ El panel ya muestra estas secciones en su menú, bajo "Próximamente".
 
 ## Licencia
 
-Pendiente de definir.
+[MIT](LICENSE). Puedes usar, copiar y modificar el código siempre que mantengas el aviso de copyright.
