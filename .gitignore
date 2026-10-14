@@ -25,3 +25,6 @@ logs/
 Thumbs.db
 desktop.ini
 .idea/
+
+# Restos de las herramientas de pruebas del navegador
+.playwright-mcp/

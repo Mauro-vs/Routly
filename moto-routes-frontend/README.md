@@ -1,16 +1,20 @@
-# Routly Admin
+<a id="top"></a>
+
+<img src="../docs/assets/banner-admin.svg" alt="Routly Admin. Panel de administración en Angular 20." width="100%">
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Angular-20.3-1b7a4e?style=flat-square&labelColor=0c2419&logo=angular&logoColor=c6f04d" alt="Angular 20.3">
+  <img src="https://img.shields.io/badge/TypeScript-5.9_strict-1b7a4e?style=flat-square&labelColor=0c2419&logo=typescript&logoColor=c6f04d" alt="TypeScript 5.9 strict">
+  <img src="https://img.shields.io/badge/RxJS-7.8-1b7a4e?style=flat-square&labelColor=0c2419&logo=reactivex&logoColor=c6f04d" alt="RxJS 7.8">
+  <img src="https://img.shields.io/badge/zoneless-signals-1b7a4e?style=flat-square&labelColor=0c2419" alt="zoneless signals">
+  <img src="https://img.shields.io/badge/tests-Karma_%2B_Jasmine-1b7a4e?style=flat-square&labelColor=0c2419&logo=jasmine&logoColor=c6f04d" alt="tests Karma + Jasmine">
+</p>
 
 Panel de administración de Routly, la plataforma de rutas en moto. Está hecho con Angular 20 y consume la API REST de [`moto-routes-api`](../moto-routes-api/README.md).
 
-![Angular](https://img.shields.io/badge/Angular_20.3-DD0031?style=flat-square&logo=angular&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript_5.9_strict-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![RxJS](https://img.shields.io/badge/RxJS_7.8-B7178C?style=flat-square&logo=reactivex&logoColor=white)
-![Zoneless](https://img.shields.io/badge/zoneless-signals-1b7a4e?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-Karma_%2B_Jasmine-8A4182?style=flat-square&logo=jasmine&logoColor=white)
+Hoy gestiona una entidad, las **rutas**, que es la única que expone la API. La arquitectura está preparada para añadir el resto. La visión general del proyecto está en el [README de la raíz](../README.md).
 
-Hoy gestiona una entidad, las **rutas**, que es la única que expone la API. La arquitectura está preparada para añadir el resto (ver [Cómo añadir una feature](#cómo-añadir-una-feature)). La visión general del proyecto está en el [README de la raíz](../README.md).
-
-![Listado de rutas en tarjetas](../docs/screenshots/rutas-tarjetas.png)
+<img src="../docs/demo.gif" alt="Demo del panel: se activa una ruta, se busca por nombre, se cambia a la vista de tabla y se abre la papelera" width="100%">
 
 ## Contenido
 
@@ -157,6 +161,11 @@ flowchart LR
     SV --> API["ApiService<br/>async/await"]
     API --> I1["errorInterceptor"] --> I2["timeoutInterceptor"] --> I3["authInterceptor"] --> B["API REST"]
     ST -.->|"signals"| P
+    classDef node fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
+    classDef store fill:#1b7a4e,stroke:#0c2419,color:#ffffff
+    class P,ST,SV,API node
+    class I1,I2,I3 node
+    class B store
 ```
 
 La página nunca llama a la API: pide al store, y el store expone el resultado como signals que la plantilla lee directamente.
@@ -188,6 +197,9 @@ SweetAlert2 solo se usa a través de `NotificationService`. Ningún componente l
 
 ### Endpoints de la API
 
+<details>
+<summary><b>Ver qué método del panel usa cada endpoint</b></summary>
+
 Todos los endpoints de la API están en el panel:
 
 | Endpoint | Método del panel | Dónde se usa |
@@ -210,6 +222,8 @@ Las URL del panel identifican cada ruta por su `slug` (`/routes/:slug/edit`). La
 
 Al elegir "Activas" o "Inactivas", el listado se filtra al instante con lo que ya hay en memoria y, a la vez, pide ese grupo a su endpoint para ponerlo al día.
 
+</details>
+
 ### Papelera
 
 Eliminar una ruta es un borrado lógico: sigue en la base de datos, marcada como eliminada. La página `/routes/trash` las lista y permite restaurarlas cuando se quiera.
@@ -231,7 +245,8 @@ Una ruta inactiva se distingue sin depender solo del color:
 
 ### Autenticación
 
-No está implementada. Está preparado lo necesario para añadirla sin tocar el resto:
+> [!IMPORTANT]
+> No está implementada. Está preparado lo necesario para añadirla sin tocar el resto:
 
 - `core/services/auth.service.ts`: `currentUser`, `token` e `isAuthenticated` como signals, sin métodos.
 - `core/interceptors/auth.interceptor.ts`: añade `Authorization: Bearer <token>` cuando haya token.
@@ -245,6 +260,9 @@ No está implementada. Está preparado lo necesario para añadirla sin tocar el 
 - Los skeletons tienen la forma del contenido que sustituyen.
 
 ## Cómo añadir una feature
+
+<details>
+<summary><b>Ver los seis pasos, con el ejemplo de categories</b></summary>
 
 Ejemplo con `categories`. La API tiene que exponer la entidad con los mismos endpoints que `routes`.
 
@@ -314,7 +332,12 @@ Con esto ya tiene carga, creación, edición, borrado, deshacer y el cambio de e
 
 Si la entidad se relaciona con otra (por ejemplo, una experiencia con su categoría), pide los registros activos de la otra con `getActives()` desde tu propio servicio. No importes el store de la otra feature.
 
+</details>
+
 ## Iconos
+
+<details>
+<summary><b>Ver cómo añadir un icono</b></summary>
 
 Los iconos son de [Phosphor](https://phosphoricons.com). Para no empaquetar la librería entera, solo se incluyen los que aparecen en `tools/generate-icons.mjs`.
 
@@ -325,6 +348,8 @@ npm run icons
 ```
 
 Después ya se puede usar con `<ui-icon name="nombre" />`. El nombre está tipado: uno que no esté en la lista no compila.
+
+</details>
 
 ## Patrones de Angular
 
@@ -353,6 +378,8 @@ Todo el aspecto sale de variables CSS en `src/styles/`:
 | `sweetalert.css` | SweetAlert2 adaptado a la paleta |
 
 **Paleta.** Verdes: principal para las acciones (`--color-primary: #1b7a4e`), verde muy oscuro para el sidebar (`#0c2419`) y un acento lima (`#c6f04d`) para lo destacado. Los neutros están teñidos de verde, y cada estado (éxito, aviso y peligro) tiene su color de texto y su fondo. Todas las parejas de texto y fondo que usa el panel cumplen contraste **WCAG AA**.
+
+![primary](https://img.shields.io/badge/primary-%231b7a4e-1b7a4e?style=for-the-badge&labelColor=1b7a4e) ![sidebar](https://img.shields.io/badge/sidebar-%230c2419-0c2419?style=for-the-badge&labelColor=0c2419) ![accent](https://img.shields.io/badge/accent-%23c6f04d-c6f04d?style=for-the-badge&labelColor=c6f04d) ![bg](https://img.shields.io/badge/bg-%23f3f6f4-f3f6f4?style=for-the-badge&labelColor=f3f6f4) ![text](https://img.shields.io/badge/text-%2313201a-13201a?style=for-the-badge&labelColor=13201a)
 
 **Tipografía.** Onest Variable, en una escala de seis tamaños (de `--text-xs` a `--text-2xl`). Las cifras usan números tabulares (clase `.num`) para que se alineen en columna.
 
@@ -388,3 +415,5 @@ Cubren la lógica, no la presentación:
 - Los filtros, la página y la vista del listado no se guardan en la URL. Se conservan al volver del formulario, pero no al recargar (salvo la vista, que se recuerda).
 - La papelera no permite borrar una ruta definitivamente: la API no tiene borrado físico.
 - No hay modo oscuro: el panel solo tiene tema claro.
+
+<p align="right"><a href="#top">Volver arriba</a></p>

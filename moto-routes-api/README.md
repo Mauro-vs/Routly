@@ -1,12 +1,16 @@
-# Routly API
+<a id="top"></a>
+
+<img src="../docs/assets/banner-api.svg" alt="Routly API. API REST con Express 5, Mongoose y Zod." width="100%">
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-20%2B-1b7a4e?style=flat-square&labelColor=0c2419&logo=nodedotjs&logoColor=c6f04d" alt="Node.js 20+">
+  <img src="https://img.shields.io/badge/Express-5.2-1b7a4e?style=flat-square&labelColor=0c2419&logo=express&logoColor=c6f04d" alt="Express 5.2">
+  <img src="https://img.shields.io/badge/Mongoose-9.10-1b7a4e?style=flat-square&labelColor=0c2419&logo=mongodb&logoColor=c6f04d" alt="Mongoose 9.10">
+  <img src="https://img.shields.io/badge/Zod-4.6-1b7a4e?style=flat-square&labelColor=0c2419&logo=zod&logoColor=c6f04d" alt="Zod 4.6">
+  <img src="https://img.shields.io/badge/OpenAPI-3-1b7a4e?style=flat-square&labelColor=0c2419&logo=swagger&logoColor=c6f04d" alt="OpenAPI 3">
+</p>
 
 API REST de Routly. Gestiona el catálogo de rutas en moto: crear, consultar, editar, activar o desactivar, eliminar con borrado lógico y restaurar.
-
-![Node.js](https://img.shields.io/badge/Node.js_20+-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
-![Express](https://img.shields.io/badge/Express_5.2-000000?style=flat-square&logo=express&logoColor=white)
-![MongoDB](https://img.shields.io/badge/Mongoose_9.10-47A248?style=flat-square&logo=mongodb&logoColor=white)
-![Zod](https://img.shields.io/badge/Zod_4.6-3E67B1?style=flat-square&logo=zod&logoColor=white)
-![Swagger](https://img.shields.io/badge/OpenAPI_3-85EA2D?style=flat-square&logo=swagger&logoColor=black)
 
 Forma parte del monorepo de Routly. La visión general del proyecto está en el [README de la raíz](../README.md) y el panel que consume esta API, en [`moto-routes-frontend`](../moto-routes-frontend/README.md).
 
@@ -76,6 +80,7 @@ npm run seed
 
 En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinicia al cambiar un `.js`, `.json` o `.yaml` (así también se recarga la documentación de Swagger). Se configura en `nodemonConfig`, dentro de `package.json`. Para reiniciar a mano, escribe `rs` y pulsa Intro en esa terminal.
 
+> [!WARNING]
 > El seed **borra físicamente** toda la colección antes de insertar los datos de ejemplo. Es la única excepción al soft delete y solo debe usarse en desarrollo.
 
 Con el servidor en marcha, la documentación interactiva está en `http://localhost:3000/api/docs` y la comprobación de estado en `http://localhost:3000/health`.
@@ -91,6 +96,10 @@ flowchart LR
     S --> RE["repositories/<br/>consultas"]
     RE --> M["models/<br/>esquema Mongoose"]
     M --> DB[("MongoDB")]
+    classDef node fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
+    classDef store fill:#1b7a4e,stroke:#0c2419,color:#ffffff
+    class R,C,S,RE,M node
+    class DB store
 ```
 
 | Capa | Archivo | Responsabilidad | Lo que no hace |
@@ -146,6 +155,9 @@ El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista.
 
 ## Estructura del proyecto
 
+<details>
+<summary><b>Ver el árbol de carpetas comentado</b></summary>
+
 ```
 src/
 ├── config/
@@ -175,6 +187,8 @@ src/
 ```
 
 Hay además un [`postman.md`](postman.md) con ejemplos de cada petición para probarlas en Postman.
+
+</details>
 
 ## Modelo: Route
 
@@ -325,9 +339,13 @@ Todas las respuestas de error tienen el mismo formato:
 | Valor duplicado (índice único)              | 409    |
 | Error inesperado                            | 500    |
 
-- En los errores 500 el cliente solo recibe `"Internal server error"`. La traza completa se muestra en la consola del servidor y nunca en la respuesta.
+> [!NOTE]
+> En los errores 500 el cliente solo recibe `"Internal server error"`. La traza completa se muestra en la consola del servidor y nunca en la respuesta.
 
 ## Seguridad (Helmet)
+
+<details>
+<summary><b>Ver las cabeceras que se añaden</b></summary>
 
 Configurado en `src/config/helmet.js`. Añade cabeceras de seguridad a todas las respuestas.
 
@@ -342,7 +360,12 @@ Además Helmet oculta `X-Powered-By` y añade `X-Content-Type-Options: nosniff`,
 
 Solo en `production`: se activan `Strict-Transport-Security` (HSTS) y `upgrade-insecure-requests`, que requieren HTTPS.
 
+</details>
+
 ## Logs (Morgan)
+
+<details>
+<summary><b>Ver dónde y cómo se registran las peticiones</b></summary>
 
 Configurado en `src/config/morgan.js`. Cada petición se registra en:
 
@@ -356,6 +379,8 @@ Configurado en `src/config/morgan.js`. Cada petición se registra en:
 - Los archivos se abren en modo *append*: no se pierden al reiniciar el servidor.
 - En producción no se registran las peticiones a `/health`.
 
+</details>
+
 ## Cómo añadir un recurso
 
 El diseño de las próximas colecciones está en [`DATABASE.md`](../DATABASE.md). Cada una se añade copiando el patrón de `routes`:
@@ -367,3 +392,5 @@ El diseño de las próximas colecciones está en [`DATABASE.md`](../DATABASE.md)
 5. **Registro** en `server.js`: `app.use("/api/<recurso>", <recurso>Routes)`, antes de `notFoundHandler`.
 6. **Documentación** en `docs/<recurso>.docs.yaml` y sus esquemas en `config/swagger.js`.
 7. Si el panel va a llamar con métodos nuevos, revisa `methods` en `config/cors.js`.
+
+<p align="right"><a href="#top">Volver arriba</a></p>
