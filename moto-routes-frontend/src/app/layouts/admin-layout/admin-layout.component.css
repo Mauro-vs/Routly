@@ -1,0 +1,110 @@
+:host {
+  display: block;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: calc(var(--z-drawer) + 1);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: var(--layout-sidebar) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.app__side {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+
+.app__scrim {
+  display: none;
+}
+
+.app__content {
+  min-width: 0;
+}
+
+main {
+  max-width: var(--layout-content);
+  margin: 0 auto;
+  padding: 28px 24px 56px;
+  outline: none;
+}
+
+/* ---------- pantallas estrechas: el sidebar se colapsa en un cajón ---------- */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .app__side {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: var(--z-drawer);
+    width: min(280px, 84vw);
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(12px, env(safe-area-inset-left));
+    /* al llegar al final del menú no se desplaza la página que hay debajo */
+    overscroll-behavior: contain;
+    transform: translateX(-102%);
+    visibility: hidden;
+  }
+
+  .app__side.is-open {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--shadow-3);
+  }
+
+  .app__side.has-motion {
+    transition:
+      transform var(--motion-slow) var(--motion-ease),
+      visibility 0s var(--motion-slow);
+  }
+
+  .app__side.has-motion.is-open {
+    transition:
+      transform var(--motion-slow) var(--motion-ease),
+      visibility 0s;
+  }
+
+  .app__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-drawer) - 1);
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgb(12 36 25 / 0.55);
+    animation: scrim-in var(--motion-base) var(--motion-ease);
+  }
+
+  main {
+    padding: 20px max(14px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}

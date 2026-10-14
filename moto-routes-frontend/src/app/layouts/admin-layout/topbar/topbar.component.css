@@ -1,0 +1,100 @@
+:host {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--layout-topbar);
+  padding: 0 24px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.menu-btn {
+  margin-left: -8px;
+  color: var(--color-text);
+}
+
+.crumbs {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.crumbs ol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.crumbs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.crumbs li:last-child {
+  flex: 1;
+}
+
+.crumbs a {
+  border-radius: var(--radius-sm);
+}
+
+.crumbs a:hover {
+  color: var(--color-text);
+}
+
+.crumbs b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.crumbs ui-icon {
+  font-size: 12px;
+}
+
+.btn {
+  flex: none;
+}
+
+@media (max-width: 900px) {
+  :host {
+    padding: 0 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .crumbs li:not(:last-child) {
+    display: none;
+  }
+
+  .btn {
+    width: 38px;
+    padding: 0;
+  }
+
+  .btn span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 560px) {
+  .btn {
+    width: 44px;
+  }
+}

@@ -1,0 +1,48 @@
+<table [attr.aria-busy]="loading()">
+  <caption class="sr-only">{{ caption() }}</caption>
+  <thead>
+    <tr>
+      @for (column of columns(); track column.key) {
+        <th scope="col" [class.is-end]="column.align === 'end'">
+          @if (column.headerHidden) {
+            <span class="sr-only">{{ column.header }}</span>
+          } @else {
+            {{ column.header }}
+          }
+        </th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @if (loading()) {
+      @for (placeholder of placeholders(); track placeholder) {
+        <tr>
+          @for (column of columns(); track column.key; let first = $first) {
+            <td [class.is-wide]="first || column.wide">
+              <ui-skeleton [width]="first ? '70%' : '60%'" height="16px" />
+            </td>
+          }
+        </tr>
+      }
+    } @else {
+      @for (row of rows(); track rowKey()(row)) {
+        <tr [class.is-muted]="mutedWhen()(row)">
+          @for (column of columns(); track column.key; let first = $first) {
+            <td
+              [class.is-end]="column.align === 'end'"
+              [class.is-wide]="first || column.wide"
+              [attr.data-label]="first || column.plain || column.headerHidden ? null : column.header"
+            >
+              @if (templateFor(column.key); as template) {
+                <ng-container
+                  [ngTemplateOutlet]="template"
+                  [ngTemplateOutletContext]="{ $implicit: row }"
+                />
+              }
+            </td>
+          }
+        </tr>
+      }
+    }
+  </tbody>
+</table>

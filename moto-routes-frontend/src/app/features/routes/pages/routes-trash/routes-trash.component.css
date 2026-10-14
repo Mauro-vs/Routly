@@ -1,0 +1,70 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: var(--space-4);
+}
+
+.toolbar__search {
+  flex: 1 1 240px;
+  max-width: 320px;
+}
+
+.toolbar__end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.toolbar__label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* El título se corta a dos líneas y el recorrido a una: los textos largos no deforman la fila. */
+.cell-title {
+  display: -webkit-box;
+  min-width: 180px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-weight: 600;
+}
+
+.cell-trip {
+  display: block;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slug {
+  max-width: 280px;
+}
+
+.cell-deleted {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .toolbar__end {
+    margin-left: 0;
+  }
+
+  .toolbar__search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .cell-title {
+    min-width: 0;
+  }
+
+  .cell-trip {
+    max-width: 100%;
+  }
+}

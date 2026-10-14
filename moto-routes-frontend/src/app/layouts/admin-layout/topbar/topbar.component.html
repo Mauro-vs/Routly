@@ -1,0 +1,39 @@
+@if (showMenu()) {
+  <button
+    #menuButton
+    type="button"
+    class="icon-btn menu-btn"
+    aria-label="Abrir el menú"
+    aria-controls="menu-principal"
+    [attr.aria-expanded]="menuOpen()"
+    (click)="menu.emit()"
+  >
+    <ui-icon name="list" />
+  </button>
+}
+
+<nav class="crumbs" aria-label="Ruta de navegación">
+  <ol>
+    @for (crumb of crumbs(); track $index; let last = $last) {
+      <li>
+        @if (last) {
+          <b aria-current="page">{{ crumb.label }}</b>
+        } @else {
+          @if (crumb.path; as path) {
+            <a [routerLink]="path">{{ crumb.label }}</a>
+          } @else {
+            <span>{{ crumb.label }}</span>
+          }
+          <ui-icon name="caret-right" />
+        }
+      </li>
+    }
+  </ol>
+</nav>
+
+@if (createAction(); as action) {
+  <a class="btn btn--primary" [routerLink]="action.path">
+    <ui-icon name="plus" />
+    <span>{{ action.label }}</span>
+  </a>
+}

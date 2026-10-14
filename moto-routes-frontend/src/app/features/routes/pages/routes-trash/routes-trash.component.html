@@ -1,0 +1,97 @@
+<ui-page-header title="Papelera" [subtitle]="subtitle()">
+  <a class="btn btn--secondary" routerLink="/routes"><ui-icon name="arrow-left" />Volver a rutas</a>
+</ui-page-header>
+
+@if (loadFailed()) {
+  <div class="card">
+    <ui-empty-state
+      tone="danger"
+      icon="wifi-slash"
+      title="No se ha podido cargar la papelera"
+      description="Comprueba que la API está en marcha y vuelve a intentarlo."
+    >
+      <button type="button" class="btn btn--secondary" (click)="reload()">
+        <ui-icon name="arrows-clockwise" />Reintentar
+      </button>
+    </ui-empty-state>
+  </div>
+} @else if (store.deletedLoaded() && store.deletedCount() === 0) {
+  <div class="card">
+    <ui-empty-state
+      icon="trash"
+      title="La papelera está vacía"
+      description="Las rutas que elimines aparecerán aquí y podrás restaurarlas."
+    >
+      <a class="btn btn--secondary" routerLink="/routes">Ir a rutas</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  <div class="toolbar">
+    <ui-search-input
+      class="toolbar__search"
+      label="Buscar en la papelera"
+      placeholder="Buscar por título, origen o destino…"
+      [(value)]="search"
+    />
+    <div class="toolbar__end">
+      <span id="restore-as" class="toolbar__label">Al restaurar, dejarla</span>
+      <ui-segmented
+        label="Estado de la ruta al restaurarla"
+        [options]="restoreOptions"
+        [(value)]="restoreAs"
+      />
+    </div>
+  </div>
+
+  @if (store.deletedLoaded() && filtered().length === 0) {
+    <div class="card">
+      <ui-empty-state
+        icon="magnifying-glass"
+        title="Ninguna ruta eliminada coincide"
+        description="Prueba con otra búsqueda."
+      >
+        <button type="button" class="btn btn--secondary" (click)="search.set('')">
+          Quitar la búsqueda
+        </button>
+      </ui-empty-state>
+    </div>
+  } @else {
+    <ui-data-table
+      caption="Rutas eliminadas"
+      [columns]="columns"
+      [rows]="filtered()"
+      [rowKey]="rowKey"
+      [loading]="showSkeleton()"
+      [skeletonRows]="3"
+    >
+      <ng-template uiCell="title" [uiCellOf]="filtered()" let-route>
+        <span class="cell-title">{{ route.title }}</span>
+        <p class="slug" translate="no">{{ route.slug }}</p>
+      </ng-template>
+      <ng-template uiCell="trip" [uiCellOf]="filtered()" let-route>
+        <span class="cell-trip" [title]="route.startPoint + ' a ' + route.endPoint">
+          {{ route.startPoint }} <span class="muted">a</span> {{ route.endPoint }}
+        </span>
+      </ng-template>
+      <ng-template uiCell="difficulty" [uiCellOf]="filtered()" let-route>
+        <span class="badge" [class]="difficultyBadges[route.difficulty]">
+          {{ difficultyLabels[route.difficulty] }}
+        </span>
+      </ng-template>
+      <ng-template uiCell="deleted" [uiCellOf]="filtered()" let-route>
+        <time class="cell-deleted" [attr.datetime]="route.deletedAt">{{ deletedAgo(route) }}</time>
+      </ng-template>
+      <ng-template uiCell="actions" [uiCellOf]="filtered()" let-route>
+        <button
+          type="button"
+          class="btn btn--secondary btn--sm"
+          [attr.aria-label]="'Restaurar ' + route.title"
+          [disabled]="store.isBusy(route._id)"
+          (click)="restore(route)"
+        >
+          <ui-icon name="arrow-counter-clockwise" />Restaurar
+        </button>
+      </ng-template>
+    </ui-data-table>
+  }
+}

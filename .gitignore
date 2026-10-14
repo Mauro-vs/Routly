@@ -1,0 +1,27 @@
+# --- Fuera del repositorio ---
+# Configuración local de Claude Code
+.claude/
+# Frontend antiguo, sustituido por moto-routes-frontend
+moto-routes-frontend-old/
+
+# --- Dependencias y compilados ---
+node_modules/
+dist/
+.angular/
+out-tsc/
+coverage/
+
+# --- Variables de entorno (solo se sube la plantilla) ---
+.env
+.env.*
+!.env.example
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Sistema y editores ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/

@@ -1,0 +1,60 @@
+<article class="card route" [class.is-inactive]="!route().isActive">
+  <header class="route__top">
+    <span class="badge" [class]="badgeClass()">{{ difficultyLabel() }}</span>
+    <span class="state">
+      @if (route().isActive) {
+        <span aria-hidden="true">Activa</span>
+      } @else {
+        <span class="badge badge--off" aria-hidden="true"><ui-icon name="eye-slash" />Inactiva</span>
+      }
+      <ui-toggle
+        [checked]="route().isActive"
+        [label]="'Ruta activa: ' + route().title"
+        (checkedChange)="activeChange.emit($event)"
+      />
+    </span>
+  </header>
+
+  <div class="route__title">
+    <h2>
+      <a [routerLink]="editLink()">{{ route().title }}</a>
+    </h2>
+    <p class="slug" translate="no">{{ route().slug }}</p>
+  </div>
+
+  <p class="trip">
+    <span [title]="route().startPoint">{{ route().startPoint }}</span>
+    <i aria-hidden="true"></i>
+    <span class="sr-only">a</span>
+    <span [title]="route().endPoint">{{ route().endPoint }}</span>
+  </p>
+
+  <dl class="facts">
+    <div>
+      <dt>Distancia</dt>
+      <dd class="num">{{ distance() }}<small>km</small></dd>
+    </div>
+    <div>
+      <dt>Duración</dt>
+      <dd class="num">{{ duration() }}<small>h</small></dd>
+    </div>
+  </dl>
+
+  <footer class="route__foot">
+    <span>Modificada {{ updated() }}</span>
+    <div>
+      <a class="icon-btn" [routerLink]="editLink()" [attr.aria-label]="'Editar ' + route().title">
+        <ui-icon name="pencil-simple" />
+      </a>
+      <button
+        type="button"
+        class="icon-btn icon-btn--danger"
+        [attr.aria-label]="'Eliminar ' + route().title"
+        [disabled]="busy()"
+        (click)="remove.emit()"
+      >
+        <ui-icon name="trash" />
+      </button>
+    </div>
+  </footer>
+</article>

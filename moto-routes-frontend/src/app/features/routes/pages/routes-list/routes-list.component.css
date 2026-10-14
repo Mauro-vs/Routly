@@ -1,0 +1,133 @@
+.trash-count {
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: var(--space-4);
+}
+
+.toolbar__search {
+  flex: 1 1 240px;
+  max-width: 320px;
+}
+
+.toolbar__end {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.routes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* misma forma que una tarjeta de ruta */
+.route-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 262px;
+  padding: 18px;
+}
+
+.route-skeleton__top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.route-skeleton__slug {
+  margin-top: 8px;
+}
+
+.route-skeleton__foot {
+  margin-top: auto;
+}
+
+.table-placeholder {
+  display: grid;
+  gap: 18px;
+  padding: 24px 16px;
+}
+
+/* El título se corta a dos líneas y el recorrido a una: los textos largos no deforman la fila. */
+.cell-title {
+  display: -webkit-box;
+  min-width: 180px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cell-trip {
+  display: block;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-title:hover {
+  text-decoration: underline;
+}
+
+.slug {
+  max-width: 280px;
+}
+
+.cell-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.cell-actions {
+  display: inline-flex;
+  margin-right: -8px;
+}
+
+.pager {
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  .toolbar__end {
+    margin-left: 0;
+  }
+
+  .toolbar__search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .cell-actions {
+    margin: 0 0 0 -8px;
+  }
+
+  .cell-title {
+    min-width: 0;
+  }
+
+  .cell-trip {
+    max-width: 100%;
+  }
+}

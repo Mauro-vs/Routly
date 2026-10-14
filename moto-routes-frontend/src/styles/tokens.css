@@ -1,0 +1,76 @@
+/* Routly · variables de diseño.
+   Paleta en verdes: principal para las acciones, verde oscuro para el sidebar y un
+   acento lima. Todas las parejas de fondo y texto que usa el panel cumplen WCAG AA
+   (se pueden revisar en design/mockup.html, pantalla "Paleta"). */
+
+:root {
+  color-scheme: light;
+
+  /* verdes de marca */
+  --color-primary: #1b7a4e;
+  --color-primary-hover: #15633f;
+  --color-primary-soft: #dff3e7;
+  --color-on-primary: #ffffff;
+  --color-sidebar: #0c2419;
+  --color-sidebar-raised: #16382a;
+  --color-on-sidebar: #e8f3ec;
+  --color-on-sidebar-muted: #9fb8aa;
+  --color-accent: #c6f04d;
+  --color-on-accent: #16260a;
+
+  /* neutros, teñidos de verde */
+  --color-bg: #f3f6f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #eaf0ec;
+  --color-border: #d6dfd9;
+  --color-border-strong: #7b8a81;
+  --color-text: #13201a;
+  --color-text-muted: #54635a;
+
+  /* estados */
+  --color-success: #17693f;
+  --color-success-bg: #dff3e7;
+  --color-warning: #7d4e00;
+  --color-warning-bg: #fcefcb;
+  --color-danger: #b3261e;
+  --color-danger-bg: #fbe3e0;
+
+  --font-sans: 'Onest Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.625rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgb(19 32 26 / 0.06);
+  --shadow-2: 0 10px 24px -12px rgb(19 32 26 / 0.22), 0 2px 6px rgb(19 32 26 / 0.06);
+  --shadow-3: 0 24px 48px -20px rgb(19 32 26 / 0.35), 0 6px 14px -6px rgb(19 32 26 / 0.12);
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --layout-sidebar: 244px;
+  --layout-topbar: 60px;
+  --layout-content: 1240px;
+
+  --z-topbar: 5;
+  --z-drawer: 30;
+}

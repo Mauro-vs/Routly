@@ -1,0 +1,204 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.route {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 18px 18px 10px;
+  transition:
+    transform var(--motion-base) var(--motion-ease),
+    box-shadow var(--motion-base) var(--motion-ease);
+}
+
+.route:hover,
+.route:focus-within {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px var(--color-primary),
+    var(--shadow-2);
+}
+
+.route__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.route__title {
+  min-width: 0;
+}
+
+h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+h2 a {
+  text-decoration: none;
+}
+
+h2 a:hover {
+  text-decoration: underline;
+}
+
+/* recorrido: origen, trazo y destino */
+.trip {
+  display: grid;
+  grid-template-columns: fit-content(42%) minmax(24px, 1fr) fit-content(42%);
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.trip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip i {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.trip i::before,
+.trip i::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  background: var(--color-bg);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.trip i::before {
+  left: -5px;
+}
+
+.trip i::after {
+  right: -5px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.facts div {
+  min-width: 0;
+}
+
+.facts div + div {
+  padding-left: 14px;
+  border-left: 1px solid var(--color-border);
+}
+
+.facts dt {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.facts dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.facts dd small {
+  margin-left: 3px;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+}
+
+.route__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.route__foot div {
+  display: flex;
+  flex: none;
+  margin-right: -8px;
+}
+
+/* Inactiva: se reconoce por la forma además de por el color. Fondo gris sin relieve,
+   borde discontinuo, etiqueta "Inactiva" con icono y contenido atenuado. */
+.route.is-inactive {
+  /* el borde ocupa 1px que la tarjeta normal no tiene: se descuenta del relleno */
+  padding: 17px 17px 9px;
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-surface-2);
+  box-shadow: none;
+}
+
+.route.is-inactive:hover,
+.route.is-inactive:focus-within {
+  border-color: var(--color-text-muted);
+  box-shadow: var(--shadow-2);
+}
+
+.is-inactive h2,
+.is-inactive .trip,
+.is-inactive .facts dd {
+  color: var(--color-text-muted);
+}
+
+.is-inactive .route__foot,
+.is-inactive .facts div + div {
+  border-color: var(--color-border-strong);
+}
+
+.is-inactive .trip i {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-border-strong) 0 6px,
+    transparent 6px 11px
+  );
+}
+
+.is-inactive .trip i::before,
+.is-inactive .trip i::after {
+  box-shadow: inset 0 0 0 2px var(--color-border-strong);
+}

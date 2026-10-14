@@ -1,0 +1,222 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px 12px;
+  background: var(--color-sidebar);
+  color: var(--color-on-sidebar);
+}
+
+:host :focus-visible {
+  outline-color: var(--color-accent);
+}
+
+.side__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: 14px;
+}
+
+.brand {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.brand small {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-on-sidebar-muted);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+}
+
+.side__btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-on-sidebar-muted);
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease);
+}
+
+.side__btn:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--color-on-sidebar);
+}
+
+/* ---------- navegación ---------- */
+.nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.nav ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav__label {
+  margin: 18px 0 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-on-sidebar-muted);
+}
+
+.nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  color: var(--color-on-sidebar-muted);
+  text-decoration: none;
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease);
+}
+
+.nav__item ui-icon {
+  font-size: 19px;
+}
+
+a.nav__item:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: var(--color-on-sidebar);
+}
+
+.nav__item.is-active {
+  background: var(--color-sidebar-raised);
+  color: var(--color-on-sidebar);
+}
+
+.nav__item.is-active ui-icon {
+  color: var(--color-accent);
+}
+
+.nav__item--soon {
+  font-weight: 400;
+}
+
+/* subsección: cuelga de la anterior */
+.nav__item--child {
+  height: 34px;
+  margin-left: 18px;
+  font-size: var(--text-sm);
+}
+
+.nav__item--child ui-icon {
+  font-size: 17px;
+}
+
+/* un contador secundario no compite con el principal */
+.nav__count.nav__count--quiet {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--color-on-sidebar);
+}
+
+.nav__count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+.docs {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.nav__item .docs__out {
+  margin-left: auto;
+  font-size: 14px;
+}
+
+/* ---------- estado de la API ---------- */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  margin-top: var(--space-2);
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--radius-md);
+  background: rgb(255 255 255 / 0.05);
+  font-size: var(--text-xs);
+}
+
+.status__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+/* el sidebar es siempre oscuro: este rojo claro cumple contraste sobre él */
+.status__dot--offline {
+  background: #ff9a8f;
+}
+
+.status__dot--checking {
+  background: var(--color-on-sidebar-muted);
+}
+
+.status__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.status__text span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--color-on-sidebar-muted);
+}
+
+@media (pointer: coarse) {
+  .nav__item {
+    height: 44px;
+  }
+
+  .side__btn {
+    width: 44px;
+    height: 44px;
+  }
+}

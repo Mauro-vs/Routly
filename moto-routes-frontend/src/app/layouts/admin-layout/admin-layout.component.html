@@ -1,0 +1,31 @@
+<a class="skip-link" href="#contenido" (click)="skipToContent($event)">Saltar al contenido</a>
+
+<div class="app">
+  <app-sidebar
+    id="menu-principal"
+    class="app__side"
+    [class.is-open]="drawerOpen()"
+    [class.has-motion]="drawerMotion()"
+    [drawer]="compact()"
+    [inert]="compact() && !drawerOpen()"
+    (closeRequest)="closeDrawer()"
+  />
+
+  @if (compact() && drawerOpen()) {
+    <!-- Fuera del orden de tabulación: con teclado el menú se cierra con Escape o con su botón. -->
+    <button
+      type="button"
+      class="app__scrim"
+      tabindex="-1"
+      aria-label="Cerrar el menú"
+      (click)="closeDrawer()"
+    ></button>
+  }
+
+  <div class="app__content" [inert]="compact() && drawerOpen()">
+    <app-topbar [showMenu]="compact()" [menuOpen]="drawerOpen()" (menu)="openDrawer()" />
+    <main #main id="contenido" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>

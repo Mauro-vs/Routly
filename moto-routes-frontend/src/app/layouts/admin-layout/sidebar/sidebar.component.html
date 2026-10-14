@@ -1,0 +1,78 @@
+<div class="side__head">
+  <a class="brand" routerLink="/" aria-label="Routly, ir al resumen">
+    <app-brand-mark />
+    <span translate="no">Routly</span>
+    <small>Admin</small>
+  </a>
+  @if (drawer()) {
+    <button
+      type="button"
+      class="side__btn"
+      aria-label="Cerrar el menú"
+      (click)="closeRequest.emit()"
+    >
+      <ui-icon name="x" />
+    </button>
+  }
+</div>
+
+<nav class="nav" aria-label="Principal">
+  <ul>
+    @for (item of items; track item.id) {
+      <li>
+        <a
+          class="nav__item"
+          [class.nav__item--child]="!!item.parent"
+          [class.is-active]="item.id === activeId()"
+          [attr.aria-current]="item.id === activeId() ? 'page' : null"
+          [routerLink]="item.path"
+        >
+          <ui-icon [name]="item.icon" />
+          {{ item.label }}
+          @if (badges.count(item.id); as count) {
+            <span class="nav__count num" [class.nav__count--quiet]="!!item.parent">{{ count }}</span>
+          }
+        </a>
+      </li>
+    }
+  </ul>
+
+  @if (upcoming.length > 0) {
+    <p class="nav__label" id="nav-upcoming">Próximamente</p>
+    <ul aria-labelledby="nav-upcoming">
+      @for (item of upcoming; track item.label) {
+        <li class="nav__item nav__item--soon"><ui-icon [name]="item.icon" />{{ item.label }}</li>
+      }
+    </ul>
+  }
+</nav>
+
+<a class="nav__item docs" [href]="docsUrl" target="_blank" rel="noopener">
+  <ui-icon name="book-open" />
+  Documentación API
+  <span class="sr-only">(se abre en una pestaña nueva)</span>
+  <ui-icon class="docs__out" name="arrow-up-right" />
+</a>
+
+<div class="status" role="status">
+  <span
+    class="status__dot"
+    aria-hidden="true"
+    [class.status__dot--offline]="status() === 'offline'"
+    [class.status__dot--checking]="status() === 'checking'"
+  ></span>
+  <div class="status__text">
+    {{ statusLabel() }}
+    <span>{{ host }}</span>
+  </div>
+  @if (status() === 'offline') {
+    <button
+      type="button"
+      class="side__btn"
+      aria-label="Volver a comprobar la conexión"
+      (click)="retry()"
+    >
+      <ui-icon name="arrows-clockwise" />
+    </button>
+  }
+</div>

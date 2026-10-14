@@ -1,0 +1,102 @@
+:host {
+  display: block;
+  /* Si aun así el contenido no cabe, se desplaza la tabla y no la página. */
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--color-border),
+    var(--shadow-1);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  padding: 11px 16px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  vertical-align: middle;
+  /* Un texto largo sin espacios se parte en vez de ensanchar la tabla. */
+  overflow-wrap: anywhere;
+}
+
+.is-end {
+  text-align: right;
+  white-space: nowrap;
+}
+
+tbody tr {
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+tbody tr:hover {
+  background: var(--color-bg);
+}
+
+/* fila apagada (por ejemplo, un registro inactivo): fondo gris y texto atenuado */
+tbody tr.is-muted,
+tbody tr.is-muted:hover {
+  background: var(--color-surface-2);
+}
+
+tr.is-muted td {
+  border-top-color: var(--color-border-strong);
+  color: var(--color-text-muted);
+}
+
+/* la fila siguiente a una apagada comparte ese borde: mismo color por los dos lados */
+tr.is-muted + tr td {
+  border-top-color: var(--color-border-strong);
+}
+
+/* En móvil cada fila es un bloque: la primera celda arriba y el resto en dos columnas,
+   con el nombre de la columna delante del valor. */
+@media (max-width: 900px) {
+  thead {
+    display: none;
+  }
+
+  tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 12px;
+    padding: 14px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  tbody tr:first-child {
+    border-top: 0;
+  }
+
+  td {
+    padding: 0;
+    border: 0;
+  }
+
+  td.is-wide {
+    grid-column: 1 / -1;
+  }
+
+  td.is-end {
+    text-align: left;
+    white-space: normal;
+  }
+
+  td[data-label]::before {
+    content: attr(data-label) ' ';
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+}

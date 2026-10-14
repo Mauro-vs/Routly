@@ -1,0 +1,107 @@
+<ui-page-header title="Resumen" subtitle="El catálogo de rutas de un vistazo." />
+
+@if (loadFailed()) {
+  <div class="card">
+    <ui-empty-state
+      tone="danger"
+      icon="wifi-slash"
+      title="No se ha podido cargar el resumen"
+      description="Comprueba que la API está en marcha y vuelve a intentarlo."
+    >
+      <button type="button" class="btn btn--secondary" (click)="reload()">
+        <ui-icon name="arrows-clockwise" />Reintentar
+      </button>
+    </ui-empty-state>
+  </div>
+} @else if (showSkeleton()) {
+  <!-- misma forma que el contenido final -->
+  <div aria-busy="true" aria-label="Cargando el resumen">
+    <div class="card stats">
+      @for (item of skeletonRows; track item) {
+        <div class="stat">
+          <ui-skeleton width="90px" height="16px" />
+          <ui-skeleton class="stat__skeleton" width="64px" height="32px" />
+        </div>
+      }
+    </div>
+    <div class="cols">
+      <div class="card panel"><ui-skeleton height="150px" /></div>
+      <div class="card panel"><ui-skeleton height="220px" /></div>
+    </div>
+  </div>
+} @else if (store.total() === 0) {
+  <div class="card">
+    <ui-empty-state
+      icon="path"
+      title="Todavía no hay rutas"
+      description="Cuando crees la primera, aquí verás las cifras del catálogo."
+    >
+      <a class="btn btn--primary" routerLink="/routes/new"><ui-icon name="plus" />Nueva ruta</a>
+    </ui-empty-state>
+  </div>
+} @else {
+  <dl class="card stats">
+    <div class="stat">
+      <dt><ui-icon name="path" />Rutas</dt>
+      <dd class="num">{{ store.total() }}</dd>
+    </div>
+    <div class="stat">
+      <dt><ui-icon name="check-circle" />Activas</dt>
+      <dd class="num">{{ store.active() }}<small>de {{ store.total() }}</small></dd>
+    </div>
+    <div class="stat">
+      <dt><ui-icon name="eye-slash" />Inactivas</dt>
+      <dd class="num">{{ store.inactive() }}</dd>
+    </div>
+    <div class="stat">
+      <dt><ui-icon name="ruler" />Distancia total</dt>
+      <dd class="num">{{ totalDistance() }}<small>km</small></dd>
+    </div>
+  </dl>
+
+  <div class="cols">
+    <section class="card panel" aria-labelledby="by-difficulty">
+      <h2 id="by-difficulty">Por dificultad</h2>
+      <ul class="levels">
+        @for (level of store.byDifficulty(); track level.difficulty) {
+          <li>
+            <div class="level__top">
+              <span>{{ level.label }}</span>
+              <span class="num">{{ level.count }}</span>
+            </div>
+            <div class="level__track" aria-hidden="true">
+              <span
+                class="level__fill"
+                [class]="'level__fill--' + level.difficulty"
+                [style.--share]="level.share"
+              ></span>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="card panel" aria-labelledby="recent">
+      <h2 id="recent">Últimas modificadas</h2>
+      <ul class="recent">
+        @for (route of store.recent(); track route._id) {
+          <li>
+            <div class="recent__text" [class.is-inactive]="!route.isActive">
+              <span class="recent__title">
+                <a [routerLink]="editLink(route)">{{ route.title }}</a>
+                @if (!route.isActive) {
+                  <span class="badge badge--off"><ui-icon name="eye-slash" />Inactiva</span>
+                }
+              </span>
+              <small>{{ summary(route) }}</small>
+            </div>
+            <span class="badge" [class]="difficultyBadges[route.difficulty]">
+              {{ difficultyLabels[route.difficulty] }}
+            </span>
+            <time [attr.datetime]="route.updatedAt">{{ updated(route) }}</time>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+}

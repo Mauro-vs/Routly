@@ -1,0 +1,117 @@
+/* SweetAlert2 con los colores del panel.
+   La librería inyecta su hoja de estilos al cargarse, así que aquí se ajustan sus
+   variables en el contenedor y se sube la especificidad de lo que no tiene variable.
+   Los botones usan .btn porque NotificationService desactiva buttonsStyling. */
+
+.swal2-container {
+  --swal2-backdrop: rgb(12 36 25 / 0.55);
+  --swal2-background: var(--color-surface);
+  --swal2-color: var(--color-text);
+  --swal2-border: 0;
+  --swal2-border-radius: var(--radius-lg);
+  --swal2-width: 26rem;
+  --swal2-padding: 0 0 20px;
+  --swal2-title-padding: 4px 28px 0;
+  --swal2-html-container-padding: 8px 28px 0;
+  --swal2-actions-margin: 22px 0 0;
+  --swal2-actions-padding: 0 20px;
+  --swal2-actions-width: 100%;
+  --swal2-icon-zoom: 0.6;
+  --swal2-outline: 0 0 0 2px var(--color-primary);
+  --swal2-toast-border: 0;
+  --swal2-toast-box-shadow: inset 0 0 0 1px var(--color-border), var(--shadow-3);
+  --swal2-show-animation: swal-in var(--motion-slow) var(--motion-ease);
+  --swal2-hide-animation: swal-out var(--motion-fast) ease-in forwards;
+  --swal2-toast-show-animation: swal-toast-in var(--motion-slow) var(--motion-ease);
+  --swal2-toast-hide-animation: swal-out var(--motion-fast) ease-in forwards;
+}
+
+.swal2-container .swal2-popup {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  box-shadow: var(--shadow-3);
+}
+
+.swal2-container .swal2-icon {
+  margin: 22px auto 6px;
+}
+
+.swal2-container .swal2-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.swal2-container .swal2-html-container {
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.swal2-container .swal2-actions {
+  gap: var(--space-2);
+}
+
+.swal2-container .swal2-actions .btn {
+  flex: 1 1 0;
+  margin: 0;
+}
+
+/* avisos breves, abajo a la derecha */
+.swal2-container .swal2-popup.swal2-toast {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+}
+
+.swal2-container .swal2-popup.swal2-toast .swal2-icon {
+  margin: 0 10px 0 0;
+}
+
+.swal2-container .swal2-popup.swal2-toast .swal2-title {
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+/* la acción del aviso (por ejemplo "Deshacer") va a la derecha, en la misma línea */
+.swal2-container .swal2-popup.swal2-toast .swal2-actions {
+  grid-column: 3;
+  grid-row: 1 / 99;
+  align-self: center;
+  margin: 0 0 0 var(--space-4);
+  padding: 0;
+  width: auto;
+}
+
+.swal2-container .swal2-popup.swal2-toast .swal2-actions .btn {
+  flex: none;
+}
+
+@keyframes swal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes swal-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes swal-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
