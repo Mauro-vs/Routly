@@ -73,7 +73,7 @@ flowchart LR
 ## Estructura del repositorio
 
 ```
-routly/
+Routly/
 ├── moto-routes-api/        API REST (Node.js + Express + MongoDB)
 ├── moto-routes-frontend/   Panel de administración (Angular)
 ├── docs/screenshots/       Capturas de este README
@@ -92,13 +92,13 @@ Necesitas **Node.js 20.19 o superior** y **MongoDB** en marcha en local.
 **1. Clona el repositorio**
 
 ```bash
-git clone https://github.com/<tu-usuario>/routly.git
+git clone https://github.com/Mauro-vs/Routly.git
 ```
 
 **2. Arranca la API** (`http://localhost:3000`)
 
 ```bash
-cd routly/moto-routes-api
+cd Routly/moto-routes-api
 npm install
 cp .env.example .env
 npm run seed
@@ -110,7 +110,7 @@ npm run dev
 **3. Arranca el panel** (`http://localhost:4200`), en otra terminal
 
 ```bash
-cd routly/moto-routes-frontend
+cd Routly/moto-routes-frontend
 npm install
 npm start
 ```
