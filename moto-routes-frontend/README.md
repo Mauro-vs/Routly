@@ -12,7 +12,7 @@
 
 Panel de administración de Routly, la plataforma de rutas en moto. Está hecho con Angular 20 y consume la API REST de [`moto-routes-api`](../moto-routes-api/README.md).
 
-Hoy gestiona una entidad, las **rutas**, que es la única que expone la API. La arquitectura está preparada para añadir el resto. La visión general del proyecto está en el [README de la raíz](../README.md).
+La API tiene nueve colecciones relacionadas entre sí. El panel ya tiene la **base de todas** (modelos, servicios y stores) y las **páginas de las rutas**: listado, formulario con sus categorías y ubicaciones, y papelera. Las páginas del resto de entidades irán después. La visión general del proyecto está en el [README de la raíz](../README.md).
 
 <img src="../docs/demo.gif" alt="Demo del panel: se activa una ruta, se busca por nombre, se cambia a la vista de tabla y se abre la papelera" width="100%">
 
@@ -124,23 +124,26 @@ Organización por features. Cada carpeta tiene una responsabilidad y unas reglas
 src/app/
 ├── core/                  Lo que existe una sola vez en la aplicación
 │   ├── services/          ApiService, NotificationService, ErrorHandlerService,
-│   │                      EntityStore, AuthService (vacío)...
+│   │                      EntityStore, EntityApiService, AuthService (vacío)...
 │   ├── interceptors/      timeout, errores y auth
 │   ├── guards/            authGuard y aviso de cambios sin guardar
-│   ├── models/            Interfaces de las entidades y ApiError
+│   ├── models/            Interfaces de las 9 entidades, con sus relaciones, y ApiError
 │   └── utils/             Traducción de los errores de la API
 ├── shared/                Piezas reutilizables, sin lógica de negocio
-│   ├── components/        toggle, skeleton, tabla, campo de formulario, paginación...
+│   ├── components/        toggle, skeleton, error-state, tabla, campo de formulario...
 │   └── utils/             Formato, búsqueda, validadores, errores de formulario
 ├── layouts/
 │   └── admin-layout/      Sidebar, barra superior y el menú (navigation.ts)
 ├── features/
 │   ├── dashboard/         Resumen
-│   └── routes/            Rutas
-│       ├── pages/         Listado, formulario (crear y editar) y papelera
-│       ├── components/    Tarjeta de ruta
-│       ├── services/      routes.service.ts (API) y routes.store.ts (estado)
-│       └── routes.routes.ts
+│   ├── routes/            Rutas
+│   │   ├── pages/         Listado, página del formulario (crear y editar) y papelera
+│   │   ├── components/    Tarjeta de ruta y formulario (route-form)
+│   │   ├── services/      routes.service.ts (API) y routes.store.ts (estado)
+│   │   └── routes.routes.ts
+│   └── roles/, users/, hosts/, categories/, locations/,
+│       experiences/, departures/, images/
+│       └── services/      Servicio y store de cada entidad (todavía sin páginas)
 ├── app.routes.ts
 ├── app.config.ts
 └── app.component.ts
@@ -175,7 +178,27 @@ La página nunca llama a la API: pide al store, y el store expone el resultado c
   1. `errorInterceptor` convierte cualquier fallo en un `ApiError` con `status`, `type` (`network`, `timeout`, `validation`, `client` o `server`), `message` y, si los hay, `fieldErrors`.
   2. `timeoutInterceptor` corta la petición a los `apiTimeout` milisegundos.
   3. `authInterceptor` añade el token de sesión si existe. Hoy no hay ninguno.
-- **`EntityStore`** guarda el estado de una entidad con signals y hace las operaciones comunes: cargar, crear, editar, eliminar, deshacer y cambiar el estado activo.
+- **`EntityApiService`** (`core/services/entity-api.service.ts`) tiene los 11 endpoints comunes a todas las colecciones. El servicio de cada entidad hereda de él y solo declara su ruta (`path`). Las imágenes, que no tienen slug, heredan de `RecordApiService`, que es lo mismo sin `getBySlug`.
+- **`EntityStore`** guarda el estado de una entidad con signals y hace las operaciones comunes: cargar, crear, editar, eliminar, deshacer, cambiar el estado activo y la papelera.
+
+### Modelos y relaciones
+
+Cada entidad tiene su modelo en `core/models/` con los mismos campos que la API. Las relaciones llegan de dos formas: el id (`categoryId`) y el documento relacionado que añade el `populate` de la API (`category`), con un resumen de sus campos:
+
+```ts
+export interface Route extends BaseEntity {
+  categoryId: string;
+  category: CategorySummary | null;
+  startLocationId: string;
+  startLocation: LocationSummary | null;
+  // ...
+  coverImage?: ImageSummary | null;
+}
+```
+
+El documento relacionado es `null` si ya no existe. Pasa en la papelera: si después de eliminar una ruta se elimina su categoría, la API ya no la encuentra. Por eso las plantillas no leen `route.startLocation.city` directamente, sino con `routeTrip(route)` y `categoryName(route)`, que ponen "Ubicación eliminada" o "Categoría eliminada".
+
+`BaseRecord` tiene los campos comunes (`_id`, `status`, `isActive`, `deletedAt` y las fechas) y `BaseEntity` le añade el `slug`. Las imágenes usan `BaseRecord`.
 
 ### El interruptor de activa
 
@@ -187,11 +210,22 @@ Todas las llamadas de los stores van en `try/catch` y pasan por `ErrorHandlerSer
 
 | Fallo | Qué ve el usuario |
 |---|---|
-| Sin red, tiempo de espera o 5xx | Diálogo de SweetAlert2 |
+| Sin red, tiempo de espera o 5xx | Diálogo de SweetAlert2, y en la página `ui-error-state` con "Reintentar" |
 | 404 | Aviso breve y vuelta al listado |
-| 400 o 422 (validación) y 409 (duplicado) | Mensaje junto al campo del formulario |
+| 400 o 422 (validación) | Mensaje junto al campo del formulario |
+| 409 | Su motivo concreto: junto al formulario, o en un aviso si no hay formulario |
 
-Los formularios validan también en el cliente, con los mismos criterios que la API. Los mensajes de validación de la API llegan en inglés y se traducen en `core/utils/api-error.mapper.ts`.
+Los formularios validan también en el cliente, con los mismos criterios que la API. Los mensajes de la API llegan en inglés y se traducen en `core/utils/api-error.mapper.ts`.
+
+Un 409 no siempre es un duplicado. El mapper reconoce cada motivo de la API y lo cuenta tal cual:
+
+| La API dice | El panel muestra |
+|---|---|
+| `Cannot delete a route that has experiences` | No se puede eliminar: tiene experiencias. |
+| `Cannot restore: categoryId references a deleted category` | No se puede restaurar mientras su categoría siga en la papelera. |
+| `Route is not deleted` | Ese registro ya estaba restaurado. |
+| `System roles cannot be deleted` | Los roles base no se pueden eliminar. |
+| `categoryId must reference an active category` (400) | Elige una categoría activa. |
 
 SweetAlert2 solo se usa a través de `NotificationService`. Ningún componente lo importa directamente.
 
@@ -217,6 +251,10 @@ Todos los endpoints de la API están en el panel:
 | `PATCH /api/routes/:id/active` | `RoutesService.setActive` | Interruptor de activa |
 | `PATCH /api/routes/:id/delete` | `RoutesService.remove` | Eliminar (borrado lógico) |
 | `PATCH /api/routes/:id/restore` | `RoutesService.restore` | "Deshacer" después de eliminar y "Restaurar" en la papelera |
+| `GET /api/categories/actives` | `RoutesService.getCategoryOptions` | Select de categoría del formulario |
+| `GET /api/locations/actives` | `RoutesService.getLocationOptions` | Selects de origen y destino |
+
+Las demás colecciones (`roles`, `users`, `hosts`, `categories`, `locations`, `experiences`, `departures` e `images`) tienen ya su servicio con los mismos endpoints, más `DeparturesService.getBySku` y `ImagesService.getByOwner`. Todavía no los usa ninguna página.
 
 Las URL del panel identifican cada ruta por su `slug` (`/routes/:slug/edit`). La API solo admite `slug` para leer, así que guardar, activar y eliminar van por `_id`.
 
@@ -232,14 +270,24 @@ Eliminar una ruta es un borrado lógico: sigue en la base de datos, marcada como
 - "Restaurar" es optimista: la ruta sale de la papelera al instante y vuelve al listado. Si la API falla, vuelve a la papelera y se muestra el error.
 - El selector "Al restaurar, dejarla" decide si vuelve inactiva (por defecto) o activa.
 - El aviso "Deshacer" que aparece justo después de eliminar sigue funcionando.
+- Si a una ruta le falta su categoría o una de sus ubicaciones (se eliminaron después que ella), la API no deja restaurarla. La papelera lo avisa en la fila ("No se puede restaurar mientras su categoría siga en la papelera") y desactiva su botón, enlazado con el aviso para los lectores de pantalla. Si aun así llega ese 409, la ruta vuelve a su sitio en la papelera, en vez de darse por restaurada.
 
 La lógica está en `EntityStore` (`loadDeleted`, `restoreFromTrash`), así que cualquier entidad nueva la hereda.
+
+### Formulario de rutas
+
+El formulario es un componente (`features/routes/components/route-form/`) separado de la página (`pages/route-form/`):
+
+- **El componente** tiene los campos, con Reactive Forms y las mismas validaciones que la API. Cuando es válido, emite `save` con los datos listos. Si la API los rechaza, la página se los devuelve con `showServerError()` y se pintan junto a su campo.
+- **La página** carga la ruta y las opciones de los selects, guarda, y tiene el interruptor de activa, los detalles y el botón de eliminar.
+
+Los selects de categoría, origen y destino ofrecen solo las **activas** (la API rechaza las inactivas). Si la ruta que se edita usa una categoría o ubicación que se desactivó después, también aparece, como "Costa (inactiva)": la API la acepta mientras no se cambie.
 
 ### Rutas inactivas
 
 Una ruta inactiva se distingue sin depender solo del color:
 
-- En tarjetas: fondo gris sin relieve, borde discontinuo, etiqueta "Inactiva" con icono y texto atenuado.
+- En tarjetas: fondo gris sin relieve, borde discontinuo, portada en gris, etiqueta "Inactiva" con icono y texto atenuado.
 - En la lista: fila con fondo gris y la misma etiqueta junto al interruptor.
 - En el Resumen: la etiqueta junto al título.
 
@@ -266,25 +314,20 @@ Una ruta inactiva se distingue sin depender solo del color:
 
 Ejemplo con `categories`. La API tiene que exponer la entidad con los mismos endpoints que `routes`.
 
-**1. Modelo**, en `core/models/category.model.ts`:
+Los pasos 1 a 3 ya están hechos para las nueve entidades. Para una entidad nueva (por ejemplo, `reviews`) serían así:
+
+**1. Modelo**, en `core/models/<entidad>.model.ts`, con los campos de la API. Mira `category.model.ts`: el modelo, su resumen para los `populate` y el payload.
+
+**2. Servicio**, en `features/<entidad>/services/<entidad>.service.ts`. Hereda los 11 endpoints:
 
 ```ts
-import { BaseEntity } from './entity.model';
-
-export interface Category extends BaseEntity {
-  name: string;
-}
-
-export interface CategoryPayload {
-  name: string;
+@Injectable({ providedIn: 'root' })
+export class CategoriesService extends EntityApiService<Category, CategoryPayload> {
+  protected readonly path = '/categories';
 }
 ```
 
-`BaseEntity` ya trae `_id`, `slug`, `status`, `isActive` y las fechas.
-
-**2. Servicio**, en `features/categories/services/categories.service.ts`. Implementa `EntityApi` con una llamada por endpoint. Copia `routes.service.ts` y cambia la ruta base.
-
-**3. Store**, en `features/categories/services/categories.store.ts`:
+**3. Store**, en `features/<entidad>/services/<entidad>.store.ts`:
 
 ```ts
 @Injectable({ providedIn: 'root' })
@@ -295,7 +338,7 @@ export class CategoriesStore extends EntityStore<Category, CategoryPayload> {
 }
 ```
 
-Con esto ya tiene carga, creación, edición, borrado, deshacer y el cambio de estado optimista.
+Con esto ya tiene carga, creación, edición, borrado, deshacer, papelera y el cambio de estado optimista.
 
 **4. Páginas**, en `features/categories/pages/`: un listado y un formulario. Usa los componentes de `shared`:
 
@@ -307,6 +350,7 @@ Con esto ya tiene carga, creación, edición, borrado, deshacer y el cambio de e
 | `ui-toggle` | Interruptor de `isActive` |
 | `ui-form-field` con `uiInput` | Campo con etiqueta, ayuda y error en línea |
 | `ui-skeleton`, `ui-empty-state`, `ui-pagination` | Carga, estado vacío y paginación |
+| `ui-error-state` | Carga fallida, con "Reintentar" |
 
 **5. Rutas**, en `features/categories/categories.routes.ts`, con `''`, `'new'` y `':slug/edit'`, como en `routes.routes.ts`. Regístralas en `app.routes.ts`:
 
@@ -330,7 +374,7 @@ Con esto ya tiene carga, creación, edición, borrado, deshacer y el cambio de e
 },
 ```
 
-Si la entidad se relaciona con otra (por ejemplo, una experiencia con su categoría), pide los registros activos de la otra con `getActives()` desde tu propio servicio. No importes el store de la otra feature.
+Si la entidad se relaciona con otra, pide los registros activos de la otra desde tu propio servicio, como hace `RoutesService.getCategoryOptions()`. No importes el servicio ni el store de la otra feature.
 
 </details>
 
@@ -362,7 +406,8 @@ Después ya se puede usar con `<ui-icon name="nombre" />`. El nombre está tipad
 | `inject()` | Todos | Sin inyección por constructor |
 | `withComponentInputBinding` | Router | El `:slug` de la URL llega a la página como `input()` |
 | Control flow `@if`, `@for`, `@defer` | Plantillas | Sintaxis nativa; `@defer` carga la tabla solo cuando hace falta |
-| Reactive Forms | `route-form` | Validación en el cliente con los mismos límites que la API |
+| Reactive Forms con selects | `components/route-form` | Validación en el cliente con los mismos límites que la API |
+| `viewChild()` | Página del formulario | Devolver al formulario los errores de la API |
 | Interceptores y guards funcionales | `core/` | Funciones en lugar de clases |
 | `canDeactivate` | `unsaved-changes.guard.ts` | Avisa antes de salir de un formulario con cambios |
 
@@ -401,17 +446,20 @@ Cubren la lógica, no la presentación:
 
 | Spec | Qué prueba |
 |---|---|
-| `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes |
+| `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes, incluido el motivo de cada 409 |
 | `api.service.spec.ts` | URLs, métodos y cuerpo de cada petición |
-| `entity.store.spec.ts` | Carga, CRUD, actualización optimista con vuelta atrás y papelera |
+| `entity.store.spec.ts` | Carga, CRUD, actualización optimista con vuelta atrás y papelera (también el 409 por una referencia eliminada) |
+| `route.model.spec.ts` | Recorrido y categoría cuando una relación ya no existe |
 | `error-handler.service.spec.ts` | Qué se muestra para cada tipo de error |
-| `routes.service.spec.ts`, `routes.store.spec.ts` | Endpoints de rutas, filtros y contadores |
+| `routes.service.spec.ts`, `routes.store.spec.ts` | Endpoints de rutas, opciones de los selects, búsqueda, filtros y contadores |
+| `<entidad>.service.spec.ts` (8) | Que cada servicio llama a sus endpoints, también `getBySku` y `getByOwner` |
 | `navigation.spec.ts` | Menú y secciones padre |
 | `utils.spec.ts` | Formato, búsqueda y validadores |
 
 ## Limitaciones conocidas
 
-- Solo existe la entidad `routes`, porque es la única de la API.
+- Solo las rutas tienen páginas. El resto de entidades tienen su modelo, servicio y store, pero todavía no aparecen en el panel (siguen en "Próximamente").
+- Las imágenes se ven (portadas en tarjetas y tabla), pero aún no se pueden añadir ni ordenar desde el panel.
 - Los filtros, la página y la vista del listado no se guardan en la URL. Se conservan al volver del formulario, pero no al recargar (salvo la vista, que se recuerda).
 - La papelera no permite borrar una ruta definitivamente: la API no tiene borrado físico.
 - No hay modo oscuro: el panel solo tiene tema claro.

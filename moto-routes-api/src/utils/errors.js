@@ -15,3 +15,10 @@ export function badRequest(message) {
 export function conflict(message) {
   return createError(message, 409);
 }
+
+// Error de validación de un campo concreto, con el mismo formato que los de Zod
+export function fieldError(field, message) {
+  const error = createError("Validation failed", 400);
+  error.details = [{ field, message }];
+  return error;
+}

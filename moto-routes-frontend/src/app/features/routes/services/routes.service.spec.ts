@@ -12,8 +12,9 @@ const PAYLOAD: RoutePayload = {
   difficulty: 'hard',
   distance: 250,
   duration: 6,
-  startPoint: 'Santander',
-  endPoint: 'Bilbao',
+  categoryId: '6710a1b2c3d4e5f6a7b8c930',
+  startLocationId: '6710a1b2c3d4e5f6a7b8c921',
+  endLocationId: '6710a1b2c3d4e5f6a7b8c920',
 };
 
 /** Comprueba que cada método llama al endpoint real de la API (ver postman.md). */
@@ -83,6 +84,12 @@ describe('RoutesService', () => {
   it('PATCH /routes/:id/delete, sin cuerpo', async () => {
     await service.remove(ID);
     expect(api.patch).toHaveBeenCalledOnceWith(`/routes/${ID}/delete`);
+  });
+
+  it('opciones del formulario: GET /categories/actives y /locations/actives', async () => {
+    await service.getCategoryOptions();
+    await service.getLocationOptions();
+    expect(api.get.calls.allArgs()).toEqual([['/categories/actives'], ['/locations/actives']]);
   });
 
   it('PATCH /routes/:id/restore', async () => {

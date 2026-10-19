@@ -4,23 +4,39 @@ import { Route } from "../models/route.model.js";
 // Solo documentos no eliminados (soft delete)
 const NOT_DELETED = { deletedAt: null };
 
+// Cada ruta trae su categoría y sus dos ubicaciones, no solo los ids
+const withRelations = (query) =>
+  query
+    .populate("category", "name slug")
+    .populate("startLocation", "city region country slug")
+    .populate("endLocation", "city region country slug");
+
 export const routeRepository = {
   findAll(filter = {}) {
-    return Route.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 }).lean();
+    return withRelations(Route.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 })).lean();
   },
 
   // Solo las eliminadas, de la eliminada más reciente a la más antigua. Como el
   // filtro indica deletedAt, el plugin de soft delete no añade deletedAt: null.
   findDeleted() {
-    return Route.find({ deletedAt: { $ne: null } }).sort({ deletedAt: -1 }).lean();
+    return withRelations(Route.find({ deletedAt: { $ne: null } }).sort({ deletedAt: -1 })).lean();
   },
 
   findById(id) {
-    return Route.findOne({ _id: id, ...NOT_DELETED }).lean();
+    return withRelations(Route.findOne({ _id: id, ...NOT_DELETED })).lean();
   },
 
   findBySlug(slug) {
-    return Route.findOne({ slug, ...NOT_DELETED }).lean();
+    return withRelations(Route.findOne({ slug, ...NOT_DELETED })).lean();
+  },
+
+  // Para restaurar: hacen falta sus referencias y su deletedAt antes de ponerlo a null
+  findDeletedById(id) {
+    return Route.findOne({ _id: id, deletedAt: { $ne: null } }).lean();
+  },
+
+  exists(filter) {
+    return Route.exists({ ...filter, ...NOT_DELETED });
   },
 
   // Mira también las rutas eliminadas: su slug sigue reservado por el índice único
@@ -38,10 +54,9 @@ export const routeRepository = {
   },
 
   updateById(id, data) {
-    return Route.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
-      new: true,
-      runValidators: true,
-    }).lean();
+    return withRelations(
+      Route.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, { returnDocument: "after", runValidators: true })
+    ).lean();
   },
 
   softDeleteById(id) {

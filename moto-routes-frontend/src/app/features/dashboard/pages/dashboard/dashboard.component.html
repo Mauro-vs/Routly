@@ -2,16 +2,7 @@
 
 @if (loadFailed()) {
   <div class="card">
-    <ui-empty-state
-      tone="danger"
-      icon="wifi-slash"
-      title="No se ha podido cargar el resumen"
-      description="Comprueba que la API está en marcha y vuelve a intentarlo."
-    >
-      <button type="button" class="btn btn--secondary" (click)="reload()">
-        <ui-icon name="arrows-clockwise" />Reintentar
-      </button>
-    </ui-empty-state>
+    <ui-error-state title="No se ha podido cargar el resumen" (retry)="reload()" />
   </div>
 } @else if (showSkeleton()) {
   <!-- misma forma que el contenido final -->

@@ -1,12 +1,17 @@
 import swaggerJsdoc from "swagger-jsdoc";
+import { apiPaths, apiSchemas, apiTags } from "../docs/openapi.js";
 
+// Las rutas y los esquemas de cada recurso se generan en src/docs/openapi.js
 const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "Moto Routes API",
-      version: "1.0.0",
-      description: "API REST para gestionar rutas de motos",
+      title: "Routly API",
+      version: "2.0.0",
+      description:
+        "API REST de Routly, la plataforma de rutas en moto: roles, usuarios, anfitriones, " +
+        "categorías, ubicaciones, rutas, experiencias, salidas e imágenes. Todas las " +
+        "colecciones se activan, se desactivan y tienen papelera (soft delete).",
     },
     servers: [
       {
@@ -14,96 +19,11 @@ const options = {
         description: "Development server",
       },
     ],
+    tags: apiTags,
+    paths: apiPaths,
     components: {
       schemas: {
-        Route: {
-          type: "object",
-          properties: {
-            _id: { type: "string", example: "664f1a2b3c4d5e6f7a8b9c0d" },
-            title: { type: "string", example: "Costa Brava Loop" },
-            slug: { type: "string", example: "costa-brava-loop-8b9c0d" },
-            description: {
-              type: "string",
-              example: "Ruta costera con vistas espectaculares",
-            },
-            difficulty: {
-              type: "string",
-              enum: ["easy", "medium", "hard"],
-              example: "medium",
-            },
-            distance: { type: "number", example: 180 },
-            duration: { type: "number", example: 4 },
-            startPoint: { type: "string", example: "Barcelona" },
-            endPoint: { type: "string", example: "Barcelona" },
-            status: {
-              type: "string",
-              enum: ["active", "inactive", "deleted"],
-              example: "active",
-            },
-            isActive: { type: "boolean", example: true },
-            deletedAt: {
-              type: "string",
-              format: "date-time",
-              nullable: true,
-              example: null,
-            },
-            createdAt: {
-              type: "string",
-              format: "date-time",
-              example: "2024-05-23T10:30:00.000Z",
-            },
-            updatedAt: {
-              type: "string",
-              format: "date-time",
-              example: "2024-05-23T10:30:00.000Z",
-            },
-          },
-        },
-        CreateRouteInput: {
-          type: "object",
-          required: [
-            "title",
-            "difficulty",
-            "distance",
-            "duration",
-            "startPoint",
-            "endPoint",
-          ],
-          properties: {
-            title: { type: "string", maxLength: 120, example: "Ruta del Cañón" },
-            description: {
-              type: "string",
-              maxLength: 500,
-              example: "Travesía por los desfiladeros del norte",
-            },
-            difficulty: {
-              type: "string",
-              enum: ["easy", "medium", "hard"],
-              example: "hard",
-            },
-            distance: { type: "number", minimum: 0, example: 250 },
-            duration: { type: "number", minimum: 0, example: 6 },
-            startPoint: { type: "string", maxLength: 100, example: "Santander" },
-            endPoint: { type: "string", maxLength: 100, example: "Bilbao" },
-          },
-        },
-        UpdateRouteInput: {
-          type: "object",
-          properties: {
-            title: { type: "string", maxLength: 120 },
-            description: { type: "string", maxLength: 500 },
-            difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
-            distance: { type: "number", minimum: 0 },
-            duration: { type: "number", minimum: 0 },
-            startPoint: { type: "string", maxLength: 100 },
-            endPoint: { type: "string", maxLength: 100 },
-            status: {
-              type: "string",
-              enum: ["active", "inactive"],
-              description: "isActive se sincroniza automáticamente",
-            },
-          },
-        },
+        ...apiSchemas,
         ErrorResponse: {
           type: "object",
           properties: {
@@ -116,10 +36,10 @@ const options = {
               items: {
                 type: "object",
                 properties: {
-                  field: { type: "string", example: "distance" },
+                  field: { type: "string", example: "categoryId" },
                   message: {
                     type: "string",
-                    example: "distance must be greater than or equal to 0",
+                    example: "categoryId must reference an active category",
                   },
                 },
               },
@@ -129,7 +49,7 @@ const options = {
       },
     },
   },
-  apis: ["./src/docs/*.yaml"],
+  apis: [],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

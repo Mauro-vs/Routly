@@ -1,18 +1,19 @@
 import { computed, inject, signal } from '@angular/core';
 
 import { ApiError } from '../models/api-error.model';
-import { BaseEntity, EntityStatus } from '../models/entity.model';
+import { BaseRecord, EntityStatus } from '../models/entity.model';
 import { ErrorHandlerService } from './error-handler.service';
 
 /** Llamadas a la API que necesita un store. Las implementa el servicio de cada entidad. */
-export interface EntityApi<T extends BaseEntity, TPayload> {
+export interface EntityApi<T extends BaseRecord, TPayload> {
   getAll(): Promise<T[]>;
   /** Solo los activos (`true`) o solo los inactivos (`false`). */
   getByActive(isActive: boolean): Promise<T[]>;
   /** La papelera: solo los eliminados, del más reciente al más antiguo. */
   getDeleted(): Promise<T[]>;
   getById(id: string): Promise<T>;
-  getBySlug(slug: string): Promise<T>;
+  /** Solo las entidades con slug (todas menos las imágenes). */
+  getBySlug?(slug: string): Promise<T>;
   create(payload: TPayload): Promise<T>;
   update(id: string, payload: Partial<TPayload>): Promise<T>;
   setActive(id: string, isActive: boolean): Promise<T>;
@@ -21,7 +22,7 @@ export interface EntityApi<T extends BaseEntity, TPayload> {
 }
 
 /** El mismo orden que usa la API en sus listados: del más reciente al más antiguo. */
-function newestFirst<T extends BaseEntity>(items: T[]): T[] {
+function newestFirst<T extends BaseRecord>(items: T[]): T[] {
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -44,7 +45,7 @@ export type StoreResult<T> = { ok: true; data: T } | { ok: false; error: ApiErro
  * `error`; las escrituras lo devuelven en el resultado para que el formulario pueda
  * pintarlo junto a los campos.
  */
-export abstract class EntityStore<T extends BaseEntity, TPayload> {
+export abstract class EntityStore<T extends BaseRecord, TPayload> {
   protected abstract readonly api: EntityApi<T, TPayload>;
   /** Ruta del listado. Se vuelve a ella cuando un registro no existe. */
   protected abstract readonly listPath: string;
@@ -137,6 +138,7 @@ export abstract class EntityStore<T extends BaseEntity, TPayload> {
     this._error.set(null);
     this._selected.set(null);
     try {
+      if (!this.api.getBySlug) throw new Error('This entity has no slug');
       const entity = await this.api.getBySlug(slug);
       // Si mientras tanto se pidió otro registro, este ya no interesa.
       if (lookup !== this.lookups) return null;
@@ -301,14 +303,15 @@ export abstract class EntityStore<T extends BaseEntity, TPayload> {
       if (this._loaded()) this.putBack(restored);
       return { ok: true, data: restored };
     } catch (error) {
-      const apiError = this.errors.handle(error, {
-        notFoundMessage: this.notFoundMessage,
-        conflictMessage: 'Ese registro ya estaba restaurado.',
-      });
-      // 404: ya no existe. 409: alguien lo restauró antes. En los dos casos la papelera
-      // que hay en memoria está anticuada, así que se vuelve a pedir en vez de reponerlo.
-      if (apiError.isNotFound || apiError.isConflict) void this.loadDeleted();
-      else this._deleted.set(before);
+      const apiError = this.errors.handle(error, { notFoundMessage: this.notFoundMessage });
+      // 404: ya no existe. 409 "no está eliminado": alguien lo restauró antes. En los dos
+      // casos la papelera que hay en memoria está anticuada y se vuelve a pedir. Si el 409
+      // es por una referencia que sigue en la papelera, el registro vuelve a su sitio.
+      if (apiError.isNotFound || (apiError.isConflict && !apiError.isMissingReference)) {
+        void this.loadDeleted();
+      } else {
+        this._deleted.set(before);
+      }
       return { ok: false, error: apiError };
     } finally {
       this.markBusy(id, false);

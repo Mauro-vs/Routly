@@ -1,12 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { DIFFICULTY_BADGES, DIFFICULTY_LABELS, Route } from '../../../../core/models/route.model';
+import {
+  DIFFICULTY_BADGES,
+  DIFFICULTY_LABELS,
+  Route,
+  categoryName,
+  routeTrip,
+} from '../../../../core/models/route.model';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { ToggleComponent } from '../../../../shared/components/toggle/toggle.component';
 import { formatNumber, formatRelativeTime } from '../../../../shared/utils/format';
 
-/** Tarjeta de una ruta en el listado: datos clave, estado y acciones. */
+/** Tarjeta de una ruta en el listado: portada, datos clave, estado y acciones. */
 @Component({
   selector: 'app-route-card',
   imports: [RouterLink, IconComponent, ToggleComponent],
@@ -27,4 +33,6 @@ export class RouteCardComponent {
   protected readonly distance = computed(() => formatNumber(this.route().distance));
   protected readonly duration = computed(() => formatNumber(this.route().duration));
   protected readonly updated = computed(() => formatRelativeTime(this.route().updatedAt));
+  protected readonly trip = computed(() => routeTrip(this.route()));
+  protected readonly category = computed(() => categoryName(this.route()));
 }

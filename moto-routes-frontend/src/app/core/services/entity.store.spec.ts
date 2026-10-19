@@ -44,7 +44,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
 }
 
 describe('EntityStore', () => {
-  let api: jasmine.SpyObj<EntityApi<Item, ItemPayload>>;
+  let api: jasmine.SpyObj<Required<EntityApi<Item, ItemPayload>>>;
   let errors: jasmine.SpyObj<ErrorHandlerService>;
   let store: TestStore;
 
@@ -55,7 +55,7 @@ describe('EntityStore', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<EntityApi<Item, ItemPayload>>('api', [
+    api = jasmine.createSpyObj<Required<EntityApi<Item, ItemPayload>>>('api', [
       'getAll',
       'getByActive',
       'getDeleted',
@@ -287,6 +287,24 @@ describe('EntityStore', () => {
 
       expect(api.getDeleted).toHaveBeenCalledTimes(2);
       expect(store.deletedCount()).toBe(0);
+    });
+
+    it('si no se puede restaurar por una referencia eliminada (409), vuelve a la papelera', async () => {
+      await loadTrashWith([trashed('9')]);
+      api.restore.and.rejectWith(
+        new ApiError({
+          status: 409,
+          type: 'client',
+          message: 'No se puede restaurar',
+          detail: 'Cannot restore: categoryId references a deleted category',
+        }),
+      );
+
+      const result = await store.restoreFromTrash(store.deleted()[0], false);
+
+      expect(result.ok).toBeFalse();
+      expect(api.getDeleted).toHaveBeenCalledTimes(1);
+      expect(store.deleted().map((entry) => entry._id)).toEqual(['9']);
     });
 
     it('deshacer un borrado también lo quita de la papelera', async () => {

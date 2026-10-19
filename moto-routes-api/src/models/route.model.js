@@ -1,17 +1,15 @@
 import mongoose from "mongoose";
-import { buildSlug } from "../utils/slugify.js";
+import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
+import { statusPlugin } from "./plugins/status.plugin.js";
+import { DELETED_FIELDS, STATUS } from "./status.js";
 
-export const ROUTE_STATUS = Object.freeze({
-  ACTIVE: "active",
-  INACTIVE: "inactive",
-  DELETED: "deleted",
-});
+// Se mantiene el nombre antiguo para no romper los imports existentes
+export const ROUTE_STATUS = STATUS;
 
 const routeSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 120 },
-    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String, trim: true, maxlength: 500 },
     difficulty: {
       type: String,
@@ -20,39 +18,36 @@ const routeSchema = new mongoose.Schema(
     },
     distance: { type: Number, required: true, min: 0 },
     duration: { type: Number, required: true, min: 0 },
-    startPoint: { type: String, required: true, trim: true, maxlength: 100 },
-    endPoint: { type: String, required: true, trim: true, maxlength: 100 },
-    status: {
-      type: String,
-      enum: Object.values(ROUTE_STATUS),
-      default: ROUTE_STATUS.ACTIVE,
-    },
-    isActive: { type: Boolean, default: true },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true, index: true },
+    startLocationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location", required: true, index: true },
+    // Puede ser la misma que el origen: ruta circular
+    endLocationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location", required: true, index: true },
   },
   { timestamps: true }
 );
 
-routeSchema.plugin(softDeletePlugin, {
-  deletedFields: { status: ROUTE_STATUS.DELETED },
+// Las respuestas traen los ids y, además, los documentos relacionados (populate)
+routeSchema.virtual("category", {
+  ref: "Category",
+  localField: "categoryId",
+  foreignField: "_id",
+  justOne: true,
+});
+routeSchema.virtual("startLocation", {
+  ref: "Location",
+  localField: "startLocationId",
+  foreignField: "_id",
+  justOne: true,
+});
+routeSchema.virtual("endLocation", {
+  ref: "Location",
+  localField: "endLocationId",
+  foreignField: "_id",
+  justOne: true,
 });
 
-// Campos derivados al crear: slug desde el título, isActive desde status
-routeSchema.pre("validate", function () {
-  if (this.isModified("title") || !this.slug) {
-    this.slug = buildSlug(this.title, this._id);
-  }
-  this.isActive = this.status === ROUTE_STATUS.ACTIVE;
-});
-
-// Los mismos campos derivados al actualizar (PATCH y soft delete)
-routeSchema.pre("findOneAndUpdate", function () {
-  const update = this.getUpdate() ?? {};
-  const title = update.title ?? update.$set?.title;
-  const status = update.status ?? update.$set?.status;
-  const id = this.getFilter()._id;
-
-  if (title && id) this.set("slug", buildSlug(title, id));
-  if (status) this.set("isActive", status === ROUTE_STATUS.ACTIVE);
-});
+routeSchema.plugin(statusPlugin);
+routeSchema.plugin(slugPlugin, { source: (doc) => doc.title, fields: ["title"] });
+routeSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
 
 export const Route = mongoose.model("Route", routeSchema);

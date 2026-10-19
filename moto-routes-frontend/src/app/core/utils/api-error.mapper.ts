@@ -65,7 +65,7 @@ export function toApiError(error: unknown): ApiError {
   return new ApiError({
     status,
     type: 'client',
-    message: CLIENT_MESSAGES[status] ?? MESSAGES.client,
+    message: (status === 409 && translateConflict(detail)) || CLIENT_MESSAGES[status] || MESSAGES.client,
     detail,
   });
 }
@@ -93,8 +93,83 @@ function readFieldErrors(body: unknown): FieldErrors | undefined {
   return Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined;
 }
 
+/** Cómo se nombra en español cada recurso de la API en los mensajes. */
+const RESOURCES: Record<string, { a: string; own: string; active: string }> = {
+  role: { a: 'un rol', own: 'su rol', active: 'activo' },
+  user: { a: 'un usuario', own: 'su usuario', active: 'activo' },
+  host: { a: 'un anfitrión', own: 'su anfitrión', active: 'activo' },
+  category: { a: 'una categoría', own: 'su categoría', active: 'activa' },
+  location: { a: 'una ubicación', own: 'una de sus ubicaciones', active: 'activa' },
+  route: { a: 'una ruta', own: 'su ruta', active: 'activa' },
+  experience: { a: 'una experiencia', own: 'su experiencia', active: 'activa' },
+};
+
+/** Lo que impide eliminar un registro ("Cannot delete a route that has experiences"). */
+const DEPENDENTS: Record<string, string> = {
+  users: 'usuarios',
+  'a host profile': 'perfil de anfitrión',
+  experiences: 'experiencias',
+  routes: 'rutas',
+  departures: 'salidas',
+};
+
+const DELETE_ACTIONS: Record<string, string> = {
+  deactivated: 'desactivar',
+  deleted: 'eliminar',
+  renamed: 'renombrar',
+};
+
+/** Los 409 de la API no siempre son duplicados: cada motivo tiene su texto. */
+const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> = [
+  [/ is not deleted$/, () => 'Ese registro ya estaba restaurado.'],
+  [
+    /^Cannot restore: \w+ references a deleted (\w+)$/,
+    (m) => `No se puede restaurar mientras ${RESOURCES[m[1]]?.own ?? 'una de sus referencias'} siga en la papelera.`,
+  ],
+  [/^Cannot delete a location that is used by routes$/, () => 'No se puede eliminar: la usan algunas rutas.'],
+  [
+    /^Cannot delete an? \w+ that has (.+)$/,
+    (m) => `No se puede eliminar: tiene ${DEPENDENTS[m[1]] ?? 'registros que dependen de él'}.`,
+  ],
+  [
+    /^System roles cannot be (\w+)$/,
+    (m) => `Los roles base no se pueden ${DELETE_ACTIONS[m[1]] ?? 'modificar así'}.`,
+  ],
+  [/^User has a host profile$/, () => 'Tiene perfil de anfitrión: necesita conservar el rol de anfitrión.'],
+  [/^This user already has a host profile$/, () => 'Ese usuario ya tiene perfil de anfitrión.'],
+  [/^maxParticipants is lower than/, () => 'Hay salidas con más plazas que ese máximo.'],
+  [/^Inactive images cannot be the cover$/, () => 'Una imagen inactiva no puede ser la principal.'],
+];
+
+function translateConflict(message: string | undefined): string | undefined {
+  if (!message) return undefined;
+  for (const [pattern, translate] of CONFLICT_RULES) {
+    const match = message.match(pattern);
+    if (match) return translate(match);
+  }
+  return undefined;
+}
+
 /** Reglas que escribe el errorHandler de la API, en el orden en que se comprueban. */
 const FIELD_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> = [
+  // Referencias a otra colección
+  [
+    /^must reference an active (\w+)$/,
+    (m) => (RESOURCES[m[1]] ? `Elige ${RESOURCES[m[1]].a} ${RESOURCES[m[1]].active}.` : 'Elige una opción activa.'),
+  ],
+  [/^must reference an existing \w+$/, () => 'El elemento al que pertenece ya no existe.'],
+  [/^must reference a user with the host role$/, () => 'El usuario tiene que tener el rol de anfitrión.'],
+  // Reglas entre campos (van antes que las genéricas de mínimo y máximo)
+  [/^must be greater than or equal to minParticipants$/, () => 'No puede ser menor que el mínimo de participantes.'],
+  [
+    /^must be less than or equal to the experience maxParticipants$/,
+    () => 'No puede superar el máximo de participantes de la experiencia.',
+  ],
+  [/^must be after startAt$/, () => 'Tiene que ser posterior al inicio.'],
+  [/^must be in the future$/, () => 'Elige una fecha futura.'],
+  [/^and longitude must be sent together$/, () => 'Indica la latitud y la longitud, o ninguna de las dos.'],
+  [/^must be an integer$/, () => 'Escribe un número entero.'],
+  [/^must have at most 2 decimals$/, () => 'Usa como mucho dos decimales.'],
   [/^is required$/, () => 'Este campo es obligatorio.'],
   [/^cannot be empty$/, () => 'Este campo no puede quedar vacío.'],
   [/^must be at least (\d+) characters$/, (m) => `Escribe al menos ${m[1]} caracteres.`],

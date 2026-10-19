@@ -13,6 +13,11 @@ function zodDetail(issue) {
   const isString = issue.origin === "string";
   let rule;
 
+  // Reglas propias (.refine): su mensaje ya está redactado completo
+  if (issue.code === "custom") {
+    return { field, message: issue.message };
+  }
+
   if (issue.input === undefined) {
     rule = "is required";
   } else {
@@ -64,6 +69,9 @@ function mongooseDetail(err) {
       return { field, message: `${field} must be less than or equal to ${props.max}` };
     case "maxlength":
       return { field, message: `${field} must be at most ${props.maxlength} characters` };
+    // Validadores propios (models/validators.js): su mensaje ya está redactado
+    case "user defined":
+      return { field, message: err.message };
     default:
       return { field, message: `${field} is invalid` };
   }
@@ -102,9 +110,10 @@ function normalizeError(err) {
     return { statusCode: 400, message: "Malformed JSON in request body" };
   }
 
-  // Errores propios (utils/errors.js) y errores 4xx de Express/body-parser
+  // Errores propios (utils/errors.js) y errores 4xx de Express/body-parser.
+  // fieldError() trae details con el mismo formato que los errores de Zod.
   if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 500) {
-    return { statusCode: err.status, message: err.message };
+    return { statusCode: err.status, message: err.message, details: err.details };
   }
 
   return { statusCode: 500, message: "Internal server error" };

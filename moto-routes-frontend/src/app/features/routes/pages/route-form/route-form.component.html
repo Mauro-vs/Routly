@@ -3,7 +3,7 @@
   [subtitle]="isEdit() ? 'Editar ruta' : 'Rellena los datos de la ruta.'"
 >
   <a class="btn btn--secondary" [routerLink]="listPath">Cancelar</a>
-  <button type="submit" form="route-form" class="btn btn--primary" [disabled]="saving() || loading()">
+  <button type="submit" [attr.form]="formId" class="btn btn--primary" [disabled]="saving() || loading()">
     @if (saving()) {
       <span class="spinner" aria-hidden="true"></span>Guardando…
     } @else {
@@ -14,16 +14,7 @@
 
 @if (loadFailed()) {
   <div class="card">
-    <ui-empty-state
-      tone="danger"
-      icon="wifi-slash"
-      title="No se ha podido cargar la ruta"
-      description="Comprueba que la API está en marcha y vuelve a intentarlo."
-    >
-      <button type="button" class="btn btn--secondary" (click)="retry()">
-        <ui-icon name="arrows-clockwise" />Reintentar
-      </button>
-    </ui-empty-state>
+    <ui-error-state title="No se ha podido cargar la ruta" (retry)="retry()" />
   </div>
 } @else if (loading()) {
   <!-- misma forma que el formulario -->
@@ -31,6 +22,7 @@
     <div class="card panel fields">
       <div class="field-skeleton"><ui-skeleton width="60px" height="14px" /><ui-skeleton height="38px" radius="var(--radius-md)" /></div>
       <div class="field-skeleton"><ui-skeleton width="90px" height="14px" /><ui-skeleton height="92px" radius="var(--radius-md)" /></div>
+      <div class="field-skeleton"><ui-skeleton width="70px" height="14px" /><ui-skeleton height="38px" radius="var(--radius-md)" /></div>
       <div class="two">
         <div class="field-skeleton"><ui-skeleton width="60px" height="14px" /><ui-skeleton height="38px" radius="var(--radius-md)" /></div>
         <div class="field-skeleton"><ui-skeleton width="60px" height="14px" /><ui-skeleton height="38px" radius="var(--radius-md)" /></div>
@@ -43,78 +35,14 @@
     </div>
   </div>
 } @else {
-  <form id="route-form" class="layout" [formGroup]="form" (ngSubmit)="save()" novalidate>
-    <div class="card panel fields">
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      <ui-form-field
-        label="Título"
-        hint="Se usa para generar la dirección de la ruta."
-        [counter]="titleCounter()"
-        [error]="errorOf('title')"
-      >
-        <input uiInput type="text" name="title" formControlName="title" autocomplete="off" />
-      </ui-form-field>
-
-      <ui-form-field
-        label="Descripción"
-        [optional]="true"
-        [counter]="descriptionCounter()"
-        [error]="errorOf('description')"
-      >
-        <textarea uiInput rows="3" name="description" formControlName="description" autocomplete="off"></textarea>
-      </ui-form-field>
-
-      <div class="two">
-        <ui-form-field label="Origen" [error]="errorOf('startPoint')">
-          <input uiInput type="text" name="startPoint" formControlName="startPoint" autocomplete="off" />
-        </ui-form-field>
-        <ui-form-field label="Destino" [error]="errorOf('endPoint')">
-          <input uiInput type="text" name="endPoint" formControlName="endPoint" autocomplete="off" />
-        </ui-form-field>
-      </div>
-
-      <fieldset class="choice-field" [attr.aria-describedby]="errorOf('difficulty') ? 'difficulty-error' : null">
-        <legend>Dificultad</legend>
-        <div class="choices">
-          @for (option of difficulties; track option.value) {
-            <div>
-              <input
-                class="sr-only"
-                type="radio"
-                name="difficulty"
-                formControlName="difficulty"
-                [id]="'difficulty-' + option.value"
-                [value]="option.value"
-              />
-              <label class="choice" [for]="'difficulty-' + option.value">{{ option.label }}</label>
-            </div>
-          }
-        </div>
-        @if (errorOf('difficulty')) {
-          <p class="choice-field__error" id="difficulty-error">
-            <ui-icon name="warning-circle" />Elige una dificultad.
-          </p>
-        }
-      </fieldset>
-
-      <div class="two">
-        <ui-form-field label="Distancia" [error]="errorOf('distance')">
-          <div class="affix">
-            <input uiInput type="number" name="distance" inputmode="decimal" min="0" step="any" autocomplete="off" formControlName="distance" />
-            <span aria-hidden="true">km</span>
-          </div>
-        </ui-form-field>
-        <ui-form-field label="Duración" [error]="errorOf('duration')">
-          <div class="affix">
-            <input uiInput type="number" name="duration" inputmode="decimal" min="0" step="any" autocomplete="off" formControlName="duration" />
-            <span aria-hidden="true">h</span>
-          </div>
-        </ui-form-field>
-      </div>
-    </div>
+  <div class="layout">
+    <app-route-form
+      [route]="route()"
+      [categories]="store.categoryOptions()"
+      [locations]="store.locationOptions()"
+      [optionsLoading]="optionsLoading()"
+      (save)="save($event)"
+    />
 
     <div class="stack">
       <div class="card panel toggle-row">
@@ -155,5 +83,5 @@
         </div>
       }
     </div>
-  </form>
+  </div>
 }

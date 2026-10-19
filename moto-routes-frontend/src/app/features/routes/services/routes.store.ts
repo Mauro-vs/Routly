@@ -1,6 +1,15 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
-import { Route, RouteDifficulty, RoutePayload } from '../../../core/models/route.model';
+import { Category } from '../../../core/models/category.model';
+import { Location } from '../../../core/models/location.model';
+import {
+  Route,
+  RouteDifficulty,
+  RoutePayload,
+  categoryName,
+  routeTrip,
+} from '../../../core/models/route.model';
+import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { EntityStore } from '../../../core/services/entity.store';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
 import { NotificationService } from '../../../core/services/notification.service';
@@ -21,6 +30,11 @@ function readView(): RoutesView {
   }
 }
 
+/** Texto en el que busca el listado: título, origen, destino y categoría. */
+export function routeSearchText(route: Route): string {
+  return `${route.title} ${routeTrip(route).text} ${categoryName(route)}`;
+}
+
 /**
  * Estado de las rutas. La carga, la edición, el borrado y el cambio de estado
  * optimista vienen de EntityStore; aquí se añaden los filtros del listado, que se
@@ -33,6 +47,18 @@ export class RoutesStore extends EntityStore<Route, RoutePayload> {
   protected override readonly notFoundMessage = 'Esa ruta ya no existe.';
 
   private readonly notifications = inject(NotificationService);
+  private readonly errorHandler = inject(ErrorHandlerService);
+
+  private readonly _categoryOptions = signal<Category[]>([]);
+  private readonly _locationOptions = signal<Location[]>([]);
+  private readonly _optionsLoading = signal(false);
+  private readonly _optionsLoaded = signal(false);
+  /** Categorías activas, para el select del formulario. */
+  readonly categoryOptions = this._categoryOptions.asReadonly();
+  /** Ubicaciones activas, para los selects de origen y destino. */
+  readonly locationOptions = this._locationOptions.asReadonly();
+  readonly optionsLoading = this._optionsLoading.asReadonly();
+  readonly optionsLoaded = this._optionsLoaded.asReadonly();
 
   readonly search = signal('');
   readonly status = signal<StatusFilter>('all');
@@ -54,7 +80,7 @@ export class RoutesStore extends EntityStore<Route, RoutePayload> {
       if (status !== 'all' && route.isActive !== (status === 'active')) return false;
       if (difficulty !== 'all' && route.difficulty !== difficulty) return false;
       if (!search) return true;
-      return matchesQuery(`${route.title} ${route.startPoint} ${route.endPoint}`, search);
+      return matchesQuery(routeSearchText(route), search);
     });
   });
 
@@ -88,6 +114,29 @@ export class RoutesStore extends EntityStore<Route, RoutePayload> {
     this.status.set(status);
     if (status === 'all') void this.load();
     else void this.refreshByActive(status === 'active');
+  }
+
+  /**
+   * Pide las opciones de los selects del formulario. Solo se ofrecen las activas: la
+   * API no deja usar una categoría o una ubicación inactiva en una ruta.
+   */
+  async loadOptions(): Promise<void> {
+    if (this._optionsLoading()) return;
+
+    this._optionsLoading.set(true);
+    try {
+      const [categories, locations] = await Promise.all([
+        this.api.getCategoryOptions(),
+        this.api.getLocationOptions(),
+      ]);
+      this._categoryOptions.set(categories);
+      this._locationOptions.set(locations);
+      this._optionsLoaded.set(true);
+    } catch (error) {
+      this.errorHandler.handle(error);
+    } finally {
+      this._optionsLoading.set(false);
+    }
   }
 
   clearFilters(): void {

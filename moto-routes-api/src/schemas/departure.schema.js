@@ -1,0 +1,40 @@
+import { z } from "zod";
+import { DEPARTURE_STATES } from "../models/departure.model.js";
+import { SKU_PATTERN } from "../utils/sku.js";
+import { objectIdSchema, statusSchema } from "./common.schema.js";
+
+// sku y slug no están en el esquema: los genera el service
+
+const departureFields = z.object({
+  experienceId: objectIdSchema,
+  // Llegan en ISO 8601: "2026-11-08T08:00:00.000Z"
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date(),
+  capacity: z.number().int().min(1),
+  // Euros por persona, con dos decimales como máximo
+  price: z.number().min(0).multipleOf(0.01),
+  state: z.enum(DEPARTURE_STATES).optional(),
+});
+
+const datesError = { message: "endAt must be after startAt", path: ["endAt"] };
+
+export const createDepartureSchema = departureFields.refine(
+  (data) => data.endAt > data.startAt,
+  datesError
+);
+
+// experienceId no se puede cambiar después de crear. Si solo llega una de las dos
+// fechas, la compara el service con la guardada.
+export const updateDepartureSchema = departureFields
+  .omit({ experienceId: true })
+  .partial()
+  .extend({ status: statusSchema.optional() })
+  .refine(
+    (data) => data.startAt === undefined || data.endAt === undefined || data.endAt > data.startAt,
+    datesError
+  );
+
+// Se acepta en minúsculas y se normaliza antes de comprobar el formato
+export const skuParamSchema = z.object({
+  sku: z.string().trim().toUpperCase().regex(SKU_PATTERN),
+});

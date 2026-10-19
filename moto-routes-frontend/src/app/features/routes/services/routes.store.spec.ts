@@ -1,6 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { LocationSummary } from '../../../core/models/location.model';
 import { Route } from '../../../core/models/route.model';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
@@ -8,7 +9,13 @@ import { NotificationService } from '../../../core/services/notification.service
 import { RoutesService } from './routes.service';
 import { RoutesStore } from './routes.store';
 
-function route(id: string, overrides: Partial<Route> = {}): Route {
+function place(city: string): LocationSummary {
+  return { _id: `loc-${city}`, city, country: 'España', slug: city.toLowerCase() };
+}
+
+type RouteFixture = Partial<Route> & { from?: string; to?: string };
+
+function route(id: string, { from = 'Origen', to = 'Destino', ...overrides }: RouteFixture = {}): Route {
   return {
     _id: id,
     slug: `ruta-${id}`,
@@ -16,8 +23,12 @@ function route(id: string, overrides: Partial<Route> = {}): Route {
     difficulty: 'easy',
     distance: 100,
     duration: 2,
-    startPoint: 'Origen',
-    endPoint: 'Destino',
+    categoryId: 'cat-1',
+    category: { _id: 'cat-1', name: 'Montaña', slug: 'montana' },
+    startLocationId: `loc-${from}`,
+    startLocation: place(from),
+    endLocationId: `loc-${to}`,
+    endLocation: place(to),
     status: 'active',
     isActive: true,
     deletedAt: null,
@@ -28,9 +39,15 @@ function route(id: string, overrides: Partial<Route> = {}): Route {
 }
 
 const ROUTES: Route[] = [
-  route('1', { title: 'Pirineos Adventure', difficulty: 'hard', startPoint: 'Huesca', endPoint: 'Lleida' }),
-  route('2', { title: 'Ruta del Vino', startPoint: 'Logroño', endPoint: 'Haro', isActive: false, status: 'inactive' }),
-  route('3', { title: 'Costa Brava Loop', difficulty: 'medium', startPoint: 'Barcelona', endPoint: 'Barcelona' }),
+  route('1', { title: 'Pirineos Adventure', difficulty: 'hard', from: 'Huesca', to: 'Lleida' }),
+  route('2', { title: 'Ruta del Vino', from: 'Logroño', to: 'Haro', isActive: false, status: 'inactive' }),
+  route('3', {
+    title: 'Costa Brava Loop',
+    difficulty: 'medium',
+    from: 'Barcelona',
+    to: 'Barcelona',
+    category: { _id: 'cat-2', name: 'Costa', slug: 'costa' },
+  }),
 ];
 
 describe('RoutesStore', () => {
@@ -45,6 +62,8 @@ describe('RoutesStore', () => {
       'getByActive',
       'remove',
       'restore',
+      'getCategoryOptions',
+      'getLocationOptions',
     ]);
     service.getAll.and.resolveTo(ROUTES);
     service.getByActive.and.callFake((isActive: boolean) =>
@@ -76,12 +95,35 @@ describe('RoutesStore', () => {
     expect(store.hasFilters()).toBeFalse();
   });
 
-  it('busca en título, origen y destino sin distinguir tildes ni mayúsculas', () => {
+  it('busca en título, origen, destino y categoría sin distinguir tildes ni mayúsculas', () => {
     store.search.set('logrono');
     expect(titles()).toEqual(['Ruta del Vino']);
 
     store.search.set('LLEIDA');
     expect(titles()).toEqual(['Pirineos Adventure']);
+
+    store.search.set('costa');
+    expect(titles()).toEqual(['Costa Brava Loop']);
+  });
+
+  it('busca aunque una ubicación ya no exista', async () => {
+    service.getAll.and.resolveTo([route('4', { title: 'Huérfana', startLocation: null })]);
+    await store.load();
+
+    store.search.set('eliminada');
+    expect(titles()).toEqual(['Huérfana']);
+  });
+
+  it('carga las categorías y ubicaciones activas para los selects', async () => {
+    service.getCategoryOptions.and.resolveTo([]);
+    service.getLocationOptions.and.resolveTo([]);
+
+    await store.loadOptions();
+
+    expect(service.getCategoryOptions).toHaveBeenCalledTimes(1);
+    expect(service.getLocationOptions).toHaveBeenCalledTimes(1);
+    expect(store.optionsLoaded()).toBeTrue();
+    expect(store.optionsLoading()).toBeFalse();
   });
 
   it('combina el filtro por estado con el de dificultad', () => {

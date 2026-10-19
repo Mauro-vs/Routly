@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 import { unsavedChangesGuard } from '../../core/guards/unsaved-changes.guard';
 
 const routeForm = () =>
-  import('./pages/route-form/route-form.component').then((m) => m.RouteFormComponent);
+  import('./pages/route-form/route-form.component').then((m) => m.RouteFormPageComponent);
 
 /**
  * Páginas de la entidad. El formulario es el mismo para crear y para editar; al

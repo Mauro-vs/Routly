@@ -7,6 +7,8 @@ Todas las peticiones con body llevan la cabecera:
 Content-Type: application/json
 ```
 
+Los ejemplos usan los datos de `npm run seed`. Los `_id` cambian cada vez que se ejecuta: cópialos de un listado antes de probar.
+
 ---
 
 ## Health Check
@@ -20,190 +22,54 @@ Response `200`:
 
 ---
 
-## Listar rutas
+## Endpoints comunes
 
-**GET** `/api/routes`
+Las nueve colecciones tienen los mismos endpoints. Cambia `<colección>` por `roles`, `users`, `hosts`, `categories`, `locations`, `routes`, `experiences`, `departures` o `images`.
 
-Devuelve solo las rutas no eliminadas, de la más reciente a la más antigua.
+| Petición | Qué hace | Éxito |
+|---|---|---|
+| **GET** `/api/<colección>` | Listado, sin los eliminados | 200 |
+| **GET** `/api/<colección>/actives` | Solo activos | 200 |
+| **GET** `/api/<colección>/inactives` | Solo inactivos (nunca los eliminados) | 200 |
+| **GET** `/api/<colección>/deleted` | Papelera, del eliminado más reciente al más antiguo | 200 |
+| **GET** `/api/<colección>/slug/:slug` | Por slug (todas menos `images`) | 200 |
+| **GET** `/api/<colección>/:id` | Por ID | 200 |
+| **POST** `/api/<colección>` | Crear | 201 |
+| **PATCH** `/api/<colección>/:id` | Editar solo los campos que se envían | 200 |
+| **PATCH** `/api/<colección>/:id/active` | Activar o desactivar | 200 |
+| **PATCH** `/api/<colección>/:id/delete` | Eliminar (soft delete) | 204 |
+| **PATCH** `/api/<colección>/:id/restore` | Restaurar | 200 |
 
-Response `200`:
-```json
-[
-  {
-    "_id": "6abd589e3d6101dd2eb767e1",
-    "title": "Sierra Nevada Express",
-    "slug": "sierra-nevada-express-b767e1",
-    "description": "Subida al puerto más alto de la península",
-    "difficulty": "hard",
-    "distance": 150,
-    "duration": 5,
-    "startPoint": "Granada",
-    "endPoint": "Granada",
-    "status": "active",
-    "isActive": true,
-    "deletedAt": null,
-    "createdAt": "2026-09-30T18:44:46.613Z",
-    "updatedAt": "2026-09-30T18:44:46.613Z",
-    "__v": 0
-  }
-]
-```
+`slug`, `status` (al crear), `isActive`, `deletedAt`, `createdAt` y `updatedAt` los genera el servidor. Si se envían en el body, se ignoran.
 
----
+### Activar o desactivar
 
-## Listar rutas activas
-
-**GET** `/api/routes/actives`
-
-Response `200`: lista con el mismo formato que el listado general, solo con las rutas que tienen `isActive: true`.
-
----
-
-## Listar rutas inactivas
-
-**GET** `/api/routes/inactives`
-
-Response `200`: lista solo con las rutas que tienen `isActive: false` y no están eliminadas. Las rutas eliminadas no aparecen aunque estén inactivas.
-
----
-
-## Listar rutas eliminadas (papelera)
-
-**GET** `/api/routes/deleted`
-
-Response `200`: lista solo con las rutas eliminadas (soft delete), de la eliminada más reciente a la más antigua. Cada una lleva `deletedAt` con la fecha de eliminación, `status: "deleted"` e `isActive: false`.
+**PATCH** `/api/routes/:id/active`
 
 ```json
-[
-  {
-    "_id": "6abd58a874e3ba83e1fcb51c",
-    "title": "Ruta del Cañón",
-    "slug": "ruta-del-canon-fcb51c",
-    "difficulty": "hard",
-    "distance": 250,
-    "duration": 6,
-    "startPoint": "Santander",
-    "endPoint": "Bilbao",
-    "status": "deleted",
-    "isActive": false,
-    "deletedAt": "2026-10-01T09:12:30.000Z",
-    "createdAt": "2026-09-30T18:44:56.279Z",
-    "updatedAt": "2026-10-01T09:12:30.000Z",
-    "__v": 0
-  }
-]
+{ "isActive": false }
 ```
 
-Es la única consulta que devuelve rutas eliminadas. Para recuperar una, usa `PATCH /api/routes/:id/restore`.
+También se puede con el PATCH normal: `{ "status": "inactive" }`. El valor `deleted` no se acepta ahí: solo se llega con `/delete`.
 
----
+### Eliminar y restaurar
 
-## Obtener ruta por ID
+**PATCH** `/api/routes/:id/delete` → `204` sin body. El documento pasa a la papelera (`GET /api/routes/deleted`).
 
-**GET** `/api/routes/:id`
+**PATCH** `/api/routes/:id/restore`
 
-Response `200`: un objeto ruta (mismo formato que en el listado).
-
-Response `400` (ID con formato inválido):
 ```json
-{
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "details": [{ "field": "id", "message": "id has an invalid format" }]
-}
+{ "isActive": true }
 ```
 
-Response `404` (no existe o está eliminada):
+Sin body, vuelve inactivo. Si no estaba eliminado:
 ```json
-{ "statusCode": 404, "error": "Not Found", "message": "Route not found" }
+{ "statusCode": 409, "error": "Conflict", "message": "Route is not deleted" }
 ```
 
----
+### Errores comunes
 
-## Obtener ruta por slug
-
-**GET** `/api/routes/slug/:slug`
-
-Ejemplo: `/api/routes/slug/sierra-nevada-express-b767e1`
-
-Response `200`: un objeto ruta (mismo formato que en el listado).
-
-Response `400` (slug con formato inválido: solo minúsculas, números y guiones):
-```json
-{
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "details": [{ "field": "slug", "message": "slug has an invalid format" }]
-}
-```
-
-Response `404` (no existe o está eliminada):
-```json
-{ "statusCode": 404, "error": "Not Found", "message": "Route not found" }
-```
-
----
-
-## Crear ruta
-
-**POST** `/api/routes`
-
-Body:
-```json
-{
-  "title": "Ruta del Cañón",
-  "description": "Travesía por los desfiladeros del norte",
-  "difficulty": "hard",
-  "distance": 250,
-  "duration": 6,
-  "startPoint": "Santander",
-  "endPoint": "Bilbao"
-}
-```
-
-Response `201`:
-```json
-{
-  "_id": "6abd58a874e3ba83e1fcb51c",
-  "title": "Ruta del Cañón",
-  "slug": "ruta-del-canon-fcb51c",
-  "description": "Travesía por los desfiladeros del norte",
-  "difficulty": "hard",
-  "distance": 250,
-  "duration": 6,
-  "startPoint": "Santander",
-  "endPoint": "Bilbao",
-  "status": "active",
-  "isActive": true,
-  "deletedAt": null,
-  "createdAt": "2026-09-30T18:44:56.279Z",
-  "updatedAt": "2026-09-30T18:44:56.279Z",
-  "__v": 0
-}
-```
-
-`slug`, `status`, `isActive`, `deletedAt`, `createdAt` y `updatedAt` los genera el servidor. Si se envían en el body, se ignoran.
-
-### Campos requeridos
-
-| Campo      | Tipo   | Valores válidos          |
-|------------|--------|--------------------------|
-| title      | String | máx. 120 caracteres      |
-| difficulty | String | `easy`, `medium`, `hard` |
-| distance   | Number | >= 0 (en km)             |
-| duration   | Number | >= 0 (en horas)          |
-| startPoint | String | máx. 100 caracteres      |
-| endPoint   | String | máx. 100 caracteres      |
-
-### Campos opcionales
-
-| Campo       | Tipo   | Valores válidos     |
-|-------------|--------|---------------------|
-| description | String | máx. 500 caracteres |
-
-Response `400` (validación):
+Response `400` (validación de Zod):
 ```json
 {
   "statusCode": 400,
@@ -216,127 +82,339 @@ Response `400` (validación):
 }
 ```
 
+Response `400` (ID con formato no válido, por ejemplo `/api/routes/123`):
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "details": [{ "field": "id", "message": "id has an invalid format" }]
+}
+```
+
+Response `404` (no existe o está eliminado):
+```json
+{ "statusCode": 404, "error": "Not Found", "message": "Route not found" }
+```
+
 Response `400` (JSON mal formado):
 ```json
 { "statusCode": 400, "error": "Bad Request", "message": "Malformed JSON in request body" }
 ```
 
-Response `409` (ya existe una ruta con el slug generado; se comprueba antes de crear):
+---
+
+## Roles
+
+**POST** `/api/roles`
+
 ```json
-{ "statusCode": 409, "error": "Conflict", "message": "A route with this slug already exists" }
+{ "name": "editor", "label": "Editor", "description": "Revisa el contenido" }
 ```
 
-En la práctica no ocurre con peticiones normales, porque el slug incluye un sufijo del `_id` de la ruta.
+- `name` se guarda en minúsculas y solo admite letras, números y guiones.
+- Los roles base (`admin`, `host`, `rider`) no se pueden desactivar, eliminar ni renombrar:
+
+```json
+{ "statusCode": 409, "error": "Conflict", "message": "System roles cannot be deactivated" }
+```
+
+| Caso | Mensaje (409) |
+|---|---|
+| `name` repetido | `A role with this name already exists` |
+| Renombrar un rol base | `System roles cannot be renamed` |
+| Eliminar un rol base | `System roles cannot be deleted` |
+| Eliminar un rol con usuarios | `Cannot delete a role that has users` |
 
 ---
 
-## Actualizar ruta (parcial)
+## Users
 
-**PATCH** `/api/routes/:id`
+**POST** `/api/users`
 
-Body (solo los campos a actualizar):
 ```json
 {
-  "title": "Desfiladero del Norte",
-  "distance": 200
+  "name": "Ana Ruiz",
+  "email": "ana@routly.dev",
+  "password": "una-contraseña-larga",
+  "roleId": "<id de un rol>"
 }
 ```
 
-Response `200`: la ruta actualizada. Si cambia el título, el `slug` se regenera.
-
-### Activar / desactivar una ruta
-
+Response `201`:
 ```json
-{ "status": "inactive" }
+{
+  "_id": "6ad647681b0b769e10cbcc85",
+  "name": "Marta Gil",
+  "email": "marta@routly.dev",
+  "roleId": "6ad647681b0b769e10cbcc7d",
+  "status": "active",
+  "isActive": true,
+  "deletedAt": null,
+  "slug": "marta-gil-cbcc85",
+  "createdAt": "2026-10-19T16:38:00.932Z",
+  "updatedAt": "2026-10-19T16:38:00.932Z",
+  "__v": 0,
+  "role": { "_id": "6ad647681b0b769e10cbcc7d", "name": "rider", "label": "Motorista" },
+  "coverImage": {
+    "_id": "6ad647691b0b769e10cbccbf",
+    "url": "https://picsum.photos/seed/marta-gil-cbcc85/400/400",
+    "alt": "Foto de perfil de Marta Gil"
+  }
+}
 ```
 
-Solo se admiten `active` e `inactive`, e `isActive` se sincroniza automáticamente. `deleted` solo se consigue con `PATCH /api/routes/:id/delete`.
+- Sin `roleId`, el usuario es `rider`.
+- `password` tiene de 8 a 72 caracteres. Se guarda solo su hash: **`passwordHash` nunca aparece en una respuesta**.
+- El correo se guarda en minúsculas.
 
-Response `400` (status no permitido):
+| Caso | Respuesta |
+|---|---|
+| Email repetido | 409 `A user with this email already exists` |
+| `roleId` inexistente, eliminado o inactivo | 400 en `roleId`: `roleId must reference an active role` |
+| Quitar el rol `host` a un usuario con perfil de anfitrión | 409 `User has a host profile` |
+| Eliminar un usuario con perfil de anfitrión | 409 `Cannot delete a user that has a host profile` |
+
+---
+
+## Hosts
+
+**POST** `/api/hosts`
+
+```json
+{
+  "userId": "<id de un usuario con el rol host>",
+  "name": "Lucía Ferrer",
+  "biography": "Guía en Mallorca desde 2015."
+}
+```
+
+`userId` no se puede cambiar después. La respuesta trae `user: { _id, name, email }` y `coverImage`.
+
+| Caso | Respuesta |
+|---|---|
+| El usuario no tiene el rol `host` | 400 en `userId`: `userId must reference a user with the host role` |
+| El usuario ya tiene perfil | 409 `This user already has a host profile` |
+| Eliminar un anfitrión con experiencias | 409 `Cannot delete a host that has experiences` |
+
+---
+
+## Categories
+
+**POST** `/api/categories`
+
+```json
+{ "name": "Urbana", "description": "Rutas por ciudad" }
+```
+
+El nombre es único sin distinguir mayúsculas ni tildes: `MONTAÑA` y `Cósta` chocan con `Montaña` y `Costa`. La `ñ` cuenta como letra propia: `Montana` es otro nombre.
+
+| Caso | Mensaje (409) |
+|---|---|
+| Nombre repetido | `A category with this name already exists` |
+| Eliminar una categoría con rutas | `Cannot delete a category that has routes` |
+
+---
+
+## Locations
+
+**POST** `/api/locations`
+
+```json
+{ "city": "Teruel", "region": "Aragón", "latitude": 40.3456, "longitude": -1.1065 }
+```
+
+- `country` es `España` si no se envía.
+- `latitude` y `longitude` van las dos o ninguna:
+
 ```json
 {
   "statusCode": 400,
   "error": "Bad Request",
   "message": "Validation failed",
-  "details": [{ "field": "status", "message": "status must be one of: active, inactive" }]
+  "details": [{ "field": "latitude", "message": "latitude and longitude must be sent together" }]
 }
 ```
 
-Response `400` (validación): mismo formato que en POST, con `details`.
-
-Response `404`: la ruta no existe o está eliminada.
+| Caso | Mensaje (409) |
+|---|---|
+| Ciudad, región y país repetidos | `A location with this city, region and country already exists` |
+| Eliminar una ubicación usada por rutas | `Cannot delete a location that is used by routes` |
 
 ---
 
-## Activar o desactivar una ruta
+## Routes
 
-**PATCH** `/api/routes/:id/active`
+**POST** `/api/routes`
 
-Body:
-```json
-{ "isActive": false }
-```
-
-Response `200`: la ruta actualizada, con `isActive` y `status` (`active` / `inactive`) cambiados. `deletedAt` no se modifica.
-
-Response `400` (falta `isActive` o no es booleano):
 ```json
 {
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "details": [{ "field": "isActive", "message": "isActive must be a valid boolean" }]
+  "title": "Ruta del Cañón",
+  "description": "Travesía por los desfiladeros del norte",
+  "difficulty": "hard",
+  "distance": 250,
+  "duration": 6,
+  "categoryId": "<id de una categoría>",
+  "startLocationId": "<id de una ubicación>",
+  "endLocationId": "<id de una ubicación>"
 }
 ```
 
-Response `404`: la ruta no existe o está eliminada. Una ruta eliminada no se puede activar.
+Response `200` de **GET** `/api/routes/slug/caminos-de-mallorca-cbccb5`:
+```json
+{
+  "_id": "6ad647691b0b769e10cbccb5",
+  "title": "Caminos de Mallorca",
+  "description": "Ruta por la Serra de Tramuntana con curvas sin fin",
+  "difficulty": "medium",
+  "distance": 120,
+  "duration": 3,
+  "categoryId": "6ad647681b0b769e10cbcc8d",
+  "startLocationId": "6ad647681b0b769e10cbcc9f",
+  "endLocationId": "6ad647681b0b769e10cbcca1",
+  "status": "active",
+  "isActive": true,
+  "deletedAt": null,
+  "slug": "caminos-de-mallorca-cbccb5",
+  "createdAt": "2026-10-19T16:38:01.043Z",
+  "updatedAt": "2026-10-19T16:38:01.043Z",
+  "__v": 0,
+  "category": { "_id": "6ad647681b0b769e10cbcc8d", "name": "Montaña", "slug": "montana-cbcc8d" },
+  "startLocation": { "_id": "6ad647681b0b769e10cbcc9f", "city": "Palma", "region": "Islas Baleares", "country": "España", "slug": "palma-cbcc9f" },
+  "endLocation": { "_id": "6ad647681b0b769e10cbcca1", "city": "Sóller", "region": "Islas Baleares", "country": "España", "slug": "soller-cbcca1" },
+  "coverImage": {
+    "_id": "6ad647691b0b769e10cbccb7",
+    "url": "https://picsum.photos/seed/caminos-de-mallorca-cbccb5/1200/800",
+    "alt": "Caminos de Mallorca, foto 1"
+  }
+}
+```
+
+- `endLocationId` puede ser igual que `startLocationId` (ruta circular).
+- El slug se regenera si cambia el título.
+
+| Caso | Respuesta |
+|---|---|
+| Categoría inexistente, eliminada o inactiva | 400 en `categoryId`: `categoryId must reference an active category` |
+| Ubicación inexistente, eliminada o inactiva | 400 en `startLocationId` o `endLocationId` |
+| Eliminar una ruta con experiencias | 409 `Cannot delete a route that has experiences` |
+| Restaurar una ruta cuya categoría está en la papelera | 409 `Cannot restore: categoryId references a deleted category` |
 
 ---
 
-## Eliminar ruta (soft delete)
+## Experiences
 
-**PATCH** `/api/routes/:id/delete`
+**POST** `/api/experiences`
 
-Sin body.
+```json
+{
+  "hostId": "<id de un anfitrión>",
+  "routeId": "<id de una ruta>",
+  "title": "Tramuntana al amanecer",
+  "meetingPoint": "Plaça d'Espanya, Palma",
+  "language": "es",
+  "duration": 5,
+  "minParticipants": 2,
+  "maxParticipants": 8
+}
+```
 
-Response `204`: sin contenido.
+La respuesta trae `host: { _id, name, slug }` y `route: { _id, title, slug }`.
 
-La ruta no se borra de MongoDB: se le asignan `deletedAt` (fecha actual), `status: "deleted"` e `isActive: false`, y deja de aparecer en todas las consultas.
-
-Response `404`: la ruta no existe o ya estaba eliminada.
+| Caso | Respuesta |
+|---|---|
+| `minParticipants` mayor que `maxParticipants` | 400 en `maxParticipants` |
+| Bajar `maxParticipants` por debajo de las plazas de una salida | 409 `maxParticipants is lower than the capacity of an existing departure` |
+| Eliminar una experiencia con salidas | 409 `Cannot delete an experience that has departures` |
 
 ---
 
-## Restaurar una ruta eliminada
+## Departures
 
-**PATCH** `/api/routes/:id/restore`
+**POST** `/api/departures`
 
-Body opcional:
 ```json
-{ "isActive": true }
+{
+  "experienceId": "<id de una experiencia>",
+  "startAt": "2026-11-08T06:00:00.000Z",
+  "endAt": "2026-11-08T11:00:00.000Z",
+  "capacity": 8,
+  "price": 89.5
+}
 ```
 
-- Con `isActive: true`: la ruta se restaura y queda activa.
-- Con `isActive: false` o sin body: se restaura pero queda inactiva.
-
-Response `200`: la ruta restaurada, con `deletedAt: null`.
-
-Response `409` (la ruta no está eliminada):
+Response `201`:
 ```json
-{ "statusCode": 409, "error": "Conflict", "message": "Route is not deleted" }
+{
+  "_id": "6ad647691b0b769e10cbccc6",
+  "experienceId": "6ad647691b0b769e10cbccc2",
+  "startAt": "2026-11-02T06:00:00.000Z",
+  "endAt": "2026-11-02T11:00:00.000Z",
+  "capacity": 8,
+  "price": 89,
+  "state": "scheduled",
+  "sku": "RTL-DEP-261102-YTSKF",
+  "slug": "tramuntana-al-amanecer-2026-11-02-cbccc6",
+  "status": "active",
+  "isActive": true,
+  "deletedAt": null,
+  "createdAt": "2026-10-19T16:38:01.097Z",
+  "updatedAt": "2026-10-19T16:38:01.097Z",
+  "__v": 0,
+  "experience": { "_id": "6ad647691b0b769e10cbccc2", "title": "Tramuntana al amanecer", "slug": "tramuntana-al-amanecer-cbccc2" }
+}
 ```
 
-Response `400`: `isActive` no es booleano o el ID no es válido.
+- `sku` y `slug` los genera el servidor. El SKU **no cambia nunca**; el slug sigue a `startAt`.
+- `state`: `scheduled` (por defecto), `cancelled` o `completed`. Es independiente de `status`.
+- `price` admite como mucho dos decimales.
 
-Response `404`: la ruta no existe.
+**GET** `/api/departures/sku/RTL-DEP-261102-YTSKF` → la salida. También funciona en minúsculas.
+
+| Caso | Respuesta |
+|---|---|
+| `startAt` en el pasado | 400 en `startAt`: `startAt must be in the future` |
+| `endAt` antes de `startAt` | 400 en `endAt`: `endAt must be after startAt` |
+| Más plazas que el máximo de la experiencia | 400 en `capacity` |
+| SKU con formato no válido | 400 en `sku` |
+
+---
+
+## Images
+
+**POST** `/api/images`
+
+```json
+{
+  "ownerType": "route",
+  "ownerId": "<id de la ruta>",
+  "url": "https://picsum.photos/seed/mi-ruta/1200/800",
+  "alt": "Vista del puerto"
+}
+```
+
+- `ownerType` es `route`, `user`, `host`, `experience`, `category` o `location`.
+- La primera imagen de un dueño es la principal (`isCover: true`). `position` va al final si no se envía.
+- Para cambiar la principal: **PATCH** `/api/images/:id` con `{ "isCover": true }`. La anterior se desmarca.
+- Las imágenes no tienen slug: no hay `GET /slug/:slug`.
+
+**GET** `/api/images?ownerType=route&ownerId=<id>` → la galería de un dueño, por posición.
+
+| Caso | Respuesta |
+|---|---|
+| El dueño no existe o está eliminado | 400 en `ownerId`: `ownerId must reference an existing route` |
+| Filtro con solo `ownerType` o solo `ownerId` | 400: `ownerType and ownerId must be sent together` |
+| Marcar como principal una imagen inactiva | 409 `Inactive images cannot be the cover` |
+
+Al eliminar el dueño, sus imágenes van a la papelera con él, y vuelven al restaurarlo.
 
 ---
 
 ## Endpoint inexistente
 
-**GET** `/api/noexiste`
+**GET** `/api/nope`
 
 Response `404`:
 ```json
-{ "statusCode": 404, "error": "Not Found", "message": "Endpoint GET /api/noexiste not found" }
+{ "statusCode": 404, "error": "Not Found", "message": "Endpoint GET /api/nope not found" }
 ```

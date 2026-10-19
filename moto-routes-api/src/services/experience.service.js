@@ -1,0 +1,119 @@
+import { statusFromActive } from "../models/status.js";
+import { departureRepository } from "../repositories/departure.repository.js";
+import { experienceRepository } from "../repositories/experience.repository.js";
+import { hostRepository } from "../repositories/host.repository.js";
+import { routeRepository } from "../repositories/route.repository.js";
+import { conflict, fieldError, notFound } from "../utils/errors.js";
+import { buildSlug } from "../utils/slugify.js";
+import { imageService } from "./image.service.js";
+import {
+  assertNoDependents,
+  assertReference,
+  assertRestorable,
+  assertSlugAvailable,
+  findRestorable,
+} from "./references.js";
+
+const REFERENCES = [
+  { field: "hostId", repository: hostRepository, resource: "host" },
+  { field: "routeId", repository: routeRepository, resource: "route" },
+];
+
+// Al crear se comprueban todas; al editar, solo las que cambian
+async function assertReferences(data, current = {}) {
+  for (const { field, repository, resource } of REFERENCES) {
+    if (data[field] !== undefined && data[field] !== String(current[field])) {
+      await assertReference(repository, data[field], field, resource);
+    }
+  }
+}
+
+export const experienceService = {
+  async list() {
+    return experienceRepository.findAll();
+  },
+
+  async listByActive(isActive) {
+    return experienceRepository.findAll({ isActive });
+  },
+
+  async listDeleted() {
+    return experienceRepository.findDeleted();
+  },
+
+  async getById(id) {
+    const experience = await experienceRepository.findById(id);
+    if (!experience) throw notFound("Experience");
+    return experience;
+  },
+
+  async getBySlug(slug) {
+    const experience = await experienceRepository.findBySlug(slug);
+    if (!experience) throw notFound("Experience");
+    return experience;
+  },
+
+  async create(data) {
+    await assertReferences(data);
+
+    const _id = experienceRepository.generateId();
+    await assertSlugAvailable(experienceRepository, buildSlug(data.title, _id), "Experience");
+
+    await experienceRepository.create({ ...data, _id });
+    return experienceService.getById(_id);
+  },
+
+  async update(id, data) {
+    const experience = await experienceService.getById(id);
+    await assertReferences(data, experience);
+
+    // Si solo llega uno de los dos límites, se compara con el guardado
+    const minParticipants = data.minParticipants ?? experience.minParticipants;
+    const maxParticipants = data.maxParticipants ?? experience.maxParticipants;
+    if (maxParticipants < minParticipants) {
+      throw fieldError(
+        "maxParticipants",
+        "maxParticipants must be greater than or equal to minParticipants"
+      );
+    }
+
+    // No se puede dejar una salida con más plazas que el nuevo máximo
+    if (
+      data.maxParticipants !== undefined &&
+      (await departureRepository.exists({ experienceId: id, capacity: { $gt: data.maxParticipants } }))
+    ) {
+      throw conflict("maxParticipants is lower than the capacity of an existing departure");
+    }
+
+    await experienceRepository.updateById(id, data);
+    return experienceService.getById(id);
+  },
+
+  async setActive(id, isActive) {
+    return experienceService.update(id, { status: statusFromActive(isActive) });
+  },
+
+  async remove(id) {
+    await experienceService.getById(id);
+    await assertNoDependents(
+      departureRepository,
+      { experienceId: id },
+      "Cannot delete an experience that has departures"
+    );
+
+    const experience = await experienceRepository.softDeleteById(id);
+    await imageService.removeByOwner("experience", id, experience.deletedAt);
+  },
+
+  async restore(id, isActive = false) {
+    const deleted = await findRestorable(experienceRepository, id, "Experience");
+
+    for (const { field, repository, resource } of REFERENCES) {
+      await assertRestorable(repository, deleted[field], field, resource);
+    }
+
+    await experienceRepository.restoreById(id, { status: statusFromActive(isActive) });
+    await imageService.restoreByOwner("experience", id, deleted.deletedAt);
+    return experienceService.getById(id);
+  },
+};

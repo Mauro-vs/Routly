@@ -1,0 +1,102 @@
+<form [id]="formId" class="card panel fields" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  @if (formError(); as message) {
+    <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
+  }
+
+  <ui-form-field
+    label="Título"
+    hint="Se usa para generar la dirección de la ruta."
+    [counter]="titleCounter()"
+    [error]="errorOf('title')"
+  >
+    <input uiInput type="text" name="title" formControlName="title" autocomplete="off" />
+  </ui-form-field>
+
+  <ui-form-field
+    label="Descripción"
+    [optional]="true"
+    [counter]="descriptionCounter()"
+    [error]="errorOf('description')"
+  >
+    <textarea uiInput rows="3" name="description" formControlName="description" autocomplete="off"></textarea>
+  </ui-form-field>
+
+  <ui-form-field
+    label="Categoría"
+    [hint]="optionsLoading() ? 'Cargando categorías…' : ''"
+    [error]="errorOf('categoryId')"
+  >
+    <select uiInput class="select" name="categoryId" formControlName="categoryId">
+      <option value="" disabled>Elige una categoría</option>
+      @for (option of categoryOptions(); track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </ui-form-field>
+
+  <div class="two">
+    <ui-form-field
+      label="Origen"
+      [hint]="optionsLoading() ? 'Cargando ubicaciones…' : ''"
+      [error]="errorOf('startLocationId')"
+    >
+      <select uiInput class="select" name="startLocationId" formControlName="startLocationId">
+        <option value="" disabled>Elige el origen</option>
+        @for (option of locationOptions(); track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </ui-form-field>
+    <ui-form-field
+      label="Destino"
+      hint="Puede ser el mismo que el origen."
+      [error]="errorOf('endLocationId')"
+    >
+      <select uiInput class="select" name="endLocationId" formControlName="endLocationId">
+        <option value="" disabled>Elige el destino</option>
+        @for (option of locationOptions(); track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </ui-form-field>
+  </div>
+
+  <fieldset class="choice-field" [attr.aria-describedby]="errorOf('difficulty') ? 'difficulty-error' : null">
+    <legend>Dificultad</legend>
+    <div class="choices">
+      @for (option of difficulties; track option.value) {
+        <div>
+          <input
+            class="sr-only"
+            type="radio"
+            name="difficulty"
+            formControlName="difficulty"
+            [id]="'difficulty-' + option.value"
+            [value]="option.value"
+          />
+          <label class="choice" [for]="'difficulty-' + option.value">{{ option.label }}</label>
+        </div>
+      }
+    </div>
+    @if (errorOf('difficulty')) {
+      <p class="choice-field__error" id="difficulty-error">
+        <ui-icon name="warning-circle" />Elige una dificultad.
+      </p>
+    }
+  </fieldset>
+
+  <div class="two">
+    <ui-form-field label="Distancia" [error]="errorOf('distance')">
+      <div class="affix">
+        <input uiInput type="number" name="distance" inputmode="decimal" min="0" step="any" autocomplete="off" formControlName="distance" />
+        <span aria-hidden="true">km</span>
+      </div>
+    </ui-form-field>
+    <ui-form-field label="Duración" [error]="errorOf('duration')">
+      <div class="affix">
+        <input uiInput type="number" name="duration" inputmode="decimal" min="0" step="any" autocomplete="off" formControlName="duration" />
+        <span aria-hidden="true">h</span>
+      </div>
+    </ui-form-field>
+  </div>
+</form>

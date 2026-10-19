@@ -6,6 +6,7 @@ import {
   DIFFICULTY_BADGES,
   DIFFICULTY_LABELS,
   Route,
+  routeTrip,
 } from '../../../../core/models/route.model';
 import {
   DataTableComponent,
@@ -13,6 +14,7 @@ import {
   TableColumn,
 } from '../../../../shared/components/data-table/data-table.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
@@ -52,6 +54,7 @@ const TABLE_COLUMNS: readonly TableColumn[] = [
     DataTableComponent,
     TableCellDirective,
     EmptyStateComponent,
+    ErrorStateComponent,
     IconComponent,
     PageHeaderComponent,
     PaginationComponent,
@@ -121,6 +124,7 @@ export class RoutesListComponent {
 
   protected readonly rowKey = (route: Route): string => route._id;
   protected readonly isInactive = (route: Route): boolean => !route.isActive;
+  protected readonly trip = routeTrip;
 
   constructor() {
     void this.store.load();

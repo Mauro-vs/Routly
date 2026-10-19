@@ -1,13 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { DIFFICULTY_BADGES, DIFFICULTY_LABELS, Route } from '../../../../core/models/route.model';
+import {
+  DIFFICULTY_BADGES,
+  DIFFICULTY_LABELS,
+  Route,
+  missingReferences,
+  routeTrip,
+} from '../../../../core/models/route.model';
 import {
   DataTableComponent,
   TableCellDirective,
   TableColumn,
 } from '../../../../shared/components/data-table/data-table.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { SearchInputComponent } from '../../../../shared/components/search-input/search-input.component';
@@ -17,7 +24,7 @@ import {
 } from '../../../../shared/components/segmented/segmented.component';
 import { formatRelativeTime } from '../../../../shared/utils/format';
 import { matchesQuery } from '../../../../shared/utils/text';
-import { RoutesStore } from '../../services/routes.store';
+import { RoutesStore, routeSearchText } from '../../services/routes.store';
 
 type RestoreAs = 'inactive' | 'active';
 
@@ -40,6 +47,7 @@ const COLUMNS: readonly TableColumn[] = [
     DataTableComponent,
     TableCellDirective,
     EmptyStateComponent,
+    ErrorStateComponent,
     IconComponent,
     PageHeaderComponent,
     SearchInputComponent,
@@ -78,9 +86,7 @@ export class RoutesTrashComponent {
     const search = this.search().trim();
     const deleted = this.store.deleted();
     return search
-      ? deleted.filter((route) =>
-          matchesQuery(`${route.title} ${route.startPoint} ${route.endPoint}`, search),
-        )
+      ? deleted.filter((route) => matchesQuery(routeSearchText(route), search))
       : deleted;
   });
 
@@ -94,6 +100,7 @@ export class RoutesTrashComponent {
   });
 
   protected readonly rowKey = (route: Route): string => route._id;
+  protected readonly trip = routeTrip;
 
   constructor() {
     void this.store.loadDeleted();
@@ -105,6 +112,18 @@ export class RoutesTrashComponent {
 
   protected restore(route: Route): void {
     void this.store.restoreAndNotify(route, this.restoreAs() === 'active');
+  }
+
+  /**
+   * Por qué no se puede restaurar todavía: después de eliminar la ruta se eliminó
+   * también su categoría o una de sus ubicaciones, y la API no la restaura (409)
+   * mientras esa referencia siga en la papelera.
+   */
+  protected blockedReason(route: Route): string | null {
+    const missing = missingReferences(route);
+    if (missing.length === 0) return null;
+    const verb = missing.length > 1 ? 'sigan' : 'siga';
+    return `No se puede restaurar mientras ${missing.join(' y ')} ${verb} en la papelera.`;
   }
 
   protected deletedAgo(route: Route): string {

@@ -1,8 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { DIFFICULTY_BADGES, DIFFICULTY_LABELS, Route } from '../../../../core/models/route.model';
+import {
+  DIFFICULTY_BADGES,
+  DIFFICULTY_LABELS,
+  Route,
+  routeTrip,
+} from '../../../../core/models/route.model';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton.component';
@@ -12,7 +18,14 @@ import { DashboardStore } from '../../services/dashboard.store';
 /** Portada del panel: las cifras del catálogo de un vistazo. */
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, EmptyStateComponent, IconComponent, PageHeaderComponent, SkeletonComponent],
+  imports: [
+    RouterLink,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    IconComponent,
+    PageHeaderComponent,
+    SkeletonComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
@@ -44,7 +57,7 @@ export class DashboardComponent {
 
   protected summary(route: Route): string {
     // Espacio de no separación entre la cifra y la unidad.
-    return `${route.startPoint} a ${route.endPoint}, ${formatNumber(route.distance)} km`;
+    return `${routeTrip(route).text}, ${formatNumber(route.distance)} km`;
   }
 
   protected updated(route: Route): string {

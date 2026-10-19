@@ -7,7 +7,15 @@ import { helmetMiddleware } from "./config/helmet.js";
 import { morganMiddleware } from "./config/morgan.js";
 import { swaggerSpec } from "./config/swagger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import categoryRoutes from "./routes/category.routes.js";
+import departureRoutes from "./routes/departure.routes.js";
+import experienceRoutes from "./routes/experience.routes.js";
+import hostRoutes from "./routes/host.routes.js";
+import imageRoutes from "./routes/image.routes.js";
+import locationRoutes from "./routes/location.routes.js";
+import roleRoutes from "./routes/role.routes.js";
 import routeRoutes from "./routes/route.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,7 +30,15 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api/roles", roleRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/hosts", hostRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/locations", locationRoutes);
 app.use("/api/routes", routeRoutes);
+app.use("/api/experiences", experienceRoutes);
+app.use("/api/departures", departureRoutes);
+app.use("/api/images", imageRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

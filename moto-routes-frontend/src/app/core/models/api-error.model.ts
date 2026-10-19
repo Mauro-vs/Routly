@@ -44,4 +44,13 @@ export class ApiError extends Error {
   get isConflict(): boolean {
     return this.status === 409;
   }
+
+  /**
+   * 409 al restaurar porque una de sus referencias (la categoría de una ruta, por
+   * ejemplo) sigue en la papelera. El registro sigue eliminado: no hay que darlo por
+   * restaurado.
+   */
+  get isMissingReference(): boolean {
+    return this.isConflict && (this.detail?.startsWith('Cannot restore:') ?? false);
+  }
 }

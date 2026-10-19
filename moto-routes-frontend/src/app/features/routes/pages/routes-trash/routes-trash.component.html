@@ -4,16 +4,7 @@
 
 @if (loadFailed()) {
   <div class="card">
-    <ui-empty-state
-      tone="danger"
-      icon="wifi-slash"
-      title="No se ha podido cargar la papelera"
-      description="Comprueba que la API está en marcha y vuelve a intentarlo."
-    >
-      <button type="button" class="btn btn--secondary" (click)="reload()">
-        <ui-icon name="arrows-clockwise" />Reintentar
-      </button>
-    </ui-empty-state>
+    <ui-error-state title="No se ha podido cargar la papelera" (retry)="reload()" />
   </div>
 } @else if (store.deletedLoaded() && store.deletedCount() === 0) {
   <div class="card">
@@ -30,7 +21,7 @@
     <ui-search-input
       class="toolbar__search"
       label="Buscar en la papelera"
-      placeholder="Buscar por título, origen o destino…"
+      placeholder="Buscar por título, lugar o categoría…"
       [(value)]="search"
     />
     <div class="toolbar__end">
@@ -67,10 +58,15 @@
       <ng-template uiCell="title" [uiCellOf]="filtered()" let-route>
         <span class="cell-title">{{ route.title }}</span>
         <p class="slug" translate="no">{{ route.slug }}</p>
+        @if (blockedReason(route); as reason) {
+          <p class="blocked" [id]="'blocked-' + route._id">
+            <ui-icon name="warning-circle" />{{ reason }}
+          </p>
+        }
       </ng-template>
       <ng-template uiCell="trip" [uiCellOf]="filtered()" let-route>
-        <span class="cell-trip" [title]="route.startPoint + ' a ' + route.endPoint">
-          {{ route.startPoint }} <span class="muted">a</span> {{ route.endPoint }}
+        <span class="cell-trip" [title]="trip(route).text">
+          {{ trip(route).from }} <span class="muted">a</span> {{ trip(route).to }}
         </span>
       </ng-template>
       <ng-template uiCell="difficulty" [uiCellOf]="filtered()" let-route>
@@ -86,7 +82,8 @@
           type="button"
           class="btn btn--secondary btn--sm"
           [attr.aria-label]="'Restaurar ' + route.title"
-          [disabled]="store.isBusy(route._id)"
+          [disabled]="store.isBusy(route._id) || !!blockedReason(route)"
+          [attr.aria-describedby]="blockedReason(route) ? 'blocked-' + route._id : null"
           (click)="restore(route)"
         >
           <ui-icon name="arrow-counter-clockwise" />Restaurar

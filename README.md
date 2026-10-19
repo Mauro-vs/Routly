@@ -27,14 +27,14 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve.
+Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve. La API ya tiene las nueve colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas e imágenes); el panel gestiona de momento las rutas.
 
 <table>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/assets/icon-catalog.svg" width="44" alt=""><br>
       <b>Catálogo completo</b><br>
-      Crea, edita y elimina rutas. Cada una tiene su propia dirección, como <code>/routes/costa-brava-loop-df38e5/edit</code>.
+      Crea, edita y elimina rutas con su categoría, su origen y su destino, elegidos de listas. Cada ruta tiene su portada y su propia dirección.
     </td>
     <td width="50%" valign="top">
       <img src="docs/assets/icon-toggle.svg" width="44" alt=""><br>
@@ -74,8 +74,8 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
     </td>
     <td valign="top">
       <img src="docs/assets/icon-docs.svg" width="44" alt=""><br>
-      <b>API documentada</b><br>
-      Todos los endpoints se pueden probar desde Swagger, en <code>/api/docs</code>.
+      <b>API completa y documentada</b><br>
+      Nueve colecciones relacionadas, con papelera en todas. Sus 99 endpoints se pueden probar desde Swagger, en <code>/api/docs</code>.
     </td>
   </tr>
 </table>
@@ -141,7 +141,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="moto-routes-api/README.md"><b>API</b></a></td>
-    <td>Express 5, Mongoose 9, Zod 4</td>
+    <td>Express 5, Mongoose 9 con relaciones y <code>populate</code>, Zod 4</td>
     <td>Arquitectura por capas, validación antes del controlador, borrado lógico reutilizable y un único formato de error</td>
   </tr>
 </table>
@@ -193,15 +193,17 @@ npm start
 
 ## Hoja de ruta
 
-Las siguientes piezas siguen el mismo patrón que las rutas: papelera, estado activo y su sección en el panel, que ya aparece en el menú como "Próximamente". El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md).
+Todas las colecciones siguen el mismo patrón que las rutas: papelera, estado activo y, cuando tengan páginas, su sección en el panel, que ya aparece en el menú como "Próximamente". El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md).
+
+"API lista" quiere decir que la API, el modelo, el servicio y el store del panel están hechos, y faltan las páginas.
 
 | Estado | Bloque | Colecciones | Para qué |
 |:---:|---|---|---|
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Rutas | `routes` | Catálogo de rutas |
-| ![siguiente](https://img.shields.io/badge/siguiente-c6f04d?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
-| ![diseñado](https://img.shields.io/badge/diseñado-0c2419?style=flat-square) | Catálogo | `categories`, `locations` | Tipos de ruta y ubicaciones con coordenadas para buscar por cercanía |
-| ![diseñado](https://img.shields.io/badge/diseñado-0c2419?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas y precio |
-| ![diseñado](https://img.shields.io/badge/diseñado-0c2419?style=flat-square) | Contenido | `images` | Galería de imágenes para cualquier elemento |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Rutas | `routes` | Catálogo de rutas, con categoría, origen, destino y portada |
+| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Catálogo | `categories`, `locations` | Tipos de ruta y ubicaciones con coordenadas para buscar por cercanía |
+| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
+| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
+| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `bookings`, `reviews` | Reservas y valoraciones |
 
 ## Autor

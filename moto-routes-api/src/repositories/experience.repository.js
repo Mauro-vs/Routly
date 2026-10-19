@@ -1,0 +1,66 @@
+import mongoose from "mongoose";
+import { Experience } from "../models/experience.model.js";
+
+const NOT_DELETED = { deletedAt: null };
+
+const withRelations = (query) =>
+  query.populate("host", "name slug").populate("route", "title slug");
+
+export const experienceRepository = {
+  findAll(filter = {}) {
+    return withRelations(
+      Experience.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 })
+    ).lean();
+  },
+
+  findDeleted() {
+    return withRelations(
+      Experience.find({ deletedAt: { $ne: null } }).sort({ deletedAt: -1 })
+    ).lean();
+  },
+
+  findById(id) {
+    return withRelations(Experience.findOne({ _id: id, ...NOT_DELETED })).lean();
+  },
+
+  findBySlug(slug) {
+    return withRelations(Experience.findOne({ slug, ...NOT_DELETED })).lean();
+  },
+
+  findDeletedById(id) {
+    return Experience.findOne({ _id: id, deletedAt: { $ne: null } }).lean();
+  },
+
+  exists(filter) {
+    return Experience.exists({ ...filter, ...NOT_DELETED });
+  },
+
+  existsBySlug(slug) {
+    return Experience.exists({ slug }).setOptions({ withDeleted: true });
+  },
+
+  generateId() {
+    return new mongoose.Types.ObjectId();
+  },
+
+  create(data) {
+    return Experience.create(data);
+  },
+
+  updateById(id, data) {
+    return withRelations(
+      Experience.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+        returnDocument: "after",
+        runValidators: true,
+      })
+    ).lean();
+  },
+
+  softDeleteById(id) {
+    return Experience.softDeleteById(id).lean();
+  },
+
+  restoreById(id, data) {
+    return Experience.restoreById(id, data).lean();
+  },
+};

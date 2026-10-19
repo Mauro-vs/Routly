@@ -1,4 +1,12 @@
 <article class="card route" [class.is-inactive]="!route().isActive">
+  <div class="route__cover">
+    @if (route().coverImage; as cover) {
+      <img [src]="cover.url" [alt]="cover.alt ?? ''" loading="lazy" decoding="async" width="600" height="264" />
+    } @else {
+      <ui-icon name="path" />
+    }
+  </div>
+
   <header class="route__top">
     <span class="badge" [class]="badgeClass()">{{ difficultyLabel() }}</span>
     <span class="state">
@@ -16,6 +24,7 @@
   </header>
 
   <div class="route__title">
+    <p class="category">{{ category() }}</p>
     <h2>
       <a [routerLink]="editLink()">{{ route().title }}</a>
     </h2>
@@ -23,10 +32,10 @@
   </div>
 
   <p class="trip">
-    <span [title]="route().startPoint">{{ route().startPoint }}</span>
+    <span [title]="trip().from">{{ trip().from }}</span>
     <i aria-hidden="true"></i>
     <span class="sr-only">a</span>
-    <span [title]="route().endPoint">{{ route().endPoint }}</span>
+    <span [title]="trip().to">{{ trip().to }}</span>
   </p>
 
   <dl class="facts">

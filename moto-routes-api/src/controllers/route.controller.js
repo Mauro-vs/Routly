@@ -1,51 +1,96 @@
 import { routeService } from "../services/route.service.js";
 
-// Express 5 envía automáticamente al errorHandler cualquier error lanzado en un
-// handler async, por eso no hace falta try/catch en cada método.
+// Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
+// service o de Mongoose) se pasan con next() al errorHandler global, que responde
+// siempre con el mismo formato.
 export const routeController = {
-  async list(req, res) {
-    res.json(await routeService.list());
+  async list(req, res, next) {
+    try {
+      res.json(await routeService.list());
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async listActives(req, res) {
-    res.json(await routeService.listByActive(true));
+  async listActives(req, res, next) {
+    try {
+      res.json(await routeService.listByActive(true));
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async listInactives(req, res) {
-    res.json(await routeService.listByActive(false));
+  async listInactives(req, res, next) {
+    try {
+      res.json(await routeService.listByActive(false));
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async listDeleted(req, res) {
-    res.json(await routeService.listDeleted());
+  async listDeleted(req, res, next) {
+    try {
+      res.json(await routeService.listDeleted());
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async getById(req, res) {
-    res.json(await routeService.getById(req.params.id));
+  async getById(req, res, next) {
+    try {
+      res.json(await routeService.getById(req.params.id));
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async getBySlug(req, res) {
-    res.json(await routeService.getBySlug(req.params.slug));
+  async getBySlug(req, res, next) {
+    try {
+      res.json(await routeService.getBySlug(req.params.slug));
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async create(req, res) {
-    const route = await routeService.create(req.body);
-    res.status(201).json(route);
+  async create(req, res, next) {
+    try {
+      const route = await routeService.create(req.body);
+      res.status(201).json(route);
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async update(req, res) {
-    res.json(await routeService.update(req.params.id, req.body));
+  async update(req, res, next) {
+    try {
+      res.json(await routeService.update(req.params.id, req.body));
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async setActive(req, res) {
-    res.json(await routeService.setActive(req.params.id, req.body.isActive));
+  async setActive(req, res, next) {
+    try {
+      res.json(await routeService.setActive(req.params.id, req.body.isActive));
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async remove(req, res) {
-    await routeService.remove(req.params.id);
-    res.status(204).send();
+  async remove(req, res, next) {
+    try {
+      await routeService.remove(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
   },
 
-  async restore(req, res) {
-    res.json(await routeService.restore(req.params.id, req.body.isActive));
+  async restore(req, res, next) {
+    try {
+      res.json(await routeService.restore(req.params.id, req.body.isActive));
+    } catch (error) {
+      next(error);
+    }
   },
 };

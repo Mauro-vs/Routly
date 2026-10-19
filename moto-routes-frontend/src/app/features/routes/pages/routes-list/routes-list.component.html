@@ -12,7 +12,7 @@
   <ui-search-input
     class="toolbar__search"
     label="Buscar rutas"
-    placeholder="Buscar por título, origen o destino…"
+    placeholder="Buscar por título, lugar o categoría…"
     [(value)]="store.search"
   />
   <ui-segmented
@@ -44,16 +44,7 @@
 
 @if (loadFailed()) {
   <div class="card">
-    <ui-empty-state
-      tone="danger"
-      icon="wifi-slash"
-      title="No se han podido cargar las rutas"
-      description="Comprueba que la API está en marcha y vuelve a intentarlo."
-    >
-      <button type="button" class="btn btn--secondary" (click)="reload()">
-        <ui-icon name="arrows-clockwise" />Reintentar
-      </button>
-    </ui-empty-state>
+    <ui-error-state title="No se han podido cargar las rutas" (retry)="reload()" />
   </div>
 } @else if (store.loaded() && store.total() === 0) {
   <div class="card">
@@ -83,6 +74,7 @@
       <ul class="routes" aria-busy="true" aria-label="Cargando rutas">
         @for (item of skeletonCards; track item) {
           <li class="card route-skeleton">
+            <ui-skeleton class="route-skeleton__cover" height="132px" radius="0" />
             <div class="route-skeleton__top">
               <ui-skeleton width="64px" height="24px" radius="999px" />
               <ui-skeleton width="86px" height="22px" radius="999px" />
@@ -124,12 +116,23 @@
         [loading]="showSkeleton()"
       >
         <ng-template uiCell="title" [uiCellOf]="pageItems()" let-route>
-          <a class="cell-title" [routerLink]="editLink(route)">{{ route.title }}</a>
-          <p class="slug" translate="no">{{ route.slug }}</p>
+          <span class="cell-route">
+            <span class="thumb" aria-hidden="true">
+              @if (route.coverImage; as cover) {
+                <img [src]="cover.url" alt="" loading="lazy" decoding="async" width="40" height="40" />
+              } @else {
+                <ui-icon name="path" />
+              }
+            </span>
+            <span class="cell-route__text">
+              <a class="cell-title" [routerLink]="editLink(route)">{{ route.title }}</a>
+              <p class="slug" translate="no">{{ route.slug }}</p>
+            </span>
+          </span>
         </ng-template>
         <ng-template uiCell="trip" [uiCellOf]="pageItems()" let-route>
-          <span class="cell-trip" [title]="route.startPoint + ' a ' + route.endPoint">
-            {{ route.startPoint }} <span class="muted">a</span> {{ route.endPoint }}
+          <span class="cell-trip" [title]="trip(route).text">
+            {{ trip(route).from }} <span class="muted">a</span> {{ trip(route).to }}
           </span>
         </ng-template>
         <ng-template uiCell="difficulty" [uiCellOf]="pageItems()" let-route>

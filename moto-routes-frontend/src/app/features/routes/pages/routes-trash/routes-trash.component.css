@@ -42,6 +42,23 @@
   white-space: nowrap;
 }
 
+/* aviso de que falta una referencia: va con el icono, no solo con el color */
+.blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 320px;
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-warning);
+}
+
+.blocked ui-icon {
+  flex: none;
+  margin-top: 2px;
+}
+
 .slug {
   max-width: 280px;
 }

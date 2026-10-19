@@ -1,16 +1,10 @@
 import { Router } from "express";
 import { routeController } from "../controllers/route.controller.js";
 import { validate } from "../middlewares/validate.js";
-import {
-  createRouteSchema,
-  idParamSchema,
-  restoreRouteSchema,
-  setActiveSchema,
-  slugParamSchema,
-  updateRouteSchema,
-} from "../schemas/route.schema.js";
+import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
+import { createRouteSchema, updateRouteSchema } from "../schemas/route.schema.js";
 
-// La documentación Swagger de estos endpoints está en src/docs/route.docs.yaml
+// La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
 
 router.get("/", routeController.list);
@@ -35,7 +29,7 @@ router.patch(
 router.patch("/:id/delete", validate({ params: idParamSchema }), routeController.remove);
 router.patch(
   "/:id/restore",
-  validate({ params: idParamSchema, body: restoreRouteSchema }),
+  validate({ params: idParamSchema, body: restoreSchema }),
   routeController.restore
 );
 

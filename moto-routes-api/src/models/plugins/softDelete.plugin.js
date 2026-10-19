@@ -33,7 +33,7 @@ export function softDeletePlugin(schema, { deletedFields = {} } = {}) {
     return this.findOneAndUpdate(
       { _id: id, deletedAt: null },
       { deletedAt: new Date(), ...deletedFields },
-      { new: true }
+      { returnDocument: "after" }
     );
   };
 
@@ -43,7 +43,7 @@ export function softDeletePlugin(schema, { deletedFields = {} } = {}) {
     return this.findOneAndUpdate(
       { _id: id, deletedAt: { $ne: null } },
       { ...restoredFields, deletedAt: null },
-      { new: true }
+      { returnDocument: "after" }
     );
   };
 }
