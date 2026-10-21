@@ -152,7 +152,7 @@ Lo que es igual en todas las colecciones no se repite: está en un solo sitio.
 | `models/imageOwners.js` | Las colecciones que pueden tener imágenes (`IMAGE_OWNERS`) |
 | `models/validators.js` | Enteros y precios con dos decimales en el modelo, igual que en Zod |
 | `schemas/common.schema.js` | Validación de `:id`, `:slug`, `status`, `/active` y `/restore` |
-| `services/references.js` | Comprobaciones entre colecciones (referencia válida, sin dependientes al eliminar, referencias al restaurar) y las comunes a todas: slug libre al crear y documento restaurable |
+| `services/references.js` | Comprobaciones que comparten todos los services: id válido (`assertObjectId`), documento que existe y es el pedido (`findExisting`), escritura que no devuelve `null` (`ensureWritten`), PATCH con algún campo (`assertHasChanges`), referencias, dependientes, slug libre y documento restaurable |
 | `services/image.service.js` | Además de las imágenes, la imagen principal (`coverImage`) y la cascada con la papelera |
 | `utils/errors.js` | `notFound`, `conflict`, `badRequest` y `fieldError` (400 con `details` en un campo) |
 | `utils/slugify.js` y `utils/sku.js` | Generación del slug y del SKU |
@@ -353,6 +353,7 @@ Son dos cosas distintas y se gestionan con operaciones independientes, en todas 
 - Un documento eliminado queda siempre inactivo: el soft delete fija `isActive: false`.
 - Un documento eliminado no se puede activar con `/active` (404). La única forma de recuperarlo es restaurarlo.
 - `status` resume ambos campos (`active`, `inactive` o `deleted`) e `isActive` se deriva de él en el modelo, por eso siempre coinciden.
+- Activar algo que ya está activo (o desactivar algo inactivo) devuelve el documento tal cual: no se escribe y `updatedAt` no cambia.
 
 ## Soft delete y papelera
 
@@ -436,8 +437,8 @@ router.get("/", validate({ query: imageQuerySchema }), imageController.list);
 
 En tres capas:
 
-1. **Rutas:** `validate()` con Zod rechaza la petición antes de llegar al controlador.
-2. **Services:** lanzan errores controlados con `utils/errors.js` (`notFound`, `conflict`, `fieldError`).
+1. **Rutas:** `validate()` con Zod rechaza la petición antes de llegar al controlador. En los `PATCH`, además, los campos que no se pueden cambiar (`cannotChange()` en `schemas/common.schema.js`).
+2. **Services:** antes de escribir, cada operación comprueba que el documento existe, es el pedido y está en un estado que la permite (funciones de `services/references.js`). Lanzan errores controlados con `utils/errors.js` (`notFound`, `conflict`, `badRequest`, `fieldError`).
 3. **Server:** un único middleware global, `src/middlewares/errorHandler.js`, convierte cualquier error en la respuesta. Los controladores lo capturan con `try/catch` y se lo pasan con `next(error)`.
 
 Todas las respuestas de error tienen el mismo formato:
@@ -461,9 +462,11 @@ Todas las respuestas de error tienen el mismo formato:
 | `id`, `slug` o `sku` con formato no válido | 400 |
 | Referencia que no existe, está eliminada o inactiva | 400 |
 | Regla de un campo (fecha pasada, plazas de más...) | 400 |
+| `PATCH /:id` sin ningún campo que cambiar: `No fields to update` | 400 |
+| Campo que no se puede cambiar en un `PATCH` (`_id`, `slug`, `sku`, `userId`...): `<campo> cannot be changed`, con `details` | 400 |
 | JSON mal formado | 400 |
 | Validación del modelo de Mongoose (segunda barrera) | 400 |
-| Documento no encontrado o eliminado | 404 |
+| Documento no encontrado o eliminado, también si se elimina mientras se edita | 404 |
 | Endpoint inexistente | 404 |
 | Eliminar con dependientes, o tocar un rol base | 409 |
 | Restaurar algo que no está eliminado, o con una referencia eliminada | 409 |

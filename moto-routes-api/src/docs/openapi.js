@@ -27,6 +27,11 @@ function fromZod(schema) {
     io: "input",
     unrepresentable: "any",
     override: ({ zodSchema, jsonSchema }) => {
+      // cannotChange(): campos que existen pero no se aceptan en el PATCH
+      if (zodSchema._zod.def.type === "any") {
+        jsonSchema.readOnly = true;
+        jsonSchema.description = "No se puede cambiar: si se envía, la API responde 400";
+      }
       if (zodSchema._zod.def.type === "date") {
         jsonSchema.type = "string";
         jsonSchema.format = "date-time";
@@ -409,7 +414,7 @@ function crudPaths(resource) {
         requestBody: body(`Update${schema}Input`),
         responses: {
           200: ok("Actualizado", ref),
-          400: error("ID o datos no válidos"),
+          400: error("ID o datos no válidos, body sin ningún campo (No fields to update) o un campo que no se puede cambiar"),
           404: error("No encontrado o eliminado"),
           ...conflict("update"),
         },
@@ -418,7 +423,8 @@ function crudPaths(resource) {
     [`${base}/{id}/active`]: {
       patch: {
         summary: `Activar o desactivar ${singular}`,
-        description: "No afecta a deletedAt ni a los documentos que lo usan.",
+        description:
+          "No afecta a deletedAt ni a los documentos que lo usan. Si ya tiene ese estado, se devuelve tal cual, sin cambios.",
         tags,
         parameters: [idParam],
         requestBody: activeBody(true),

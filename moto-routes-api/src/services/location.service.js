@@ -4,7 +4,14 @@ import { routeRepository } from "../repositories/route.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
 import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
-import { assertNoDependents, assertSlugAvailable, findRestorable } from "./references.js";
+import {
+  assertHasChanges,
+  assertNoDependents,
+  assertSlugAvailable,
+  ensureWritten,
+  findExisting,
+  findRestorable,
+} from "./references.js";
 
 const DUPLICATED = "A location with this city, region and country already exists";
 const DEFAULT_COUNTRY = "España";
@@ -38,8 +45,7 @@ export const locationService = {
   },
 
   async getById(id) {
-    const location = await locationRepository.findById(id);
-    if (!location) throw notFound("Location");
+    const location = await findExisting(locationRepository, id, "Location");
     return toResponse(location);
   },
 
@@ -61,6 +67,8 @@ export const locationService = {
   },
 
   async update(id, data) {
+    assertHasChanges(data);
+
     const location = await locationService.getById(id);
 
     if (data.city !== undefined || data.region !== undefined || data.country !== undefined) {
@@ -72,10 +80,15 @@ export const locationService = {
       if (await locationRepository.existsByPlace(place, id)) throw conflict(DUPLICATED);
     }
 
-    return toResponse(await locationRepository.updateById(id, toDocument(data)));
+    return toResponse(
+      ensureWritten(await locationRepository.updateById(id, toDocument(data)), "Location")
+    );
   },
 
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await locationService.getById(id);
+    if (current.isActive === isActive) return current;
     return locationService.update(id, { status: statusFromActive(isActive) });
   },
 
@@ -87,14 +100,17 @@ export const locationService = {
       "Cannot delete a location that is used by routes"
     );
 
-    const location = await locationRepository.softDeleteById(id);
+    const location = ensureWritten(await locationRepository.softDeleteById(id), "Location");
     await imageService.removeByOwner("location", id, location.deletedAt);
   },
 
   async restore(id, isActive = false) {
     const deleted = await findRestorable(locationRepository, id, "Location");
 
-    const location = await locationRepository.restoreById(id, { status: statusFromActive(isActive) });
+    const location = ensureWritten(
+      await locationRepository.restoreById(id, { status: statusFromActive(isActive) }),
+      "Location"
+    );
     await imageService.restoreByOwner("location", id, deleted.deletedAt);
     return toResponse(location);
   },

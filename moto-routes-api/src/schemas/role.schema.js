@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { statusSchema } from "./common.schema.js";
+import { cannotChange, statusSchema } from "./common.schema.js";
 
 // isSystem no está en el esquema: solo lo fija el seed
 
@@ -19,4 +19,5 @@ export const createRoleSchema = roleFields;
 
 export const updateRoleSchema = roleFields.partial().extend({
   status: statusSchema.optional(),
+  ...cannotChange("_id", "slug", "isSystem"),
 });

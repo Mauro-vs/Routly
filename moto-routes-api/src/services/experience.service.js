@@ -7,10 +7,13 @@ import { conflict, fieldError, notFound } from "../utils/errors.js";
 import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
+  assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
   assertSlugAvailable,
+  ensureWritten,
+  findExisting,
   findRestorable,
 } from "./references.js";
 
@@ -42,8 +45,7 @@ export const experienceService = {
   },
 
   async getById(id) {
-    const experience = await experienceRepository.findById(id);
-    if (!experience) throw notFound("Experience");
+    const experience = await findExisting(experienceRepository, id, "Experience");
     return experience;
   },
 
@@ -64,6 +66,8 @@ export const experienceService = {
   },
 
   async update(id, data) {
+    assertHasChanges(data);
+
     const experience = await experienceService.getById(id);
     await assertReferences(data, experience);
 
@@ -89,7 +93,10 @@ export const experienceService = {
     return experienceService.getById(id);
   },
 
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await experienceService.getById(id);
+    if (current.isActive === isActive) return current;
     return experienceService.update(id, { status: statusFromActive(isActive) });
   },
 
@@ -101,7 +108,7 @@ export const experienceService = {
       "Cannot delete an experience that has departures"
     );
 
-    const experience = await experienceRepository.softDeleteById(id);
+    const experience = ensureWritten(await experienceRepository.softDeleteById(id), "Experience");
     await imageService.removeByOwner("experience", id, experience.deletedAt);
   },
 

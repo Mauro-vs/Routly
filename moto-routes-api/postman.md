@@ -92,6 +92,21 @@ Response `400` (ID con formato no válido, por ejemplo `/api/routes/123`):
 }
 ```
 
+Response `400` (`PATCH` sin ningún campo que cambiar):
+```json
+{ "statusCode": 400, "error": "Bad Request", "message": "No fields to update" }
+```
+
+Response `400` (`PATCH` con un campo que no se puede cambiar, por ejemplo el SKU de una salida):
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "details": [{ "field": "sku", "message": "sku cannot be changed" }]
+}
+```
+
 Response `404` (no existe o está eliminado):
 ```json
 { "statusCode": 404, "error": "Not Found", "message": "Route not found" }

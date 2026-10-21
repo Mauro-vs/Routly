@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DEPARTURE_STATES } from "../models/departure.model.js";
 import { SKU_PATTERN } from "../utils/sku.js";
-import { objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 // sku y slug no están en el esquema: los genera el service
 
@@ -28,7 +28,10 @@ export const createDepartureSchema = departureFields.refine(
 export const updateDepartureSchema = departureFields
   .omit({ experienceId: true })
   .partial()
-  .extend({ status: statusSchema.optional() })
+  .extend({
+    status: statusSchema.optional(),
+    ...cannotChange("_id", "slug", "sku", "experienceId"),
+  })
   .refine(
     (data) => data.startAt === undefined || data.endAt === undefined || data.endAt > data.startAt,
     datesError

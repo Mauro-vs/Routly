@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { statusSchema } from "./common.schema.js";
+import { cannotChange, statusSchema } from "./common.schema.js";
 
 // La API trabaja con latitude y longitude; el service las guarda como punto GeoJSON
 const locationFields = z.object({
@@ -20,5 +20,5 @@ export const createLocationSchema = locationFields.refine(bothOrNone, bothOrNone
 
 export const updateLocationSchema = locationFields
   .partial()
-  .extend({ status: statusSchema.optional() })
+  .extend({ status: statusSchema.optional(), ...cannotChange("_id", "slug") })
   .refine(bothOrNone, bothOrNoneError);

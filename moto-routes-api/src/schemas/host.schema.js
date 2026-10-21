@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 const hostFields = z.object({
   name: z.string().trim().min(2).max(100),
@@ -13,4 +13,5 @@ export const createHostSchema = hostFields.extend({
 // userId no se puede cambiar después de crear
 export const updateHostSchema = hostFields.partial().extend({
   status: statusSchema.optional(),
+  ...cannotChange("_id", "slug", "userId"),
 });

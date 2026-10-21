@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { statusSchema } from "./common.schema.js";
+import { cannotChange, statusSchema } from "./common.schema.js";
 
 const categoryFields = z.object({
   name: z.string().trim().min(2).max(60),
@@ -10,4 +10,5 @@ export const createCategorySchema = categoryFields;
 
 export const updateCategorySchema = categoryFields.partial().extend({
   status: statusSchema.optional(),
+  ...cannotChange("_id", "slug"),
 });

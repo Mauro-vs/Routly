@@ -7,10 +7,13 @@ import { conflict, fieldError, notFound } from "../utils/errors.js";
 import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
+  assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
   assertSlugAvailable,
+  ensureWritten,
+  findExisting,
   findRestorable,
 } from "./references.js";
 
@@ -30,8 +33,7 @@ export const hostService = {
   },
 
   async getById(id) {
-    const host = await hostRepository.findById(id);
-    if (!host) throw notFound("Host");
+    const host = await findExisting(hostRepository, id, "Host");
     return imageService.attachCover("host", host);
   },
 
@@ -61,12 +63,17 @@ export const hostService = {
 
   // userId no llega: no se puede cambiar después de crear
   async update(id, data) {
+    assertHasChanges(data);
+
     await hostService.getById(id);
     await hostRepository.updateById(id, data);
     return hostService.getById(id);
   },
 
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await hostService.getById(id);
+    if (current.isActive === isActive) return current;
     return hostService.update(id, { status: statusFromActive(isActive) });
   },
 
@@ -78,7 +85,7 @@ export const hostService = {
       "Cannot delete a host that has experiences"
     );
 
-    const host = await hostRepository.softDeleteById(id);
+    const host = ensureWritten(await hostRepository.softDeleteById(id), "Host");
     await imageService.removeByOwner("host", id, host.deletedAt);
   },
 

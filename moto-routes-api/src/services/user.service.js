@@ -7,10 +7,13 @@ import { conflict, notFound } from "../utils/errors.js";
 import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
+  assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
   assertSlugAvailable,
+  ensureWritten,
+  findExisting,
   findRestorable,
 } from "./references.js";
 
@@ -38,8 +41,7 @@ export const userService = {
   },
 
   async getById(id) {
-    const user = await userRepository.findById(id);
-    if (!user) throw notFound("User");
+    const user = await findExisting(userRepository, id, "User");
     return imageService.attachCover("user", user);
   },
 
@@ -68,6 +70,8 @@ export const userService = {
   },
 
   async update(id, data) {
+    assertHasChanges(data);
+
     const user = await userService.getById(id);
 
     if (data.email !== undefined && (await userRepository.existsByEmail(data.email, id))) {
@@ -86,7 +90,10 @@ export const userService = {
     return userService.getById(id);
   },
 
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await userService.getById(id);
+    if (current.isActive === isActive) return current;
     return userService.update(id, { status: statusFromActive(isActive) });
   },
 
@@ -98,7 +105,7 @@ export const userService = {
       "Cannot delete a user that has a host profile"
     );
 
-    const user = await userRepository.softDeleteById(id);
+    const user = ensureWritten(await userRepository.softDeleteById(id), "User");
     await imageService.removeByOwner("user", id, user.deletedAt);
   },
 

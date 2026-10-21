@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 const experienceFields = z.object({
   hostId: objectIdSchema,
@@ -33,7 +33,7 @@ export const createExperienceSchema = experienceFields.refine(
 // service con el valor guardado
 export const updateExperienceSchema = experienceFields
   .partial()
-  .extend({ status: statusSchema.optional() })
+  .extend({ status: statusSchema.optional(), ...cannotChange("_id", "slug") })
   .refine(
     (data) =>
       data.minParticipants === undefined ||

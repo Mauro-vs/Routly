@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 // La API recibe password y guarda solo su hash: passwordHash nunca se acepta del cliente.
 // 72 es el máximo que bcrypt tiene en cuenta.
@@ -15,4 +15,5 @@ export const createUserSchema = userFields;
 
 export const updateUserSchema = userFields.partial().extend({
   status: statusSchema.optional(),
+  ...cannotChange("_id", "slug", "passwordHash"),
 });

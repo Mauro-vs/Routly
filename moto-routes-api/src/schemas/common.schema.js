@@ -20,5 +20,25 @@ export const setActiveSchema = z.object({
   isActive: z.boolean(),
 });
 
+/**
+ * Campos que existen pero no se pueden cambiar en un PATCH. Sin esto, Zod los
+ * descartaría sin avisar; así el cliente recibe un 400 en el campo:
+ * "sku cannot be changed".
+ *
+ * Uso: updateXSchema = fields.partial().extend({ ...cannotChange("_id", "slug") })
+ */
+export function cannotChange(...fields) {
+  return Object.fromEntries(
+    fields.map((field) => [
+      field,
+      // optional(): si no llega, no se valida; si llega con cualquier valor, falla
+      z
+        .any()
+        .refine((value) => value === undefined, { message: `${field} cannot be changed` })
+        .optional(),
+    ])
+  );
+}
+
 // Al restaurar, isActive es opcional (si no llega, el documento vuelve inactivo)
 export const restoreSchema = setActiveSchema.partial();

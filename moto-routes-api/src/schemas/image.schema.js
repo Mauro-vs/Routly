@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { IMAGE_OWNER_TYPES } from "../models/imageOwners.js";
-import { objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 const imageUrl = z
   .string()
@@ -23,7 +23,7 @@ export const createImageSchema = imageFields;
 export const updateImageSchema = imageFields
   .omit({ ownerType: true, ownerId: true })
   .partial()
-  .extend({ status: statusSchema.optional() });
+  .extend({ status: statusSchema.optional(), ...cannotChange("_id", "ownerType", "ownerId") });
 
 // GET /api/images?ownerType=route&ownerId=<id>: los dos o ninguno
 export const imageQuerySchema = z

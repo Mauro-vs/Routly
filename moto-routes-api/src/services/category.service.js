@@ -4,7 +4,14 @@ import { routeRepository } from "../repositories/route.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
 import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
-import { assertNoDependents, assertSlugAvailable, findRestorable } from "./references.js";
+import {
+  assertHasChanges,
+  assertNoDependents,
+  assertSlugAvailable,
+  ensureWritten,
+  findExisting,
+  findRestorable,
+} from "./references.js";
 
 export const categoryService = {
   async list() {
@@ -20,8 +27,7 @@ export const categoryService = {
   },
 
   async getById(id) {
-    const category = await categoryRepository.findById(id);
-    if (!category) throw notFound("Category");
+    const category = await findExisting(categoryRepository, id, "Category");
     return category;
   },
 
@@ -45,17 +51,22 @@ export const categoryService = {
   },
 
   async update(id, data) {
+    assertHasChanges(data);
+
     await categoryService.getById(id);
 
     if (data.name !== undefined && (await categoryRepository.existsByName(data.name, id))) {
       throw conflict("A category with this name already exists");
     }
 
-    return categoryRepository.updateById(id, data);
+    return ensureWritten(await categoryRepository.updateById(id, data), "Category");
   },
 
   // Desactivar no se propaga: sus rutas siguen igual, pero no se puede usar en rutas nuevas
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await categoryService.getById(id);
+    if (current.isActive === isActive) return current;
     return categoryService.update(id, { status: statusFromActive(isActive) });
   },
 
@@ -67,14 +78,17 @@ export const categoryService = {
       "Cannot delete a category that has routes"
     );
 
-    const category = await categoryRepository.softDeleteById(id);
+    const category = ensureWritten(await categoryRepository.softDeleteById(id), "Category");
     await imageService.removeByOwner("category", id, category.deletedAt);
   },
 
   async restore(id, isActive = false) {
     const deleted = await findRestorable(categoryRepository, id, "Category");
 
-    const category = await categoryRepository.restoreById(id, { status: statusFromActive(isActive) });
+    const category = ensureWritten(
+      await categoryRepository.restoreById(id, { status: statusFromActive(isActive) }),
+      "Category"
+    );
     await imageService.restoreByOwner("category", id, deleted.deletedAt);
     return category;
   },

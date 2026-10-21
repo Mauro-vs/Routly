@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 // Los campos que no aparecen en un esquema se descartan (comportamiento por
 // defecto de z.object), así el cliente no puede fijar slug, isActive, deletedAt...
@@ -26,4 +26,5 @@ export const createRouteSchema = z.object({
 
 export const updateRouteSchema = createRouteSchema.partial().extend({
   status: statusSchema.optional(),
+  ...cannotChange("_id", "slug"),
 });

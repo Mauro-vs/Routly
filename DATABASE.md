@@ -119,6 +119,9 @@ Para no repetir código en nueve recursos, crea estas utilidades y úsalas tambi
 - **Validación.** `validate({ params, query, body })` con Zod antes del controlador. Los campos que no están en el esquema se descartan, así el cliente no puede fijar `slug`, `status` al crear, `isActive`, `deletedAt`, `createdAt` ni `updatedAt`.
 - **Errores.** Siempre `{ statusCode, error, message, details? }`. `details` solo en errores de validación (Zod, Mongoose o `fieldError`). Los 500 nunca muestran la traza.
 - **Códigos.** 200 al leer, editar, activar y restaurar; 201 al crear; 204 al eliminar.
+- **Antes de escribir.** Cada operación con id comprueba que el id es válido y que el documento existe y es el pedido (404 si no). Si el documento se elimina entre la búsqueda y la escritura, también 404.
+- **PATCH.** Sin ningún campo: 400 `No fields to update`. Con un campo que no se puede cambiar (`_id`, `slug` y los propios de cada colección: `isSystem`, `passwordHash`, `userId`, `experienceId`, `sku`, `ownerType`, `ownerId`): 400 `<campo> cannot be changed`.
+- **Activar o desactivar** un documento que ya tiene ese estado lo devuelve sin escribir.
 - **Orden de los listados.** De más reciente a más antiguo (`createdAt: -1`). La papelera, por `deletedAt: -1`. Excepciones indicadas en cada colección.
 
 ### 3.4 Plantilla de modelo

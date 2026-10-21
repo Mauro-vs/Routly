@@ -5,9 +5,12 @@ import { fieldError, notFound } from "../utils/errors.js";
 import { buildSku, madridDateParts } from "../utils/sku.js";
 import { buildSlug } from "../utils/slugify.js";
 import {
+  assertHasChanges,
   assertReference,
   assertRestorable,
   assertSlugAvailable,
+  ensureWritten,
+  findExisting,
   findRestorable,
 } from "./references.js";
 
@@ -45,8 +48,7 @@ export const departureService = {
   },
 
   async getById(id) {
-    const departure = await departureRepository.findById(id);
-    if (!departure) throw notFound("Departure");
+    const departure = await findExisting(departureRepository, id, "Departure");
     return departure;
   },
 
@@ -94,8 +96,15 @@ export const departureService = {
 
   // experienceId no llega: no se puede cambiar. El SKU tampoco cambia nunca.
   async update(id, data) {
+    assertHasChanges(data);
+
     const departure = await departureService.getById(id);
     const experience = await experienceRepository.findById(departure.experienceId);
+    // No debería pasar (una experiencia con salidas no se puede eliminar), pero sin ella
+    // no se puede calcular el slug ni comprobar las plazas
+    if (!experience) {
+      throw conflict("Cannot update: experienceId references a deleted experience");
+    }
 
     const startAt = data.startAt ?? departure.startAt;
     const endAt = data.endAt ?? departure.endAt;
@@ -112,13 +121,16 @@ export const departureService = {
     return departureService.getById(id);
   },
 
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await departureService.getById(id);
+    if (current.isActive === isActive) return current;
     return departureService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
     await departureService.getById(id);
-    await departureRepository.softDeleteById(id);
+    ensureWritten(await departureRepository.softDeleteById(id), "Departure");
   },
 
   async restore(id, isActive = false) {

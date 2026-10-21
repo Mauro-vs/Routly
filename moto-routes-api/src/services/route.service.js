@@ -7,10 +7,13 @@ import { notFound } from "../utils/errors.js";
 import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
+  assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
   assertSlugAvailable,
+  ensureWritten,
+  findExisting,
   findRestorable,
 } from "./references.js";
 
@@ -49,8 +52,7 @@ export const routeService = {
   },
 
   async getById(id) {
-    const route = await routeRepository.findById(id);
-    if (!route) throw notFound("Route");
+    const route = await findExisting(routeRepository, id, "Route");
     return imageService.attachCover("route", route);
   },
 
@@ -75,6 +77,8 @@ export const routeService = {
   },
 
   async update(id, data) {
+    assertHasChanges(data);
+
     const route = await routeService.getById(id);
     await assertReferences(data, route);
 
@@ -85,7 +89,10 @@ export const routeService = {
   // Activar o desactivar no toca deletedAt: es independiente del soft delete.
   // isActive se deriva de status en el modelo, y update() solo actúa sobre rutas
   // no eliminadas, así que una ruta eliminada no se puede activar (404).
+  // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
+    const current = await routeService.getById(id);
+    if (current.isActive === isActive) return current;
     return routeService.update(id, { status: statusFromActive(isActive) });
   },
 
@@ -98,7 +105,7 @@ export const routeService = {
       "Cannot delete a route that has experiences"
     );
 
-    const route = await routeRepository.softDeleteById(id);
+    const route = ensureWritten(await routeRepository.softDeleteById(id), "Route");
     await imageService.removeByOwner("route", id, route.deletedAt);
   },
 
