@@ -41,7 +41,7 @@ export abstract class EntityDetailPage<T extends BaseEntity> {
     return record ? this.store.displayName(record) : '';
   });
   protected readonly editPath = computed(() => [this.listPath, this.slug(), 'edit']);
-  /** El identificador legible del registro. Las salidas lo cambian por su SKU. */
+  /** El identificador legible del registro: su slug. */
   protected readonly identifier = computed<DetailIdentifier | null>(() => {
     const record = this.record();
     return record ? { label: 'Slug', value: record.slug } : null;

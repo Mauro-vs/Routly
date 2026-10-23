@@ -5,7 +5,6 @@ import { EntityStore } from '../../../core/services/entity.store';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { OptionList } from '../../../core/services/option-list';
 import { CollectionLabels } from '../../../shared/utils/labels';
-import { UsersService } from '../../users/services/users.service';
 import { HostsService } from './hosts.service';
 
 /** Cómo se nombra la colección en los textos del panel. */
@@ -27,13 +26,15 @@ export class HostsStore extends EntityStore<Host, HostPayload> {
   protected override readonly notFoundMessage = 'Ese anfitrión ya no existe.';
   readonly labels = HOST_LABELS;
 
-  private readonly users = inject(UsersService);
   /**
    * Usuarios activos para el select. La API no tiene un filtro por rol (está
    * propuesto en NOTES.md): se ofrecen todos y la API rechaza los que no tienen el
    * rol host o ya tienen perfil.
    */
-  readonly userOptions = new OptionList(() => this.users.getActives(), inject(ErrorHandlerService));
+  readonly userOptions = new OptionList(
+    () => this.api.getUserOptions(),
+    inject(ErrorHandlerService),
+  );
 
   displayName(host: Host): string {
     return host.name;

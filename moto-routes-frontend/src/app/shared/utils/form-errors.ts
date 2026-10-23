@@ -15,6 +15,7 @@ const DEFAULT_MESSAGES: Record<string, ErrorMessage> = {
   pattern: () => 'El formato no es válido.',
   email: () => 'Escribe un correo electrónico válido.',
   integer: () => 'Escribe un número entero.',
+  future: () => 'Elige una fecha futura.',
   decimals: (detail) => `Usa como mucho ${String(detail['places'])} decimales.`,
 };
 

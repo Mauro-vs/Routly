@@ -47,6 +47,26 @@ export function maxDecimals(places: number): ValidatorFn {
   };
 }
 
+/** Una fecha (`datetime-local` o ISO) que todavía no ha pasado. */
+export function futureDate(control: AbstractControl): ValidationErrors | null {
+  const value: unknown = control.value;
+  if (typeof value !== 'string' || value === '') return null;
+  return new Date(value).getTime() > Date.now() ? null : { future: true };
+}
+
+/**
+ * Validador de grupo: el campo `end` es posterior al campo `start` (dos fechas). El
+ * error (`dateOrder`) queda en el grupo.
+ */
+export function endAfterStart(start: string, end: string): ValidatorFn {
+  return (group: AbstractControl): ValidationErrors | null => {
+    const from: unknown = group.get(start)?.value;
+    const to: unknown = group.get(end)?.value;
+    if (typeof from !== 'string' || typeof to !== 'string' || !from || !to) return null;
+    return new Date(to).getTime() > new Date(from).getTime() ? null : { dateOrder: true };
+  };
+}
+
 export function notBlank(control: AbstractControl): ValidationErrors | null {
   const value: unknown = control.value;
   return typeof value === 'string' && value.trim() !== '' ? null : { required: true };

@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
+import { fromLocalInput, toLocalInput } from './dates';
 import { applyServerErrors, controlErrorMessage } from './form-errors';
 import { formatDateTime, formatMoney, formatNumber, formatRelativeTime } from './format';
 import {
@@ -58,6 +59,16 @@ describe('format', () => {
     const text = plain(formatDateTime(local));
     expect(text).toContain('2026');
     expect(text).toContain('10:05');
+  });
+});
+
+describe('dates', () => {
+  it('toLocalInput y fromLocalInput van y vuelven sin perder la hora', () => {
+    const iso = '2026-11-08T08:30:00.000Z';
+    const local = toLocalInput(iso);
+
+    expect(local).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(fromLocalInput(local)).toBe(iso);
   });
 });
 

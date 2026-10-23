@@ -75,7 +75,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: 'compass',
         path: '/experiences',
         create: { label: 'Nueva experiencia', path: '/experiences/new' },
-        pending: true,
       },
       {
         id: 'departures',
@@ -83,7 +82,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: 'calendar-blank',
         path: '/departures',
         create: { label: 'Nueva salida', path: '/departures/new' },
-        pending: true,
       },
     ],
   },

@@ -1,0 +1,51 @@
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
+
+import { Experience, ExperiencePayload } from '../../../../core/models/experience.model';
+import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
+import { EntityFormPage } from '../../../../shared/pages/entity-form-page';
+import { ExperienceFormComponent } from '../../components/experience-form/experience-form.component';
+import { ExperiencesStore } from '../../services/experiences.store';
+
+/** Crear (`/experiences/new`) y editar (`/experiences/:slug/edit`) una experiencia. */
+@Component({
+  selector: 'app-experience-form-page',
+  imports: [FormPageComponent, ExperienceFormComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <ui-form-page
+      [heading]="heading()"
+      [labels]="store.labels"
+      [isEdit]="isEdit()"
+      [loading]="loading()"
+      [failed]="loadFailed()"
+      [saving]="saving()"
+      [cancelPath]="cancelPath()"
+      [active]="isActive()"
+      (activeChange)="setActive($event)"
+      (retry)="retry()"
+    >
+      <app-experience-form
+        [record]="record()"
+        [hosts]="store.hostOptions.items()"
+        [routes]="store.routeOptions.items()"
+        [optionsLoading]="optionsLoading()"
+        (save)="save($event)"
+      />
+    </ui-form-page>
+  `,
+})
+export class ExperienceFormPageComponent extends EntityFormPage<Experience, ExperiencePayload> {
+  protected readonly store = inject(ExperiencesStore);
+  protected readonly listPath = '/experiences';
+  protected readonly form = viewChild(ExperienceFormComponent);
+
+  protected readonly optionsLoading = computed(
+    () => this.store.hostOptions.loading() || this.store.routeOptions.loading(),
+  );
+
+  constructor() {
+    super();
+    void this.store.hostOptions.load();
+    void this.store.routeOptions.load();
+  }
+}
