@@ -126,34 +126,29 @@ a.nav__item:hover {
   font-weight: 400;
 }
 
-/* subsección: cuelga de la anterior */
-.nav__item--child {
-  height: 34px;
-  margin-left: 18px;
-  font-size: var(--text-sm);
+.nav__soon {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
 }
 
-.nav__item--child ui-icon {
-  font-size: 17px;
-}
-
-/* un contador secundario no compite con el principal */
-.nav__count.nav__count--quiet {
-  background: rgb(255 255 255 / 0.12);
-  color: var(--color-on-sidebar);
-}
-
+/* Nueve contadores en lima competirían entre sí: solo destaca el de la sección abierta. */
 .nav__count {
   margin-left: auto;
   min-width: 22px;
   padding: 0 6px;
   border-radius: var(--radius-pill);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  background: rgb(255 255 255 / 0.1);
+  color: var(--color-on-sidebar);
   font-size: 12px;
   font-weight: 600;
   line-height: 20px;
   text-align: center;
+}
+
+.nav__item.is-active .nav__count {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .docs {

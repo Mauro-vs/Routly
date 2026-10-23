@@ -61,15 +61,10 @@ export class DashboardStore {
     this._loading.set(true);
     this._error.set(null);
     try {
-      // Las eliminadas solo se piden para el contador de la papelera en el menú.
-      const [routes, deleted] = await Promise.all([
-        this.api.get<Route[]>('/routes'),
-        this.api.get<Route[]>('/routes/deleted'),
-      ]);
+      const routes = await this.api.get<Route[]>('/routes');
       this._routes.set(routes);
       this._loaded.set(true);
       this.badges.set('routes', routes.length);
-      this.badges.set('routes-trash', deleted.length);
     } catch (error) {
       this._error.set(this.errors.handle(error));
     } finally {

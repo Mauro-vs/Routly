@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, model } from '@angular/core';
+import { ChangeDetectionStrategy, Component, booleanAttribute, input, model } from '@angular/core';
 
 import { IconComponent } from '../icon/icon.component';
 import { IconName } from '../icon/icons.generated';
@@ -103,9 +103,26 @@ export interface SegmentOption<T> {
         height: 38px;
       }
     }
+
+    /* En móvil ocupa todo el ancho y las opciones se lo reparten. */
+    @media (max-width: 560px) {
+      :host(.is-stretch),
+      :host(.is-stretch) .seg {
+        display: flex;
+        width: 100%;
+      }
+
+      :host(.is-stretch) button {
+        flex: 1;
+        justify-content: center;
+      }
+    }
   `,
+  host: { '[class.is-stretch]': 'stretch()' },
 })
 export class SegmentedComponent<T> {
+  /** En móvil, a todo el ancho. Para el filtro por estado. */
+  readonly stretch = input(false, { transform: booleanAttribute });
   readonly options = input.required<readonly SegmentOption<T>[]>();
   readonly value = model.required<T>();
   /** Nombre accesible del grupo, por ejemplo "Filtrar por estado". */

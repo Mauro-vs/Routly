@@ -17,4 +17,11 @@ export class NavBadgeService {
     if (this.counts()[sectionId] === count) return;
     this.counts.update((counts) => ({ ...counts, [sectionId]: count }));
   }
+
+  /** Suma (o resta) al contador, si ya lo hay. Para un cambio sin el listado cargado. */
+  adjust(sectionId: string, delta: number): void {
+    const current = this.counts()[sectionId];
+    if (current === undefined) return;
+    this.set(sectionId, Math.max(0, current + delta));
+  }
 }

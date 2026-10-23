@@ -1,11 +1,14 @@
 import { Injectable, provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
+import { CollectionLabels } from '../../shared/utils/labels';
 import { ApiError } from '../models/api-error.model';
 import { BaseEntity } from '../models/entity.model';
 import { toApiError } from '../utils/api-error.mapper';
 import { EntityApi, EntityStore } from './entity.store';
 import { ErrorHandlerService } from './error-handler.service';
+import { NavBadgeService } from './nav-badge.service';
+import { NotificationService } from './notification.service';
 
 interface Item extends BaseEntity {
   name: string;
@@ -46,12 +49,18 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reje
 describe('EntityStore', () => {
   let api: jasmine.SpyObj<Required<EntityApi<Item, ItemPayload>>>;
   let errors: jasmine.SpyObj<ErrorHandlerService>;
+  let notifications: jasmine.SpyObj<NotificationService>;
   let store: TestStore;
 
   @Injectable()
   class TestStore extends EntityStore<Item, ItemPayload> {
     protected readonly api = api;
     protected readonly listPath = '/items';
+    readonly labels: CollectionLabels = { singular: 'ruta', plural: 'rutas', gender: 'f' };
+
+    displayName(entity: Item): string {
+      return entity.name;
+    }
   }
 
   beforeEach(() => {
@@ -69,12 +78,19 @@ describe('EntityStore', () => {
     ]);
     errors = jasmine.createSpyObj<ErrorHandlerService>('errors', ['handle']);
     errors.handle.and.callFake((error: unknown) => toApiError(error));
+    notifications = jasmine.createSpyObj<NotificationService>('notifications', [
+      'confirm',
+      'undoable',
+      'success',
+    ]);
+    notifications.success.and.resolveTo();
 
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
         TestStore,
         { provide: ErrorHandlerService, useValue: errors },
+        { provide: NotificationService, useValue: notifications },
       ],
     });
     store = TestBed.inject(TestStore);
@@ -398,6 +414,98 @@ describe('EntityStore', () => {
 
       expect(result.ok).toBeFalse();
       expect(store.total()).toBe(1);
+    });
+  });
+
+  describe('filtro por estado', () => {
+    it('visible muestra todos, solo los activos o solo los inactivos', async () => {
+      await loadWith([item('1'), item('2', false), item('3')]);
+      api.getByActive.and.callFake(async (isActive) =>
+        [item('1'), item('2', false), item('3')].filter((entry) => entry.isActive === isActive),
+      );
+
+      store.setStatus('inactive');
+      expect(store.visible().map((entry) => entry._id)).toEqual(['2']);
+
+      store.setStatus('active');
+      expect(store.visible().map((entry) => entry._id)).toEqual(['1', '3']);
+      expect(api.getByActive).toHaveBeenCalledWith(true);
+    });
+
+    it('al volver a "todos" pide el listado completo', async () => {
+      await loadWith([item('1')]);
+      api.getAll.calls.reset();
+
+      store.setStatus('all');
+
+      expect(store.visible().length).toBe(1);
+      expect(api.getAll).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('contador del menú', () => {
+    it('publica el total con el id de la sección (listPath sin la barra)', async () => {
+      const badges = TestBed.inject(NavBadgeService);
+      await loadWith([item('1'), item('2', false)]);
+      TestBed.tick();
+
+      expect(badges.count('items')).toBe(2);
+    });
+
+    it('sin el listado cargado, restaurar desde la papelera suma uno al contador', async () => {
+      const badges = TestBed.inject(NavBadgeService);
+      badges.set('items', 3);
+      const target = { ...item('9', false), status: 'deleted' as const };
+      api.getDeleted.and.resolveTo([target]);
+      api.restore.and.resolveTo(item('9'));
+      await store.loadDeleted();
+
+      await store.restoreFromTrash(target, true);
+
+      expect(badges.count('items')).toBe(4);
+    });
+  });
+
+  describe('borrado con confirmación', () => {
+    it('no elimina nada si no se confirma', async () => {
+      await loadWith([item('1')]);
+      notifications.confirm.and.resolveTo(false);
+
+      const removed = await store.confirmAndRemove(store.items()[0]);
+
+      expect(removed).toBeFalse();
+      expect(api.remove).not.toHaveBeenCalled();
+      expect(notifications.confirm.calls.mostRecent().args[0].title).toBe('¿Eliminar «Item 1»?');
+    });
+
+    it('elimina, ofrece deshacer y lo restaura si se pulsa', async () => {
+      await loadWith([item('1')]);
+      const target = store.items()[0];
+      notifications.confirm.and.resolveTo(true);
+      notifications.undoable.and.resolveTo(true);
+      api.remove.and.resolveTo();
+      api.restore.and.resolveTo(target);
+
+      const removed = await store.confirmAndRemove(target);
+      // El deshacer no se espera: termina en segundo plano.
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(removed).toBeTrue();
+      expect(notifications.undoable).toHaveBeenCalledOnceWith('Ruta eliminada.');
+      expect(api.restore).toHaveBeenCalledOnceWith('1', true);
+      expect(notifications.success).toHaveBeenCalledOnceWith('Ruta restaurada.');
+    });
+
+    it('restaurar desde la papelera avisa con el estado elegido', async () => {
+      const target = { ...item('1', false), status: 'deleted' as const };
+      api.getDeleted.and.resolveTo([target]);
+      api.restore.and.resolveTo(item('1'));
+      await store.loadDeleted();
+
+      await store.restoreAndNotify(target, true);
+
+      expect(notifications.success).toHaveBeenCalledOnceWith('Ruta restaurada y activa.');
+      expect(store.deletedCount()).toBe(0);
     });
   });
 });

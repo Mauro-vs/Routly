@@ -10,7 +10,7 @@ const messagePage = () =>
 
 /**
  * Cada feature se carga aparte (lazy loading). Para añadir una entidad: crea su
- * carpeta en features/, registra aquí su ruta y dale entrada en
+ * carpeta en features/, registra aquí su ruta y quita su `pending` en
  * layouts/admin-layout/navigation.ts.
  */
 export const routes: Routes = [
@@ -31,6 +31,28 @@ export const routes: Routes = [
       {
         path: 'routes',
         loadChildren: () => import('./features/routes/routes.routes').then((m) => m.ROUTES_ROUTES),
+      },
+      {
+        path: 'categories',
+        loadChildren: () =>
+          import('./features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES),
+      },
+      {
+        path: 'locations',
+        loadChildren: () =>
+          import('./features/locations/locations.routes').then((m) => m.LOCATIONS_ROUTES),
+      },
+      {
+        path: 'users',
+        loadChildren: () => import('./features/users/users.routes').then((m) => m.USERS_ROUTES),
+      },
+      {
+        path: 'hosts',
+        loadChildren: () => import('./features/hosts/hosts.routes').then((m) => m.HOSTS_ROUTES),
+      },
+      {
+        path: 'roles',
+        loadChildren: () => import('./features/roles/roles.routes').then((m) => m.ROLES_ROUTES),
       },
       {
         path: '**',

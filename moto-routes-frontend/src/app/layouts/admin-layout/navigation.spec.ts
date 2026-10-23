@@ -1,4 +1,4 @@
-import { findParent, findSection } from './navigation';
+import { COLLECTION_IDS, NAV_GROUPS, findSection } from './navigation';
 
 describe('navigation', () => {
   it('la portada solo coincide con la URL exacta', () => {
@@ -12,12 +12,28 @@ describe('navigation', () => {
     expect(findSection('/routes/costa-brava-loop-df38e5/edit')?.id).toBe('routes');
   });
 
-  it('la papelera gana a la sección de rutas aunque la URL empiece igual', () => {
-    expect(findSection('/routes/trash')?.id).toBe('routes-trash');
+  it('la papelera es parte de la sección de su colección', () => {
+    expect(findSection('/routes/trash')?.id).toBe('routes');
   });
 
-  it('la papelera cuelga de rutas', () => {
-    const trash = findSection('/routes/trash');
-    expect(trash && findParent(trash)?.id).toBe('routes');
+  it('una sección sin páginas todavía no se marca', () => {
+    const pending = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.pending);
+    if (pending) expect(findSection(pending.path)).toBeNull();
+  });
+
+  it('las nueve colecciones llevan contador con el nombre de su ruta en la API', () => {
+    expect([...COLLECTION_IDS].sort()).toEqual(
+      [
+        'categories',
+        'departures',
+        'experiences',
+        'hosts',
+        'images',
+        'locations',
+        'roles',
+        'routes',
+        'users',
+      ].sort(),
+    );
   });
 });

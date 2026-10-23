@@ -1,13 +1,15 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import { ApiStatus, ApiStatusService } from '../../../core/services/api-status.service';
+import { CollectionCountsService } from '../../../core/services/collection-counts.service';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { BrandMarkComponent } from '../brand-mark.component';
-import { NAV_ITEMS, UPCOMING_ITEMS, findSection } from '../navigation';
+import { COLLECTION_IDS, NAV_GROUPS, NAV_HOME, findSection } from '../navigation';
 
 const STATUS_LABELS: Record<ApiStatus, string> = {
   checking: 'Comprobando la API',
@@ -15,10 +17,13 @@ const STATUS_LABELS: Record<ApiStatus, string> = {
   offline: 'API sin conexión',
 };
 
-/** Sidebar: marca, navegación por entidades y estado de la conexión con la API. */
+/**
+ * Sidebar: marca, navegación por grupos de colecciones, cada una con su contador, y
+ * estado de la conexión con la API.
+ */
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, IconComponent, BrandMarkComponent],
+  imports: [NgTemplateOutlet, RouterLink, IconComponent, BrandMarkComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
@@ -32,8 +37,8 @@ export class SidebarComponent {
   private readonly router = inject(Router);
   protected readonly badges = inject(NavBadgeService);
 
-  protected readonly items = NAV_ITEMS;
-  protected readonly upcoming = UPCOMING_ITEMS;
+  protected readonly home = NAV_HOME;
+  protected readonly groups = NAV_GROUPS;
   protected readonly host = this.apiStatus.host;
   protected readonly docsUrl = this.apiStatus.docsUrl;
   protected readonly status = this.apiStatus.status;
@@ -48,13 +53,14 @@ export class SidebarComponent {
   );
 
   /**
-   * Solo una sección activa a la vez: la más concreta. En `/routes/trash` se marca
-   * "Papelera" y no "Rutas", cosa que routerLinkActive no sabe distinguir.
+   * Solo una sección activa a la vez: la más concreta. La portada (`/`) no se marca
+   * en las demás páginas, cosa que routerLinkActive no distingue sin `exact`.
    */
   protected readonly activeId = computed(() => findSection(this.url())?.id ?? null);
 
   constructor() {
     void this.apiStatus.check();
+    void inject(CollectionCountsService).load(COLLECTION_IDS);
   }
 
   protected retry(): void {

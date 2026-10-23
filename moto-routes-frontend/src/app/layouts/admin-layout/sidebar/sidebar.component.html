@@ -18,11 +18,28 @@
 
 <nav class="nav" aria-label="Principal">
   <ul>
-    @for (item of items; track item.id) {
+    <ng-container *ngTemplateOutlet="entry; context: { $implicit: home }" />
+  </ul>
+
+  @for (group of groups; track group.label; let index = $index) {
+    <p class="nav__label" [id]="'nav-group-' + index">{{ group.label }}</p>
+    <ul [attr.aria-labelledby]="'nav-group-' + index">
+      @for (item of group.items; track item.id) {
+        <ng-container *ngTemplateOutlet="entry; context: { $implicit: item }" />
+      }
+    </ul>
+  }
+
+  <ng-template #entry let-item>
+    @if (item.pending) {
+      <li class="nav__item nav__item--soon">
+        <ui-icon [name]="item.icon" />{{ item.label }}
+        <span class="nav__soon">pronto</span>
+      </li>
+    } @else {
       <li>
         <a
           class="nav__item"
-          [class.nav__item--child]="!!item.parent"
           [class.is-active]="item.id === activeId()"
           [attr.aria-current]="item.id === activeId() ? 'page' : null"
           [routerLink]="item.path"
@@ -30,21 +47,14 @@
           <ui-icon [name]="item.icon" />
           {{ item.label }}
           @if (badges.count(item.id); as count) {
-            <span class="nav__count num" [class.nav__count--quiet]="!!item.parent">{{ count }}</span>
+            <span class="nav__count num">
+              {{ count }}<span class="sr-only">{{ count === 1 ? ' registro' : ' registros' }}</span>
+            </span>
           }
         </a>
       </li>
     }
-  </ul>
-
-  @if (upcoming.length > 0) {
-    <p class="nav__label" id="nav-upcoming">Próximamente</p>
-    <ul aria-labelledby="nav-upcoming">
-      @for (item of upcoming; track item.label) {
-        <li class="nav__item nav__item--soon"><ui-icon [name]="item.icon" />{{ item.label }}</li>
-      }
-    </ul>
-  }
+  </ng-template>
 </nav>
 
 <a class="nav__item docs" [href]="docsUrl" target="_blank" rel="noopener">

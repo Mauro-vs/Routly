@@ -3,7 +3,7 @@ import { AbstractControl, FormGroup } from '@angular/forms';
 /** Clave con la que se guarda en un control el error que devuelve la API. */
 const SERVER_ERROR = 'server';
 
-type ErrorMessage = (detail: Record<string, unknown>) => string;
+export type ErrorMessage = (detail: Record<string, unknown>) => string;
 
 /** Mensajes para los validadores de Angular. Se pueden ampliar por formulario. */
 const DEFAULT_MESSAGES: Record<string, ErrorMessage> = {
@@ -14,6 +14,8 @@ const DEFAULT_MESSAGES: Record<string, ErrorMessage> = {
   max: (detail) => `El valor máximo es ${String(detail['max'])}.`,
   pattern: () => 'El formato no es válido.',
   email: () => 'Escribe un correo electrónico válido.',
+  integer: () => 'Escribe un número entero.',
+  decimals: (detail) => `Usa como mucho ${String(detail['places'])} decimales.`,
 };
 
 /**

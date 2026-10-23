@@ -19,6 +19,7 @@ export const ROUTES_ROUTES: Routes = [
   {
     path: 'trash',
     title: 'Papelera',
+    data: { crumb: 'Papelera' },
     loadComponent: () =>
       import('./pages/routes-trash/routes-trash.component').then((m) => m.RoutesTrashComponent),
   },

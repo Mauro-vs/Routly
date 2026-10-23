@@ -87,7 +87,8 @@
   cursor: pointer;
   transition:
     background var(--motion-fast) var(--motion-ease),
-    color var(--motion-fast) var(--motion-ease);
+    color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
 }
 
 .icon-btn:hover {
@@ -95,16 +96,24 @@
   color: var(--color-text);
 }
 
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
 .icon-btn--danger:hover {
   background: var(--color-danger-bg);
   color: var(--color-danger);
 }
 
-.icon-btn:disabled {
+/* aria-disabled: no hace nada, pero sigue recibiendo el foco para leer por qué */
+.icon-btn:disabled,
+.icon-btn[aria-disabled='true'],
+.icon-btn[aria-disabled='true']:hover {
   opacity: 0.4;
   cursor: not-allowed;
   background: transparent;
   color: var(--color-text-muted);
+  transform: none;
 }
 
 /* indicador de espera dentro de un botón */
@@ -176,6 +185,21 @@
   background: var(--color-surface-2);
 }
 
+/* "Programada": el verde de las acciones, más oscuro para el contraste sobre su fondo */
+.badge--info {
+  color: var(--color-primary-hover);
+  background: var(--color-primary-soft);
+}
+
+/* con icono en lugar del punto: ui-status-badge */
+.badge--icon::before {
+  display: none;
+}
+
+.badge--icon ui-icon {
+  font-size: 14px;
+}
+
 /* "Inactiva": con icono y borde en vez de punto y color, para que se lea como un
    estado apagado sin depender del color. */
 .badge--off {
@@ -190,6 +214,99 @@
 
 .badge--off ui-icon {
   font-size: 14px;
+}
+
+/* ---------- celdas de los listados ---------- */
+/* Nombre del registro: enlace al detalle, cortado a dos líneas. */
+.cell-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-width: 140px;
+  font-weight: 600;
+}
+
+/* Texto secundario largo (una descripción): atenuado y cortado a dos líneas. */
+.cell-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  max-width: 420px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* Segunda línea bajo el nombre: el email de un usuario, la región de un lugar... */
+.cell-sub {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Miniatura junto al nombre */
+.cell-media {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.thumb {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 18px;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb--round {
+  border-radius: 50%;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .cell-title {
+    min-width: 0;
+  }
+}
+
+/* ---------- enlaces ---------- */
+/* Enlace a otro registro dentro de un texto o una tabla: se distingue al pasar por
+   encima y con el foco, sin llenar de subrayados un listado. */
+.link {
+  color: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-color var(--motion-fast) var(--motion-ease);
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration-color: currentColor;
 }
 
 /* ---------- campos ---------- */
@@ -246,6 +363,86 @@ textarea.input {
   min-height: 92px;
   padding: 9px 12px;
   resize: vertical;
+}
+
+/* ---------- formularios de las colecciones ---------- */
+.form-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* dos campos en la misma fila; en móvil, uno debajo de otro */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.form-grid .select {
+  width: 100%;
+}
+
+/* error que no es de ningún campo: va arriba, con icono */
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* campo con unidad: "km", "€", "personas"... */
+.affix {
+  position: relative;
+}
+
+.affix .input {
+  padding-right: 44px;
+  appearance: textfield;
+}
+
+.affix .input::-webkit-inner-spin-button,
+.affix .input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.affix > span {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+/* campo que no se puede cambiar al editar: se ve, pero no es un control */
+.readonly-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.readonly-value ui-icon {
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 560px) {
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* En móvil, las acciones de la cabecera de página se reparten el ancho. */

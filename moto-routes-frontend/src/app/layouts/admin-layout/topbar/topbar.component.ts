@@ -14,7 +14,7 @@ import { filter, map } from 'rxjs';
 
 import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
-import { NAV_ITEMS, NavAction, findParent, findSection } from '../navigation';
+import { NavAction, findSection } from '../navigation';
 
 interface Crumb {
   label: string;
@@ -58,22 +58,18 @@ export class TopbarComponent {
     const section = findSection(url);
     if (!section) return [{ label: crumb ?? 'Routly' }];
 
-    // Una subsección (la papelera) arrastra delante la sección de la que cuelga.
-    const parent = findParent(section);
-    const trail: Crumb[] = parent ? [{ label: parent.label, path: parent.path }] : [];
-
-    // La última miga es la página dentro de la sección: el dato cargado o el texto fijo.
+    // La última miga es la página dentro de la sección (la papelera, un registro...):
+    // el dato cargado o el texto fijo de la ruta.
     const current = url === section.path ? null : (this.breadcrumbs.current() ?? crumb);
     return current
-      ? [...trail, { label: section.label, path: section.path }, { label: current }]
-      : [...trail, { label: section.label }];
+      ? [{ label: section.label, path: section.path }, { label: current }]
+      : [{ label: section.label }];
   });
 
-  /** Crear en la sección actual; en las que no crean nada, la primera que sí. */
+  /** Crear en la sección actual. Las que no crean nada (el resumen) no lo muestran. */
   protected readonly createAction = computed<NavAction | null>(() => {
     const { url } = this.page();
-    const action =
-      findSection(url)?.create ?? NAV_ITEMS.find((item) => item.create)?.create ?? null;
+    const action = findSection(url)?.create ?? null;
     return action && action.path !== url ? action : null;
   });
 

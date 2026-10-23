@@ -8,6 +8,7 @@ import {
   Route,
   routeTrip,
 } from '../../../../core/models/route.model';
+import { StatusFilter } from '../../../../core/services/entity.store';
 import {
   DataTableComponent,
   TableCellDirective,
@@ -27,12 +28,7 @@ import { SkeletonComponent } from '../../../../shared/components/skeleton/skelet
 import { ToggleComponent } from '../../../../shared/components/toggle/toggle.component';
 import { formatNumber, formatRelativeTime } from '../../../../shared/utils/format';
 import { RouteCardComponent } from '../../components/route-card/route-card.component';
-import {
-  DifficultyFilter,
-  RoutesStore,
-  RoutesView,
-  StatusFilter,
-} from '../../services/routes.store';
+import { DifficultyFilter, RoutesStore, RoutesView } from '../../services/routes.store';
 
 const PAGE_SIZE = 12;
 

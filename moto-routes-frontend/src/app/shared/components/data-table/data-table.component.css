@@ -15,7 +15,7 @@ table {
 }
 
 th {
-  padding: 11px 16px;
+  padding: 10px 14px;
   font-size: var(--text-xs);
   font-weight: 600;
   text-align: left;
@@ -25,23 +25,41 @@ th {
 }
 
 td {
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-top: 1px solid var(--color-border);
   vertical-align: middle;
   /* Un texto largo sin espacios se parte en vez de ensanchar la tabla. */
   overflow-wrap: anywhere;
 }
 
+/* Los extremos, alineados con el borde redondeado de la tarjeta. En móvil las filas
+   son bloques y no hace falta. */
+@media (min-width: 901px) {
+  th:first-child,
+  td:first-child {
+    padding-left: 18px;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 12px;
+  }
+}
+
+/* columnas de cifras: alineadas a la derecha y con dígitos del mismo ancho */
 .is-end {
   text-align: right;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 tbody tr {
   transition: background var(--motion-fast) var(--motion-ease);
 }
 
-tbody tr:hover {
+/* también con el teclado: la fila del control con el foco se ilumina igual */
+tbody tr:hover,
+tbody tr:focus-within {
   background: var(--color-bg);
 }
 

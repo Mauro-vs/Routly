@@ -46,3 +46,24 @@ export const EXPERIENCE_LIMITS = {
   meetingPoint: 200,
   maxParticipants: 100,
 } as const;
+
+/**
+ * Idiomas que ofrece el formulario. La API acepta cualquier código de dos letras;
+ * esta lista es para elegir sin tener que saberse el código.
+ */
+export const EXPERIENCE_LANGUAGES: Readonly<Record<string, string>> = {
+  es: 'Español',
+  en: 'Inglés',
+  fr: 'Francés',
+  de: 'Alemán',
+  it: 'Italiano',
+  pt: 'Portugués',
+  ca: 'Catalán',
+  eu: 'Euskera',
+  gl: 'Gallego',
+};
+
+/** "Español", o el código en mayúsculas si no está en la lista: "NL". */
+export function languageName(code: string): string {
+  return EXPERIENCE_LANGUAGES[code] ?? code.toUpperCase();
+}

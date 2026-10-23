@@ -1,0 +1,58 @@
+<ui-list-page
+  title="Categorías"
+  icon="tag"
+  createPath="/categories/new"
+  trashPath="/categories/trash"
+  [labels]="store.labels"
+  [loaded]="store.loaded()"
+  [failed]="loadFailed()"
+  [counts]="counts()"
+  [total]="pager.total()"
+  [pageSize]="pager.pageSize"
+  [trashCount]="store.deletedCount()"
+  [status]="store.status()"
+  (statusChange)="setStatus($event)"
+  [(page)]="pager.page"
+  (retry)="reload()"
+>
+  <ui-data-table
+    caption="Categorías"
+    [columns]="columns"
+    [rows]="pager.items()"
+    [rowKey]="rowKey"
+    [mutedWhen]="isInactive"
+    [loading]="showSkeleton()"
+  >
+    <ng-template uiCell="name" [uiCellOf]="pager.items()" let-category>
+      <a class="link cell-title" [routerLink]="['/categories', category.slug]">{{ category.name }}</a>
+    </ng-template>
+    <ng-template uiCell="description" [uiCellOf]="pager.items()" let-category>
+      @if (category.description) {
+        <span class="cell-text" [title]="category.description">{{ category.description }}</span>
+      } @else {
+        <span class="cell-text">Sin descripción</span>
+      }
+    </ng-template>
+    <ng-template uiCell="updated" [uiCellOf]="pager.items()" let-category>
+      <time class="nowrap" [attr.datetime]="category.updatedAt">{{ updated(category) }}</time>
+    </ng-template>
+    <ng-template uiCell="status" [uiCellOf]="pager.items()" let-category>
+      <ui-status-toggle
+        [active]="category.isActive"
+        [label]="category.name"
+        [labels]="store.labels"
+        [busy]="store.isBusy(category._id)"
+        (activeChange)="setActive(category, $event)"
+      />
+    </ng-template>
+    <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-category>
+      <ui-row-actions
+        [label]="category.name"
+        [detailPath]="['/categories', category.slug]"
+        [editPath]="['/categories', category.slug, 'edit']"
+        [busy]="store.isBusy(category._id)"
+        (remove)="remove(category)"
+      />
+    </ng-template>
+  </ui-data-table>
+</ui-list-page>

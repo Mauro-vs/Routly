@@ -1,7 +1,16 @@
+import { signal } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
 import { applyServerErrors, controlErrorMessage } from './form-errors';
-import { formatNumber, formatRelativeTime } from './format';
+import { formatDateTime, formatMoney, formatNumber, formatRelativeTime } from './format';
+import {
+  CollectionLabels,
+  countLabel,
+  newLabel,
+  statusFilterLabels,
+  statusWord,
+} from './labels';
+import { createPager } from './pager';
 import { matchesQuery, normalizeText } from './text';
 import { notBlank } from './validators';
 
@@ -37,6 +46,78 @@ describe('format', () => {
   it('formatRelativeTime pasa a la fecha cuando ha pasado más de un mes', () => {
     const now = new Date('2026-10-07T12:00:00.000Z');
     expect(plain(formatRelativeTime('2026-01-15T12:00:00.000Z', now))).toContain('2026');
+  });
+
+  it('formatMoney escribe el precio en euros con dos decimales', () => {
+    expect(plain(formatMoney(12345.5))).toBe('12.345,50 €');
+    expect(plain(formatMoney(0))).toBe('0,00 €');
+  });
+
+  it('formatDateTime incluye la fecha y la hora local', () => {
+    const local = new Date(2026, 8, 30, 10, 5).toISOString();
+    const text = plain(formatDateTime(local));
+    expect(text).toContain('2026');
+    expect(text).toContain('10:05');
+  });
+});
+
+describe('labels', () => {
+  const routes: CollectionLabels = { singular: 'ruta', plural: 'rutas', gender: 'f' };
+  const users: CollectionLabels = { singular: 'usuario', plural: 'usuarios', gender: 'm' };
+
+  it('concierta el estado con el género de la colección', () => {
+    expect(statusWord('active', 'f')).toBe('activa');
+    expect(statusWord('inactive', 'm')).toBe('inactivo');
+    expect(statusWord('deleted', 'f')).toBe('eliminada');
+  });
+
+  it('countLabel usa el singular solo para uno', () => {
+    expect(countLabel(1, routes)).toBe('1 ruta');
+    expect(countLabel(0, routes)).toBe('0 rutas');
+    expect(countLabel(5, users)).toBe('5 usuarios');
+  });
+
+  it('newLabel y statusFilterLabels', () => {
+    expect(newLabel(routes)).toBe('Nueva ruta');
+    expect(newLabel(users)).toBe('Nuevo usuario');
+    expect(statusFilterLabels('f')).toEqual({ all: 'Todas', active: 'Activas', inactive: 'Inactivas' });
+    expect(statusFilterLabels('m')).toEqual({ all: 'Todos', active: 'Activos', inactive: 'Inactivos' });
+  });
+});
+
+describe('pager', () => {
+  const numbers = (count: number): number[] => Array.from({ length: count }, (_, index) => index);
+
+  it('corta la página actual', () => {
+    const rows = signal(numbers(30));
+    const pager = createPager(rows, () => 'todos', 12);
+
+    expect(pager.items()).toEqual(numbers(12));
+    pager.page.set(3);
+    expect(pager.items()).toEqual([24, 25, 26, 27, 28, 29]);
+    expect(pager.total()).toBe(30);
+  });
+
+  it('vuelve a la página 1 al cambiar el filtro', () => {
+    const rows = signal(numbers(30));
+    const key = signal('todos');
+    const pager = createPager(rows, key, 12);
+
+    pager.page.set(2);
+    key.set('activos');
+
+    expect(pager.page()).toBe(1);
+  });
+
+  it('no se queda en una página que ya no existe', () => {
+    const rows = signal(numbers(30));
+    const pager = createPager(rows, () => 'todos', 12);
+
+    pager.page.set(3);
+    rows.set(numbers(13));
+
+    expect(pager.page()).toBe(2);
+    expect(pager.items()).toEqual([12]);
   });
 });
 

@@ -76,9 +76,10 @@ describe('toApiError', () => {
       'No se puede restaurar mientras su categoría siga en la papelera.',
     );
     expect(conflict('Route is not deleted')).toBe('Ese registro ya estaba restaurado.');
+    expect(conflict('Something else')).toBe('Ya existe un registro con esos datos.');
     expect(conflict('System roles cannot be deleted')).toBe('Los roles base no se pueden eliminar.');
     expect(conflict('A route with this slug already exists')).toBe(
-      'Ya existe un registro con esos datos.',
+      'Ya existe una ruta con esa dirección.',
     );
     expect(toApiError(httpError(409, { message: 'Route is not deleted' })).detail).toBe(
       'Route is not deleted',
@@ -122,8 +123,28 @@ describe('translateFieldMessage', () => {
       'latitude and longitude must be sent together',
       'Indica la latitud y la longitud, o ninguna de las dos.',
     ],
+    ['sku', 'sku cannot be changed', 'Este dato no se puede cambiar.'],
     ['title', 'title is weird', 'El valor no es válido.'],
   ];
+
+  it('un 409 por duplicado dice qué dato está repetido', () => {
+    const message = (detail: string): string =>
+      toApiError(httpError(409, { statusCode: 409, message: detail })).message;
+
+    expect(message('A category with this name already exists')).toBe(
+      'Ya existe una categoría con ese nombre.',
+    );
+    expect(message('A location with this city, region and country already exists')).toBe(
+      'Ya existe una ubicación con esa ciudad, región y país.',
+    );
+    expect(message('A user with this email already exists')).toBe('Ya existe un usuario con ese email.');
+  });
+
+  it('un PATCH sin campos se explica como "no hay cambios"', () => {
+    const error = toApiError(httpError(400, { statusCode: 400, message: 'No fields to update' }));
+    expect(error.type).toBe('validation');
+    expect(error.message).toBe('No has cambiado ningún dato: no hay nada que guardar.');
+  });
 
   for (const [field, message, expected] of cases) {
     it(`traduce "${message}"`, () => {

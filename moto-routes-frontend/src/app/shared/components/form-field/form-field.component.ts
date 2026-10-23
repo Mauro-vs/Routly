@@ -72,6 +72,12 @@ let nextId = 0;
       color: var(--color-text-muted);
     }
 
+    /* "37 / 120" no se parte en dos líneas */
+    .field__hint .num {
+      flex: none;
+      white-space: nowrap;
+    }
+
     .field__error {
       display: flex;
       align-items: center;

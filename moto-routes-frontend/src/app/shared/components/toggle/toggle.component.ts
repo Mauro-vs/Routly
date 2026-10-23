@@ -33,6 +33,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       [attr.aria-checked]="value()"
       [attr.aria-label]="label() || null"
       [attr.aria-labelledby]="labelledBy() || null"
+      [attr.aria-describedby]="describedBy()"
+      [attr.aria-disabled]="locked() || null"
+      [class.is-locked]="locked()"
       [disabled]="isDisabled()"
       (click)="toggle()"
       (blur)="onTouched()"
@@ -74,7 +77,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       border-radius: 50%;
       background: #fff;
       box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-      transition: transform var(--motion-base) var(--motion-ease);
+      transition:
+        transform var(--motion-base) var(--motion-ease),
+        width var(--motion-fast) var(--motion-ease);
     }
 
     .switch[aria-checked='true'] {
@@ -85,7 +90,16 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       transform: translateX(16px);
     }
 
-    .switch:disabled {
+    .switch:active:not(:disabled, .is-locked) .switch__thumb {
+      width: 21px;
+    }
+
+    .switch[aria-checked='true']:active:not(:disabled, .is-locked) .switch__thumb {
+      transform: translateX(13px);
+    }
+
+    .switch:disabled,
+    .switch.is-locked {
       opacity: 0.5;
       cursor: not-allowed;
     }
@@ -97,6 +111,13 @@ export class ToggleComponent implements ControlValueAccessor {
   /** Nombre accesible. Usa `labelledBy` si ya hay un texto visible que lo describe. */
   readonly label = input('');
   readonly labelledBy = input('');
+  /** Id del texto que lo explica, por ejemplo por qué no se puede cambiar. */
+  readonly describedBy = input<string | null>(null);
+  /**
+   * No se puede cambiar, pero sigue llegando el foco para leer su explicación
+   * (`describedBy`). Un `disabled` nativo la dejaría fuera del teclado.
+   */
+  readonly locked = input(false);
   readonly checkedChange = output<boolean>();
 
   protected readonly value = linkedSignal(() => this.checked());
@@ -108,6 +129,7 @@ export class ToggleComponent implements ControlValueAccessor {
   protected onTouched: () => void = () => undefined;
 
   protected toggle(): void {
+    if (this.locked()) return;
     const next = !this.value();
     // Solo un control de formulario se actualiza a sí mismo.
     if (this.boundToForm) this.value.set(next);

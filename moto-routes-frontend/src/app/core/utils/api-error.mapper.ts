@@ -10,6 +10,7 @@ const MESSAGES = {
   server: 'La API ha fallado al procesar la petición. Vuelve a intentarlo en unos minutos.',
   validationFields: 'Hay campos con errores. Revísalos y vuelve a guardar.',
   validation: 'La API ha rechazado los datos enviados.',
+  noChanges: 'No has cambiado ningún dato: no hay nada que guardar.',
   unauthorized: 'Necesitas iniciar sesión para hacer esto.',
   forbidden: 'No tienes permiso para hacer esto.',
   notFound: 'No se ha encontrado lo que buscabas. Puede que se haya eliminado.',
@@ -53,10 +54,16 @@ export function toApiError(error: unknown): ApiError {
 
   if (status === 400 || status === 422) {
     const fieldErrors = readFieldErrors(error.error);
+    // Un PATCH sin ningún campo (la API lo rechaza con 400 y sin `details`).
+    const noChanges = detail === 'No fields to update';
     return new ApiError({
       status,
       type: 'validation',
-      message: fieldErrors ? MESSAGES.validationFields : MESSAGES.validation,
+      message: fieldErrors
+        ? MESSAGES.validationFields
+        : noChanges
+          ? MESSAGES.noChanges
+          : MESSAGES.validation,
       fieldErrors,
       detail,
     });
@@ -102,6 +109,7 @@ const RESOURCES: Record<string, { a: string; own: string; active: string }> = {
   location: { a: 'una ubicación', own: 'una de sus ubicaciones', active: 'activa' },
   route: { a: 'una ruta', own: 'su ruta', active: 'activa' },
   experience: { a: 'una experiencia', own: 'su experiencia', active: 'activa' },
+  departure: { a: 'una salida', own: 'su salida', active: 'activa' },
 };
 
 /** Lo que impide eliminar un registro ("Cannot delete a route that has experiences"). */
@@ -120,8 +128,20 @@ const DELETE_ACTIONS: Record<string, string> = {
 };
 
 /** Los 409 de la API no siempre son duplicados: cada motivo tiene su texto. */
+const DUPLICATED_FIELDS: Record<string, string> = {
+  name: 'ese nombre',
+  email: 'ese email',
+  slug: 'esa dirección',
+  'city, region and country': 'esa ciudad, región y país',
+};
+
 const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> = [
   [/ is not deleted$/, () => 'Ese registro ya estaba restaurado.'],
+  [
+    /^An? (\w+) with this (.+) already exists$/,
+    (m) =>
+      `Ya existe ${RESOURCES[m[1]]?.a ?? 'un registro'} con ${DUPLICATED_FIELDS[m[2]] ?? 'esos datos'}.`,
+  ],
   [
     /^Cannot restore: \w+ references a deleted (\w+)$/,
     (m) => `No se puede restaurar mientras ${RESOURCES[m[1]]?.own ?? 'una de sus referencias'} siga en la papelera.`,
@@ -159,6 +179,8 @@ const FIELD_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> 
   ],
   [/^must reference an existing \w+$/, () => 'El elemento al que pertenece ya no existe.'],
   [/^must reference a user with the host role$/, () => 'El usuario tiene que tener el rol de anfitrión.'],
+  // Un campo que no se puede editar (el SKU de una salida, el usuario de un anfitrión...)
+  [/^cannot be changed$/, () => 'Este dato no se puede cambiar.'],
   // Reglas entre campos (van antes que las genéricas de mínimo y máximo)
   [/^must be greater than or equal to minParticipants$/, () => 'No puede ser menor que el mínimo de participantes.'],
   [
