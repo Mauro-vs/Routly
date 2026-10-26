@@ -8,6 +8,7 @@ import {
   assertNotTaken,
   assertNoDependents,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -67,7 +68,7 @@ export const locationService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const location = await locationService.getById(id);
+    const location = await findCurrent(locationRepository, id, "Location");
 
     if (data.city !== undefined || data.region !== undefined || data.country !== undefined) {
       // region a null es "sin región", no "la que tenía"
@@ -79,20 +80,19 @@ export const locationService = {
       assertNotTaken(await locationRepository.findDuplicateByPlace(place, id), DUPLICATED);
     }
 
-    return toResponse(
-      ensureWritten(await locationRepository.updateById(id, toDocument(data)), "Location")
-    );
+    ensureWritten(await locationRepository.updateById(id, toDocument(data)), "Location");
+    return locationService.getById(id);
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await locationService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(locationRepository, id, "Location");
+    if (current.isActive === isActive) return locationService.getById(id);
     return locationService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    await locationService.getById(id);
+    await findCurrent(locationRepository, id, "Location");
     await assertNoDependents(
       routeRepository,
       { $or: [{ startLocationId: id }, { endLocationId: id }] },

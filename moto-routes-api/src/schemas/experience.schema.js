@@ -1,18 +1,17 @@
 import { z } from "zod";
-import { EXPERIENCE_LANGUAGES } from "../models/experience.model.js";
+import { EXPERIENCE_LANGUAGES, EXPERIENCE_LIMITS as LIMITS } from "../models/experience.model.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 const experienceFields = z.strictObject({
   hostId: objectIdSchema,
   routeId: objectIdSchema,
-  title: z.string().trim().min(2).max(120),
-  description: z.string().trim().max(2000).optional(),
-  meetingPoint: z.string().trim().max(200).optional(),
+  title: z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax),
+  description: z.string().trim().max(LIMITS.descriptionMax).optional(),
+  meetingPoint: z.string().trim().max(LIMITS.meetingPointMax).optional(),
   language: z.string().trim().toLowerCase().pipe(z.enum(EXPERIENCE_LANGUAGES)).optional(),
-  // Horas, con paradas: como mucho 30 días
-  duration: z.number().positive().max(720),
+  duration: z.number().positive().max(LIMITS.durationMax),
   minParticipants: z.number().int().min(1).optional(),
-  maxParticipants: z.number().int().min(1).max(100),
+  maxParticipants: z.number().int().min(1).max(LIMITS.participantsMax),
 });
 
 const participantsError = {

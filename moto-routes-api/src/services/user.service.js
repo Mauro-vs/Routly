@@ -12,6 +12,7 @@ import {
   assertReference,
   assertRestorable,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -72,7 +73,7 @@ export const userService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const user = await userService.getById(id);
+    const user = await findCurrent(userRepository, id, "User");
 
     if (data.email !== undefined) {
       assertNotTaken(
@@ -89,19 +90,19 @@ export const userService = {
       }
     }
 
-    await userRepository.updateById(id, await withPasswordHash(data));
+    ensureWritten(await userRepository.updateById(id, await withPasswordHash(data)), "User");
     return userService.getById(id);
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await userService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(userRepository, id, "User");
+    if (current.isActive === isActive) return userService.getById(id);
     return userService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    await userService.getById(id);
+    await findCurrent(userRepository, id, "User");
     await assertNoDependents(
       hostRepository,
       { userId: id },

@@ -1,29 +1,48 @@
 import { badRequest, conflict, fieldError, notFound } from "../utils/errors.js";
+import { OBJECT_ID_PATTERN } from "../utils/objectId.js";
 
 // Comprobaciones que comparten todos los services. MongoDB no vigila las relaciones
 // ni el estado de los documentos: lo hacen estas funciones antes de cada escritura.
-
-const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 
 /**
  * 400 si el id no tiene formato de ObjectId. Zod ya lo comprueba en las rutas; esto
  * protege cuando un service se llama desde otro sitio (el seed u otro service).
  */
-export function assertObjectId(id, field = "id") {
-  if (!OBJECT_ID.test(String(id))) throw fieldError(field, `${field} has an invalid format`);
+function assertObjectId(id, field = "id") {
+  if (!OBJECT_ID_PATTERN.test(String(id))) {
+    throw fieldError(field, `${field} has an invalid format`);
+  }
 }
 
 /**
- * Busca el documento que se va a leer o modificar: tiene que existir, no estar
- * eliminado y ser exactamente el que se pidió. Si no, 404.
+ * Busca el documento que se va a leer: tiene que existir y no estar eliminado. Si no,
+ * 404. Trae sus relaciones (populate), como lo devuelve un GET.
  *
  * @param resource nombre del recurso en los mensajes: "Route", "Experience"...
  */
 export async function findExisting(repository, id, resource) {
   assertObjectId(id);
   const document = await repository.findById(id);
-  if (!document || String(document._id) !== String(id)) throw notFound(resource);
+  if (!document) throw notFound(resource);
   return document;
+}
+
+/**
+ * Igual que findExisting, pero sin relaciones: el documento tal como está guardado.
+ * Es lo que necesitan las reglas antes de editar, activar o eliminar, y cuesta una
+ * sola consulta. Los repositorios sin relaciones no tienen findPlainById: su findById
+ * ya es así.
+ */
+export async function findCurrent(repository, id, resource) {
+  assertObjectId(id);
+  const document = await findPlain(repository, id);
+  if (!document) throw notFound(resource);
+  return document;
+}
+
+// El documento sin relaciones, o null si no existe o está eliminado
+function findPlain(repository, id) {
+  return repository.findPlainById ? repository.findPlainById(id) : repository.findById(id);
 }
 
 /**
@@ -46,12 +65,12 @@ export function assertHasChanges(data) {
  * Comprueba que una referencia apunta a un documento que existe, no está eliminado
  * y (si se pide) está activo. Si no, lanza un 400 en ese campo. Devuelve el documento.
  *
- * @param repository repositorio de la colección referenciada (con findById)
+ * @param repository repositorio de la colección referenciada
  * @param resource nombre del recurso en los mensajes: "role", "location"...
  */
 export async function assertReference(repository, id, field, resource, { mustBeActive = true } = {}) {
   assertObjectId(id, field);
-  const document = await repository.findById(id);
+  const document = await findPlain(repository, id);
 
   if (!document || (mustBeActive && !document.isActive)) {
     const state = mustBeActive ? "an active" : "an existing";
@@ -79,7 +98,7 @@ export async function assertNoDependents(repository, filter, message) {
 
 /** 409 al restaurar si una referencia apunta a un documento eliminado. */
 export async function assertRestorable(repository, id, field, resource) {
-  if (!(await repository.findById(id))) {
+  if (!(await findPlain(repository, id))) {
     throw conflict(`Cannot restore: ${field} references a deleted ${resource}`);
   }
 }
@@ -95,6 +114,6 @@ export async function findRestorable(repository, id, resource) {
   const deleted = await repository.findDeletedById(id);
   if (deleted) return deleted;
 
-  if (await repository.findById(id)) throw conflict(`${resource} is not deleted`);
+  if (await findPlain(repository, id)) throw conflict(`${resource} is not deleted`);
   throw notFound(resource);
 }

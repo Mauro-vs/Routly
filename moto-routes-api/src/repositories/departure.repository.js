@@ -20,6 +20,11 @@ export const departureRepository = {
     return withExperience(Departure.findOne({ _id: id })).lean();
   },
 
+  // Sin relaciones: lo que necesitan las reglas del service antes de escribir
+  findPlainById(id) {
+    return Departure.findOne({ _id: id }).lean();
+  },
+
   findBySlug(slug) {
     return withExperience(Departure.findOne({ slug })).lean();
   },
@@ -63,12 +68,10 @@ export const departureRepository = {
   },
 
   updateById(id, data) {
-    return withExperience(
-      Departure.findOneAndUpdate({ _id: id }, toUpdate(data), {
-        returnDocument: "after",
-        runValidators: true,
-      })
-    ).lean();
+    return Departure.findOneAndUpdate({ _id: id }, toUpdate(data), {
+      returnDocument: "after",
+      runValidators: true,
+    }).lean();
   },
 
   softDeleteById(id) {

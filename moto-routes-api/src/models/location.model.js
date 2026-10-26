@@ -3,6 +3,17 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 
+// Límites de los campos: los usan este modelo y el esquema de Zod (schemas/location.schema.js).
+export const LOCATION_LIMITS = Object.freeze({
+  cityMin: 2,
+  cityMax: 80,
+  regionMax: 80,
+  countryMin: 2,
+  countryMax: 80,
+  latitudeMax: 90,
+  longitudeMax: 180,
+});
+
 // Ciudad, región y país se comparan sin distinguir mayúsculas ni tildes
 export const LOCATION_COLLATION = Object.freeze({ locale: "es", strength: 1 });
 
@@ -15,7 +26,8 @@ const pointSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: ([longitude, latitude] = []) =>
-          longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90,
+          Math.abs(longitude) <= LOCATION_LIMITS.longitudeMax &&
+          Math.abs(latitude) <= LOCATION_LIMITS.latitudeMax,
         message: "coordinates must be [longitude, latitude]",
       },
     },
@@ -25,9 +37,22 @@ const pointSchema = new mongoose.Schema(
 
 const locationSchema = new mongoose.Schema(
   {
-    city: { type: String, required: true, trim: true, minlength: 2, maxlength: 80 },
-    region: { type: String, trim: true, maxlength: 80 },
-    country: { type: String, required: true, trim: true, minlength: 2, maxlength: 80, default: "España" },
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: LOCATION_LIMITS.cityMin,
+      maxlength: LOCATION_LIMITS.cityMax,
+    },
+    region: { type: String, trim: true, maxlength: LOCATION_LIMITS.regionMax },
+    country: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: LOCATION_LIMITS.countryMin,
+      maxlength: LOCATION_LIMITS.countryMax,
+      default: "España",
+    },
     coordinates: { type: pointSchema, default: undefined },
   },
   { timestamps: true }

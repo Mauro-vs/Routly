@@ -11,6 +11,7 @@ import {
   assertReference,
   assertRestorable,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -72,10 +73,10 @@ export const routeService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const route = await routeService.getById(id);
+    const route = await findCurrent(routeRepository, id, "Route");
     await assertReferences(data, route);
 
-    await routeRepository.updateById(id, data);
+    ensureWritten(await routeRepository.updateById(id, data), "Route");
     return routeService.getById(id);
   },
 
@@ -84,14 +85,14 @@ export const routeService = {
   // no eliminadas, así que una ruta eliminada no se puede activar (404).
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await routeService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(routeRepository, id, "Route");
+    if (current.isActive === isActive) return routeService.getById(id);
     return routeService.update(id, { status: statusFromActive(isActive) });
   },
 
   // Sus imágenes se eliminan con ella, con el mismo deletedAt
   async remove(id) {
-    await routeService.getById(id);
+    await findCurrent(routeRepository, id, "Route");
     await assertNoDependents(
       experienceRepository,
       { routeId: id },

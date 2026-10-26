@@ -8,18 +8,31 @@ import { positive } from "./validators.js";
 // Se mantiene el nombre antiguo para no romper los imports existentes
 export const ROUTE_STATUS = STATUS;
 
+// Límites de los campos: los usan este modelo y el esquema de Zod (schemas/route.schema.js).
+// Distancia en km y duración en horas
+export const ROUTE_LIMITS = Object.freeze({
+  titleMin: 2,
+  titleMax: 120,
+  descriptionMax: 500,
+  distanceMax: 5000,
+  durationMax: 240,
+});
+
+export const ROUTE_DIFFICULTIES = Object.freeze(["easy", "medium", "hard"]);
+
 const routeSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true, minlength: 2, maxlength: 120 },
-    description: { type: String, trim: true, maxlength: 500 },
-    difficulty: {
+    title: {
       type: String,
       required: true,
-      enum: ["easy", "medium", "hard"],
+      trim: true,
+      minlength: ROUTE_LIMITS.titleMin,
+      maxlength: ROUTE_LIMITS.titleMax,
     },
-    // Kilómetros y horas
-    distance: { type: Number, required: true, max: 5000, validate: positive },
-    duration: { type: Number, required: true, max: 240, validate: positive },
+    description: { type: String, trim: true, maxlength: ROUTE_LIMITS.descriptionMax },
+    difficulty: { type: String, required: true, enum: ROUTE_DIFFICULTIES },
+    distance: { type: Number, required: true, max: ROUTE_LIMITS.distanceMax, validate: positive },
+    duration: { type: Number, required: true, max: ROUTE_LIMITS.durationMax, validate: positive },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true, index: true },
     startLocationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location", required: true, index: true },
     // Puede ser la misma que el origen: ruta circular

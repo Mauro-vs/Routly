@@ -8,6 +8,7 @@ import {
   assertNotTaken,
   assertNoDependents,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -50,7 +51,7 @@ export const categoryService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    await categoryService.getById(id);
+    await findCurrent(categoryRepository, id, "Category");
 
     if (data.name !== undefined) {
       assertNotTaken(
@@ -59,19 +60,20 @@ export const categoryService = {
       );
     }
 
-    return ensureWritten(await categoryRepository.updateById(id, data), "Category");
+    ensureWritten(await categoryRepository.updateById(id, data), "Category");
+    return categoryService.getById(id);
   },
 
   // Desactivar no se propaga: sus rutas siguen igual, pero no se puede usar en rutas nuevas
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await categoryService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(categoryRepository, id, "Category");
+    if (current.isActive === isActive) return categoryService.getById(id);
     return categoryService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    await categoryService.getById(id);
+    await findCurrent(categoryRepository, id, "Category");
     await assertNoDependents(
       routeRepository,
       { categoryId: id },

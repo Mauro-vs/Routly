@@ -17,6 +17,11 @@ export const userRepository = {
     return withRole(User.findOne({ _id: id })).lean();
   },
 
+  // Sin relaciones: lo que necesitan las reglas del service antes de escribir
+  findPlainById(id) {
+    return User.findOne({ _id: id }).lean();
+  },
+
   findBySlug(slug) {
     return withRole(User.findOne({ slug })).lean();
   },
@@ -42,12 +47,10 @@ export const userRepository = {
   },
 
   updateById(id, data) {
-    return withRole(
-      User.findOneAndUpdate({ _id: id }, toUpdate(data), {
-        returnDocument: "after",
-        runValidators: true,
-      })
-    ).lean();
+    return User.findOneAndUpdate({ _id: id }, toUpdate(data), {
+      returnDocument: "after",
+      runValidators: true,
+    }).lean();
   },
 
   softDeleteById(id) {

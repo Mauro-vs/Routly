@@ -1,7 +1,13 @@
 import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { imageRepository } from "../repositories/image.repository.js";
 import { conflict, fieldError } from "../utils/errors.js";
-import { assertHasChanges, ensureWritten, findExisting, findRestorable } from "./references.js";
+import {
+  assertHasChanges,
+  ensureWritten,
+  findCurrent,
+  findExisting,
+  findRestorable,
+} from "./references.js";
 
 // La imagen principal (isCover) es la portada de una ruta, la foto de perfil de un
 // usuario... Siempre hay como mucho una por dueño, y nunca es una imagen inactiva.
@@ -54,7 +60,7 @@ export const imageService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const image = await imageService.getById(id);
+    const image = await findCurrent(imageRepository, id, "Image");
     const { ownerType, ownerId } = image;
     const willBeActive = data.status ? data.status === STATUS.ACTIVE : image.isActive;
 
@@ -69,20 +75,20 @@ export const imageService = {
 
     if (image.isCover && !updated.isCover) await promoteNextCover(ownerType, ownerId, id);
     if (!image.isActive && updated.isActive && !(await imageRepository.hasCover(ownerType, ownerId))) {
-      return imageRepository.updateById(id, { isCover: true });
+      await imageRepository.updateById(id, { isCover: true });
     }
-    return updated;
+    return imageService.getById(id);
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await imageService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(imageRepository, id, "Image");
+    if (current.isActive === isActive) return imageService.getById(id);
     return imageService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    const image = await imageService.getById(id);
+    const image = await findCurrent(imageRepository, id, "Image");
 
     if (image.isCover) await imageRepository.updateById(id, { isCover: false });
     ensureWritten(await imageRepository.softDeleteById(id), "Image");
@@ -103,9 +109,9 @@ export const imageService = {
       "Image"
     );
     if (restored.isActive && !(await imageRepository.hasCover(deleted.ownerType, deleted.ownerId))) {
-      return imageRepository.updateById(id, { isCover: true });
+      await imageRepository.updateById(id, { isCover: true });
     }
-    return restored;
+    return imageService.getById(id);
   },
 
   // ---- Para los services de los dueños ----

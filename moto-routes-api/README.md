@@ -152,7 +152,7 @@ Lo que es igual en todas las colecciones no se repite: está en un solo sitio.
 | `models/imageOwners.js` | Las colecciones que pueden tener imágenes (`IMAGE_OWNERS`) |
 | `models/validators.js` | Enteros y precios con dos decimales en el modelo, igual que en Zod |
 | `schemas/common.schema.js` | Validación de `:id`, `:slug`, `status`, `/active` y `/restore` |
-| `services/references.js` | Comprobaciones que comparten todos los services: id válido (`assertObjectId`), documento que existe y es el pedido (`findExisting`), escritura que no devuelve `null` (`ensureWritten`), PATCH con algún campo (`assertHasChanges`), referencias, dependientes, slug libre y documento restaurable |
+| `services/references.js` | Comprobaciones que comparten todos los services: documento que existe, con sus relaciones (`findExisting`, lo que devuelve un GET) o tal como está guardado (`findCurrent`, lo que usan las reglas antes de escribir), escritura que no devuelve `null` (`ensureWritten`), PATCH con algún campo (`assertHasChanges`), valores únicos (`assertNotTaken`), referencias, dependientes y documento restaurable |
 | `services/image.service.js` | Además de las imágenes, la imagen principal (`coverImage`) y la cascada con la papelera |
 | `utils/errors.js` | `notFound`, `conflict`, `badRequest` y `fieldError` (400 con `details` en un campo) |
 | `utils/slugify.js` y `utils/sku.js` | Generación del slug y del SKU |
@@ -454,7 +454,7 @@ router.get("/", validate({ query: imageQuerySchema }), imageController.list);
 
 Se pueden vaciar con `null` en el PATCH: `description` (rutas, categorías, roles y experiencias), `meetingPoint`, `biography`, `alt`, `region`, y `latitude` con `longitude` (las dos a la vez).
 - Si no lo son, Zod lanza un error y el `errorHandler` responde 400 con un `details` por campo. No se llega a consultar la base de datos.
-- El modelo de Mongoose mantiene sus propias reglas como segunda barrera. Si cambia un límite, hay que cambiarlo en el esquema de Zod **y** en el modelo.
+- El modelo de Mongoose mantiene sus propias reglas como segunda barrera. Los límites y las listas cerradas están una sola vez, en constantes del modelo (`ROUTE_LIMITS`, `ROUTE_DIFFICULTIES`, `EXPERIENCE_LANGUAGES`...), y el esquema de Zod las importa: un límite se cambia en un solo sitio.
 - Swagger genera los cuerpos de las peticiones a partir de estos mismos esquemas (`z.toJSONSchema`), así que la documentación siempre coincide con la validación.
 
 ## Manejo de errores
@@ -462,7 +462,7 @@ Se pueden vaciar con `null` en el PATCH: `description` (rutas, categorías, role
 En tres capas:
 
 1. **Rutas:** `validate()` con Zod rechaza la petición antes de llegar al controlador. En los `PATCH`, además, los campos que no se pueden cambiar (`cannotChange()` en `schemas/common.schema.js`).
-2. **Services:** antes de escribir, cada operación comprueba que el documento existe, es el pedido y está en un estado que la permite (funciones de `services/references.js`). Lanzan errores controlados con `utils/errors.js` (`notFound`, `conflict`, `badRequest`, `fieldError`).
+2. **Services:** antes de escribir, cada operación lee el documento sin relaciones (una consulta) y comprueba que existe y está en un estado que la permite (funciones de `services/references.js`). Después de editar, activar o restaurar, la respuesta es la misma que la de un GET. Lanzan errores controlados con `utils/errors.js` (`notFound`, `conflict`, `badRequest`, `fieldError`).
 3. **Server:** un único middleware global, `src/middlewares/errorHandler.js`, convierte cualquier error en la respuesta. Los controladores lo capturan con `try/catch` y se lo pasan con `next(error)`.
 
 Todas las respuestas de error tienen el mismo formato:

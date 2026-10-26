@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { USER_LIMITS as LIMITS } from "../models/user.model.js";
 import { cannotChange, objectIdSchema } from "./common.schema.js";
 
 // La API recibe password y guarda solo su hash: passwordHash nunca se acepta del cliente.
@@ -12,8 +13,8 @@ const password = z
   });
 
 const userFields = z.strictObject({
-  name: z.string().trim().min(2).max(100),
-  email: z.string().trim().toLowerCase().max(254).email(),
+  name: z.string().trim().min(LIMITS.nameMin).max(LIMITS.nameMax),
+  email: z.string().trim().toLowerCase().max(LIMITS.emailMax).email(),
   password,
   // Si no llega, el service asigna el rol rider
   roleId: objectIdSchema.optional(),

@@ -7,6 +7,7 @@ import {
   assertNotTaken,
   assertNoDependents,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -55,7 +56,7 @@ export const roleService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const role = await roleService.getById(id);
+    const role = await findCurrent(roleRepository, id, "Role");
 
     if (data.name !== undefined && data.name !== role.name) {
       if (role.isSystem) throw conflict("System roles cannot be renamed");
@@ -75,18 +76,19 @@ export const roleService = {
       throw conflict("System roles cannot be deactivated");
     }
 
-    return ensureWritten(await roleRepository.updateById(id, data), "Role");
+    ensureWritten(await roleRepository.updateById(id, data), "Role");
+    return roleService.getById(id);
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await roleService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(roleRepository, id, "Role");
+    if (current.isActive === isActive) return roleService.getById(id);
     return roleService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    const role = await roleService.getById(id);
+    const role = await findCurrent(roleRepository, id, "Role");
 
     if (role.isSystem) throw conflict("System roles cannot be deleted");
     await assertNoDependents(userRepository, { roleId: id }, "Cannot delete a role that has users");

@@ -3,13 +3,22 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 
+// Límites de los campos: los usan este modelo y el esquema de Zod (schemas/host.schema.js).
+export const HOST_LIMITS = Object.freeze({ nameMin: 2, nameMax: 100, biographyMax: 1000 });
+
 // Perfil público de un anfitrión. La cuenta está en users.
 const hostSchema = new mongoose.Schema(
   {
     // Un usuario tiene como mucho un perfil de anfitrión
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
-    name: { type: String, required: true, trim: true, minlength: 2, maxlength: 100 },
-    biography: { type: String, trim: true, maxlength: 1000 },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: HOST_LIMITS.nameMin,
+      maxlength: HOST_LIMITS.nameMax,
+    },
+    biography: { type: String, trim: true, maxlength: HOST_LIMITS.biographyMax },
   },
   { timestamps: true }
 );

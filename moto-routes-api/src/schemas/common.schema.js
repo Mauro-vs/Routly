@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { OBJECT_ID_PATTERN } from "../utils/objectId.js";
 
 // Piezas de validación que comparten todas las colecciones.
 // Los body usan z.strictObject: un campo que no está en el esquema es un 400
 // ("color is not allowed"), no se descarta sin avisar.
 
-export const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/);
+export const objectIdSchema = z.string().regex(OBJECT_ID_PATTERN);
 
 export const idParamSchema = z.object({
   id: objectIdSchema,

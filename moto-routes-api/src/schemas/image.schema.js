@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IMAGE_LIMITS as LIMITS } from "../models/image.model.js";
 import { IMAGE_OWNER_TYPES } from "../models/imageOwners.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
@@ -7,14 +8,14 @@ import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 const imageUrl = z
   .string()
   .trim()
-  .max(2048)
+  .max(LIMITS.urlMax)
   .pipe(z.url({ protocol: /^https$/ }));
 
 const imageFields = z.strictObject({
   ownerType: z.enum(IMAGE_OWNER_TYPES),
   ownerId: objectIdSchema,
   url: imageUrl,
-  alt: z.string().trim().max(200).optional(),
+  alt: z.string().trim().max(LIMITS.altMax).optional(),
   position: z.number().int().min(0).optional(),
   isCover: z.boolean().optional(),
 });

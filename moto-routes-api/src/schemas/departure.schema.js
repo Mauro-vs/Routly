@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEPARTURE_STATES } from "../models/departure.model.js";
+import { DEPARTURE_LIMITS as LIMITS, DEPARTURE_STATES } from "../models/departure.model.js";
 import { SKU_PATTERN } from "../utils/sku.js";
 import { cannotChange, objectIdSchema } from "./common.schema.js";
 
@@ -15,7 +15,7 @@ const departureFields = z.strictObject({
   endAt: isoDate,
   capacity: z.number().int().min(1),
   // Euros por persona, con dos decimales como máximo
-  price: z.number().min(0).max(100000).multipleOf(0.01),
+  price: z.number().min(0).max(LIMITS.priceMax).multipleOf(0.01),
   state: z.enum(DEPARTURE_STATES).optional(),
 });
 

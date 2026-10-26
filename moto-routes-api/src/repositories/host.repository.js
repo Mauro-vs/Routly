@@ -16,6 +16,11 @@ export const hostRepository = {
     return withUser(Host.findOne({ _id: id })).lean();
   },
 
+  // Sin relaciones: lo que necesitan las reglas del service antes de escribir
+  findPlainById(id) {
+    return Host.findOne({ _id: id }).lean();
+  },
+
   findBySlug(slug) {
     return withUser(Host.findOne({ slug })).lean();
   },
@@ -39,12 +44,10 @@ export const hostRepository = {
   },
 
   updateById(id, data) {
-    return withUser(
-      Host.findOneAndUpdate({ _id: id }, toUpdate(data), {
-        returnDocument: "after",
-        runValidators: true,
-      })
-    ).lean();
+    return Host.findOneAndUpdate({ _id: id }, toUpdate(data), {
+      returnDocument: "after",
+      runValidators: true,
+    }).lean();
   },
 
   softDeleteById(id) {

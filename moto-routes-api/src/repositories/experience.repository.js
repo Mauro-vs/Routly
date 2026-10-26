@@ -21,6 +21,11 @@ export const experienceRepository = {
     return withRelations(Experience.findOne({ _id: id })).lean();
   },
 
+  // Sin relaciones: lo que necesitan las reglas del service antes de escribir
+  findPlainById(id) {
+    return Experience.findOne({ _id: id }).lean();
+  },
+
   findBySlug(slug) {
     return withRelations(Experience.findOne({ slug })).lean();
   },
@@ -38,12 +43,10 @@ export const experienceRepository = {
   },
 
   updateById(id, data) {
-    return withRelations(
-      Experience.findOneAndUpdate({ _id: id }, toUpdate(data), {
-        returnDocument: "after",
-        runValidators: true,
-      })
-    ).lean();
+    return Experience.findOneAndUpdate({ _id: id }, toUpdate(data), {
+      returnDocument: "after",
+      runValidators: true,
+    }).lean();
   },
 
   softDeleteById(id) {

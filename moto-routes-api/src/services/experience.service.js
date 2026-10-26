@@ -12,6 +12,7 @@ import {
   assertReference,
   assertRestorable,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -64,7 +65,7 @@ export const experienceService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const experience = await experienceService.getById(id);
+    const experience = await findCurrent(experienceRepository, id, "Experience");
     await assertReferences(data, experience);
 
     // Si solo llega uno de los dos límites, se compara con el guardado
@@ -86,14 +87,12 @@ export const experienceService = {
     }
 
     // Ni con menos plazas que el nuevo mínimo
-    if (
-      data.minParticipants !== undefined &&
-      (await departureRepository.exists({ experienceId: id, capacity: { $lt: data.minParticipants } }))
-    ) {
+    const belowMinimum = { experienceId: id, capacity: { $lt: data.minParticipants } };
+    if (data.minParticipants !== undefined && (await departureRepository.exists(belowMinimum))) {
       throw conflict("minParticipants is higher than the capacity of an existing departure");
     }
 
-    await experienceRepository.updateById(id, data);
+    ensureWritten(await experienceRepository.updateById(id, data), "Experience");
     if (data.title !== undefined && data.title !== experience.title) {
       await departureService.renameExperience(id, data.title);
     }
@@ -102,13 +101,13 @@ export const experienceService = {
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await experienceService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(experienceRepository, id, "Experience");
+    if (current.isActive === isActive) return experienceService.getById(id);
     return experienceService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    await experienceService.getById(id);
+    await findCurrent(experienceRepository, id, "Experience");
     await assertNoDependents(
       departureRepository,
       { experienceId: id },

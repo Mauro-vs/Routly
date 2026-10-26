@@ -1,5 +1,5 @@
-// Validadores de Mongoose para las reglas que Zod comprueba con .int(), .positive() y .multipleOf():
-// así el modelo sigue siendo una segunda barrera completa
+// Validadores de Mongoose para las reglas que Zod comprueba con .int(), .positive() y
+// .multipleOf(): así el modelo sigue siendo una segunda barrera completa
 
 export const integer = {
   validator: Number.isInteger,

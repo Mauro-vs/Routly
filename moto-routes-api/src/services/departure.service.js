@@ -10,6 +10,7 @@ import {
   assertReference,
   assertRestorable,
   ensureWritten,
+  findCurrent,
   findExisting,
   findRestorable,
 } from "./references.js";
@@ -131,8 +132,8 @@ export const departureService = {
   async update(id, data) {
     assertHasChanges(data);
 
-    const departure = await departureService.getById(id);
-    const experience = await experienceRepository.findById(departure.experienceId);
+    const departure = await findCurrent(departureRepository, id, "Departure");
+    const experience = await experienceRepository.findPlainById(departure.experienceId);
     // No debería pasar (una experiencia con salidas no se puede eliminar), pero sin ella
     // no se puede calcular el slug ni comprobar las plazas
     if (!experience) {
@@ -158,7 +159,7 @@ export const departureService = {
       ? { ...data, slug: departureSlug(experience.title, data.startAt, id) }
       : data;
 
-    await departureRepository.updateById(id, changes);
+    ensureWritten(await departureRepository.updateById(id, changes), "Departure");
     return departureService.getById(id);
   },
 
@@ -175,13 +176,13 @@ export const departureService = {
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
   async setActive(id, isActive) {
-    const current = await departureService.getById(id);
-    if (current.isActive === isActive) return current;
+    const current = await findCurrent(departureRepository, id, "Departure");
+    if (current.isActive === isActive) return departureService.getById(id);
     return departureService.update(id, { status: statusFromActive(isActive) });
   },
 
   async remove(id) {
-    await departureService.getById(id);
+    await findCurrent(departureRepository, id, "Departure");
     ensureWritten(await departureRepository.softDeleteById(id), "Departure");
   },
 

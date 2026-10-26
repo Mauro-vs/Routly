@@ -23,6 +23,11 @@ export const routeRepository = {
     return withRelations(Route.findOne({ _id: id })).lean();
   },
 
+  // Sin relaciones: lo que necesitan las reglas del service antes de escribir
+  findPlainById(id) {
+    return Route.findOne({ _id: id }).lean();
+  },
+
   findBySlug(slug) {
     return withRelations(Route.findOne({ slug })).lean();
   },
@@ -41,12 +46,10 @@ export const routeRepository = {
   },
 
   updateById(id, data) {
-    return withRelations(
-      Route.findOneAndUpdate({ _id: id }, toUpdate(data), {
-        returnDocument: "after",
-        runValidators: true,
-      })
-    ).lean();
+    return Route.findOneAndUpdate({ _id: id }, toUpdate(data), {
+      returnDocument: "after",
+      runValidators: true,
+    }).lean();
   },
 
   softDeleteById(id) {
