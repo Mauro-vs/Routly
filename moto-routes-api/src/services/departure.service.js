@@ -1,7 +1,7 @@
 import { statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
-import { fieldError, notFound } from "../utils/errors.js";
+import { conflict, fieldError, notFound } from "../utils/errors.js";
 import { buildSku, madridDateParts } from "../utils/sku.js";
 import { buildSlug } from "../utils/slugify.js";
 import {
@@ -32,6 +32,13 @@ function assertCapacity(capacity, experience) {
   }
 }
 
+// Al crear y al cambiar la fecha: una salida no puede empezar en el pasado
+function assertFuture(startAt) {
+  if (startAt <= new Date()) {
+    throw fieldError("startAt", "startAt must be in the future");
+  }
+}
+
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
 
 export const departureService = {
@@ -58,9 +65,9 @@ export const departureService = {
     return departure;
   },
 
-  // Se acepta en minúsculas: se guarda siempre en mayúsculas
+  // Llega ya en mayúsculas: lo normaliza skuParamSchema
   async getBySku(sku) {
-    const departure = await departureRepository.findBySku(sku.trim().toUpperCase());
+    const departure = await departureRepository.findBySku(sku);
     if (!departure) throw notFound("Departure");
     return departure;
   },
@@ -73,9 +80,7 @@ export const departureService = {
       "experience"
     );
 
-    if (data.startAt <= new Date()) {
-      throw fieldError("startAt", "startAt must be in the future");
-    }
+    assertFuture(data.startAt);
     assertCapacity(data.capacity, experience);
 
     const _id = departureRepository.generateId();
@@ -105,6 +110,8 @@ export const departureService = {
     if (!experience) {
       throw conflict("Cannot update: experienceId references a deleted experience");
     }
+
+    if (data.startAt !== undefined) assertFuture(data.startAt);
 
     const startAt = data.startAt ?? departure.startAt;
     const endAt = data.endAt ?? departure.endAt;

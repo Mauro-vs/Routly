@@ -32,3 +32,4 @@ desktop.ini
 *.md
 
 !README.md
+.code-review-graphignore

@@ -5,11 +5,14 @@ import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 
 // sku y slug no están en el esquema: los genera el service
 
+// Solo texto ISO 8601 con hora y zona: "2026-11-08T08:00:00.000Z" o "...+01:00".
+// z.coerce.date() aceptaba cualquier cosa convertible (true, 0, "2026").
+const isoDate = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
+
 const departureFields = z.object({
   experienceId: objectIdSchema,
-  // Llegan en ISO 8601: "2026-11-08T08:00:00.000Z"
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date(),
+  startAt: isoDate,
+  endAt: isoDate,
   capacity: z.number().int().min(1),
   // Euros por persona, con dos decimales como máximo
   price: z.number().min(0).multipleOf(0.01),
