@@ -108,14 +108,45 @@ describe('DepartureFormComponent', () => {
 
     form.select('state', 'cancelled');
     await form.submit();
+    // Las fechas no han cambiado: no se envían
+    expect(form.saved[0]).toEqual({
+      mode: 'update',
+      payload: { capacity: 6, price: 120, state: 'cancelled' },
+    });
+  });
+
+  it('una salida que ya pasó se puede marcar como realizada sin enviar su fecha', async () => {
+    const past: Departure = {
+      ...DEPARTURE,
+      startAt: '2026-01-10T08:00:00.000Z',
+      endAt: '2026-01-10T16:00:00.000Z',
+    };
+    const form = await render(past);
+    form.select('state', 'completed');
+    await form.submit();
+
+    expect(form.saved[0]).toEqual({
+      mode: 'update',
+      payload: { capacity: 6, price: 120, state: 'completed' },
+    });
+  });
+
+  it('al editar, las fechas cambiadas sí se envían', async () => {
+    const form = await render(DEPARTURE);
+    const start = localIn(20);
+    const end = localIn(20, 17);
+    form.type('startAt', start);
+    form.type('endAt', end);
+    await form.submit();
+
     expect(form.saved[0]).toEqual({
       mode: 'update',
       payload: {
-        startAt: DEPARTURE.startAt,
-        endAt: DEPARTURE.endAt,
+        startAt: new Date(start).toISOString(),
+        endAt: new Date(end).toISOString(),
         capacity: 6,
         price: 120,
-        state: 'cancelled',
+        state: 'scheduled',
       },
     });
   });

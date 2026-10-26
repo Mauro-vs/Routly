@@ -92,13 +92,33 @@ describe('LocationFormComponent', () => {
     });
   });
 
-  it('al editar una ubicación con coordenadas no deja quitarlas', async () => {
+  it('al editar, vaciar las dos coordenadas las quita (las envía a null)', async () => {
     await render(PALMA);
     type('latitude', '');
     type('longitude', '');
     await submit();
 
-    expect(saved).toEqual([]);
-    expect(element.textContent).toContain('se pueden cambiar pero no quitar');
+    expect(saved).toEqual([
+      {
+        mode: 'update',
+        payload: {
+          city: 'Palma',
+          region: 'Islas Baleares',
+          country: 'España',
+          latitude: null,
+          longitude: null,
+        },
+      },
+    ]);
+  });
+
+  it('al editar una ubicación sin coordenadas, dejarlas vacías no envía nada', async () => {
+    await render({ ...PALMA, latitude: undefined, longitude: undefined });
+    await submit();
+
+    expect(saved[0]).toEqual({
+      mode: 'update',
+      payload: { city: 'Palma', region: 'Islas Baleares', country: 'España' },
+    });
   });
 });

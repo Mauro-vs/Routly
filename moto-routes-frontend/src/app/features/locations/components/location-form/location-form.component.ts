@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ApiError } from '../../../../core/models/api-error.model';
@@ -45,8 +45,7 @@ type LocationControls = ReturnType<typeof createLocationForm>['controls'];
  * Campos de una ubicación: el lugar y, si se quieren, sus coordenadas. La latitud y
  * la longitud van las dos o ninguna, como pide la API.
  *
- * La API no deja quitar unas coordenadas que ya tiene una ubicación (no acepta
- * `null`): al editar una que las tiene, son obligatorias.
+ * Al editar, vaciar las dos quita las coordenadas: se envían a `null`.
  */
 @Component({
   selector: 'app-location-form',
@@ -77,7 +76,7 @@ type LocationControls = ReturnType<typeof createLocationForm>['controls'];
       </div>
 
       <fieldset class="coordinates" [attr.aria-describedby]="coordinatesError() ? 'coordinates-error' : 'coordinates-hint'">
-        <legend>Coordenadas <span class="optional">{{ coordinatesRequired() ? '' : '(opcional)' }}</span></legend>
+        <legend>Coordenadas <span class="optional">(opcional)</span></legend>
         <div class="form-row">
           <ui-form-field label="Latitud" [error]="errorOf('latitude')">
             <input uiInput type="number" name="latitude" inputmode="decimal" step="any" min="-90" max="90" formControlName="latitude" />
@@ -89,7 +88,9 @@ type LocationControls = ReturnType<typeof createLocationForm>['controls'];
         @if (coordinatesError(); as message) {
           <p class="coordinates__error" id="coordinates-error"><ui-icon name="warning-circle" />{{ message }}</p>
         } @else {
-          <p class="coordinates__hint" id="coordinates-hint">{{ coordinatesHint() }}</p>
+          <p class="coordinates__hint" id="coordinates-hint">
+            En grados decimales, por ejemplo 39.5696 y 2.6502. Las dos o ninguna.
+          </p>
         }
       </fieldset>
     </form>
@@ -134,17 +135,6 @@ type LocationControls = ReturnType<typeof createLocationForm>['controls'];
 export class LocationFormComponent extends EntityForm<Location, LocationPayload, LocationControls> {
   protected readonly limits = LOCATION_LIMITS;
 
-  /** Al editar una ubicación con coordenadas, no se pueden quitar. */
-  protected readonly coordinatesRequired = computed(
-    () => this.record()?.latitude !== undefined && this.isEdit(),
-  );
-
-  protected readonly coordinatesHint = computed(() =>
-    this.coordinatesRequired()
-      ? 'Una vez puestas, se pueden cambiar pero no quitar.'
-      : 'En grados decimales, por ejemplo 39.5696 y 2.6502. Las dos o ninguna.',
-  );
-
   protected readonly coordinatesError = computed(() => {
     const latitude = this.errorOf('latitude');
     const longitude = this.errorOf('longitude');
@@ -157,15 +147,6 @@ export class LocationFormComponent extends EntityForm<Location, LocationPayload,
 
   constructor() {
     super(createLocationForm());
-
-    effect(() => {
-      const required = this.coordinatesRequired();
-      for (const control of [this.form.controls.latitude, this.form.controls.longitude]) {
-        if (required) control.addValidators(Validators.required);
-        else control.removeValidators(Validators.required);
-        control.updateValueAndValidity({ emitEvent: false });
-      }
-    });
   }
 
   protected fill(location: Location | null): void {
@@ -190,11 +171,16 @@ export class LocationFormComponent extends EntityForm<Location, LocationPayload,
 
   protected override toUpdatePayload(): Partial<LocationPayload> {
     const value = this.form.getRawValue();
+    const hadCoordinates = this.record()?.latitude !== undefined;
+    const cleared = value.latitude === null && value.longitude === null;
     return {
       city: value.city.trim(),
       region: editedText(value.region, this.record()?.region),
       country: value.country.trim(),
-      ...coordinates(value.latitude, value.longitude),
+      // Vaciar las dos quita las coordenadas que tenía
+      ...(hadCoordinates && cleared
+        ? { latitude: null, longitude: null }
+        : coordinates(value.latitude, value.longitude)),
     };
   }
 

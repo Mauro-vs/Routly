@@ -13,13 +13,16 @@ export interface Location extends BaseEntity {
 /** Lo que trae una ruta de su origen y su destino (`populate`). */
 export type LocationSummary = Pick<Location, '_id' | 'city' | 'region' | 'country' | 'slug'>;
 
-/** Cuerpo de `POST /api/locations`. Sin `country`, la API pone "España". */
+/**
+ * Cuerpo de `POST /api/locations`. Sin `country`, la API pone "España". En el PATCH,
+ * `latitude` y `longitude` a `null` (las dos) quitan las coordenadas.
+ */
 export interface LocationPayload {
   city: string;
   region?: string;
   country?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export const LOCATION_LIMITS = {
