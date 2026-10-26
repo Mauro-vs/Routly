@@ -8,7 +8,7 @@ import { IconComponent } from '../icon/icon.component';
 import { RelationLinkComponent } from '../relation-link/relation-link.component';
 import { BadgeStatus, StatusBadgeComponent } from '../status-badge/status-badge.component';
 
-export type FieldFormat =
+type FieldFormat =
   | 'text'
   | 'multiline'
   | 'mono'

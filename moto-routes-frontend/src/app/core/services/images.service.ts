@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
-import { Image, ImageOwnerType, ImagePayload } from '../../../core/models/image.model';
-import { RecordApiService } from '../../../core/services/entity-api.service';
+import { Image, ImageOwnerType, ImagePayload } from '../models/image.model';
+import { RecordApiService } from './entity-api.service';
 
 /**
  * Llamadas a `/api/images`. Los endpoints comunes vienen de RecordApiService

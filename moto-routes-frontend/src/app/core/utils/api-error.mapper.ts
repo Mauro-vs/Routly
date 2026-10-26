@@ -14,7 +14,8 @@ const MESSAGES = {
   unauthorized: 'Necesitas iniciar sesión para hacer esto.',
   forbidden: 'No tienes permiso para hacer esto.',
   notFound: 'No se ha encontrado lo que buscabas. Puede que se haya eliminado.',
-  conflict: 'Ya existe un registro con esos datos.',
+  // Un 409 que no se reconoce: no todos son duplicados (dependientes, roles base...)
+  conflict: 'La API no ha permitido la operación.',
   tooLarge: 'Los datos enviados son demasiado grandes.',
   client: 'La API no ha aceptado la petición.',
   unknown: 'Ha ocurrido un error inesperado. Vuelve a intentarlo.',
@@ -145,6 +146,10 @@ const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string
     (m) =>
       `Ya existe ${RESOURCES[m[1]]?.a ?? 'un registro'} con ${DUPLICATED_FIELDS[m[2]] ?? 'esos datos'}` +
       (m[3] ? ' en la papelera: se puede restaurar desde allí.' : '.'),
+  ],
+  [
+    /^Cannot update: \w+ references a deleted (\w+)$/,
+    (m) => `No se puede editar mientras ${RESOURCES[m[1]]?.own ?? 'una de sus referencias'} siga en la papelera.`,
   ],
   [
     /^Cannot restore: \w+ references a deleted (\w+)$/,

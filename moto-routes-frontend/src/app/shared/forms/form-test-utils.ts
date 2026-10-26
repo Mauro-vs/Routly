@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormSubmit } from './entity-form';
 
 /** Lo que devuelve `renderForm`: el formulario y unas acciones para probarlo como un usuario. */
-export interface FormHarness<C> {
+interface FormHarness<C> {
   fixture: ComponentFixture<C>;
   element: HTMLElement;
   /** Lo que ha emitido `save`, en orden. */

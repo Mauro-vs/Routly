@@ -19,7 +19,7 @@ export interface Experience extends BaseEntity {
 }
 
 /** Lo que trae una experiencia de su ruta (`populate`). */
-export interface ExperienceRouteSummary {
+interface ExperienceRouteSummary {
   _id: string;
   title: string;
   slug: string;

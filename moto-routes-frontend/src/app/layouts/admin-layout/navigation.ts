@@ -5,7 +5,7 @@ export interface NavAction {
   path: string;
 }
 
-export interface NavItem {
+interface NavItem {
   /**
    * Identificador de la sección. En las colecciones es su ruta en la API (`routes`,
    * `users`...): con él se pide y se publica su contador en NavBadgeService.
@@ -22,7 +22,7 @@ export interface NavItem {
   pending?: boolean;
 }
 
-export interface NavGroup {
+interface NavGroup {
   label: string;
   items: readonly NavItem[];
 }
@@ -119,7 +119,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 ];
 
 /** Todas las secciones, en el orden del menú. */
-export const NAV_ITEMS: readonly NavItem[] = [NAV_HOME, ...NAV_GROUPS.flatMap((group) => group.items)];
+const NAV_ITEMS: readonly NavItem[] = [NAV_HOME, ...NAV_GROUPS.flatMap((group) => group.items)];
 
 /** Las colecciones, que llevan contador en el menú. */
 export const COLLECTION_IDS: readonly string[] = NAV_GROUPS.flatMap((group) =>

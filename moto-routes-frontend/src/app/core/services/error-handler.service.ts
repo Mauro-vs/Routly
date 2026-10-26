@@ -6,7 +6,7 @@ import { ApiError, ApiErrorType } from '../models/api-error.model';
 import { toApiError } from '../utils/api-error.mapper';
 import { NotificationService } from './notification.service';
 
-export interface HandleErrorOptions {
+interface HandleErrorOptions {
   /**
    * El llamante pinta los errores de validación (400, 422) y de duplicado (409)
    * junto a los campos, así que no hace falta un aviso global. Para formularios.

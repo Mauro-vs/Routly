@@ -14,7 +14,7 @@ import { EntityForm, editedText, optionalText } from '../../../../shared/forms/e
 import { bothOrNone, minTrimmed, notBlank } from '../../../../shared/utils/validators';
 
 /** El país que pone la API si no se envía. */
-export const DEFAULT_COUNTRY = 'España';
+const DEFAULT_COUNTRY = 'España';
 
 // Los mismos criterios que src/schemas/location.schema.js en la API.
 function createLocationForm() {

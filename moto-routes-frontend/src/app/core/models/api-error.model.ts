@@ -11,7 +11,7 @@ export type ApiErrorType = 'network' | 'timeout' | 'validation' | 'client' | 'se
 /** Mensaje de error por nombre de campo, listo para mostrar junto al control. */
 export type FieldErrors = Record<string, string>;
 
-export interface ApiErrorInit {
+interface ApiErrorInit {
   status: number;
   type: ApiErrorType;
   message: string;

@@ -76,7 +76,10 @@ describe('toApiError', () => {
       'No se puede restaurar mientras su categoría siga en la papelera.',
     );
     expect(conflict('Route is not deleted')).toBe('Ese registro ya estaba restaurado.');
-    expect(conflict('Something else')).toBe('Ya existe un registro con esos datos.');
+    expect(conflict('Something else')).toBe('La API no ha permitido la operación.');
+    expect(conflict('Cannot update: experienceId references a deleted experience')).toBe(
+      'No se puede editar mientras su experiencia siga en la papelera.',
+    );
     expect(conflict('System roles cannot be deleted')).toBe('Los roles base no se pueden eliminar.');
     expect(conflict('A route with this slug already exists')).toBe(
       'Ya existe una ruta con esa dirección.',

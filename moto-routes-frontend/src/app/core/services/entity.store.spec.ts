@@ -468,7 +468,7 @@ describe('EntityStore', () => {
     it('sin el listado cargado, restaurar desde la papelera suma uno al contador', async () => {
       const badges = TestBed.inject(NavBadgeService);
       badges.set('items', 3);
-      const target = { ...item('9', false), status: 'deleted' as const };
+      const target = { ...item('9', false), deletedAt: '2026-10-01T00:00:00.000Z' };
       api.getDeleted.and.resolveTo([target]);
       api.restore.and.resolveTo(item('9'));
       await store.loadDeleted();
@@ -510,7 +510,7 @@ describe('EntityStore', () => {
     });
 
     it('restaurar desde la papelera avisa con el estado elegido', async () => {
-      const target = { ...item('1', false), status: 'deleted' as const };
+      const target = { ...item('1', false), deletedAt: '2026-10-01T00:00:00.000Z' };
       api.getDeleted.and.resolveTo([target]);
       api.restore.and.resolveTo(item('1'));
       await store.loadDeleted();

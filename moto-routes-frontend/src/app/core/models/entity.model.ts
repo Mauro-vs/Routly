@@ -1,4 +1,5 @@
-export type EntityStatus = 'active' | 'inactive' | 'deleted';
+/** El estado de un registro. Eliminar no es un estado: lo marca `deletedAt`. */
+export type EntityStatus = 'active' | 'inactive';
 
 /**
  * Campos que la API añade a todos los registros.

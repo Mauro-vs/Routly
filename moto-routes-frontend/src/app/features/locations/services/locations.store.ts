@@ -27,4 +27,9 @@ export class LocationsStore extends EntityStore<Location, LocationPayload> {
   displayName(location: Location): string {
     return location.city;
   }
+
+  /** Por ciudad, sin distinguir mayúsculas ni tildes, como la API. */
+  protected override compare(a: Location, b: Location): number {
+    return a.city.localeCompare(b.city, 'es', { sensitivity: 'base' });
+  }
 }

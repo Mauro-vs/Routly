@@ -28,11 +28,6 @@ export interface EntityApi<T extends BaseRecord, TPayload> {
   restore(id: string, isActive?: boolean): Promise<T>;
 }
 
-/** El mismo orden que usa la API en sus listados: del más reciente al más antiguo. */
-function newestFirst<T extends BaseRecord>(items: T[]): T[] {
-  return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
 /** Resultado de una escritura: o los datos guardados, o el error ya normalizado. */
 export type StoreResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
@@ -69,6 +64,15 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
 
   /** Nombre de un registro en los avisos y en los nombres accesibles: el título, el nombre... */
   abstract displayName(entity: T): string;
+
+  /**
+   * El orden del listado, el mismo que usa la API: así un registro creado o restaurado
+   * queda donde estará al recargar. Por defecto, del más reciente al más antiguo; las
+   * colecciones que la API ordena de otra forma lo redefinen.
+   */
+  protected compare(a: T, b: T): number {
+    return b.createdAt.localeCompare(a.createdAt);
+  }
 
   private readonly errors = inject(ErrorHandlerService);
   private readonly notifications = inject(NotificationService);
@@ -172,7 +176,7 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       const others = this._items().filter(
         (item) => item.isActive !== isActive && !freshIds.has(item._id),
       );
-      this._items.set(newestFirst([...others, ...fresh]));
+      this._items.set(this.sorted([...others, ...fresh]));
     } catch (error) {
       this.errors.handle(error);
     }
@@ -243,7 +247,7 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       const created = await this.api.create(payload);
       // Sin el listado cargado (se entró directo al formulario), el contador suma igual.
       if (!this._loaded()) this.badges.adjust(this.navId(), 1);
-      this._items.update((items) => [created, ...items]);
+      this._items.update((items) => this.sorted([created, ...items]));
       return { ok: true, data: created };
     } catch (error) {
       return { ok: false, error: this.errors.handle(error, { inline: true }) };
@@ -452,11 +456,15 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     return this.listPath.slice(1);
   }
 
-  /** Devuelve un registro restaurado al listado, en su sitio por fecha de creación. */
+  /** Devuelve un registro restaurado al listado, en su sitio. */
   private putBack(entity: T): void {
     this._items.update((items) =>
-      newestFirst([entity, ...items.filter((item) => item._id !== entity._id)]),
+      this.sorted([entity, ...items.filter((item) => item._id !== entity._id)]),
     );
+  }
+
+  private sorted(items: T[]): T[] {
+    return [...items].sort((a, b) => this.compare(a, b));
   }
 
   /**

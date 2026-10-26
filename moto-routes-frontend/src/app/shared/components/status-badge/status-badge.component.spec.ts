@@ -8,7 +8,6 @@ describe('statusBadge', () => {
     expect(statusBadge('active', 'f').label).toBe('Activa');
     expect(statusBadge('active', 'm').label).toBe('Activo');
     expect(statusBadge('inactive', 'm').label).toBe('Inactivo');
-    expect(statusBadge('deleted', 'f').label).toBe('Eliminada');
   });
 
   it('usa las etiquetas del estado de una salida', () => {
@@ -22,7 +21,7 @@ describe('statusBadge', () => {
   });
 
   it('cada estado lleva un icono propio, no solo un color', () => {
-    const icons = (['active', 'inactive', 'deleted', 'scheduled', 'cancelled', 'completed'] as const).map(
+    const icons = (['active', 'inactive', 'scheduled', 'cancelled', 'completed'] as const).map(
       (status) => statusBadge(status, 'f').icon,
     );
     expect(new Set(icons).size).toBe(icons.length);

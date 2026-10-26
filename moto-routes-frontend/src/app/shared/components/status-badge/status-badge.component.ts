@@ -8,7 +8,7 @@ import { IconName } from '../icon/icons.generated';
 
 export type BadgeStatus = EntityStatus | DepartureState;
 
-export interface StatusBadgeView {
+interface StatusBadgeView {
   label: string;
   icon: IconName;
   /** Clase de color de primitives.css. */
@@ -18,14 +18,13 @@ export interface StatusBadgeView {
 const TONES: Record<BadgeStatus, { icon: IconName; tone: string }> = {
   active: { icon: 'check-circle', tone: 'badge--success' },
   inactive: { icon: 'eye-slash', tone: 'badge--off' },
-  deleted: { icon: 'trash', tone: 'badge--danger' },
   scheduled: { icon: 'calendar-blank', tone: 'badge--info' },
   cancelled: { icon: 'x-circle', tone: 'badge--danger' },
   completed: { icon: 'calendar-check', tone: 'badge--neutral' },
 };
 
 function isEntityStatus(status: BadgeStatus): status is EntityStatus {
-  return status === 'active' || status === 'inactive' || status === 'deleted';
+  return status === 'active' || status === 'inactive';
 }
 
 /** Texto, icono y color de una insignia de estado. */
@@ -37,7 +36,7 @@ export function statusBadge(status: BadgeStatus, gender: Gender): StatusBadgeVie
 }
 
 /**
- * Insignia de estado: activo, inactivo o eliminado, y el estado de una salida
+ * Insignia de estado: activo o inactivo, y el estado de una salida
  * (programada, cancelada o realizada). Lleva siempre icono y texto, así que no
  * depende solo del color.
  *

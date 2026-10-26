@@ -6,7 +6,7 @@ import { CollectionLabels, agree, capitalize } from '../utils/labels';
 
 type LoadComponent = () => Promise<Type<unknown>>;
 
-export interface CollectionPages {
+interface CollectionPages {
   labels: CollectionLabels;
   /** Título del listado: "Categorías". */
   title: string;

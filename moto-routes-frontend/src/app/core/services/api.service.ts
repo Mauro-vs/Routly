@@ -5,9 +5,9 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 /** Parámetros de consulta admitidos en la URL. */
-export type QueryParams = Record<string, string | number | boolean>;
+type QueryParams = Record<string, string | number | boolean>;
 
-export interface RequestOptions {
+interface RequestOptions {
   params?: QueryParams;
   /** Datos para los interceptores, por ejemplo REQUEST_TIMEOUT. */
   context?: HttpContext;

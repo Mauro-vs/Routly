@@ -24,14 +24,17 @@ export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-const STATUS_WORDS: Record<EntityStatus, [feminine: string, masculine: string]> = {
+/** Los estados de un registro y, para los textos, «eliminada» (que no es un estado). */
+type StatusWord = EntityStatus | 'deleted';
+
+const STATUS_WORDS: Record<StatusWord, [feminine: string, masculine: string]> = {
   active: ['activa', 'activo'],
   inactive: ['inactiva', 'inactivo'],
   deleted: ['eliminada', 'eliminado'],
 };
 
 /** "activa", "inactivo"... en minúscula. */
-export function statusWord(status: EntityStatus, gender: Gender): string {
+export function statusWord(status: StatusWord, gender: Gender): string {
   const [feminine, masculine] = STATUS_WORDS[status];
   return agree(gender, feminine, masculine);
 }

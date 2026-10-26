@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import type Swal from 'sweetalert2';
 import type { SweetAlertIcon, SweetAlertOptions } from 'sweetalert2';
 
-export interface ConfirmOptions {
+interface ConfirmOptions {
   title: string;
   text?: string;
   confirmText?: string;

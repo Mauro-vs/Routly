@@ -1,8 +1,8 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { ImagePayload } from '../../../core/models/image.model';
-import { ApiService } from '../../../core/services/api.service';
+import { ImagePayload } from '../models/image.model';
+import { ApiService } from './api.service';
 import { ImagesService } from './images.service';
 
 const ID = '6abd589e3d6101dd2eb767e1';

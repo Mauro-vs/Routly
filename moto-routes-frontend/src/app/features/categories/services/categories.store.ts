@@ -27,4 +27,9 @@ export class CategoriesStore extends EntityStore<Category, CategoryPayload> {
   displayName(category: Category): string {
     return category.name;
   }
+
+  /** Por nombre, sin distinguir mayúsculas ni tildes, como la API. */
+  protected override compare(a: Category, b: Category): number {
+    return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+  }
 }

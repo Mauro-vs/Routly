@@ -39,6 +39,11 @@ export class DeparturesStore extends EntityStore<Departure, DeparturePayload> {
     return `${title}, ${formatDate(departure.startAt)}`;
   }
 
+  /** Por fecha de salida, de la más próxima a la más lejana, como la API. */
+  protected override compare(a: Departure, b: Departure): number {
+    return a.startAt.localeCompare(b.startAt);
+  }
+
   /** Por qué no se puede restaurar todavía: su experiencia sigue en la papelera. */
   restoreBlockedReason(departure: Departure): string | null {
     return departure.experience

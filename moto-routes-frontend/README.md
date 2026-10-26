@@ -270,7 +270,7 @@ Todos los endpoints de la API están en el panel:
 | `GET /api/categories/actives` | `RoutesService.getCategoryOptions` | Select de categoría del formulario |
 | `GET /api/locations/actives` | `RoutesService.getLocationOptions` | Selects de origen y destino |
 
-Las demás colecciones (`roles`, `users`, `hosts`, `categories`, `locations`, `experiences`, `departures` e `images`) tienen ya su servicio con los mismos endpoints, más `DeparturesService.getBySku` y `ImagesService.getByOwner`. Todavía no los usa ninguna página.
+Las demás colecciones (`roles`, `users`, `hosts`, `categories`, `locations`, `experiences`, `departures` e `images`) usan los mismos endpoints desde su servicio. `ImagesService` está en `core/services/` porque también la usa la galería de `shared`; su `getByOwner` pide la galería de un dueño (`GET /api/images?ownerType=route&ownerId=<id>`).
 
 Las URL del panel identifican cada ruta por su `slug` (`/routes/:slug/edit`). La API solo admite `slug` para leer, así que guardar, activar y eliminar van por `_id`.
 

@@ -19,8 +19,8 @@ import {
   ImageOwnerType,
   ImagePayload,
 } from '../../../core/models/image.model';
-import { ApiService } from '../../../core/services/api.service';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
+import { ImagesService } from '../../../core/services/images.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { applyServerErrors, controlErrorMessage } from '../../utils/form-errors';
 import { httpsUrl, notBlank } from '../../utils/validators';
@@ -33,7 +33,6 @@ import { StatusBadgeComponent } from '../status-badge/status-badge.component';
 import { TipComponent } from '../tip/tip.component';
 import { ToggleComponent } from '../toggle/toggle.component';
 
-const PATH = '/images';
 // Lo que dura el resalte de una imagen que se acaba de mover (como la animación en CSS).
 const MOVED_TIME = 700;
 
@@ -47,9 +46,9 @@ const MOVED_TIME = 700;
  * principal se desactiva o se elimina, la API elige la siguiente. Por eso, después de
  * cada cambio se vuelve a pedir la galería.
  *
- * Está en `shared` y llama a la API directamente porque la usan los detalles de seis
- * colecciones y una feature no importa de otra. El selector es `app-` porque así se
- * acordó en el diseño del panel.
+ * Está en `shared` porque la usan los detalles de seis colecciones, y llama a la API
+ * con `ImagesService`, que está en `core` por eso mismo (una feature no importa de
+ * otra). El selector es `app-` porque así se acordó en el diseño del panel.
  *
  *   <app-image-gallery ownerType="route" [ownerId]="ruta._id" [ownerLabel]="ruta.title" />
  */
@@ -79,7 +78,7 @@ export class ImageGalleryComponent {
   /** La imagen principal ha cambiado: el detalle pone al día su miniatura. */
   readonly coverChange = output<void>();
 
-  private readonly api = inject(ApiService);
+  private readonly imagesApi = inject(ImagesService);
   private readonly errors = inject(ErrorHandlerService);
   private readonly notifications = inject(NotificationService);
 
@@ -144,9 +143,7 @@ export class ImageGalleryComponent {
     this.failed.set(false);
     try {
       this.images.set(
-        await this.api.get<Image[]>(PATH, {
-          params: { ownerType: this.ownerType(), ownerId: this.ownerId() },
-        }),
+        await this.imagesApi.getByOwner(this.ownerType(), this.ownerId()),
       );
       this.loaded.set(true);
     } catch (error) {
@@ -170,7 +167,7 @@ export class ImageGalleryComponent {
 
     this.adding.set(true);
     try {
-      await this.api.post<Image>(PATH, payload);
+      await this.imagesApi.create(payload);
       this.addForm.reset();
       this.addSubmitted.set(false);
       void this.notifications.success('Imagen añadida.');
@@ -190,11 +187,11 @@ export class ImageGalleryComponent {
 
   protected async setCover(image: Image): Promise<void> {
     if (this.coverReason(image)) return;
-    await this.run(() => this.api.patch<Image>(`${PATH}/${image._id}`, { isCover: true }));
+    await this.run(() => this.imagesApi.update(image._id, { isCover: true }));
   }
 
   protected async setActive(image: Image, isActive: boolean): Promise<void> {
-    await this.run(() => this.api.patch<Image>(`${PATH}/${image._id}/active`, { isActive }));
+    await this.run(() => this.imagesApi.setActive(image._id, isActive));
   }
 
   /** Sube o baja una imagen un puesto. Se reescriben las posiciones que cambian. */
@@ -208,7 +205,7 @@ export class ImageGalleryComponent {
     await this.run(async () => {
       for (const [position, item] of order.entries()) {
         if (item.position !== position) {
-          await this.api.patch<Image>(`${PATH}/${item._id}`, { position });
+          await this.imagesApi.update(item._id, { position });
         }
       }
     });
@@ -225,13 +222,13 @@ export class ImageGalleryComponent {
     });
     if (!confirmed) return;
 
-    const removed = await this.run(() => this.api.patch<null>(`${PATH}/${image._id}/delete`));
+    const removed = await this.run(() => this.imagesApi.remove(image._id));
     if (!removed) return;
 
     const undo = await this.notifications.undoable('Imagen eliminada.');
     if (!undo) return;
     // Sin isActive: la API la devuelve como estaba (y vuelve a ser la principal si lo era)
-    const restored = await this.run(() => this.api.patch<Image>(`${PATH}/${image._id}/restore`, {}));
+    const restored = await this.run(() => this.imagesApi.restore(image._id));
     if (restored) void this.notifications.success('Imagen restaurada.');
   }
 

@@ -18,9 +18,4 @@ export class DeparturesService extends EntityApiService<Departure, DeparturePayl
   getExperienceOptions(): Promise<Experience[]> {
     return this.api.get<Experience[]>('/experiences/actives');
   }
-
-  /** Una salida por su SKU (`RTL-DEP-261108-7QX2M`). La API lo acepta también en minúsculas. */
-  getBySku(sku: string): Promise<Departure> {
-    return this.api.get<Departure>(`${this.path}/sku/${encodeURIComponent(sku)}`);
-  }
 }

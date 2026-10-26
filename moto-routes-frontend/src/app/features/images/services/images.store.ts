@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { IMAGE_OWNERS, Image, ImagePayload } from '../../../core/models/image.model';
 import { EntityStore } from '../../../core/services/entity.store';
 import { CollectionLabels } from '../../../shared/utils/labels';
-import { ImagesService } from './images.service';
+import { ImagesService } from '../../../core/services/images.service';
 
 /** Cómo se nombra la colección en los textos del panel. */
 export const IMAGE_LABELS: CollectionLabels = {
@@ -44,5 +44,10 @@ export class ImagesStore extends EntityStore<Image, ImagePayload> {
     const owner = IMAGE_OWNERS[image.ownerType];
     const article = owner.gender === 'f' ? 'una' : 'un';
     return `Imagen ${image.position + 1} de ${article} ${owner.label.toLowerCase()}`;
+  }
+
+  /** Por posición y, a igual posición, la más antigua primero, como la API. */
+  protected override compare(a: Image, b: Image): number {
+    return a.position - b.position || a.createdAt.localeCompare(b.createdAt);
   }
 }

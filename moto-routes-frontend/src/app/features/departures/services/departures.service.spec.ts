@@ -51,11 +51,6 @@ describe('DeparturesService', () => {
     expect(api.get).toHaveBeenCalledOnceWith('/departures/slug/tramuntana-al-amanecer-2026-11-08-b8c950');
   });
 
-  it('GET /departures/sku/:sku', async () => {
-    await service.getBySku('RTL-DEP-261108-7QX2M');
-    expect(api.get).toHaveBeenCalledOnceWith('/departures/sku/RTL-DEP-261108-7QX2M');
-  });
-
   it('POST /departures', async () => {
     await service.create(PAYLOAD);
     expect(api.post).toHaveBeenCalledOnceWith('/departures', PAYLOAD);

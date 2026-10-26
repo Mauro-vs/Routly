@@ -1,9 +1,9 @@
 import { Signal, WritableSignal, computed, linkedSignal } from '@angular/core';
 
 /** Registros por página en los listados. */
-export const PAGE_SIZE = 12;
+const PAGE_SIZE = 12;
 
-export interface Pager<T> {
+interface Pager<T> {
   /** Página actual, empezando en 1. Se enlaza con `ui-pagination`. */
   page: WritableSignal<number>;
   /** Los registros de la página actual. */
