@@ -16,6 +16,7 @@ const DEFAULT_MESSAGES: Record<string, ErrorMessage> = {
   email: () => 'Escribe un correo electrónico válido.',
   integer: () => 'Escribe un número entero.',
   future: () => 'Elige una fecha futura.',
+  url: () => 'Escribe una dirección completa, que empiece por https://.',
   decimals: (detail) => `Usa como mucho ${String(detail['places'])} decimales.`,
 };
 

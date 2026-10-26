@@ -6,7 +6,7 @@
   <ui-form-field
     label="Título"
     hint="Se usa para generar la dirección de la ruta."
-    [counter]="titleCounter()"
+    [counter]="counter('title', limits.title)"
     [error]="errorOf('title')"
   >
     <input uiInput type="text" name="title" formControlName="title" autocomplete="off" />
@@ -15,7 +15,7 @@
   <ui-form-field
     label="Descripción"
     [optional]="true"
-    [counter]="descriptionCounter()"
+    [counter]="counter('description', limits.description)"
     [error]="errorOf('description')"
   >
     <textarea uiInput rows="3" name="description" formControlName="description" autocomplete="off"></textarea>

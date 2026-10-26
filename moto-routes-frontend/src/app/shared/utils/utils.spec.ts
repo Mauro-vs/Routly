@@ -12,20 +12,7 @@ import {
   statusWord,
 } from './labels';
 import { createPager } from './pager';
-import { matchesQuery, normalizeText } from './text';
 import { notBlank } from './validators';
-
-describe('text', () => {
-  it('normalizeText quita tildes, mayúsculas y espacios de sobra', () => {
-    expect(normalizeText('  Logroño ')).toBe('logrono');
-    expect(normalizeText('SÓLLER')).toBe('soller');
-  });
-
-  it('matchesQuery encuentra coincidencias parciales', () => {
-    expect(matchesQuery('Sierra Nevada Express', 'nevada')).toBeTrue();
-    expect(matchesQuery('Sierra Nevada Express', 'pirineos')).toBeFalse();
-  });
-});
 
 describe('format', () => {
   // Intl separa con espacios no rompibles: se comparan como espacios normales.

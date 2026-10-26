@@ -65,6 +65,10 @@ export const routes: Routes = [
         loadChildren: () => import('./features/roles/roles.routes').then((m) => m.ROLES_ROUTES),
       },
       {
+        path: 'images',
+        loadChildren: () => import('./features/images/images.routes').then((m) => m.IMAGES_ROUTES),
+      },
+      {
         path: '**',
         title: 'Página no encontrada',
         loadComponent: messagePage,

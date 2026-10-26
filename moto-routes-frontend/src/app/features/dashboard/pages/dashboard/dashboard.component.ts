@@ -7,6 +7,8 @@ import {
   Route,
   routeTrip,
 } from '../../../../core/models/route.model';
+import { NavBadgeService } from '../../../../core/services/nav-badge.service';
+import { NAV_GROUPS } from '../../../../layouts/admin-layout/navigation';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
@@ -15,7 +17,10 @@ import { SkeletonComponent } from '../../../../shared/components/skeleton/skelet
 import { formatNumber, formatRelativeTime } from '../../../../shared/utils/format';
 import { DashboardStore } from '../../services/dashboard.store';
 
-/** Portada del panel: las cifras del catálogo de un vistazo. */
+/**
+ * Portada del panel: cuántos registros hay en cada colección (los mismos contadores
+ * del menú) y las cifras de las rutas.
+ */
 @Component({
   selector: 'app-dashboard',
   imports: [
@@ -32,6 +37,8 @@ import { DashboardStore } from '../../services/dashboard.store';
 })
 export class DashboardComponent {
   protected readonly store = inject(DashboardStore);
+  protected readonly badges = inject(NavBadgeService);
+  protected readonly groups = NAV_GROUPS;
 
   protected readonly difficultyLabels = DIFFICULTY_LABELS;
   protected readonly difficultyBadges = DIFFICULTY_BADGES;
@@ -49,10 +56,6 @@ export class DashboardComponent {
 
   protected reload(): void {
     void this.store.load();
-  }
-
-  protected editLink(route: Route): string[] {
-    return ['/routes', route.slug, 'edit'];
   }
 
   protected summary(route: Route): string {

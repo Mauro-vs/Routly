@@ -56,7 +56,6 @@ describe('RoutesStore', () => {
   let notifications: jasmine.SpyObj<NotificationService>;
 
   beforeEach(async () => {
-    localStorage.removeItem('routly.routes.view');
     service = jasmine.createSpyObj<RoutesService>('service', [
       'getAll',
       'getByActive',
@@ -88,48 +87,17 @@ describe('RoutesStore', () => {
     await store.load();
   });
 
-  const titles = (): string[] => store.filtered().map((item) => item.title);
-
-  it('sin filtros muestra todas las rutas', () => {
-    expect(titles().length).toBe(3);
-    expect(store.hasFilters()).toBeFalse();
-  });
-
-  it('busca en título, origen, destino y categoría sin distinguir tildes ni mayúsculas', () => {
-    store.search.set('logrono');
-    expect(titles()).toEqual(['Ruta del Vino']);
-
-    store.search.set('LLEIDA');
-    expect(titles()).toEqual(['Pirineos Adventure']);
-
-    store.search.set('costa');
-    expect(titles()).toEqual(['Costa Brava Loop']);
-  });
-
-  it('busca aunque una ubicación ya no exista', async () => {
-    service.getAll.and.resolveTo([route('4', { title: 'Huérfana', startLocation: null })]);
-    await store.load();
-
-    store.search.set('eliminada');
-    expect(titles()).toEqual(['Huérfana']);
-  });
+  const titles = (): string[] => store.visible().map((item) => item.title);
 
   it('carga las categorías y ubicaciones activas para los selects', async () => {
     service.getCategoryOptions.and.resolveTo([]);
     service.getLocationOptions.and.resolveTo([]);
-
-    await store.loadOptions();
+    await Promise.all([store.categoryOptions.load(), store.locationOptions.load()]);
 
     expect(service.getCategoryOptions).toHaveBeenCalledTimes(1);
     expect(service.getLocationOptions).toHaveBeenCalledTimes(1);
-    expect(store.optionsLoaded()).toBeTrue();
-    expect(store.optionsLoading()).toBeFalse();
-  });
-
-  it('combina el filtro por estado con el de dificultad', () => {
-    store.status.set('active');
-    store.difficulty.set('medium');
-    expect(titles()).toEqual(['Costa Brava Loop']);
+    expect(store.categoryOptions.loaded()).toBeTrue();
+    expect(store.locationOptions.loading()).toBeFalse();
   });
 
   it('setStatus filtra al instante y lo confirma con el endpoint de ese estado', () => {
@@ -144,26 +112,19 @@ describe('RoutesStore', () => {
     expect(service.getAll).toHaveBeenCalledTimes(2);
   });
 
-  it('clearFilters lo deja todo como al entrar', () => {
-    store.search.set('x');
-    store.setStatus('inactive');
-    store.difficulty.set('hard');
-
-    store.clearFilters();
-
-    expect(store.hasFilters()).toBeFalse();
-    expect(titles().length).toBe(3);
-  });
-
   it('publica el número de rutas para el contador del menú', () => {
     TestBed.tick();
     expect(TestBed.inject(NavBadgeService).count('routes')).toBe(3);
   });
 
-  it('recuerda la vista elegida', () => {
-    store.view.set('table');
-    TestBed.tick();
-    expect(localStorage.getItem('routly.routes.view')).toBe('table');
+  it('no deja restaurar una ruta cuya categoría o ubicación sigue en la papelera', () => {
+    expect(store.restoreBlockedReason(ROUTES[0])).toBeNull();
+    expect(store.restoreBlockedReason(route('5', { category: null }))).toBe(
+      'No se puede restaurar mientras su categoría siga en la papelera.',
+    );
+    expect(store.restoreBlockedReason(route('6', { category: null, endLocation: null }))).toBe(
+      'No se puede restaurar mientras su categoría y una de sus ubicaciones sigan en la papelera.',
+    );
   });
 
   describe('confirmAndRemove', () => {

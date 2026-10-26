@@ -8,13 +8,14 @@ import {
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { LocationsStore } from '../../services/locations.store';
 
 /** Detalle de una ubicación (`/locations/:slug`). */
 @Component({
   selector: 'app-location-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
+  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -36,6 +37,14 @@ import { LocationsStore } from '../../services/locations.store';
       <ui-detail-section heading="Coordenadas" description="En grados decimales.">
         <ui-field-list [columns]="2" [items]="coordinates()" />
       </ui-detail-section>
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="location"
+          [ownerId]="owner._id"
+          [ownerLabel]="title()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-detail-page>
   `,
 })

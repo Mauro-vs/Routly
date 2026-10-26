@@ -309,6 +309,11 @@
   text-decoration-color: currentColor;
 }
 
+/* el nombre de una fila, aunque sea enlace, mantiene su peso */
+.link.cell-title {
+  font-weight: 600;
+}
+
 /* ---------- campos ---------- */
 .input,
 .select {

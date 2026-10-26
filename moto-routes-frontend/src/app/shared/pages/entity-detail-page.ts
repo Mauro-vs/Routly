@@ -66,6 +66,11 @@ export abstract class EntityDetailPage<T extends BaseEntity> {
     }
   }
 
+  /** La galería ha cambiado la imagen principal: se pone al día la miniatura. */
+  protected refreshCover(): void {
+    void this.store.refreshSelected();
+  }
+
   protected retry(): void {
     void this.open(this.slug());
   }

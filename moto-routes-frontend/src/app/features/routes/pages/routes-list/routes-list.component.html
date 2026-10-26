@@ -1,0 +1,88 @@
+<ui-list-page
+  title="Rutas"
+  icon="path"
+  createPath="/routes/new"
+  trashPath="/routes/trash"
+  [labels]="store.labels"
+  [loaded]="store.loaded()"
+  [failed]="loadFailed()"
+  [counts]="counts()"
+  [total]="pager.total()"
+  [pageSize]="pager.pageSize"
+  [trashCount]="store.deletedCount()"
+  [status]="store.status()"
+  (statusChange)="setStatus($event)"
+  [(page)]="pager.page"
+  (retry)="reload()"
+>
+  <ui-data-table
+    caption="Rutas"
+    [columns]="columns"
+    [rows]="pager.items()"
+    [rowKey]="rowKey"
+    [mutedWhen]="isInactive"
+    [loading]="showSkeleton()"
+  >
+    <ng-template uiCell="title" [uiCellOf]="pager.items()" let-route>
+      <span class="cell-media">
+        <span class="thumb" aria-hidden="true">
+          @if (route.coverImage; as cover) {
+            <!-- las primeras portadas se ven nada más entrar: sin carga diferida -->
+            <img [src]="cover.url" alt="" decoding="async" width="40" height="40" />
+          } @else {
+            <ui-icon name="path" />
+          }
+        </span>
+        <a class="link cell-title" [routerLink]="['/routes', route.slug]">{{ route.title }}</a>
+      </span>
+    </ng-template>
+    <ng-template uiCell="trip" [uiCellOf]="pager.items()" let-route>
+      <span class="trip">
+        <ui-relation-link
+          gender="f"
+          [label]="route.startLocation?.city ?? null"
+          [path]="route.startLocation ? ['/locations', route.startLocation.slug] : null"
+        />
+        <span class="muted">a</span>
+        <ui-relation-link
+          gender="f"
+          [label]="route.endLocation?.city ?? null"
+          [path]="route.endLocation ? ['/locations', route.endLocation.slug] : null"
+        />
+      </span>
+      <span class="cell-sub num">
+        {{ number(route.distance) }}&nbsp;km · {{ number(route.duration) }}&nbsp;h
+      </span>
+    </ng-template>
+    <ng-template uiCell="category" [uiCellOf]="pager.items()" let-route>
+      <ui-relation-link
+        gender="f"
+        [label]="route.category?.name ?? null"
+        [path]="route.category ? ['/categories', route.category.slug] : null"
+      />
+    </ng-template>
+    <ng-template uiCell="difficulty" [uiCellOf]="pager.items()" let-route>
+      <span class="badge" [class]="difficultyBadges[route.difficulty]">
+        {{ difficultyLabels[route.difficulty] }}
+      </span>
+    </ng-template>
+    <ng-template uiCell="status" [uiCellOf]="pager.items()" let-route>
+      <ui-status-toggle
+        [active]="route.isActive"
+        [label]="route.title"
+        [labels]="store.labels"
+        [busy]="store.isBusy(route._id)"
+        (activeChange)="setActive(route, $event)"
+      />
+    </ng-template>
+    <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-route>
+      <ui-row-actions
+        [label]="route.title"
+        [detailPath]="['/routes', route.slug]"
+        [editPath]="['/routes', route.slug, 'edit']"
+        [busy]="store.isBusy(route._id)"
+        (remove)="remove(route)"
+      />
+    </ng-template>
+  </ui-data-table>
+</ui-list-page>

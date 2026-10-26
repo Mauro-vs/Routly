@@ -4,6 +4,7 @@ import { Experience, languageName } from '../../../../core/models/experience.mod
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { ExperiencesStore } from '../../services/experiences.store';
 
@@ -13,7 +14,7 @@ import { ExperiencesStore } from '../../services/experiences.store';
  */
 @Component({
   selector: 'app-experience-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
+  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -38,6 +39,14 @@ import { ExperiencesStore } from '../../services/experiences.store';
       <ui-detail-section heading="Descripción">
         <ui-field-list [items]="about()" />
       </ui-detail-section>
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="experience"
+          [ownerId]="owner._id"
+          [ownerLabel]="title()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-detail-page>
   `,
 })

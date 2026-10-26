@@ -177,16 +177,41 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     }
   }
 
-  /** Trae un registro para editarlo. Si no existe, avisa, vuelve al listado y da null. */
+  /** Abre un registro por su slug. Si no existe, avisa, vuelve al listado y da null. */
   async getBySlug(slug: string): Promise<T | null> {
+    const { getBySlug } = this.api;
+    if (!getBySlug) throw new Error('This entity has no slug');
+    return this.select(() => getBySlug.call(this.api, slug));
+  }
+
+  /** Lo mismo por su `_id`, para las colecciones sin slug (las imágenes). */
+  getOne(id: string): Promise<T | null> {
+    return this.select(() => this.api.getById(id));
+  }
+
+  /**
+   * Vuelve a pedir el registro abierto sin vaciarlo antes, por ejemplo cuando la
+   * galería cambia su imagen principal. Si falla, se queda lo que había.
+   */
+  async refreshSelected(): Promise<void> {
+    const current = this._selected();
+    if (!current) return;
+    try {
+      this.replace(await this.api.getById(current._id));
+    } catch {
+      // Es una puesta al día de fondo: lo que se ve sigue siendo válido.
+    }
+  }
+
+  /** Abre un registro (lo deja en `selected`) con la llamada que se le pase. */
+  private async select(load: () => Promise<T>): Promise<T | null> {
     const lookup = ++this.lookups;
 
     this._loading.set(true);
     this._error.set(null);
     this._selected.set(null);
     try {
-      if (!this.api.getBySlug) throw new Error('This entity has no slug');
-      const entity = await this.api.getBySlug(slug);
+      const entity = await load();
       // Si mientras tanto se pidió otro registro, este ya no interesa.
       if (lookup !== this.lookups) return null;
       this._selected.set(entity);

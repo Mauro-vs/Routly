@@ -4,13 +4,14 @@ import { User } from '../../../../core/models/user.model';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { UsersStore } from '../../services/users.store';
 
 /** Detalle de un usuario (`/users/:slug`). La contraseña nunca llega de la API. */
 @Component({
   selector: 'app-user-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
+  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -33,6 +34,14 @@ import { UsersStore } from '../../services/users.store';
       <ui-detail-section heading="Acceso" description="El rol decide lo que puede hacer en la plataforma.">
         <ui-field-list [columns]="2" [items]="access()" />
       </ui-detail-section>
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="user"
+          [ownerId]="owner._id"
+          [ownerLabel]="title()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-detail-page>
   `,
 })

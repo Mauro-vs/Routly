@@ -114,7 +114,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     label: 'Contenido',
     // Las imágenes se crean desde la galería de su dueño: no hay "Nueva imagen".
-    items: [{ id: 'images', label: 'Imágenes', icon: 'images', path: '/images', pending: true }],
+    items: [{ id: 'images', label: 'Imágenes', icon: 'images', path: '/images' }],
   },
 ];
 

@@ -4,13 +4,14 @@ import { Category } from '../../../../core/models/category.model';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { CategoriesStore } from '../../services/categories.store';
 
 /** Detalle de una categoría (`/categories/:slug`). */
 @Component({
   selector: 'app-category-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
+  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -28,6 +29,14 @@ import { CategoriesStore } from '../../services/categories.store';
       <ui-detail-section heading="Datos">
         <ui-field-list [items]="fields()" />
       </ui-detail-section>
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="category"
+          [ownerId]="owner._id"
+          [ownerLabel]="title()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-detail-page>
   `,
 })

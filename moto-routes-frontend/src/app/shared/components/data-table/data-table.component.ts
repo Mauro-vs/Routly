@@ -39,8 +39,8 @@ export class TableCellDirective<T> {
 
   static ngTemplateContextGuard<T>(
     _directive: TableCellDirective<T>,
-    context: unknown,
-  ): context is { $implicit: T } {
+    _context: unknown,
+  ): _context is { $implicit: T } {
     return true;
   }
 }

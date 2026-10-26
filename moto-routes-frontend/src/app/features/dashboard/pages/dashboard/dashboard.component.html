@@ -1,4 +1,26 @@
-<ui-page-header title="Resumen" subtitle="El catálogo de rutas de un vistazo." />
+<ui-page-header title="Resumen" subtitle="El panel de un vistazo." />
+
+<section class="groups" aria-labelledby="collections">
+  <h2 id="collections" class="sr-only">Colecciones</h2>
+  @for (group of groups; track group.label) {
+    <div class="card group">
+      <h3>{{ group.label }}</h3>
+      <ul>
+        @for (item of group.items; track item.id) {
+          <li>
+            <a class="count" [routerLink]="item.path">
+              <ui-icon [name]="item.icon" />
+              <span class="count__label">{{ item.label }}</span>
+              <span class="count__value num">{{ badges.count(item.id) ?? '–' }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</section>
+
+<h2 class="section-title">Rutas</h2>
 
 @if (loadFailed()) {
   <div class="card">
@@ -79,7 +101,7 @@
           <li>
             <div class="recent__text" [class.is-inactive]="!route.isActive">
               <span class="recent__title">
-                <a [routerLink]="editLink(route)">{{ route.title }}</a>
+                <a [routerLink]="['/routes', route.slug]">{{ route.title }}</a>
                 @if (!route.isActive) {
                   <span class="badge badge--off"><ui-icon name="eye-slash" />Inactiva</span>
                 }

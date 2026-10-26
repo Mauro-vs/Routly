@@ -1,0 +1,122 @@
+<section class="card gallery" aria-labelledby="gallery-heading" [attr.aria-busy]="busy()">
+  <header class="gallery__head">
+    <h2 id="gallery-heading">Imágenes</h2>
+    <p>{{ summary() }}</p>
+  </header>
+
+  @if (failed()) {
+    <ui-error-state title="No se han podido cargar las imágenes" (retry)="load()" />
+  } @else if (!loaded()) {
+    <div class="grid" aria-hidden="true">
+      @for (placeholder of [0, 1, 2]; track placeholder) {
+        <div class="tile"><ui-skeleton height="140px" radius="var(--radius-md)" /></div>
+      }
+    </div>
+  } @else if (images().length === 0) {
+    <p class="empty"><ui-icon name="image" />Todavía no tiene imágenes.</p>
+  } @else {
+    <ol class="grid" [attr.aria-label]="'Imágenes de ' + ownerLabel()">
+      @for (image of images(); track image._id; let index = $index, first = $first, last = $last) {
+        <li class="tile" [class.is-off]="!image.isActive" [class.is-moved]="moved() === image._id">
+          <div class="tile__media">
+            <img [src]="image.url" [alt]="image.alt ?? ''" loading="lazy" decoding="async" width="320" height="200" />
+            <div class="tile__badges">
+              @if (image.isCover) {
+                <span class="badge badge--icon badge--info"><ui-icon name="star" />Principal</span>
+              }
+              @if (!image.isActive) {
+                <ui-status-badge status="inactive" gender="f" />
+              }
+            </div>
+          </div>
+
+          <p class="tile__alt" [class.muted]="!image.alt">
+            <span class="sr-only">Posición {{ index + 1 }}:</span>
+            {{ image.alt || 'Sin texto alternativo' }}
+          </p>
+
+          <div class="tile__actions">
+            <ui-tip #coverTip [text]="coverReason(image)">
+              <button
+                type="button"
+                class="icon-btn"
+                [attr.aria-label]="'Marcar como principal: ' + nameOf(image, index)"
+                [attr.aria-disabled]="coverReason(image) ? true : null"
+                [attr.aria-describedby]="coverTip.describedBy()"
+                [disabled]="busy()"
+                (click)="setCover(image)"
+              >
+                <ui-icon name="star" />
+              </button>
+            </ui-tip>
+            <button
+              type="button"
+              class="icon-btn"
+              [attr.aria-label]="'Subir: ' + nameOf(image, index)"
+              [disabled]="first || busy()"
+              (click)="move(index, -1)"
+            >
+              <ui-icon name="arrow-up" />
+            </button>
+            <button
+              type="button"
+              class="icon-btn"
+              [attr.aria-label]="'Bajar: ' + nameOf(image, index)"
+              [disabled]="last || busy()"
+              (click)="move(index, 1)"
+            >
+              <ui-icon name="arrow-down" />
+            </button>
+            <span class="tile__spacer"></span>
+            <ui-toggle
+              [checked]="image.isActive"
+              [disabled]="busy()"
+              [label]="'Imagen activa: ' + nameOf(image, index)"
+              (checkedChange)="setActive(image, $event)"
+            />
+            <a
+              class="icon-btn"
+              [routerLink]="['/images', image._id, 'edit']"
+              [attr.aria-label]="'Editar: ' + nameOf(image, index)"
+            >
+              <ui-icon name="pencil-simple" />
+            </a>
+            <button
+              type="button"
+              class="icon-btn icon-btn--danger"
+              [attr.aria-label]="'Eliminar: ' + nameOf(image, index)"
+              [disabled]="busy()"
+              (click)="remove(image, index)"
+            >
+              <ui-icon name="trash" />
+            </button>
+          </div>
+        </li>
+      }
+    </ol>
+  }
+
+  <form class="add" [formGroup]="addForm" (ngSubmit)="add()" novalidate aria-labelledby="gallery-add">
+    <h3 id="gallery-add">Añadir una imagen</h3>
+    <div class="add__fields">
+      <ui-form-field label="Dirección de la imagen" hint="Una URL que empiece por https://." [error]="addError('url')">
+        <input uiInput type="url" name="url" formControlName="url" autocomplete="off" spellcheck="false" />
+      </ui-form-field>
+      <ui-form-field
+        label="Texto alternativo"
+        [optional]="true"
+        hint="Lo que se ve en la foto, para quien no puede verla."
+        [error]="addError('alt')"
+      >
+        <input uiInput type="text" name="alt" formControlName="alt" autocomplete="off" />
+      </ui-form-field>
+    </div>
+    <button type="submit" class="btn btn--secondary" [disabled]="adding() || failed()">
+      @if (adding()) {
+        <span class="spinner" aria-hidden="true"></span>Añadiendo…
+      } @else {
+        <ui-icon name="plus" />Añadir imagen
+      }
+    </button>
+  </form>
+</section>

@@ -152,6 +152,8 @@ export class ListPageComponent {
   readonly total = input.required<number>();
   readonly pageSize = input.required<number>();
   readonly createPath = input<RouterPath | null>(null);
+  /** Texto del estado vacío, si no se crean desde aquí (las imágenes). */
+  readonly emptyDescription = input('');
   readonly trashPath = input<RouterPath | null>(null);
   readonly trashCount = input<number | null>(null);
 
@@ -182,6 +184,7 @@ export class ListPageComponent {
   });
   protected readonly createLabel = computed(() => newLabel(this.labels()));
   protected readonly emptyText = computed(() => {
+    if (this.emptyDescription()) return this.emptyDescription();
     const { gender } = this.labels();
     return `Crea ${agree(gender, 'la primera', 'el primero')} para que aparezca aquí.`;
   });
