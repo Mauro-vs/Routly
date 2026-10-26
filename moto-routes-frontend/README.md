@@ -123,27 +123,28 @@ Organización por features. Cada carpeta tiene una responsabilidad y unas reglas
 ```
 src/app/
 ├── core/                  Lo que existe una sola vez en la aplicación
-│   ├── services/          ApiService, NotificationService, ErrorHandlerService,
-│   │                      EntityStore, EntityApiService, AuthService (vacío)...
+│   ├── services/          ApiService, NotificationService, ErrorHandlerService, EntityStore,
+│   │                      EntityApiService, OptionList, CollectionCountsService...
 │   ├── interceptors/      timeout, errores y auth
 │   ├── guards/            authGuard y aviso de cambios sin guardar
 │   ├── models/            Interfaces de las 9 entidades, con sus relaciones, y ApiError
 │   └── utils/             Traducción de los errores de la API
 ├── shared/                Piezas reutilizables, sin lógica de negocio
-│   ├── components/        toggle, skeleton, error-state, tabla, campo de formulario...
-│   └── utils/             Formato, búsqueda, validadores, errores de formulario
+│   ├── components/        Plantillas de listado, detalle, formulario y papelera, tabla,
+│   │                      galería de imágenes, insignias, interruptor, campos...
+│   ├── forms/             EntityForm (base de los formularios) y opciones de los selects
+│   ├── pages/             Bases de las páginas y collectionRoutes()
+│   └── utils/             Formato, fechas, textos de cada colección, paginación, validadores
 ├── layouts/
-│   └── admin-layout/      Sidebar, barra superior y el menú (navigation.ts)
+│   └── admin-layout/      Sidebar con grupos y contadores, barra superior y navigation.ts
 ├── features/
 │   ├── dashboard/         Resumen
-│   ├── routes/            Rutas
-│   │   ├── pages/         Listado, página del formulario (crear y editar) y papelera
-│   │   ├── components/    Tarjeta de ruta y formulario (route-form)
-│   │   ├── services/      routes.service.ts (API) y routes.store.ts (estado)
-│   │   └── routes.routes.ts
-│   └── roles/, users/, hosts/, categories/, locations/,
-│       experiences/, departures/, images/
-│       └── services/      Servicio y store de cada entidad (todavía sin páginas)
+│   └── routes/, categories/, locations/, experiences/, departures/,
+│       users/, hosts/, roles/, images/
+│       ├── components/    El formulario de la colección (<x>-form)
+│       ├── pages/         Listado, detalle, formulario (crear y editar) y papelera
+│       ├── services/      Servicio (API) y store (estado)
+│       └── <x>.routes.ts
 ├── app.routes.ts
 ├── app.config.ts
 └── app.component.ts
@@ -152,8 +153,23 @@ src/app/
 Reglas:
 
 - `core` son servicios únicos (singletons).
-- `shared` no sabe nada del negocio ni importa de `core`.
-- Una feature no importa de otra. Lo que comparten va a `core/models` o a `shared`.
+- `shared` no sabe nada del negocio de una colección concreta.
+- Una feature no importa de otra. Lo que comparten va a `core/models` o a `shared`; las opciones de un select (por ejemplo, los roles de un usuario) las pide el servicio de la propia feature.
+
+### Pantallas
+
+Cada colección tiene las mismas cinco páginas:
+
+| Ruta | Página |
+|---|---|
+| `/<colección>` | Listado con filtro por estado (en la URL: `?estado=active&pagina=2`), interruptor, ver, editar y eliminar |
+| `/<colección>/new` | Crear |
+| `/<colección>/:slug` | Detalle: datos por secciones, relaciones enlazadas, estado, registro, eliminar y galería |
+| `/<colección>/:slug/edit` | Editar, con la galería debajo del formulario |
+| `/<colección>/trash` | Papelera: restaurar activo o inactivo |
+| `/<colección>/id/:id` | Lleva al detalle de un registro del que solo se sabe el `_id` (relaciones sin slug) |
+
+Las imágenes no tienen slug ni página de crear: su detalle es `/images/:id` y se añaden desde la galería de su dueño. El Resumen (`/`) muestra cuántos registros hay en cada colección y las cifras de las rutas.
 
 ### Cómo viajan los datos
 
@@ -264,32 +280,27 @@ Al elegir "Activas" o "Inactivas", el listado se filtra al instante con lo que y
 
 ### Papelera
 
-Eliminar una ruta es un borrado lógico: sigue en la base de datos, marcada como eliminada. La página `/routes/trash` las lista y permite restaurarlas cuando se quiera.
+Eliminar es un borrado lógico: el registro sigue en la base de datos, marcado como eliminado.
 
-- Se llega desde el botón "Papelera" del listado y desde el sidebar. Los dos muestran cuántas hay.
-- "Restaurar" es optimista: la ruta sale de la papelera al instante y vuelve al listado. Si la API falla, vuelve a la papelera y se muestra el error.
+- Se llega desde el botón "Papelera" de cada listado, que muestra cuántos hay.
+- "Restaurar" es optimista: sale de la papelera al instante. Si la API falla, vuelve a su sitio y se muestra el error.
 - El selector "Al restaurar, dejarla" decide si vuelve inactiva (por defecto) o activa.
-- El aviso "Deshacer" que aparece justo después de eliminar sigue funcionando.
-- Si a una ruta le falta su categoría o una de sus ubicaciones (se eliminaron después que ella), la API no deja restaurarla. La papelera lo avisa en la fila ("No se puede restaurar mientras su categoría siga en la papelera") y desactiva su botón, enlazado con el aviso para los lectores de pantalla. Si aun así llega ese 409, la ruta vuelve a su sitio en la papelera, en vez de darse por restaurada.
+- Si una referencia sigue eliminada (la categoría de una ruta, el usuario de un anfitrión...), la API no deja restaurar: el botón se desactiva con el motivo a la vista.
 
-La lógica está en `EntityStore` (`loadDeleted`, `restoreFromTrash`), así que cualquier entidad nueva la hereda.
+### Formularios
 
-### Formulario de rutas
+Cada colección tiene su formulario en `components/<x>-form/`, que hereda de `shared/forms/entity-form.ts`:
 
-El formulario es un componente (`features/routes/components/route-form/`) separado de la página (`pages/route-form/`):
+- Reactive Forms con las mismas validaciones que la API, y los errores de la API pintados junto a su campo (un 409 por duplicado va al campo repetido).
+- Al editar solo se envía lo que se puede cambiar: el SKU de una salida, el usuario de un anfitrión o el nombre interno de un rol base se muestran bloqueados con su motivo.
+- Los selects de relaciones ofrecen solo las opciones activas; si el registro usa una que se desactivó después, aparece marcada "(inactiva)".
+- La contraseña de un usuario es de solo escritura: al editar, solo se envía si se marca "Cambiar la contraseña".
 
-- **El componente** tiene los campos, con Reactive Forms y las mismas validaciones que la API. Cuando es válido, emite `save` con los datos listos. Si la API los rechaza, la página se los devuelve con `showServerError()` y se pintan junto a su campo.
-- **La página** carga la ruta y las opciones de los selects, guarda, y tiene el interruptor de activa, los detalles y el botón de eliminar.
+Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar como principal una imagen inactiva) se desactivan con una explicación visible al pasar el ratón o al llegar con el teclado.
 
-Los selects de categoría, origen y destino ofrecen solo las **activas** (la API rechaza las inactivas). Si la ruta que se edita usa una categoría o ubicación que se desactivó después, también aparece, como "Costa (inactiva)": la API la acepta mientras no se cambie.
+### Imágenes
 
-### Rutas inactivas
-
-Una ruta inactiva se distingue sin depender solo del color:
-
-- En tarjetas: fondo gris sin relieve, borde discontinuo, portada en gris, etiqueta "Inactiva" con icono y texto atenuado.
-- En la lista: fila con fondo gris y la misma etiqueta junto al interruptor.
-- En el Resumen: la etiqueta junto al título.
+`app-image-gallery` (en `shared/components/image-gallery/`) va en el detalle y en la edición de rutas, usuarios, anfitriones, experiencias, categorías y ubicaciones. Permite añadir por URL, marcar la principal, subir y bajar, activar o desactivar y eliminar con deshacer. Cuando cambia la principal, la miniatura del detalle se pone al día.
 
 ### Autenticación
 
@@ -302,23 +313,20 @@ Una ruta inactiva se distingue sin depender solo del color:
 
 ### Rendimiento
 
-- Cada feature se descarga cuando se visita (lazy loading en `app.routes.ts`).
-- La tabla del listado va en un bloque `@defer`: su código solo se descarga al elegir la vista de lista.
+- Cada página se descarga cuando se visita (`loadChildren` y `loadComponent`).
 - SweetAlert2 se descarga la primera vez que hace falta un aviso.
-- Los skeletons tienen la forma del contenido que sustituyen.
+- Los listados se paginan de 12 en 12 y los skeletons tienen la forma del contenido que sustituyen.
 
-## Cómo añadir una feature
+## Cómo añadir una colección
 
 <details>
-<summary><b>Ver los seis pasos, con el ejemplo de categories</b></summary>
+<summary><b>Ver los pasos, con el ejemplo de categories</b></summary>
 
-Ejemplo con `categories`. La API tiene que exponer la entidad con los mismos endpoints que `routes`.
+La API tiene que exponer la colección con los 11 endpoints comunes.
 
-Los pasos 1 a 3 ya están hechos para las nueve entidades. Para una entidad nueva (por ejemplo, `reviews`) serían así:
+**1. Modelo** en `core/models/<x>.model.ts`: la entidad, su resumen para los `populate` y el payload.
 
-**1. Modelo**, en `core/models/<entidad>.model.ts`, con los campos de la API. Mira `category.model.ts`: el modelo, su resumen para los `populate` y el payload.
-
-**2. Servicio**, en `features/<entidad>/services/<entidad>.service.ts`. Hereda los 11 endpoints:
+**2. Servicio** en `features/<x>/services/<x>.service.ts`: hereda los 11 endpoints.
 
 ```ts
 @Injectable({ providedIn: 'root' })
@@ -327,54 +335,39 @@ export class CategoriesService extends EntityApiService<Category, CategoryPayloa
 }
 ```
 
-**3. Store**, en `features/<entidad>/services/<entidad>.store.ts`:
+**3. Store** en `features/<x>/services/<x>.store.ts`, con los textos de la colección y el nombre que se muestra de cada registro:
 
 ```ts
+export const CATEGORY_LABELS: CollectionLabels = { singular: 'categoría', plural: 'categorías', gender: 'f' };
+
 @Injectable({ providedIn: 'root' })
 export class CategoriesStore extends EntityStore<Category, CategoryPayload> {
   protected readonly api = inject(CategoriesService);
   protected readonly listPath = '/categories';
-  protected override readonly notFoundMessage = 'Esa categoría ya no existe.';
+  readonly labels = CATEGORY_LABELS;
+
+  displayName(category: Category): string {
+    return category.name;
+  }
 }
 ```
 
-Con esto ya tiene carga, creación, edición, borrado, deshacer, papelera y el cambio de estado optimista.
+Con esto ya tiene carga, filtro por estado, cambio de estado optimista, eliminar con confirmación y deshacer, papelera y su contador en el menú.
 
-**4. Páginas**, en `features/categories/pages/`: un listado y un formulario. Usa los componentes de `shared`:
+**4. Formulario** en `components/<x>-form/`: hereda de `EntityForm`, crea su `FormGroup` y define `fill()` y `toPayload()` (y `toUpdatePayload()` si al editar no se envía todo). Copia `category-form.component.ts`.
 
-| Componente | Para qué |
-|---|---|
-| `ui-page-header` | Título de la página y acciones |
-| `ui-search-input`, `ui-segmented` | Búsqueda y filtro activas/inactivas/todas |
-| `ui-data-table` con `uiCell` | Tabla del listado, con filas de espera incluidas |
-| `ui-toggle` | Interruptor de `isActive` |
-| `ui-form-field` con `uiInput` | Campo con etiqueta, ayuda y error en línea |
-| `ui-skeleton`, `ui-empty-state`, `ui-pagination` | Carga, estado vacío y paginación |
-| `ui-error-state` | Carga fallida, con "Reintentar" |
+**5. Páginas** en `pages/`. Cada una hereda su base y usa su plantilla de `shared`:
 
-**5. Rutas**, en `features/categories/categories.routes.ts`, con `''`, `'new'` y `':slug/edit'`, como en `routes.routes.ts`. Regístralas en `app.routes.ts`:
+| Página | Base | Plantilla |
+|---|---|---|
+| Listado | `EntityListPage` | `ui-list-page` con `ui-data-table`, `ui-status-toggle` y `ui-row-actions` |
+| Detalle | `EntityDetailPage` | `ui-detail-page` con `ui-detail-section` y `ui-field-list` |
+| Formulario | `EntityFormPage` | `ui-form-page` con el formulario |
+| Papelera | `EntityTrashPage` | `ui-trash-page` con `ui-restore-button` |
 
-```ts
-{
-  path: 'categories',
-  loadChildren: () =>
-    import('./features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES),
-},
-```
+**6. Rutas** en `<x>.routes.ts` con `collectionRoutes({ labels, title, list, detail, form, trash })`, y regístralas en `app.routes.ts` con `loadChildren`.
 
-**6. Menú**, en `layouts/admin-layout/navigation.ts`: mueve la entrada de `UPCOMING_ITEMS` a `NAV_ITEMS` y dale `path` y `create`.
-
-```ts
-{
-  id: 'categories',
-  label: 'Categorías',
-  icon: 'tag',
-  path: '/categories',
-  create: { label: 'Nueva categoría', path: '/categories/new' },
-},
-```
-
-Si la entidad se relaciona con otra, pide los registros activos de la otra desde tu propio servicio, como hace `RoutesService.getCategoryOptions()`. No importes el servicio ni el store de la otra feature.
+**7. Menú**: añade la entrada a su grupo en `layouts/admin-layout/navigation.ts`, con su `id` igual a la ruta de la API.
 
 </details>
 
@@ -405,7 +398,7 @@ Después ya se puede usar con `<ui-icon name="nombre" />`. El nombre está tipad
 | `input()`, `model()`, `output()` | Componentes de `shared` | API de componentes basada en signals |
 | `inject()` | Todos | Sin inyección por constructor |
 | `withComponentInputBinding` | Router | El `:slug` de la URL llega a la página como `input()` |
-| Control flow `@if`, `@for`, `@defer` | Plantillas | Sintaxis nativa; `@defer` carga la tabla solo cuando hace falta |
+| Control flow `@if`, `@for` | Plantillas | Sintaxis nativa, sin directivas estructurales |
 | Reactive Forms con selects | `components/route-form` | Validación en el cliente con los mismos límites que la API |
 | `viewChild()` | Página del formulario | Devolver al formulario los errores de la API |
 | Interceptores y guards funcionales | `core/` | Funciones en lugar de clases |
@@ -442,26 +435,24 @@ Todo el aspecto sale de variables CSS en `src/styles/`:
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-Cubren la lógica, no la presentación:
+260 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
-| `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes, incluido el motivo de cada 409 |
-| `api.service.spec.ts` | URLs, métodos y cuerpo de cada petición |
-| `entity.store.spec.ts` | Carga, CRUD, actualización optimista con vuelta atrás y papelera (también el 409 por una referencia eliminada) |
-| `route.model.spec.ts` | Recorrido y categoría cuando una relación ya no existe |
-| `error-handler.service.spec.ts` | Qué se muestra para cada tipo de error |
-| `routes.service.spec.ts`, `routes.store.spec.ts` | Endpoints de rutas, opciones de los selects, búsqueda, filtros y contadores |
-| `<entidad>.service.spec.ts` (8) | Que cada servicio llama a sus endpoints, también `getBySku` y `getByOwner` |
-| `navigation.spec.ts` | Menú y secciones padre |
-| `utils.spec.ts` | Formato, búsqueda y validadores |
+| `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes (409 por duplicado, campos que no se pueden cambiar...) |
+| `api.service.spec.ts`, `<x>.service.spec.ts` | URLs, métodos y cuerpo de cada petición |
+| `entity.store.spec.ts`, `routes.store.spec.ts` | Carga, CRUD, actualización optimista, filtro por estado, papelera, deshacer y contador del menú |
+| `<x>-form.component.spec.ts` (9) | Validaciones, lo que se envía al crear y al editar, y dónde se pinta cada error de la API |
+| `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
+| Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
+| `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos, paginación y validadores |
 
 ## Limitaciones conocidas
 
-- Solo las rutas tienen páginas. El resto de entidades tienen su modelo, servicio y store, pero todavía no aparecen en el panel (siguen en "Próximamente").
-- Las imágenes se ven (portadas en tarjetas y tabla), pero aún no se pueden añadir ni ordenar desde el panel.
-- Los filtros, la página y la vista del listado no se guardan en la URL. Se conservan al volver del formulario, pero no al recargar (salvo la vista, que se recuerda).
-- La papelera no permite borrar una ruta definitivamente: la API no tiene borrado físico.
+- El detalle no lista lo que cuelga de un registro (las salidas de una experiencia, las rutas de una categoría): la API no filtra por relación. Está propuesto en `NOTES.md`.
+- El listado global de imágenes muestra el tipo de dueño y enlaza a él, pero no su nombre: la API solo devuelve `ownerType` y `ownerId`.
+- Los contadores del menú y del Resumen piden cada listado completo: la API no tiene un endpoint de totales.
+- No hay borrado definitivo: la API no tiene borrado físico.
 - No hay modo oscuro: el panel solo tiene tema claro.
 
 <p align="right"><a href="#top">Volver arriba</a></p>

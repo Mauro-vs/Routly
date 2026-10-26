@@ -27,38 +27,38 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve. La API ya tiene las nueve colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas e imágenes); el panel gestiona de momento las rutas.
+Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve. La API tiene las nueve colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas e imágenes) y el panel las gestiona todas.
 
 <table>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/assets/icon-catalog.svg" width="44" alt=""><br>
-      <b>Catálogo completo</b><br>
-      Crea, edita y elimina rutas con su categoría, su origen y su destino, elegidos de listas. Cada ruta tiene su portada y su propia dirección.
+      <b>Nueve colecciones, un mismo patrón</b><br>
+      Rutas, categorías, ubicaciones, experiencias, salidas, usuarios, anfitriones, roles e imágenes: cada una con listado, detalle, formulario y papelera, y las relaciones enlazadas entre sí.
     </td>
     <td width="50%" valign="top">
       <img src="docs/assets/icon-toggle.svg" width="44" alt=""><br>
       <b>Activar y desactivar al instante</b><br>
-      Un interruptor oculta una ruta sin borrarla. El cambio se ve en el momento y, si el servidor falla, vuelve atrás solo.
+      Un interruptor oculta cualquier registro sin borrarlo. El cambio se ve en el momento y, si el servidor falla, vuelve atrás solo.
     </td>
   </tr>
   <tr>
     <td valign="top">
       <img src="docs/assets/icon-trash.svg" width="44" alt=""><br>
       <b>Papelera con vuelta atrás</b><br>
-      Nada se borra para siempre. Las rutas eliminadas se pueden restaurar como activas o inactivas, o deshacer justo después.
+      Nada se borra para siempre. Lo eliminado se puede restaurar como activo o inactivo, o deshacer justo después.
     </td>
     <td valign="top">
       <img src="docs/assets/icon-search.svg" width="44" alt=""><br>
-      <b>Encontrar rápido</b><br>
-      Búsqueda por título, origen o destino, filtros por estado y dificultad, y vista en tarjetas o en tabla.
+      <b>Galería de imágenes</b><br>
+      Cada ruta, usuario, anfitrión, experiencia, categoría y ubicación tiene su galería: añadir por URL, elegir la principal, ordenar y desactivar.
     </td>
   </tr>
   <tr>
     <td valign="top">
       <img src="docs/assets/icon-chart.svg" width="44" alt=""><br>
       <b>Resumen del catálogo</b><br>
-      Rutas activas e inactivas, kilómetros totales, reparto por dificultad y últimos cambios, de un vistazo.
+      Cuántos registros hay en cada colección, kilómetros totales, reparto por dificultad y últimos cambios, de un vistazo.
     </td>
     <td valign="top">
       <img src="docs/assets/icon-errors.svg" width="44" alt=""><br>
@@ -181,7 +181,7 @@ npm run dev
 ```
 
 > [!WARNING]
-> `npm run seed` borra las rutas que haya y carga cinco de ejemplo. Úsalo solo en desarrollo.
+> `npm run seed` vacía las nueve colecciones y carga datos de ejemplo en todas. Úsalo solo en desarrollo.
 
 **3. Arranca el panel** en `http://localhost:4200`, en otra terminal
 
@@ -193,17 +193,16 @@ npm start
 
 ## Hoja de ruta
 
-Todas las colecciones siguen el mismo patrón que las rutas: papelera, estado activo y, cuando tengan páginas, su sección en el panel, que ya aparece en el menú como "Próximamente". El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md).
-
-"API lista" quiere decir que la API, el modelo, el servicio y el store del panel están hechos, y faltan las páginas.
+Las nueve colecciones están hechas de punta a punta: API, panel y tests. El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md), y las mejoras propuestas para la API, en [`NOTES.md`](NOTES.md).
 
 | Estado | Bloque | Colecciones | Para qué |
 |:---:|---|---|---|
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Rutas | `routes` | Catálogo de rutas, con categoría, origen, destino y portada |
-| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Catálogo | `categories`, `locations` | Tipos de ruta y ubicaciones con coordenadas para buscar por cercanía |
-| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
-| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
-| ![API lista](https://img.shields.io/badge/API_lista-c6f04d?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Catálogo | `categories`, `locations` | Tipos de ruta y ubicaciones con coordenadas |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
+| ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Acceso | - | Inicio de sesión: el panel ya tiene preparados el servicio, el interceptor y el guard |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `bookings`, `reviews` | Reservas y valoraciones |
 
 ## Autor
