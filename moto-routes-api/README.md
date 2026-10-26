@@ -43,7 +43,7 @@ JavaScript moderno sobre **Node.js**, con módulos ES (`"type": "module"` en `pa
 | [dotenv](https://github.com/motdotla/dotenv) | 18.0 | Carga las variables de `.env` |
 | [nodemon](https://nodemon.io) (desarrollo) | 3.1 | Reinicia el servidor al guardar |
 
-Los tests usan el runner que trae Node (`node:test`), sin dependencias.
+Los tests usan el runner que trae Node (`node:test`), sin dependencias. Los de integración necesitan MongoDB en marcha (ver [Tests](#tests)).
 
 ## Instalación
 
@@ -86,6 +86,20 @@ npm test
 ```
 
 En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinicia al cambiar un `.js` o un `.json`. Se configura en `nodemonConfig`, dentro de `package.json`. Para reiniciar a mano, escribe `rs` y pulsa Intro en esa terminal.
+
+### Tests
+
+`npm test` ejecuta 42 tests con `node:test`:
+
+| Archivo | Qué prueba |
+|---|---|
+| `src/utils/sku.test.js` | Formato del SKU, fecha del alta en hora de Madrid y alfabeto sin caracteres ambiguos |
+| `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
+| `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
+| `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
+| `src/testing/validation.test.js` | Campos de más, `status` en el PATCH, vaciar con `null`, región vacía, límites, contraseña, idioma, `https`, etiqueta de rol, 413, respuestas iguales al GET y 404 frente a 400 |
+
+Los de `src/testing/` son de integración: levantan la API real (routers, services y modelos, con `src/testing/app.js`) sobre una base de datos temporal `routly_test_*` que se borra al terminar. Necesitan **MongoDB en marcha** en `mongodb://localhost:27017`, o en la URI de la variable `MONGODB_TEST_URI`. No tocan la base de datos de `MONGODB_URI`.
 
 Con el servidor en marcha, la documentación interactiva está en `http://localhost:3000/api/docs` y la comprobación de estado en `http://localhost:3000/health`.
 
@@ -150,12 +164,16 @@ Lo que es igual en todas las colecciones no se repite: está en un solo sitio.
 | `models/plugins/slug.plugin.js` | Añade `slug` (único) y lo regenera cuando cambia el campo del que sale |
 | `models/plugins/softDelete.plugin.js` | Borrado lógico: `deletedAt`, filtro automático, `softDeleteById` y `restoreById` |
 | `models/imageOwners.js` | Las colecciones que pueden tener imágenes (`IMAGE_OWNERS`) |
-| `models/validators.js` | Enteros y precios con dos decimales en el modelo, igual que en Zod |
-| `schemas/common.schema.js` | Validación de `:id`, `:slug`, `status`, `/active` y `/restore` |
+| `models/validators.js` | Enteros, mayores que 0 y precios con dos decimales en el modelo, igual que en Zod |
+| `models/<recurso>.model.js` | Además del modelo, sus límites (`ROUTE_LIMITS`...) y listas cerradas (`ROUTE_DIFFICULTIES`, `EXPERIENCE_LANGUAGES`...), que importa su esquema de Zod |
+| `schemas/common.schema.js` | Validación de `:id`, `:slug`, `/active` y `/restore`; `cannotChange()` y `clearable()` para los PATCH |
 | `services/references.js` | Comprobaciones que comparten todos los services: documento que existe, con sus relaciones (`findExisting`, lo que devuelve un GET) o tal como está guardado (`findCurrent`, lo que usan las reglas antes de escribir), escritura que no devuelve `null` (`ensureWritten`), PATCH con algún campo (`assertHasChanges`), valores únicos (`assertNotTaken`), referencias, dependientes y documento restaurable |
 | `services/image.service.js` | Además de las imágenes, la imagen principal (`coverImage`) y la cascada con la papelera |
 | `utils/errors.js` | `notFound`, `conflict`, `badRequest` y `fieldError` (400 con `details` en un campo) |
 | `utils/slugify.js` y `utils/sku.js` | Generación del slug y del SKU |
+| `utils/dates.js` | Fecha en hora de Madrid, para el SKU y el slug de las salidas |
+| `utils/update.js` | `toUpdate()`: convierte los `null` de un PATCH en `$unset` |
+| `utils/objectId.js` | El formato de un ObjectId, para Zod y para los services |
 | `docs/openapi.js` | Documentación de los endpoints de todas las colecciones |
 
 ### El recorrido de una petición
@@ -173,17 +191,20 @@ sequenceDiagram
     participant DB as MongoDB
     Cliente->>MW: PATCH /api/routes/:id
     MW->>V: petición con body JSON
-    V->>V: valida :id y body, limpia campos extra
+    V->>V: valida :id y body (campos de más: 400)
     V->>C: req.body limpio
     C->>S: update(id, data)
-    S->>R: categoryRepository.findById(categoryId)
+    S->>R: routeRepository.findPlainById(id)
     R->>DB: findOne({ _id, deletedAt: null })
+    Note over S: findCurrent: si no existe, 404
+    S->>R: categoryRepository.findById(categoryId)
     Note over S: assertReference: si no existe o está inactiva, 400
     S->>R: routeRepository.updateById(id, data)
-    R->>DB: findOneAndUpdate + populate
+    R->>DB: findOneAndUpdate
     Note over DB: el modelo recalcula slug e isActive
+    S->>R: routeRepository.findById(id)
     R-->>S: ruta con category, startLocation y endLocation
-    S-->>C: ruta + coverImage
+    S-->>C: ruta + coverImage, igual que un GET
     C-->>Cliente: 200 + JSON
 ```
 
@@ -194,7 +215,7 @@ Si algo falla en cualquier punto (Zod, el service o Mongoose), el error llega a 
 1. `helmet`: cabeceras de seguridad.
 2. `cors`: orígenes permitidos y métodos `GET`, `POST` y `PATCH`.
 3. `morgan`: logs.
-4. `express.json()`: lee el body.
+4. `express.json({ limit: "50kb" })`: lee el body (más grande, 413).
 5. `GET /health`, `/api/docs` y los routers de las nueve colecciones.
 6. `notFoundHandler`: 404 para cualquier otra URL.
 7. `errorHandler`: siempre el último.
@@ -216,16 +237,17 @@ src/
 │   └── swagger.js                 Definición OpenAPI
 ├── models/
 │   ├── <recurso>.model.js         Uno por colección: role, user, host, category, location,
-│   │                              route, experience, departure, image
+│   │                              route, experience, departure, image. Exporta sus límites
 │   ├── imageOwners.js             Colecciones que pueden tener imágenes
 │   ├── status.js                  Estados comunes
+│   ├── validators.js              Validadores propios de Mongoose
 │   └── plugins/
 │       ├── softDelete.plugin.js   Borrado lógico reutilizable
 │       ├── status.plugin.js       status e isActive
 │       └── slug.plugin.js         slug único
 ├── schemas/
 │   ├── <recurso>.schema.js        Esquemas de Zod de cada colección
-│   └── common.schema.js           Piezas comunes (:id, :slug, status...)
+│   └── common.schema.js           Piezas comunes (:id, :slug, cannotChange, clearable...)
 ├── repositories/<recurso>.repository.js
 ├── services/
 │   ├── <recurso>.service.js
@@ -240,7 +262,13 @@ src/
 │   ├── errors.js                  notFound, conflict, badRequest, fieldError
 │   ├── slugify.js                 Generación del slug
 │   ├── sku.js                     Generación del SKU
-│   └── sku.test.js                Tests del SKU
+│   ├── sku.test.js                Tests del SKU
+│   ├── dates.js                   Fecha en hora de Madrid
+│   ├── update.js                  null de un PATCH → $unset
+│   └── objectId.js                Formato de un ObjectId
+├── testing/
+│   ├── app.js                     La API sobre una base de datos temporal, para los tests
+│   └── *.test.js                  Tests de integración
 ├── seed.js                        Datos de ejemplo
 └── server.js                      Punto de entrada
 ```
@@ -303,12 +331,14 @@ MongoDB no tiene claves foráneas, así que las relaciones las vigilan los servi
 
 Reglas propias de cada colección:
 
-- Los roles base (`isSystem`) no se pueden desactivar, eliminar ni renombrar.
+- Los roles base (`isSystem`) no se pueden desactivar, eliminar ni renombrar. La etiqueta (`label`) de un rol es única sin distinguir mayúsculas ni tildes.
 - Un usuario sin `roleId` es `rider`. El correo es único, también entre los eliminados.
 - Solo un usuario con el rol `host` puede tener perfil de anfitrión, y no se le puede quitar ese rol mientras lo tenga.
 - Los nombres de categoría y los lugares (ciudad, región y país) son únicos sin distinguir mayúsculas ni tildes. La `ñ` cuenta como letra propia, como en español.
-- Una experiencia no puede tener `minParticipants` mayor que `maxParticipants`, ni bajar el máximo por debajo de las plazas de una salida.
-- Una salida se crea con fecha futura, termina después de empezar y no tiene más plazas que el máximo de su experiencia.
+- Una experiencia no puede tener `minParticipants` mayor que `maxParticipants`, ni bajar el máximo por debajo de las plazas de una salida ni subir el mínimo por encima.
+- Si cambia el título de una experiencia, se rehacen los slugs de todas sus salidas (también las de la papelera).
+- Una salida empieza en el futuro (al crearla y al cambiar su fecha), termina después de empezar, tiene sus plazas entre el mínimo y el máximo de su experiencia y no coincide en hora con otra salida de la misma experiencia.
+- `completed` solo se puede marcar cuando la salida ya ha terminado, y una salida `cancelled` no se reabre.
 
 ## Endpoints
 
@@ -548,8 +578,8 @@ Configurado en `src/config/morgan.js`. Cada petición se registra en:
 Por ejemplo, `reviews`. Cada paso copia el patrón de una colección que ya existe:
 
 1. **Modelo** en `models/review.model.js`, con `statusPlugin`, `slugPlugin` y `softDeletePlugin` (ver `category.model.js`). Las relaciones, con `ref` y un virtual para el `populate`.
-2. **Esquemas de Zod** en `schemas/review.schema.js`, con los mismos límites que el modelo.
-3. **Repositorio**, **service** y **controlador**, uno por archivo y con las mismas funciones que los de `routes`. Las referencias se comprueban con `assertReference` y los dependientes con `assertNoDependents` (`services/references.js`).
+2. **Esquemas de Zod** en `schemas/review.schema.js`, con `z.strictObject` y los límites que exporta el modelo (`REVIEW_LIMITS`). En el PATCH, `cannotChange()` para los campos fijos y `clearable()` para los opcionales que se pueden vaciar.
+3. **Repositorio**, **service** y **controlador**, uno por archivo y con las mismas funciones que los de `routes`. Si el modelo tiene relaciones, el repositorio añade `findPlainById` (sin `populate`) y su `updateById` usa `toUpdate(data)`. En el service: `findCurrent` antes de escribir, `getById` para responder, `assertReference` para las referencias, `assertNoDependents` para los dependientes y `assertNotTaken` para los valores únicos (`services/references.js`).
 4. **Rutas** en `routes/review.routes.js`. Las fijas (`/actives`, `/inactives`, `/deleted`, `/slug/:slug`) van antes de `/:id`.
 5. **Registro** en `server.js`: `app.use("/api/reviews", reviewRoutes)`, antes de `notFoundHandler`.
 6. **Documentación:** una entrada más en `RESOURCES`, en `docs/openapi.js`. Los endpoints y los cuerpos se generan solos.

@@ -435,7 +435,7 @@ Todo el aspecto sale de variables CSS en `src/styles/`:
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-260 tests. Cubren la lógica y los formularios:
+263 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
