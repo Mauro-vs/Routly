@@ -189,6 +189,21 @@ describe('DepartureFormComponent', () => {
     });
   });
 
+  it('una fecha guardada con segundos que no se toca no se envía', async () => {
+    const form = await render({
+      ...DEPARTURE,
+      startAt: '2026-01-10T08:00:37.512Z',
+      endAt: '2026-01-10T16:00:12.004Z',
+    });
+    form.select('state', 'completed');
+    await form.submit();
+
+    expect(form.saved[0]).toEqual({
+      mode: 'update',
+      payload: { capacity: 6, price: 120, state: 'completed' },
+    });
+  });
+
   it('al editar, las fechas cambiadas sí se envían', async () => {
     const form = await render(DEPARTURE);
     const start = localIn(20);

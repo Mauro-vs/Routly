@@ -17,8 +17,3 @@ export function toLocalInput(iso: string): string {
 export function fromLocalInput(value: string): string {
   return new Date(value).toISOString();
 }
-
-/** Las dos fechas ISO son el mismo instante, aunque estén escritas distinto. */
-export function sameInstant(a: string, b: string | undefined): boolean {
-  return b !== undefined && new Date(a).getTime() === new Date(b).getTime();
-}

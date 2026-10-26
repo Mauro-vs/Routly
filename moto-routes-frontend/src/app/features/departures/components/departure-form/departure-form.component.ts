@@ -30,7 +30,7 @@ import { ReadonlyFieldComponent } from '../../../../shared/components/form-field
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm } from '../../../../shared/forms/entity-form';
 import { SelectOption } from '../../../../shared/forms/select-options';
-import { fromLocalInput, sameInstant, toLocalInput } from '../../../../shared/utils/dates';
+import { fromLocalInput, toLocalInput } from '../../../../shared/utils/dates';
 import {
   endAfterStart,
   futureDate,
@@ -299,14 +299,19 @@ export class DepartureFormComponent extends EntityForm<
 
   // Las fechas solo se envían si cambian: la API exige que un inicio que llega sea
   // futuro, y así una salida que ya pasó se puede editar o marcar como realizada.
+  // Se comparan como las muestra el campo (al minuto): una fecha guardada con segundos
+  // que no se toca no cuenta como cambiada.
   protected override toUpdatePayload(): Partial<DeparturePayload> | null {
     const payload = this.toPayload();
     if (!payload) return null;
     const { startAt, endAt, capacity, price, state } = payload;
+    const value = this.form.getRawValue();
     const record = this.record();
+    const unchanged = (input: string, saved: string | undefined): boolean =>
+      saved !== undefined && input === toLocalInput(saved);
     return {
-      ...(sameInstant(startAt, record?.startAt) ? {} : { startAt }),
-      ...(sameInstant(endAt, record?.endAt) ? {} : { endAt }),
+      ...(unchanged(value.startAt, record?.startAt) ? {} : { startAt }),
+      ...(unchanged(value.endAt, record?.endAt) ? {} : { endAt }),
       capacity,
       price,
       state,
