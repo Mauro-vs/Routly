@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,6 +19,11 @@ import { TopbarComponent } from './topbar/topbar.component';
 
 // El mismo corte que usan las hojas de estilo del layout.
 const COMPACT_QUERY = '(max-width: 900px)';
+
+/** La URL sin parámetros ni fragmento: `/routes?estado=active` es `/routes`. */
+function pathOf(url: string): string {
+  return url.split(/[?#]/)[0] ?? url;
+}
 
 /**
  * Armazón del panel: sidebar, barra superior y la zona donde se pinta cada página.
@@ -49,13 +55,25 @@ export class AdminLayoutComponent {
   protected readonly drawerMotion = signal(false);
 
   private firstNavigation = true;
+  /** Ruta de la página actual, sin los parámetros. */
+  private currentPath: string | null = null;
 
   constructor() {
     this.watchViewport();
+    this.hideBrokenImages();
 
+    // Un cambio solo de parámetros (el filtro o la página de un listado) no es otra
+    // página: no se vacían las migas ni se mueve el foco.
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
-      if (event instanceof NavigationStart) this.breadcrumbs.clear();
-      if (event instanceof NavigationEnd) this.onNavigated();
+      if (event instanceof NavigationStart && pathOf(event.url) !== this.currentPath) {
+        this.breadcrumbs.clear();
+      }
+      if (event instanceof NavigationEnd) {
+        const path = pathOf(event.urlAfterRedirects);
+        const samePage = path === this.currentPath;
+        this.currentPath = path;
+        if (!samePage) this.onNavigated();
+      }
     });
   }
 
@@ -97,6 +115,21 @@ export class AdminLayoutComponent {
    */
   private focusWhenRendered(target: () => HTMLElement | null): void {
     afterNextRender(() => target()?.focus({ preventScroll: true }), { injector: this.injector });
+  }
+
+  /**
+   * Las imágenes son URLs que escribe quien administra: alguna puede no cargar. En vez
+   * del icono roto del navegador se ve el hueco de su contenedor (miniatura, avatar,
+   * galería). Un solo manejador para todo el panel: el evento `error` no burbujea,
+   * pero se captura en el documento.
+   */
+  private hideBrokenImages(): void {
+    const document = inject(DOCUMENT);
+    const onError = (event: Event): void => {
+      if (event.target instanceof HTMLImageElement) event.target.classList.add('is-broken');
+    };
+    document.addEventListener('error', onError, true);
+    inject(DestroyRef).onDestroy(() => document.removeEventListener('error', onError, true));
   }
 
   private watchViewport(): void {

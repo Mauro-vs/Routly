@@ -33,7 +33,7 @@
             <ui-icon name="path" />
           }
         </span>
-        <a class="link cell-title" [routerLink]="['/routes', route.slug]">{{ route.title }}</a>
+        <a class="link cell-title" [routerLink]="['/routes', route.slug]" [title]="route.title">{{ route.title }}</a>
       </span>
     </ng-template>
     <ng-template uiCell="trip" [uiCellOf]="pager.items()" let-route>

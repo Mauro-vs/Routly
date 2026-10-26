@@ -49,7 +49,7 @@ const COLUMNS: readonly TableColumn[] = [
             <span class="thumb" aria-hidden="true">
               <img [src]="image.url" alt="" loading="lazy" decoding="async" width="40" height="40" />
             </span>
-            <span class="cell-title">{{ name(image) }}</span>
+            <span class="cell-title" [title]="name(image)">{{ name(image) }}</span>
           </span>
         </ng-template>
         <ng-template uiCell="owner" [uiCellOf]="store.deleted()" let-image>

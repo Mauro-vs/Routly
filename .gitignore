@@ -29,8 +29,6 @@ desktop.ini
 # Restos de las herramientas de pruebas del navegador
 .playwright-mcp/
 
-prompt-solucion.md
-prompt-panel-admin.md
-prompt-validaciones-api.md
-NOTES.md
-DATABASE.md
+*.md
+
+!README.md

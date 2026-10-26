@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from 
 
 import { Route, RoutePayload } from '../../../../core/models/route.model';
 import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityFormPage } from '../../../../shared/pages/entity-form-page';
 import { RouteFormComponent } from '../../components/route-form/route-form.component';
 import { RoutesStore } from '../../services/routes.store';
@@ -9,7 +10,7 @@ import { RoutesStore } from '../../services/routes.store';
 /** Crear (`/routes/new`) y editar (`/routes/:slug/edit`) una ruta. */
 @Component({
   selector: 'app-route-form-page',
-  imports: [FormPageComponent, RouteFormComponent],
+  imports: [FormPageComponent, RouteFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-form-page
@@ -21,6 +22,7 @@ import { RoutesStore } from '../../services/routes.store';
       [saving]="saving()"
       [cancelPath]="cancelPath()"
       [active]="isActive()"
+      ownsImages
       (activeChange)="setActive($event)"
       (retry)="retry()"
     >
@@ -31,6 +33,14 @@ import { RoutesStore } from '../../services/routes.store';
         [optionsLoading]="optionsLoading()"
         (save)="save($event)"
       />
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="route"
+          [ownerId]="owner._id"
+          [ownerLabel]="heading()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-form-page>
   `,
 })

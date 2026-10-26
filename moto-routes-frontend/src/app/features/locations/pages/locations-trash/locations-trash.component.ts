@@ -42,7 +42,7 @@ const COLUMNS: readonly TableColumn[] = [
         [skeletonRows]="3"
       >
         <ng-template uiCell="city" [uiCellOf]="store.deleted()" let-location>
-          <span class="cell-title">{{ location.city }}</span>
+          <span class="cell-title" [title]="location.city">{{ location.city }}</span>
           <span class="cell-sub">{{ location.region || 'Sin región' }}</span>
         </ng-template>
         <ng-template uiCell="country" [uiCellOf]="store.deleted()" let-location>

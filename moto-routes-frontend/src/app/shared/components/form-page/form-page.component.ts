@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  booleanAttribute,
+  computed,
+  input,
+  output,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { ENTITY_FORM_ID } from '../../forms/entity-form';
@@ -89,6 +96,12 @@ import { ToggleComponent } from '../toggle/toggle.component';
             />
           </ui-tip>
         </div>
+        @if (ownsImages() && !isEdit()) {
+          <p class="card panel images-note">
+            <ui-icon name="images" />
+            <span>{{ imagesNote() }}</span>
+          </p>
+        }
         <ng-content select="[formAside]" />
       </div>
     </div>
@@ -105,8 +118,26 @@ import { ToggleComponent } from '../toggle/toggle.component';
       gap: var(--space-4);
     }
 
+    /* el formulario y, al editar, la galería de imágenes */
     .layout__main {
+      display: grid;
+      gap: var(--space-4);
       min-width: 0;
+    }
+
+    .images-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
+    .images-note ui-icon {
+      flex: none;
+      margin-top: 2px;
+      font-size: 18px;
+      color: var(--color-primary);
     }
 
     .stack,
@@ -158,6 +189,8 @@ export class FormPageComponent {
   readonly active = input(true);
   /** Por qué no se puede activar o desactivar. null: se puede. */
   readonly lockedReason = input<string | null>(null);
+  /** La colección tiene galería: al crear se explica cuándo se añaden las imágenes. */
+  readonly ownsImages = input(false, { transform: booleanAttribute });
 
   readonly activeChange = output<boolean>();
   readonly retry = output<void>();
@@ -180,6 +213,9 @@ export class FormPageComponent {
     this.isEdit() ? 'Guardar cambios' : `Crear ${this.labels().singular}`,
   );
   protected readonly errorTitle = computed(() => `No se ha podido cargar ${this.ofThe()}`);
+  protected readonly imagesNote = computed(
+    () => `Las imágenes se añaden después de crear ${this.ofThe()}, desde su detalle o al editar.`,
+  );
   protected readonly activeLabel = computed(() => {
     const { singular, gender } = this.labels();
     return `${capitalize(singular)} ${statusWord('active', gender)}`;

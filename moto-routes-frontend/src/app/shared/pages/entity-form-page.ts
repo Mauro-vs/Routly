@@ -115,6 +115,11 @@ export abstract class EntityFormPage<T extends BaseEntity, TPayload>
     void this.router.navigate([this.listPath, result.data.slug]);
   }
 
+  /** La galería ha cambiado la imagen principal: se pone al día el registro. */
+  protected refreshCover(): void {
+    void this.store.refreshSelected();
+  }
+
   protected retry(): void {
     void this.open(this.slug());
   }

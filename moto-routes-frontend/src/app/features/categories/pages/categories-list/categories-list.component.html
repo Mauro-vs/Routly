@@ -24,7 +24,7 @@
     [loading]="showSkeleton()"
   >
     <ng-template uiCell="name" [uiCellOf]="pager.items()" let-category>
-      <a class="link cell-title" [routerLink]="['/categories', category.slug]">{{ category.name }}</a>
+      <a class="link cell-title" [routerLink]="['/categories', category.slug]" [title]="category.name">{{ category.name }}</a>
     </ng-template>
     <ng-template uiCell="description" [uiCellOf]="pager.items()" let-category>
       @if (category.description) {

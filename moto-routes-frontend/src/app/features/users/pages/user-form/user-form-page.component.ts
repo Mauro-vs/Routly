@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/
 
 import { User, UserPayload } from '../../../../core/models/user.model';
 import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityFormPage } from '../../../../shared/pages/entity-form-page';
 import { UserFormComponent } from '../../components/user-form/user-form.component';
 import { UsersStore } from '../../services/users.store';
@@ -9,7 +10,7 @@ import { UsersStore } from '../../services/users.store';
 /** Crear (`/users/new`) y editar (`/users/:slug/edit`) un usuario. */
 @Component({
   selector: 'app-user-form-page',
-  imports: [FormPageComponent, UserFormComponent],
+  imports: [FormPageComponent, UserFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-form-page
@@ -21,6 +22,7 @@ import { UsersStore } from '../../services/users.store';
       [saving]="saving()"
       [cancelPath]="cancelPath()"
       [active]="isActive()"
+      ownsImages
       (activeChange)="setActive($event)"
       (retry)="retry()"
     >
@@ -30,6 +32,14 @@ import { UsersStore } from '../../services/users.store';
         [rolesLoading]="store.roleOptions.loading()"
         (save)="save($event)"
       />
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="user"
+          [ownerId]="owner._id"
+          [ownerLabel]="heading()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-form-page>
   `,
 })

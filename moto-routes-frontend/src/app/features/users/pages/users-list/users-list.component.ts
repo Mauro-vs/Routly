@@ -72,11 +72,11 @@ const COLUMNS: readonly TableColumn[] = [
                 <ui-icon name="user-circle" />
               }
             </span>
-            <a class="link cell-title" [routerLink]="['/users', user.slug]">{{ user.name }}</a>
+            <a class="link cell-title" [routerLink]="['/users', user.slug]" [title]="user.name">{{ user.name }}</a>
           </span>
         </ng-template>
         <ng-template uiCell="email" [uiCellOf]="pager.items()" let-user>
-          <span class="cell-sub email" translate="no">{{ user.email }}</span>
+          <span class="cell-sub email" translate="no" [title]="user.email">{{ user.email }}</span>
         </ng-template>
         <ng-template uiCell="role" [uiCellOf]="pager.items()" let-user>
           <ui-relation-link

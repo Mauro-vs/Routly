@@ -50,7 +50,7 @@ const COLUMNS: readonly TableColumn[] = [
         [skeletonRows]="3"
       >
         <ng-template uiCell="title" [uiCellOf]="store.deleted()" let-experience>
-          <span class="cell-title">{{ experience.title }}</span>
+          <span class="cell-title" [title]="experience.title">{{ experience.title }}</span>
         </ng-template>
         <ng-template uiCell="route" [uiCellOf]="store.deleted()" let-experience>
           <ui-relation-link gender="f" [label]="experience.route?.title ?? null" />

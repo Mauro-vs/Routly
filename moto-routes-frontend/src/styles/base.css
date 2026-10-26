@@ -104,6 +104,12 @@ textarea {
   color: var(--color-text-muted);
 }
 
+/* Una imagen que no carga (la marca AdminLayoutComponent): se ve el fondo de su
+   contenedor, no el icono roto ni el texto alternativo desbordado. */
+img.is-broken {
+  visibility: hidden;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

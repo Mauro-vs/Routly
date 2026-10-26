@@ -60,7 +60,7 @@ const COLUMNS: readonly TableColumn[] = [
         [loading]="showSkeleton()"
       >
         <ng-template uiCell="city" [uiCellOf]="pager.items()" let-location>
-          <a class="link cell-title" [routerLink]="['/locations', location.slug]">{{ location.city }}</a>
+          <a class="link cell-title" [routerLink]="['/locations', location.slug]" [title]="location.city">{{ location.city }}</a>
           <span class="cell-sub">{{ location.region || 'Sin región' }}</span>
         </ng-template>
         <ng-template uiCell="country" [uiCellOf]="pager.items()" let-location>

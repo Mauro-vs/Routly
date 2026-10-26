@@ -65,7 +65,7 @@ const COLUMNS: readonly TableColumn[] = [
         [loading]="showSkeleton()"
       >
         <ng-template uiCell="label" [uiCellOf]="pager.items()" let-role>
-          <a class="link cell-title" [routerLink]="['/roles', role.slug]">{{ role.label }}</a>
+          <a class="link cell-title" [routerLink]="['/roles', role.slug]" [title]="role.label">{{ role.label }}</a>
           <span class="cell-sub mono" translate="no">{{ role.name }}</span>
         </ng-template>
         <ng-template uiCell="description" [uiCellOf]="pager.items()" let-role>

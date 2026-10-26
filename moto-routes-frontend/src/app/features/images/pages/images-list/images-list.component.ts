@@ -71,7 +71,7 @@ const COLUMNS: readonly TableColumn[] = [
             <span class="thumb" aria-hidden="true">
               <img [src]="image.url" alt="" loading="lazy" decoding="async" width="40" height="40" />
             </span>
-            <a class="link cell-title" [routerLink]="['/images', image._id]">{{ name(image) }}</a>
+            <a class="link cell-title" [routerLink]="['/images', image._id]" [title]="name(image)">{{ name(image) }}</a>
           </span>
         </ng-template>
         <ng-template uiCell="owner" [uiCellOf]="pager.items()" let-image>

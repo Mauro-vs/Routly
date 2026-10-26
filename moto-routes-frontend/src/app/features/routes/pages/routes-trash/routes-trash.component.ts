@@ -52,7 +52,7 @@ const COLUMNS: readonly TableColumn[] = [
         [skeletonRows]="3"
       >
         <ng-template uiCell="title" [uiCellOf]="store.deleted()" let-route>
-          <span class="cell-title">{{ route.title }}</span>
+          <span class="cell-title" [title]="route.title">{{ route.title }}</span>
           <span class="cell-sub">{{ trip(route).text }}</span>
         </ng-template>
         <ng-template uiCell="category" [uiCellOf]="store.deleted()" let-route>

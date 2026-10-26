@@ -72,7 +72,7 @@ const COLUMNS: readonly TableColumn[] = [
                 <ui-icon name="user-circle" />
               }
             </span>
-            <a class="link cell-title" [routerLink]="['/hosts', host.slug]">{{ host.name }}</a>
+            <a class="link cell-title" [routerLink]="['/hosts', host.slug]" [title]="host.name">{{ host.name }}</a>
           </span>
         </ng-template>
         <ng-template uiCell="user" [uiCellOf]="pager.items()" let-host>
@@ -81,7 +81,7 @@ const COLUMNS: readonly TableColumn[] = [
             [path]="host.user ? ['/users', 'id', host.user._id] : null"
           />
           @if (host.user; as user) {
-            <span class="cell-sub" translate="no">{{ user.email }}</span>
+            <span class="cell-sub" translate="no" [title]="user.email">{{ user.email }}</span>
           }
         </ng-template>
         <ng-template uiCell="biography" [uiCellOf]="pager.items()" let-host>

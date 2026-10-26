@@ -49,7 +49,7 @@ const COLUMNS: readonly TableColumn[] = [
         [skeletonRows]="3"
       >
         <ng-template uiCell="name" [uiCellOf]="store.deleted()" let-user>
-          <span class="cell-title">{{ user.name }}</span>
+          <span class="cell-title" [title]="user.name">{{ user.name }}</span>
           <span class="cell-sub" translate="no">{{ user.email }}</span>
         </ng-template>
         <ng-template uiCell="role" [uiCellOf]="store.deleted()" let-user>

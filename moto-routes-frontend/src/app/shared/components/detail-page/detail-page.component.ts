@@ -161,6 +161,11 @@ export interface DetailIdentifier {
       background: var(--color-surface-2);
     }
 
+    /* si la imagen principal no carga, el título se queda con su sitio */
+    .head__thumb.is-broken {
+      display: none;
+    }
+
     .head__text {
       flex: 1;
       min-width: 0;
@@ -177,6 +182,12 @@ export interface DetailIdentifier {
       gap: var(--space-2) var(--space-3);
       margin-top: 6px;
       color: var(--color-text-muted);
+    }
+
+    /* un email o un lugar sin espacios se parte en vez de ensanchar la página */
+    .head__meta > span {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .head__actions {
@@ -239,12 +250,26 @@ export interface DetailIdentifier {
       }
     }
 
+    /* En móvil el título se queda con todo el ancho y "Editar" baja a su propia fila. */
     @media (max-width: 560px) {
       .head {
         flex-wrap: wrap;
+        align-items: flex-start;
       }
 
-      .head__actions,
+      .head__thumb {
+        width: 48px;
+        height: 48px;
+      }
+
+      .head__text {
+        flex-basis: calc(100% - 48px - var(--space-4));
+      }
+
+      .head__actions {
+        flex-basis: 100%;
+      }
+
       .head__actions .btn {
         flex: 1;
       }

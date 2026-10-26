@@ -1,5 +1,8 @@
 :host {
   display: block;
+  /* contenedor de los textos .sr-only (posición absoluta): si no, escapan del
+     desplazamiento de la tabla y ensanchan la página */
+  position: relative;
   /* Si aun así el contenido no cabe, se desplaza la tabla y no la página. */
   overflow-x: auto;
   border-radius: var(--radius-lg);
@@ -35,6 +38,12 @@ td {
 /* Los extremos, alineados con el borde redondeado de la tarjeta. En móvil las filas
    son bloques y no hace falta. */
 @media (min-width: 901px) {
+  /* Una columna estrecha no parte palabras normales ("Responsable"); solo las que no
+     caben en ningún caso (un nombre de lugar de 58 letras). */
+  td {
+    min-width: 6.5rem;
+  }
+
   th:first-child,
   td:first-child {
     padding-left: 18px;

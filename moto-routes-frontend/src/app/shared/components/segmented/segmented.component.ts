@@ -92,10 +92,10 @@ export interface SegmentOption<T> {
       font-size: 17px;
     }
 
+    /* el contador va en el mismo color que la etiqueta: aclararlo bajaba el contraste de AA */
     b {
       font-size: 12.5px;
       font-weight: 500;
-      opacity: 0.8;
     }
 
     @media (pointer: coarse) {

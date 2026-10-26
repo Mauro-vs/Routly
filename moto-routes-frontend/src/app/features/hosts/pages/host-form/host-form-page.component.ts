@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/
 
 import { Host, HostPayload } from '../../../../core/models/host.model';
 import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityFormPage } from '../../../../shared/pages/entity-form-page';
 import { HostFormComponent } from '../../components/host-form/host-form.component';
 import { HostsStore } from '../../services/hosts.store';
@@ -9,7 +10,7 @@ import { HostsStore } from '../../services/hosts.store';
 /** Crear (`/hosts/new`) y editar (`/hosts/:slug/edit`) un anfitrión. */
 @Component({
   selector: 'app-host-form-page',
-  imports: [FormPageComponent, HostFormComponent],
+  imports: [FormPageComponent, HostFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-form-page
@@ -21,6 +22,7 @@ import { HostsStore } from '../../services/hosts.store';
       [saving]="saving()"
       [cancelPath]="cancelPath()"
       [active]="isActive()"
+      ownsImages
       (activeChange)="setActive($event)"
       (retry)="retry()"
     >
@@ -30,6 +32,14 @@ import { HostsStore } from '../../services/hosts.store';
         [usersLoading]="store.userOptions.loading()"
         (save)="save($event)"
       />
+      @if (record(); as owner) {
+        <app-image-gallery
+          ownerType="host"
+          [ownerId]="owner._id"
+          [ownerLabel]="heading()"
+          (coverChange)="refreshCover()"
+        />
+      }
     </ui-form-page>
   `,
 })
