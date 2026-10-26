@@ -28,8 +28,7 @@ export const roleService = {
   },
 
   async getById(id) {
-    const role = await findExisting(roleRepository, id, "Role");
-    return role;
+    return findExisting(roleRepository, id, "Role");
   },
 
   async getBySlug(slug) {

@@ -27,8 +27,7 @@ export const categoryService = {
   },
 
   async getById(id) {
-    const category = await findExisting(categoryRepository, id, "Category");
-    return category;
+    return findExisting(categoryRepository, id, "Category");
   },
 
   async getBySlug(slug) {

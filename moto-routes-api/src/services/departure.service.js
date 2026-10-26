@@ -82,8 +82,7 @@ export const departureService = {
   },
 
   async getById(id) {
-    const departure = await findExisting(departureRepository, id, "Departure");
-    return departure;
+    return findExisting(departureRepository, id, "Departure");
   },
 
   async getBySlug(slug) {

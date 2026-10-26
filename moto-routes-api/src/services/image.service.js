@@ -33,8 +33,7 @@ export const imageService = {
   },
 
   async getById(id) {
-    const image = await findExisting(imageRepository, id, "Image");
-    return image;
+    return findExisting(imageRepository, id, "Image");
   },
 
   // El dueño tiene que existir y no estar eliminado, pero puede estar inactivo:

@@ -45,8 +45,7 @@ export const experienceService = {
   },
 
   async getById(id) {
-    const experience = await findExisting(experienceRepository, id, "Experience");
-    return experience;
+    return findExisting(experienceRepository, id, "Experience");
   },
 
   async getBySlug(slug) {

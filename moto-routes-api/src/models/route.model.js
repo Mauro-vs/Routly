@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { STATUS } from "./status.js";
 import { positive } from "./validators.js";
-
-// Se mantiene el nombre antiguo para no romper los imports existentes
-export const ROUTE_STATUS = STATUS;
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/route.schema.js).
 // Distancia en km y duración en horas
