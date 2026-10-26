@@ -18,7 +18,7 @@ export type HostSummary = Pick<Host, '_id' | 'name' | 'slug'>;
 export interface HostPayload {
   userId: string;
   name: string;
-  biography?: string;
+  biography?: string | null;
 }
 
 export const HOST_LIMITS = {

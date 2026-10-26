@@ -284,7 +284,7 @@ Eliminar es un borrado lógico: el registro sigue en la base de datos, marcado c
 
 - Se llega desde el botón "Papelera" de cada listado, que muestra cuántos hay.
 - "Restaurar" es optimista: sale de la papelera al instante. Si la API falla, vuelve a su sitio y se muestra el error.
-- El selector "Al restaurar, dejarla" decide si vuelve inactiva (por defecto) o activa.
+- Un registro eliminado conserva su estado: la columna "Estaba" lo muestra. El selector "Al restaurar, dejarla" decide si vuelve como estaba (por defecto), inactiva o activa. Deshacer un borrado recién hecho siempre lo deja como estaba.
 - Si una referencia sigue eliminada (la categoría de una ruta, el usuario de un anfitrión...), la API no deja restaurar: el botón se desactiva con el motivo a la vista.
 
 ### Formularios
@@ -295,6 +295,8 @@ Cada colección tiene su formulario en `components/<x>-form/`, que hereda de `sh
 - Al editar solo se envía lo que se puede cambiar: el SKU de una salida, el usuario de un anfitrión o el nombre interno de un rol base se muestran bloqueados con su motivo.
 - Los selects de relaciones ofrecen solo las opciones activas; si el registro usa una que se desactivó después, aparece marcada "(inactiva)".
 - La contraseña de un usuario es de solo escritura: al editar, solo se envía si se marca "Cambiar la contraseña".
+- Al editar, un texto opcional que se vacía se envía como `null` y la API lo borra. Vaciar las dos coordenadas de una ubicación las quita.
+- Las fechas de una salida solo se envían si cambian: así una salida que ya pasó se puede editar y marcar como "Realizada".
 
 Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar como principal una imagen inactiva) se desactivan con una explicación visible al pasar el ratón o al llegar con el teclado.
 

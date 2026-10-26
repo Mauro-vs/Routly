@@ -17,7 +17,7 @@ export type RoleSummary = Pick<Role, '_id' | 'name' | 'label'>;
 export interface RolePayload {
   name: string;
   label: string;
-  description?: string;
+  description?: string | null;
 }
 
 export const ROLE_LIMITS = {

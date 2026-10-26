@@ -23,7 +23,7 @@ export interface ImagePayload {
   ownerType: ImageOwnerType;
   ownerId: string;
   url: string;
-  alt?: string;
+  alt?: string | null;
   position?: number;
   isCover?: boolean;
 }

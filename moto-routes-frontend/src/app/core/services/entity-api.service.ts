@@ -71,8 +71,10 @@ export abstract class RecordApiService<T extends BaseRecord, TPayload>
     await this.api.patch<null>(`${this.path}/${id}/delete`);
   }
 
-  restore(id: string, isActive: boolean): Promise<T> {
-    return this.api.patch<T>(`${this.path}/${id}/restore`, { isActive });
+  /** Sin `isActive`, la API lo devuelve con el estado que tenía al eliminarlo. */
+  restore(id: string, isActive?: boolean): Promise<T> {
+    const body = isActive === undefined ? {} : { isActive };
+    return this.api.patch<T>(`${this.path}/${id}/restore`, body);
   }
 }
 

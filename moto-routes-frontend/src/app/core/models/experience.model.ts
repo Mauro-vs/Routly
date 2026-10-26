@@ -32,8 +32,8 @@ export interface ExperiencePayload {
   hostId: string;
   routeId: string;
   title: string;
-  description?: string;
-  meetingPoint?: string;
+  description?: string | null;
+  meetingPoint?: string | null;
   language?: string;
   duration: number;
   minParticipants?: number;

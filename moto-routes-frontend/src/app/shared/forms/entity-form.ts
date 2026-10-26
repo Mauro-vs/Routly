@@ -190,12 +190,13 @@ export abstract class EntityForm<T extends BaseRecord, TPayload, TControls exten
 }
 
 /**
- * Al editar, un campo opcional: el texto recortado. Si queda vacío se envía vacío
- * para borrar lo que había, y si ya estaba vacío no se envía.
+ * Al editar, un campo opcional: el texto recortado. Si queda vacío y antes tenía algo,
+ * se envía `null` y la API borra el campo; si ya estaba vacío, no se envía.
  */
-export function editedText(value: string, previous: string | undefined): string | undefined {
+export function editedText(value: string, previous: string | undefined): string | null | undefined {
   const text = value.trim();
-  return text === '' && !previous ? undefined : text;
+  if (text !== '') return text;
+  return previous ? null : undefined;
 }
 
 /**

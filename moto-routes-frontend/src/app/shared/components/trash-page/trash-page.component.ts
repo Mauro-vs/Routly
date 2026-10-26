@@ -9,12 +9,13 @@ import { IconComponent } from '../icon/icon.component';
 import { PageHeaderComponent } from '../page-header/page-header.component';
 import { SegmentOption, SegmentedComponent } from '../segmented/segmented.component';
 
-export type RestoreAs = 'inactive' | 'active';
+/** Cómo vuelve un registro: con el estado que tenía al eliminarlo, inactivo o activo. */
+export type RestoreAs = 'previous' | 'inactive' | 'active';
 
 /**
  * Marco común de las papeleras: los registros eliminados (borrado lógico), que se
- * pueden restaurar activos o inactivos. La tabla la pone cada página dentro, con un
- * `ui-restore-button` en cada fila.
+ * pueden restaurar como estaban, activos o inactivos. La tabla la pone cada página
+ * dentro, con un `ui-restore-button` en cada fila.
  *
  *   <ui-trash-page [labels]="labels" backPath="/routes" ... [(restoreAs)]="restoreAs">
  *     <ui-data-table ... />
@@ -106,8 +107,8 @@ export class TrashPageComponent {
   /** Cuántos registros hay en la papelera. */
   readonly total = input.required<number>();
 
-  /** Cómo vuelve un registro al restaurarlo. Inactivo por defecto: revisarlo antes de publicarlo. */
-  readonly restoreAs = model<RestoreAs>('inactive');
+  /** Cómo vuelve un registro al restaurarlo. Por defecto, como estaba al eliminarlo. */
+  readonly restoreAs = model<RestoreAs>('previous');
   readonly retry = output<void>();
 
   protected readonly subtitle = computed(() => {
@@ -134,6 +135,7 @@ export class TrashPageComponent {
   protected readonly restoreOptions = computed<SegmentOption<RestoreAs>[]>(() => {
     const { gender } = this.labels();
     return [
+      { value: 'previous', label: 'Como estaba' },
       { value: 'inactive', label: capitalize(statusWord('inactive', gender)) },
       { value: 'active', label: capitalize(statusWord('active', gender)) },
     ];

@@ -111,7 +111,7 @@ describe('ExperienceFormComponent', () => {
 
     const submit = form.saved[0];
     expect(submit.mode).toBe('update');
-    expect(submit.payload).toEqual(jasmine.objectContaining({ description: '', meetingPoint: undefined }));
+    expect(submit.payload).toEqual(jasmine.objectContaining({ description: null, meetingPoint: undefined }));
   });
 
   it('bajar el máximo por debajo de una salida (409) se pinta en el máximo', async () => {

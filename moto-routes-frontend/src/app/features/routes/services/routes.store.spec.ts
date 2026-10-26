@@ -146,7 +146,7 @@ describe('RoutesStore', () => {
 
       // El aviso de deshacer sigue su curso sin bloquear a quien llamó.
       await new Promise((resolve) => setTimeout(resolve));
-      expect(service.restore).toHaveBeenCalledOnceWith('1', true);
+      expect(service.restore).toHaveBeenCalledOnceWith('1');
       expect(store.total()).toBe(3);
     });
   });

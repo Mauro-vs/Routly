@@ -6,6 +6,7 @@ import {
   TableCellDirective,
   TableColumn,
 } from '../../../../shared/components/data-table/data-table.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { RestoreButtonComponent } from '../../../../shared/components/trash-page/restore-button.component';
 import { TrashPageComponent } from '../../../../shared/components/trash-page/trash-page.component';
 import { EntityTrashPage } from '../../../../shared/pages/entity-trash-page';
@@ -14,6 +15,7 @@ import { ImagesStore } from '../../services/images.store';
 const COLUMNS: readonly TableColumn[] = [
   { key: 'image', header: 'Imagen' },
   { key: 'owner', header: 'Dueño' },
+  { key: 'was', header: 'Estaba' },
   { key: 'deleted', header: 'Eliminada' },
   { key: 'actions', header: 'Acciones', headerHidden: true, align: 'end', wide: true },
 ];
@@ -24,7 +26,13 @@ const COLUMNS: readonly TableColumn[] = [
  */
 @Component({
   selector: 'app-images-trash',
-  imports: [DataTableComponent, TableCellDirective, RestoreButtonComponent, TrashPageComponent],
+  imports: [
+    DataTableComponent,
+    TableCellDirective,
+    RestoreButtonComponent,
+    StatusBadgeComponent,
+    TrashPageComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-trash-page
@@ -54,6 +62,9 @@ const COLUMNS: readonly TableColumn[] = [
         </ng-template>
         <ng-template uiCell="owner" [uiCellOf]="store.deleted()" let-image>
           {{ owners[image.ownerType].label }}
+        </ng-template>
+        <ng-template uiCell="was" [uiCellOf]="store.deleted()" let-image>
+          <ui-status-badge [status]="image.status" [gender]="store.labels.gender" />
         </ng-template>
         <ng-template uiCell="deleted" [uiCellOf]="store.deleted()" let-image>
           <time class="nowrap" [attr.datetime]="image.deletedAt">{{ deletedAgo(image) }}</time>

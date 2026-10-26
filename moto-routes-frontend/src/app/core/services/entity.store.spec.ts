@@ -272,6 +272,17 @@ describe('EntityStore', () => {
       expect(store.items().map((entry) => entry._id)).toContain('9');
     });
 
+    it('sin indicar el estado, restaura como estaba y el aviso dice cómo ha vuelto', async () => {
+      await loadTrashWith([trashed('9')]);
+      api.restore.and.resolveTo(item('9', true));
+
+      await store.restoreAndNotify(store.deleted()[0]);
+
+      expect(api.restore).toHaveBeenCalledOnceWith('9', undefined);
+      expect(notifications.success).toHaveBeenCalledOnceWith(jasmine.stringContaining('restaurad'));
+      expect(notifications.success.calls.mostRecent().args[0]).toContain('y activ');
+    });
+
     it('restaura como activa cuando se pide', async () => {
       await loadTrashWith([trashed('9')]);
       api.restore.and.resolveTo(item('9', true));
@@ -403,7 +414,8 @@ describe('EntityStore', () => {
       expect(store.items().map((entry) => entry._id)).toEqual(['2']);
 
       await store.restore(removed);
-      expect(api.restore).toHaveBeenCalledOnceWith('1', true);
+      // Sin isActive: la API lo devuelve como estaba
+      expect(api.restore).toHaveBeenCalledOnceWith('1');
       expect(store.total()).toBe(2);
     });
 
@@ -493,7 +505,7 @@ describe('EntityStore', () => {
 
       expect(removed).toBeTrue();
       expect(notifications.undoable).toHaveBeenCalledOnceWith('Ruta eliminada.');
-      expect(api.restore).toHaveBeenCalledOnceWith('1', true);
+      expect(api.restore).toHaveBeenCalledOnceWith('1');
       expect(notifications.success).toHaveBeenCalledOnceWith('Ruta restaurada.');
     });
 

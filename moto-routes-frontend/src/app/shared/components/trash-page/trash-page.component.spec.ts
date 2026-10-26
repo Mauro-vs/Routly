@@ -26,6 +26,24 @@ describe('TrashPageComponent', () => {
     );
   });
 
+  it('al restaurar, por defecto lo deja como estaba', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([])],
+    });
+    const fixture = TestBed.createComponent(TrashPageComponent);
+    fixture.componentRef.setInput('labels', USERS);
+    fixture.componentRef.setInput('backPath', '/users');
+    fixture.componentRef.setInput('loaded', true);
+    fixture.componentRef.setInput('total', 2);
+    await fixture.whenStable();
+
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('ui-segmented button'),
+    );
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual(['Como estaba', 'Inactivo', 'Activo']);
+    expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('en plural y en masculino', async () => {
     expect(await subtitleFor(3, USERS)).toBe(
       '3 usuarios eliminados. Puedes restaurarlos cuando quieras.',

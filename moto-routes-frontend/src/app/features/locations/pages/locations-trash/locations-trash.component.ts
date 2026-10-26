@@ -6,6 +6,7 @@ import {
   TableCellDirective,
   TableColumn,
 } from '../../../../shared/components/data-table/data-table.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { RestoreButtonComponent } from '../../../../shared/components/trash-page/restore-button.component';
 import { TrashPageComponent } from '../../../../shared/components/trash-page/trash-page.component';
 import { EntityTrashPage } from '../../../../shared/pages/entity-trash-page';
@@ -14,6 +15,7 @@ import { LocationsStore } from '../../services/locations.store';
 const COLUMNS: readonly TableColumn[] = [
   { key: 'city', header: 'Ubicación' },
   { key: 'country', header: 'País' },
+  { key: 'was', header: 'Estaba' },
   { key: 'deleted', header: 'Eliminada' },
   { key: 'actions', header: 'Acciones', headerHidden: true, align: 'end', wide: true },
 ];
@@ -21,7 +23,13 @@ const COLUMNS: readonly TableColumn[] = [
 /** Papelera de ubicaciones: las eliminadas, que se pueden restaurar. */
 @Component({
   selector: 'app-locations-trash',
-  imports: [DataTableComponent, TableCellDirective, RestoreButtonComponent, TrashPageComponent],
+  imports: [
+    DataTableComponent,
+    TableCellDirective,
+    RestoreButtonComponent,
+    StatusBadgeComponent,
+    TrashPageComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-trash-page
@@ -47,6 +55,9 @@ const COLUMNS: readonly TableColumn[] = [
         </ng-template>
         <ng-template uiCell="country" [uiCellOf]="store.deleted()" let-location>
           {{ location.country }}
+        </ng-template>
+        <ng-template uiCell="was" [uiCellOf]="store.deleted()" let-location>
+          <ui-status-badge [status]="location.status" [gender]="store.labels.gender" />
         </ng-template>
         <ng-template uiCell="deleted" [uiCellOf]="store.deleted()" let-location>
           <time class="nowrap" [attr.datetime]="location.deletedAt">{{ deletedAgo(location) }}</time>

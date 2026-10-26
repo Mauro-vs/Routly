@@ -19,7 +19,7 @@ export type LocationSummary = Pick<Location, '_id' | 'city' | 'region' | 'countr
  */
 export interface LocationPayload {
   city: string;
-  region?: string;
+  region?: string | null;
   country?: string;
   latitude?: number | null;
   longitude?: number | null;

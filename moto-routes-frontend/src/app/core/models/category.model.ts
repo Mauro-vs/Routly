@@ -11,7 +11,7 @@ export type CategorySummary = Pick<Category, '_id' | 'name' | 'slug'>;
 
 export interface CategoryPayload {
   name: string;
-  description?: string;
+  description?: string | null;
 }
 
 export const CATEGORY_LIMITS = {

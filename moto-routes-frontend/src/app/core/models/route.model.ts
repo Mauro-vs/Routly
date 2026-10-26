@@ -35,7 +35,7 @@ export interface Route extends BaseEntity {
 /** Cuerpo de `POST /api/routes` y, con campos opcionales, de `PATCH /api/routes/:id`. */
 export interface RoutePayload {
   title: string;
-  description?: string;
+  description?: string | null;
   difficulty: RouteDifficulty;
   distance: number;
   duration: number;

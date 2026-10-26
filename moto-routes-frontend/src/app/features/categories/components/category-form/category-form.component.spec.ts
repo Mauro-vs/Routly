@@ -71,7 +71,8 @@ describe('CategoryFormComponent', () => {
     type('description', '   ');
     await submit();
 
-    expect(saved).toEqual([{ mode: 'update', payload: { name: 'Montaña', description: '' } }]);
+    // null: la API borra la descripción
+    expect(saved).toEqual([{ mode: 'update', payload: { name: 'Montaña', description: null } }]);
   });
 
   it('un nombre repetido (409) se pinta en el campo del nombre', async () => {

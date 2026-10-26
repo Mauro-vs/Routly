@@ -24,7 +24,8 @@ export interface EntityApi<T extends BaseRecord, TPayload> {
   update(id: string, payload: Partial<TPayload>): Promise<T>;
   setActive(id: string, isActive: boolean): Promise<T>;
   remove(id: string): Promise<void>;
-  restore(id: string, isActive: boolean): Promise<T>;
+  /** Sin `isActive`, vuelve con el estado que tenía al eliminarlo. */
+  restore(id: string, isActive?: boolean): Promise<T>;
 }
 
 /** El mismo orden que usa la API en sus listados: del más reciente al más antiguo. */
@@ -330,10 +331,10 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     }
   }
 
-  /** Deshace un borrado recién hecho y deja el registro con el estado activo que tenía. */
+  /** Deshace un borrado recién hecho: la API lo devuelve con el estado que tenía. */
   async restore(entity: T): Promise<StoreResult<T>> {
     try {
-      const restored = await this.api.restore(entity._id, entity.isActive);
+      const restored = await this.api.restore(entity._id);
       if (!this._loaded()) this.badges.adjust(this.navId(), 1);
       this.putBack(restored);
       this._deleted.update((deleted) => deleted.filter((item) => item._id !== restored._id));
@@ -360,10 +361,11 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   }
 
   /**
-   * Restaura un registro desde la papelera, activo o inactivo. Es optimista: sale
-   * de la papelera al instante y, si la API falla, vuelve a su sitio y se avisa.
+   * Restaura un registro desde la papelera: activo, inactivo o, sin `isActive`, como
+   * estaba. Es optimista: sale de la papelera al instante y, si la API falla, vuelve
+   * a su sitio y se avisa.
    */
-  async restoreFromTrash(entity: T, isActive: boolean): Promise<StoreResult<T>> {
+  async restoreFromTrash(entity: T, isActive?: boolean): Promise<StoreResult<T>> {
     const id = entity._id;
     if (this.isBusy(id)) return { ok: true, data: entity };
 
@@ -413,15 +415,18 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     return true;
   }
 
-  /** Restaura un registro desde la papelera y lo confirma con un aviso. */
-  async restoreAndNotify(entity: T, isActive: boolean): Promise<void> {
+  /**
+   * Restaura un registro desde la papelera y lo confirma con un aviso. El aviso dice
+   * el estado con el que ha vuelto, también si se restauró como estaba.
+   */
+  async restoreAndNotify(entity: T, isActive?: boolean): Promise<void> {
     const result = await this.restoreFromTrash(entity, isActive);
     if (!result.ok) return;
 
-    const { gender } = this.labels;
-    const state = statusWord(isActive ? 'active' : 'inactive', gender);
+    const active = result.data.isActive;
+    const state = statusWord(active ? 'active' : 'inactive', this.labels.gender);
     void this.notifications.success(
-      isActive ? `${this.restoredText()} y ${state}.` : `${this.restoredText()} como ${state}.`,
+      active ? `${this.restoredText()} y ${state}.` : `${this.restoredText()} como ${state}.`,
     );
   }
 

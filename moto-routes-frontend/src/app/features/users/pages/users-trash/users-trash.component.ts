@@ -7,6 +7,7 @@ import {
   TableColumn,
 } from '../../../../shared/components/data-table/data-table.component';
 import { RelationLinkComponent } from '../../../../shared/components/relation-link/relation-link.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { RestoreButtonComponent } from '../../../../shared/components/trash-page/restore-button.component';
 import { TrashPageComponent } from '../../../../shared/components/trash-page/trash-page.component';
 import { EntityTrashPage } from '../../../../shared/pages/entity-trash-page';
@@ -15,6 +16,7 @@ import { UsersStore } from '../../services/users.store';
 const COLUMNS: readonly TableColumn[] = [
   { key: 'name', header: 'Usuario' },
   { key: 'role', header: 'Rol' },
+  { key: 'was', header: 'Estaba' },
   { key: 'deleted', header: 'Eliminado' },
   { key: 'actions', header: 'Acciones', headerHidden: true, align: 'end', wide: true },
 ];
@@ -27,6 +29,7 @@ const COLUMNS: readonly TableColumn[] = [
     TableCellDirective,
     RelationLinkComponent,
     RestoreButtonComponent,
+    StatusBadgeComponent,
     TrashPageComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,6 +57,9 @@ const COLUMNS: readonly TableColumn[] = [
         </ng-template>
         <ng-template uiCell="role" [uiCellOf]="store.deleted()" let-user>
           <ui-relation-link [label]="user.role?.label ?? null" />
+        </ng-template>
+        <ng-template uiCell="was" [uiCellOf]="store.deleted()" let-user>
+          <ui-status-badge [status]="user.status" [gender]="store.labels.gender" />
         </ng-template>
         <ng-template uiCell="deleted" [uiCellOf]="store.deleted()" let-user>
           <time class="nowrap" [attr.datetime]="user.deletedAt">{{ deletedAgo(user) }}</time>

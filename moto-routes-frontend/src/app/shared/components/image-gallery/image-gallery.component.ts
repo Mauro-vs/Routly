@@ -230,9 +230,8 @@ export class ImageGalleryComponent {
 
     const undo = await this.notifications.undoable('Imagen eliminada.');
     if (!undo) return;
-    const restored = await this.run(() =>
-      this.api.patch<Image>(`${PATH}/${image._id}/restore`, { isActive: image.isActive }),
-    );
+    // Sin isActive: la API la devuelve como estaba (y vuelve a ser la principal si lo era)
+    const restored = await this.run(() => this.api.patch<Image>(`${PATH}/${image._id}/restore`, {}));
     if (restored) void this.notifications.success('Imagen restaurada.');
   }
 

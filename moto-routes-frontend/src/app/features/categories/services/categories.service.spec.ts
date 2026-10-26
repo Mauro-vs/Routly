@@ -75,4 +75,9 @@ describe('CategoriesService', () => {
     await service.restore(ID, true);
     expect(api.patch).toHaveBeenCalledOnceWith(`/categories/${ID}/restore`, { isActive: true });
   });
+
+  it('PATCH /categories/:id/restore sin isActive: vuelve como estaba', async () => {
+    await service.restore(ID);
+    expect(api.patch).toHaveBeenCalledOnceWith(`/categories/${ID}/restore`, {});
+  });
 });
