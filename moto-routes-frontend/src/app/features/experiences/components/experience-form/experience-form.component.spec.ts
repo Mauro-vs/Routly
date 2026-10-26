@@ -80,6 +80,24 @@ describe('ExperienceFormComponent', () => {
     expect(form.element.textContent).toContain('Escribe un número entero.');
   });
 
+  it('la duración es mayor que 0 y como mucho 720 horas', async () => {
+    const form = await render();
+    form.type('duration', '0');
+    await form.submit();
+    expect(form.element.textContent).toContain('Tiene que ser mayor que 0.');
+
+    form.type('duration', '721');
+    await form.submit();
+    expect(form.element.textContent).toContain('El valor máximo es 720.');
+  });
+
+  it('el título necesita al menos 2 caracteres', async () => {
+    const form = await render();
+    form.type('title', 'C');
+    await form.submit();
+    expect(form.element.textContent).toContain('Escribe al menos 2 caracteres.');
+  });
+
   it('un idioma que no está en la lista se conserva como opción', async () => {
     const form = await render(EXPERIENCE);
     expect(form.field('language')!.value).toBe('nl');

@@ -88,13 +88,13 @@
   <div class="two">
     <ui-form-field label="Distancia" [error]="errorOf('distance')">
       <div class="affix">
-        <input uiInput type="number" name="distance" inputmode="decimal" min="0" step="any" autocomplete="off" formControlName="distance" />
+        <input uiInput type="number" name="distance" inputmode="decimal" min="0" [max]="limits.distance" step="any" autocomplete="off" formControlName="distance" />
         <span aria-hidden="true">km</span>
       </div>
     </ui-form-field>
     <ui-form-field label="Duración" [error]="errorOf('duration')">
       <div class="affix">
-        <input uiInput type="number" name="duration" inputmode="decimal" min="0" step="any" autocomplete="off" formControlName="duration" />
+        <input uiInput type="number" name="duration" inputmode="decimal" min="0" [max]="limits.duration" step="any" autocomplete="off" formControlName="duration" />
         <span aria-hidden="true">h</span>
       </div>
     </ui-form-field>

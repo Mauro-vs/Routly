@@ -9,12 +9,13 @@ import { InputDirective } from '../../../../shared/components/form-field/input.d
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm } from '../../../../shared/forms/entity-form';
 import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
-import { minTrimmed, notBlank } from '../../../../shared/utils/validators';
+import { email, letterAndNumber, minTrimmed, notBlank } from '../../../../shared/utils/validators';
 
 const PASSWORD_VALIDATORS = [
   Validators.required,
   Validators.minLength(USER_LIMITS.passwordMin),
   Validators.maxLength(USER_LIMITS.passwordMax),
+  letterAndNumber,
 ];
 
 // Los mismos criterios que src/schemas/user.schema.js en la API.
@@ -26,7 +27,7 @@ function createUserForm() {
     }),
     email: new FormControl('', {
       nonNullable: true,
-      validators: [notBlank, Validators.email, Validators.maxLength(USER_LIMITS.email)],
+      validators: [notBlank, email, Validators.maxLength(USER_LIMITS.email)],
     }),
     // Vacío: la API le pone el rol rider.
     roleId: new FormControl('', { nonNullable: true }),
@@ -85,7 +86,7 @@ type UserControls = ReturnType<typeof createUserForm>['controls'];
       @if (!isEdit() || changePassword()) {
         <ui-form-field
           [label]="isEdit() ? 'Contraseña nueva' : 'Contraseña'"
-          [hint]="'Entre ' + limits.passwordMin + ' y ' + limits.passwordMax + ' caracteres. No se vuelve a mostrar.'"
+          [hint]="'Entre ' + limits.passwordMin + ' y ' + limits.passwordMax + ' caracteres, con al menos una letra y un número. No se vuelve a mostrar.'"
           [error]="errorOf('password')"
         >
           <input uiInput type="password" name="password" formControlName="password" autocomplete="new-password" />

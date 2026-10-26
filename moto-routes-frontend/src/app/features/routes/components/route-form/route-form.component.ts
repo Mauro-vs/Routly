@@ -17,14 +17,14 @@ import { InputDirective } from '../../../../shared/components/form-field/input.d
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm, editedText, optionalText } from '../../../../shared/forms/entity-form';
 import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
-import { notBlank } from '../../../../shared/utils/validators';
+import { minTrimmed, notBlank, positive } from '../../../../shared/utils/validators';
 
 // Los mismos criterios que src/schemas/route.schema.js en la API.
 function createRouteForm() {
   return new FormGroup({
     title: new FormControl('', {
       nonNullable: true,
-      validators: [notBlank, Validators.maxLength(ROUTE_LIMITS.title)],
+      validators: [notBlank, minTrimmed(ROUTE_LIMITS.titleMin), Validators.maxLength(ROUTE_LIMITS.title)],
     }),
     description: new FormControl('', {
       nonNullable: true,
@@ -34,8 +34,16 @@ function createRouteForm() {
     startLocationId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     endLocationId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     difficulty: new FormControl<RouteDifficulty | null>(null, Validators.required),
-    distance: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
-    duration: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
+    distance: new FormControl<number | null>(null, [
+      Validators.required,
+      positive,
+      Validators.max(ROUTE_LIMITS.distance),
+    ]),
+    duration: new FormControl<number | null>(null, [
+      Validators.required,
+      positive,
+      Validators.max(ROUTE_LIMITS.duration),
+    ]),
   });
 }
 

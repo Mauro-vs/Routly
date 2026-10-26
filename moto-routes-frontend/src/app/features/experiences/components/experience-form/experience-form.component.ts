@@ -23,7 +23,7 @@ import { InputDirective } from '../../../../shared/components/form-field/input.d
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm, editedText, optionalText } from '../../../../shared/forms/entity-form';
 import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
-import { integer, notBlank } from '../../../../shared/utils/validators';
+import { integer, minTrimmed, notBlank, positive } from '../../../../shared/utils/validators';
 
 /** El mínimo de participantes no puede superar al máximo. El error queda en el grupo. */
 function participantsInOrder(group: AbstractControl): ValidationErrors | null {
@@ -42,7 +42,11 @@ function createExperienceForm() {
       routeId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       title: new FormControl('', {
         nonNullable: true,
-        validators: [notBlank, Validators.maxLength(EXPERIENCE_LIMITS.title)],
+        validators: [
+          notBlank,
+          minTrimmed(EXPERIENCE_LIMITS.titleMin),
+          Validators.maxLength(EXPERIENCE_LIMITS.title),
+        ],
       }),
       description: new FormControl('', {
         nonNullable: true,
@@ -53,7 +57,11 @@ function createExperienceForm() {
         validators: [Validators.maxLength(EXPERIENCE_LIMITS.meetingPoint)],
       }),
       language: new FormControl('es', { nonNullable: true, validators: [Validators.required] }),
-      duration: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
+      duration: new FormControl<number | null>(null, [
+        Validators.required,
+        positive,
+        Validators.max(EXPERIENCE_LIMITS.duration),
+      ]),
       minParticipants: new FormControl<number | null>(1, [
         Validators.required,
         Validators.min(1),
@@ -150,9 +158,13 @@ type ExperienceControls = ReturnType<typeof createExperienceForm>['controls'];
             }
           </select>
         </ui-form-field>
-        <ui-form-field label="Duración" hint="Horas en total, con las paradas." [error]="errorOf('duration')">
+        <ui-form-field
+          label="Duración"
+          [hint]="'Horas en total, con las paradas. Hasta ' + limits.duration + '.'"
+          [error]="errorOf('duration')"
+        >
           <div class="affix">
-            <input uiInput type="number" name="duration" inputmode="decimal" min="0" step="any" formControlName="duration" />
+            <input uiInput type="number" name="duration" inputmode="decimal" min="0" [max]="limits.duration" step="any" formControlName="duration" />
             <span aria-hidden="true">h</span>
           </div>
         </ui-form-field>

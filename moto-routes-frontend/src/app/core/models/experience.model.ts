@@ -40,11 +40,14 @@ export interface ExperiencePayload {
   maxParticipants: number;
 }
 
+/** Los mismos límites que la API (EXPERIENCE_LIMITS en experience.model.js). Duración en horas. */
 export const EXPERIENCE_LIMITS = {
+  titleMin: 2,
   title: 120,
   description: 2000,
   meetingPoint: 200,
   maxParticipants: 100,
+  duration: 720,
 } as const;
 
 /**

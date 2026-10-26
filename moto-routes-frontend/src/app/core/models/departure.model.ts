@@ -32,6 +32,11 @@ export interface DeparturePayload {
   state?: DepartureState;
 }
 
+/** Los mismos límites que la API (DEPARTURE_LIMITS en departure.model.js). Euros por persona. */
+export const DEPARTURE_LIMITS = {
+  price: 100000,
+} as const;
+
 export const DEPARTURE_STATE_LABELS: Record<DepartureState, string> = {
   scheduled: 'Programada',
   cancelled: 'Cancelada',

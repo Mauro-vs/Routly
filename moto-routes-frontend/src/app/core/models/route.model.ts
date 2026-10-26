@@ -45,9 +45,13 @@ export interface RoutePayload {
 }
 
 /** Los mismos límites que valida la API (src/schemas/route.schema.js). */
+/** Los mismos límites que la API (ROUTE_LIMITS en route.model.js). Distancia en km y duración en horas. */
 export const ROUTE_LIMITS = {
+  titleMin: 2,
   title: 120,
   description: 500,
+  distance: 5000,
+  duration: 240,
 } as const;
 
 export const DIFFICULTY_LABELS: Record<RouteDifficulty, string> = {

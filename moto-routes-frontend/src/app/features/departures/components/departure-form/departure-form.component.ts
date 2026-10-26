@@ -6,6 +6,7 @@ import {
   input,
   untracked,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -16,6 +17,7 @@ import {
 } from '@angular/forms';
 
 import {
+  DEPARTURE_LIMITS,
   DEPARTURE_STATE_LABELS,
   Departure,
   DeparturePayload,
@@ -36,6 +38,11 @@ import {
   maxDecimals,
 } from '../../../../shared/utils/validators';
 
+/** El fin (valor de un `datetime-local`) ya ha pasado. Vacío no cuenta como terminada. */
+function hasEnded(end: string): boolean {
+  return end !== '' && new Date(end).getTime() <= Date.now();
+}
+
 const STATES = Object.entries(DEPARTURE_STATE_LABELS).map(([value, label]) => ({
   value: value as DepartureState,
   label,
@@ -49,7 +56,12 @@ function createDepartureForm() {
       startAt: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       endAt: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       capacity: new FormControl<number | null>(null, [Validators.required, Validators.min(1), integer]),
-      price: new FormControl<number | null>(null, [Validators.required, Validators.min(0), maxDecimals(2)]),
+      price: new FormControl<number | null>(null, [
+        Validators.required,
+        Validators.min(0),
+        Validators.max(DEPARTURE_LIMITS.price),
+        maxDecimals(2),
+      ]),
       state: new FormControl<DepartureState>('scheduled', { nonNullable: true }),
     },
     { validators: endAfterStart('startAt', 'endAt') },
@@ -125,19 +137,27 @@ type DepartureControls = ReturnType<typeof createDepartureForm>['controls'];
         </ui-form-field>
         <ui-form-field label="Precio por persona" [error]="errorOf('price')">
           <div class="affix">
-            <input uiInput type="number" name="price" inputmode="decimal" min="0" step="0.01" formControlName="price" />
+            <input uiInput type="number" name="price" inputmode="decimal" min="0" [max]="limits.price" step="0.01" formControlName="price" />
             <span aria-hidden="true">€</span>
           </div>
         </ui-form-field>
       </div>
 
-      <ui-form-field label="Estado de la salida" hint="Lo que ha pasado o va a pasar con ella." [error]="errorOf('state')">
-        <select uiInput class="select" name="state" formControlName="state">
-          @for (option of states; track option.value) {
-            <option [value]="option.value">{{ option.label }}</option>
-          }
-        </select>
-      </ui-form-field>
+      @if (stateLocked()) {
+        <ui-readonly-field label="Estado de la salida" [hint]="cancelledReason">
+          {{ stateLabels.cancelled }}
+        </ui-readonly-field>
+      } @else {
+        <ui-form-field label="Estado de la salida" [hint]="stateHint()" [error]="errorOf('state')">
+          <select uiInput class="select" name="state" formControlName="state">
+            @for (option of states; track option.value) {
+              <option [value]="option.value" [disabled]="option.value === 'completed' && !finished()">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+        </ui-form-field>
+      }
     </form>
   `,
   styles: `
@@ -155,22 +175,53 @@ export class DepartureFormComponent extends EntityForm<
   readonly experiencesLoading = input(false);
 
   protected readonly states = STATES;
+  protected readonly stateLabels = DEPARTURE_STATE_LABELS;
+  protected readonly limits = DEPARTURE_LIMITS;
+  protected readonly cancelledReason = 'Una salida cancelada no se puede reabrir.';
+  protected override readonly errorMessages = {
+    notFinished: () => 'Solo se puede marcar como realizada cuando ya ha terminado.',
+  };
 
   protected readonly experienceOptions = computed<SelectOption[]>(() =>
     this.experiences().map((experience) => ({ value: experience._id, label: experience.title })),
   );
 
-  /** El máximo de participantes de la experiencia elegida, si se conoce. */
-  protected readonly maxCapacity = computed(() => {
+  /** La experiencia elegida (o la de la salida, al editar), si se conoce. */
+  private readonly experience = computed(() => {
     this.changes();
     const id = this.record()?.experienceId ?? this.form.controls.experienceId.value;
-    return this.experiences().find((experience) => experience._id === id)?.maxParticipants ?? null;
+    return this.experiences().find((experience) => experience._id === id) ?? null;
+  });
+
+  /** Las plazas van entre el mínimo y el máximo de participantes de la experiencia. */
+  protected readonly capacityRange = computed(() => {
+    const experience = this.experience();
+    return experience ? { min: experience.minParticipants, max: experience.maxParticipants } : null;
   });
 
   protected readonly capacityHint = computed(() => {
-    const max = this.maxCapacity();
-    return max === null ? '' : `Como mucho ${max}, el máximo de la experiencia.`;
+    const range = this.capacityRange();
+    return range === null
+      ? ''
+      : `Entre ${range.min} y ${range.max}, el mínimo y el máximo de la experiencia.`;
   });
+
+  /** La salida ya ha terminado (según el fin del formulario): solo entonces es «Realizada». */
+  protected readonly finished = computed(() => {
+    this.changes();
+    return hasEnded(this.form.controls.endAt.value);
+  });
+
+  /** Una salida cancelada no se reabre: su estado se muestra bloqueado. */
+  protected readonly stateLocked = computed(
+    () => this.isEdit() && this.record()?.state === 'cancelled',
+  );
+
+  protected readonly stateHint = computed(() =>
+    this.finished()
+      ? 'Lo que ha pasado o va a pasar con ella.'
+      : 'Lo que va a pasar con ella. «Realizada» se puede marcar cuando haya terminado.',
+  );
 
   protected readonly datesError = computed(() => {
     this.changes();
@@ -183,15 +234,26 @@ export class DepartureFormComponent extends EntityForm<
   constructor() {
     super(createDepartureForm());
 
-    const { experienceId, startAt, capacity } = this.form.controls;
-    // Las plazas, como mucho las de la experiencia (si se sabe cuáles son).
+    const { experienceId, startAt, endAt, capacity, state } = this.form.controls;
+    // Las plazas, entre el mínimo y el máximo de la experiencia (si se sabe cuáles son).
     capacity.addValidators((control: AbstractControl): ValidationErrors | null => {
-      const max = untracked(() => this.maxCapacity());
-      return Validators.max(max ?? Number.POSITIVE_INFINITY)(control);
+      const range = untracked(() => this.capacityRange());
+      if (!range) return null;
+      return Validators.min(range.min)(control) ?? Validators.max(range.max)(control);
     });
 
+    // «Realizada» solo si la salida ya terminó (también si se mueve el fin al futuro).
+    // Se lee el fin del formulario en el momento: al cambiarlo, el estado se revalida
+    // en el acto, antes de que se pueda enviar.
+    state.addValidators((control: AbstractControl): ValidationErrors | null =>
+      control.value === 'completed' && !hasEnded(endAt.value) ? { notFinished: true } : null,
+    );
+    endAt.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => state.updateValueAndValidity({ emitEvent: false }));
+
     effect(() => {
-      this.maxCapacity();
+      this.capacityRange();
       capacity.updateValueAndValidity({ emitEvent: false });
     });
 

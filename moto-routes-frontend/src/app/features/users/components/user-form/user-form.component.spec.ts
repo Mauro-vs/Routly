@@ -39,6 +39,31 @@ describe('UserFormComponent', () => {
     expect(form.element.textContent).toContain('Escribe al menos 8 caracteres.');
   });
 
+  it('la contraseña necesita al menos una letra y un número', async () => {
+    const form = await renderForm(UserFormComponent, { record: null, roles: ROLES });
+    form.type('name', 'Luis');
+    form.type('email', 'luis@routly.dev');
+    form.type('password', 'solotexto');
+    await form.submit();
+    expect(form.saved).toEqual([]);
+    expect(form.element.textContent).toContain('Usa al menos una letra y un número.');
+
+    form.type('password', '12345678');
+    await form.submit();
+    expect(form.saved).toEqual([]);
+  });
+
+  it('el email necesita un dominio con punto, como en la API', async () => {
+    const form = await renderForm(UserFormComponent, { record: null, roles: ROLES });
+    form.type('name', 'Luis');
+    form.type('email', 'luis@localhost');
+    form.type('password', 'segura-1234');
+    await form.submit();
+
+    expect(form.saved).toEqual([]);
+    expect(form.element.textContent).toContain('Escribe un correo electrónico válido.');
+  });
+
   it('sin rol elegido no se envía roleId: la API pone rider', async () => {
     const form = await renderForm(UserFormComponent, { record: null, roles: ROLES });
     form.type('name', 'Luis');

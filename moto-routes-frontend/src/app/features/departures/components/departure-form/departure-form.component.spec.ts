@@ -13,7 +13,7 @@ const DATES = {
 } as const;
 
 const EXPERIENCES = [
-  { _id: 'e1', slug: 'costa-e1', title: 'Costa Brava en moto', maxParticipants: 8 },
+  { _id: 'e1', slug: 'costa-e1', title: 'Costa Brava en moto', minParticipants: 2, maxParticipants: 8 },
 ] as unknown as Experience[];
 
 /** Una fecha dentro de `days` días, a las 9:00 en hora local, como la da el input. */
@@ -57,15 +57,73 @@ describe('DepartureFormComponent', () => {
     expect(form.element.textContent).toContain('Tiene que ser posterior al inicio.');
   });
 
-  it('las plazas no pueden superar el máximo de la experiencia', async () => {
+  it('las plazas van entre el mínimo y el máximo de la experiencia', async () => {
     const form = await render();
     form.select('experienceId', 'e1');
     await form.fixture.whenStable();
-    expect(form.element.textContent).toContain('Como mucho 8, el máximo de la experiencia.');
+    expect(form.element.textContent).toContain('Entre 2 y 8, el mínimo y el máximo de la experiencia.');
 
     form.type('capacity', '9');
     await form.submit();
     expect(form.element.textContent).toContain('El valor máximo es 8.');
+
+    form.type('capacity', '1');
+    await form.submit();
+    expect(form.element.textContent).toContain('El valor mínimo es 2.');
+  });
+
+  it('el precio es como mucho 100.000 €', async () => {
+    const form = await render();
+    form.type('price', '100001');
+    await form.submit();
+    expect(form.element.textContent).toContain('El valor máximo es 100000.');
+  });
+
+  const completedOption = (element: HTMLElement): HTMLOptionElement =>
+    element.querySelector<HTMLOptionElement>('select[name="state"] option[value="completed"]')!;
+
+  it('«Realizada» no se puede elegir si la salida no ha terminado', async () => {
+    const form = await render(DEPARTURE);
+    expect(completedOption(form.element).disabled).toBeTrue();
+    expect(form.element.textContent).toContain('«Realizada» se puede marcar cuando haya terminado.');
+  });
+
+  it('«Realizada» se puede elegir cuando la salida ya ha terminado', async () => {
+    const form = await render({
+      ...DEPARTURE,
+      startAt: '2026-01-10T08:00:00.000Z',
+      endAt: '2026-01-10T16:00:00.000Z',
+    });
+    expect(completedOption(form.element).disabled).toBeFalse();
+  });
+
+  it('una salida realizada cuyo fin se mueve al futuro no se puede guardar así', async () => {
+    const form = await render({
+      ...DEPARTURE,
+      state: 'completed',
+      startAt: '2026-01-10T08:00:00.000Z',
+      endAt: '2026-01-10T16:00:00.000Z',
+    });
+    form.type('startAt', localIn(20));
+    form.type('endAt', localIn(20, 17));
+    await form.submit();
+
+    expect(form.saved).toEqual([]);
+    expect(form.element.textContent).toContain('Solo se puede marcar como realizada cuando ya ha terminado.');
+  });
+
+  it('el estado de una salida cancelada se muestra bloqueado con su motivo', async () => {
+    const form = await render({ ...DEPARTURE, state: 'cancelled' });
+
+    expect(form.field('state')).toBeNull();
+    expect(form.element.textContent).toContain('Una salida cancelada no se puede reabrir.');
+
+    form.type('price', '99');
+    await form.submit();
+    expect(form.saved[0]).toEqual({
+      mode: 'update',
+      payload: { capacity: 6, price: 99, state: 'cancelled' },
+    });
   });
 
   it('el precio admite como mucho dos decimales', async () => {
