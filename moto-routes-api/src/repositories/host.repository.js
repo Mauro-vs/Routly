@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Host } from "../models/host.model.js";
 
 const NOT_DELETED = { deletedAt: null };
@@ -33,14 +32,6 @@ export const hostRepository = {
   // Incluye los eliminados: un usuario solo puede tener un perfil, también en la papelera
   existsByUser(userId) {
     return Host.exists({ userId }).setOptions({ withDeleted: true });
-  },
-
-  existsBySlug(slug) {
-    return Host.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

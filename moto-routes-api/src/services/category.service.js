@@ -2,12 +2,10 @@ import { statusFromActive } from "../models/status.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
-import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNoDependents,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -43,10 +41,7 @@ export const categoryService = {
       throw conflict("A category with this name already exists");
     }
 
-    const _id = categoryRepository.generateId();
-    await assertSlugAvailable(categoryRepository, buildSlug(data.name, _id), "Category");
-
-    await categoryRepository.create({ ...data, _id });
+    const { _id } = await categoryRepository.create(data);
     return categoryService.getById(_id);
   },
 

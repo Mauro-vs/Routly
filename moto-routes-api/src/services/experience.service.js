@@ -4,14 +4,13 @@ import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
-import { buildSlug } from "../utils/slugify.js";
+import { departureService } from "./departure.service.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -58,10 +57,7 @@ export const experienceService = {
   async create(data) {
     await assertReferences(data);
 
-    const _id = experienceRepository.generateId();
-    await assertSlugAvailable(experienceRepository, buildSlug(data.title, _id), "Experience");
-
-    await experienceRepository.create({ ...data, _id });
+    const { _id } = await experienceRepository.create(data);
     return experienceService.getById(_id);
   },
 
@@ -90,6 +86,9 @@ export const experienceService = {
     }
 
     await experienceRepository.updateById(id, data);
+    if (data.title !== undefined && data.title !== experience.title) {
+      await departureService.renameExperience(id, data.title);
+    }
     return experienceService.getById(id);
   },
 

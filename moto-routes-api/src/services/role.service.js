@@ -2,11 +2,9 @@ import { STATUS, statusFromActive } from "../models/status.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
-import { buildSlug } from "../utils/slugify.js";
 import {
   assertHasChanges,
   assertNoDependents,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -44,10 +42,7 @@ export const roleService = {
       throw conflict("A role with this name already exists");
     }
 
-    const _id = roleRepository.generateId();
-    await assertSlugAvailable(roleRepository, buildSlug(data.label, _id), "Role");
-
-    await roleRepository.create({ ...data, _id });
+    const { _id } = await roleRepository.create(data);
     return roleService.getById(_id);
   },
 

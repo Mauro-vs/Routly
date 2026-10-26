@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Experience } from "../models/experience.model.js";
 
 const NOT_DELETED = { deletedAt: null };
@@ -33,14 +32,6 @@ export const experienceRepository = {
 
   exists(filter) {
     return Experience.exists({ ...filter, ...NOT_DELETED });
-  },
-
-  existsBySlug(slug) {
-    return Experience.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

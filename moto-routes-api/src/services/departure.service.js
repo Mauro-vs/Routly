@@ -8,7 +8,6 @@ import {
   assertHasChanges,
   assertReference,
   assertRestorable,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -83,9 +82,9 @@ export const departureService = {
     assertFuture(data.startAt);
     assertCapacity(data.capacity, experience);
 
+    // El slug lleva el sufijo del _id: hay que conocerlo antes de crear
     const _id = departureRepository.generateId();
     const slug = departureSlug(experience.title, data.startAt, _id);
-    await assertSlugAvailable(departureRepository, slug, "Departure");
 
     // El SKU es aleatorio: si coincide con uno existente (casi imposible), se genera otro
     for (let attempt = 1; attempt <= SKU_ATTEMPTS; attempt++) {
@@ -126,6 +125,17 @@ export const departureService = {
 
     await departureRepository.updateById(id, changes);
     return departureService.getById(id);
+  },
+
+  // El slug de una salida lleva el título de su experiencia: si cambia, se rehacen
+  // todos, también los de las salidas eliminadas (pueden restaurarse)
+  async renameExperience(experienceId, title) {
+    const departures = await departureRepository.findAllByExperience(experienceId);
+    if (departures.length === 0) return;
+
+    await departureRepository.updateSlugs(
+      departures.map(({ _id, startAt }) => ({ _id, slug: departureSlug(title, startAt, _id) }))
+    );
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt

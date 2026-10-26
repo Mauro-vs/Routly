@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Location, LOCATION_COLLATION } from "../models/location.model.js";
 
 const NOT_DELETED = { deletedAt: null };
@@ -33,14 +32,6 @@ export const locationRepository = {
     const filter = { city, region: region ?? null, country };
     if (excludeId) filter._id = { $ne: excludeId };
     return Location.exists(filter).collation(LOCATION_COLLATION).setOptions({ withDeleted: true });
-  },
-
-  existsBySlug(slug) {
-    return Location.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

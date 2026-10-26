@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Route } from "../models/route.model.js";
 
 // Solo documentos no eliminados (soft delete)
@@ -37,16 +36,6 @@ export const routeRepository = {
 
   exists(filter) {
     return Route.exists({ ...filter, ...NOT_DELETED });
-  },
-
-  // Mira también las rutas eliminadas: su slug sigue reservado por el índice único
-  existsBySlug(slug) {
-    return Route.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  // El slug lleva el sufijo del _id, así que hay que conocerlo antes de crear
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

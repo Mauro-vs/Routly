@@ -4,14 +4,12 @@ import { experienceRepository } from "../repositories/experience.repository.js";
 import { locationRepository } from "../repositories/location.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { notFound } from "../utils/errors.js";
-import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -62,17 +60,12 @@ export const routeService = {
     return imageService.attachCover("route", route);
   },
 
-  // Antes de crear se comprueba que el slug no exista ya (tampoco en una ruta
-  // eliminada). El slug lleva el sufijo del _id, por eso el _id se genera aquí;
-  // el modelo calcula ese mismo slug al guardar. El índice único de la base de
-  // datos sigue siendo la garantía final si llegan dos altas a la vez.
+  // El slug lo calcula el modelo con el título y el _id. Si dos altas chocaran, el
+  // índice único responde con un 409.
   async create(data) {
     await assertReferences(data);
 
-    const _id = routeRepository.generateId();
-    await assertSlugAvailable(routeRepository, buildSlug(data.title, _id), "Route");
-
-    await routeRepository.create({ ...data, _id });
+    const { _id } = await routeRepository.create(data);
     return routeService.getById(_id);
   },
 

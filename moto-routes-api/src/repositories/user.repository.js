@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 
 const NOT_DELETED = { deletedAt: null };
@@ -36,14 +35,6 @@ export const userRepository = {
   existsByEmail(email, excludeId) {
     const filter = excludeId ? { email, _id: { $ne: excludeId } } : { email };
     return User.exists(filter).setOptions({ withDeleted: true });
-  },
-
-  existsBySlug(slug) {
-    return User.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

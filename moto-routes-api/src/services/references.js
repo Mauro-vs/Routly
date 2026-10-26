@@ -87,11 +87,3 @@ export async function findRestorable(repository, id, resource) {
   if (await repository.findById(id)) throw conflict(`${resource} is not deleted`);
   throw notFound(resource);
 }
-
-/** 409 si el slug que tendría un documento nuevo ya existe (también en la papelera). */
-export async function assertSlugAvailable(repository, slug, resource) {
-  if (await repository.existsBySlug(slug)) {
-    const article = /^[AEIOU]/.test(resource) ? "An" : "A";
-    throw conflict(`${article} ${resource.toLowerCase()} with this slug already exists`);
-  }
-}

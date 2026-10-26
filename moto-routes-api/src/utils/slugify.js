@@ -1,7 +1,8 @@
 export function slugify(text) {
   return String(text)
+    // NFD separa la letra de su tilde ("á" → "a" + "´") y luego se quita la tilde
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{Diacritic}/gu, "")
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")

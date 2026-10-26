@@ -37,10 +37,21 @@ export const departureRepository = {
     return Departure.exists({ ...filter, ...NOT_DELETED });
   },
 
-  existsBySlug(slug) {
-    return Departure.exists({ slug }).setOptions({ withDeleted: true });
+  // Las salidas de una experiencia, también las eliminadas: solo lo que hace falta
+  // para rehacer su slug
+  findAllByExperience(experienceId) {
+    return Departure.find({ experienceId }).select("startAt").setOptions({ withDeleted: true }).lean();
   },
 
+  // Un slug distinto por salida, en una sola operación. bulkWrite no pasa por los
+  // plugins: solo cambian slug y updatedAt.
+  updateSlugs(slugs) {
+    return Departure.bulkWrite(
+      slugs.map(({ _id, slug }) => ({ updateOne: { filter: { _id }, update: { $set: { slug } } } }))
+    );
+  },
+
+  // El slug lleva el sufijo del _id, así que el service lo necesita antes de crear
   generateId() {
     return new mongoose.Types.ObjectId();
   },

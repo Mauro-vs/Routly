@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Category, CATEGORY_COLLATION } from "../models/category.model.js";
 
 const NOT_DELETED = { deletedAt: null };
@@ -32,14 +31,6 @@ export const categoryRepository = {
   existsByName(name, excludeId) {
     const filter = excludeId ? { name, _id: { $ne: excludeId } } : { name };
     return Category.exists(filter).collation(CATEGORY_COLLATION).setOptions({ withDeleted: true });
-  },
-
-  existsBySlug(slug) {
-    return Category.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

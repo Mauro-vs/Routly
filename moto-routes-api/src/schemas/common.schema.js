@@ -10,7 +10,7 @@ export const idParamSchema = z.object({
 });
 
 export const slugParamSchema = z.object({
-  slug: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+  slug: z.string().max(200).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
 });
 
 // `deleted` solo se alcanza con el soft delete (PATCH /:id/delete), nunca desde el cliente

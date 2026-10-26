@@ -2,12 +2,10 @@ import { statusFromActive } from "../models/status.js";
 import { locationRepository } from "../repositories/location.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
-import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNoDependents,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -59,10 +57,7 @@ export const locationService = {
     const place = { city: data.city, region: data.region, country: data.country ?? DEFAULT_COUNTRY };
     if (await locationRepository.existsByPlace(place)) throw conflict(DUPLICATED);
 
-    const _id = locationRepository.generateId();
-    await assertSlugAvailable(locationRepository, buildSlug(data.city, _id), "Location");
-
-    await locationRepository.create({ ...toDocument(data), _id });
+    const { _id } = await locationRepository.create(toDocument(data));
     return locationService.getById(_id);
   },
 

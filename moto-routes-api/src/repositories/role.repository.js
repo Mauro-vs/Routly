@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { Role } from "../models/role.model.js";
 
 // Solo documentos no eliminados (soft delete)
@@ -33,14 +32,6 @@ export const roleRepository = {
   // Incluye los eliminados: su nombre y su slug siguen reservados para poder restaurarlos
   existsByName(name) {
     return Role.exists({ name }).setOptions({ withDeleted: true });
-  },
-
-  existsBySlug(slug) {
-    return Role.exists({ slug }).setOptions({ withDeleted: true });
-  },
-
-  generateId() {
-    return new mongoose.Types.ObjectId();
   },
 
   create(data) {

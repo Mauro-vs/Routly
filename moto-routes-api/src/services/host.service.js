@@ -4,14 +4,12 @@ import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
-import { buildSlug } from "../utils/slugify.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNoDependents,
   assertReference,
   assertRestorable,
-  assertSlugAvailable,
   ensureWritten,
   findExisting,
   findRestorable,
@@ -54,10 +52,7 @@ export const hostService = {
       throw conflict("This user already has a host profile");
     }
 
-    const _id = hostRepository.generateId();
-    await assertSlugAvailable(hostRepository, buildSlug(data.name, _id), "Host");
-
-    await hostRepository.create({ ...data, _id });
+    const { _id } = await hostRepository.create(data);
     return hostService.getById(_id);
   },
 
