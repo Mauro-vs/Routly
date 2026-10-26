@@ -2,7 +2,8 @@ import { statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
-import { buildSku, madridDateParts } from "../utils/sku.js";
+import { madridDateParts } from "../utils/dates.js";
+import { buildSku } from "../utils/sku.js";
 import { buildSlug } from "../utils/slugify.js";
 import {
   assertHasChanges,
@@ -89,7 +90,7 @@ export const departureService = {
     // El SKU es aleatorio: si coincide con uno existente (casi imposible), se genera otro
     for (let attempt = 1; attempt <= SKU_ATTEMPTS; attempt++) {
       try {
-        await departureRepository.create({ ...data, _id, slug, sku: buildSku(SKU_TYPE, data.startAt) });
+        await departureRepository.create({ ...data, _id, slug, sku: buildSku(SKU_TYPE) });
         return departureService.getById(_id);
       } catch (error) {
         if (!isSkuClash(error)) throw error;

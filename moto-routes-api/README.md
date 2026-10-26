@@ -396,11 +396,11 @@ Cada salida tiene un `sku`: su código comercial, el que verán reservas, factur
 |---|---|
 | `RTL` | Prefijo de Routly |
 | `DEP` | Tipo de producto (*departure*) |
-| `261108` | Día de salida (`AAMMDD`) en hora de Madrid |
+| `261108` | Día del alta (`AAMMDD`) en hora de Madrid |
 | `7QX2M` | 5 caracteres aleatorios en Crockford Base32: sin `I`, `L`, `O` ni `U`, para que no se confundan al leerlos |
 
 - Es obligatorio, único (también en la papelera) y lo genera el servidor: el cliente no lo envía.
-- **No cambia nunca**, aunque se cambie la fecha de la salida. El slug, en cambio, sí sigue a la fecha.
+- **No cambia nunca**, aunque se cambie la fecha de la salida: por eso lleva la fecha del alta. El slug, en cambio, sí sigue a la fecha de salida y al título de la experiencia.
 - Es un identificador público: las relaciones internas siguen usando `_id`.
 - Se genera en `utils/sku.js` y tiene tests en `utils/sku.test.js` (`npm test`).
 

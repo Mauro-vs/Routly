@@ -17,7 +17,8 @@ const departureSchema = new mongoose.Schema(
     // Euros por persona
     price: { type: Number, required: true, min: 0, validate: twoDecimals },
     state: { type: String, enum: DEPARTURE_STATES, default: "scheduled" },
-    // Código comercial fijo (RTL-DEP-AAMMDD-XXXXX): lo genera el service y no cambia nunca
+    // Código comercial fijo (RTL-DEP-AAMMDD-XXXXX, con la fecha del alta): lo genera el
+    // service y no cambia nunca
     sku: { type: String, required: true, unique: true, immutable: true, match: SKU_PATTERN },
     // Lo calcula el service con el título de la experiencia y la fecha de salida
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
