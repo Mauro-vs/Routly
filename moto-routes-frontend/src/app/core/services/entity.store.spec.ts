@@ -214,9 +214,9 @@ describe('EntityStore', () => {
   });
 
   describe('papelera', () => {
+    // Como en la API: un eliminado conserva su estado y lo marca deletedAt
     const trashed = (id: string): Item => ({
       ...item(id, false),
-      status: 'deleted',
       deletedAt: '2026-10-01T00:00:00.000Z',
     });
 
@@ -249,7 +249,8 @@ describe('EntityStore', () => {
 
       expect(store.items().map((entry) => entry._id)).toEqual(['2']);
       expect(store.deleted().map((entry) => entry._id)).toEqual(['1']);
-      expect(store.deleted()[0].status).toBe('deleted');
+      // Conserva su estado, como en la API: solo cambia deletedAt
+      expect(store.deleted()[0].status).toBe('active');
       expect(store.deleted()[0].deletedAt).not.toBeNull();
     });
 

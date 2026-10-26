@@ -1,25 +1,35 @@
+// Todas las consultas de Query que llevan filtro. Las de lectura y escritura que no
+// estén aquí verían también los eliminados.
 const QUERIES_TO_FILTER = [
   "find",
   "findOne",
   "findOneAndUpdate",
+  "findOneAndReplace",
+  "findOneAndDelete",
   "countDocuments",
+  "distinct",
   "updateOne",
   "updateMany",
+  "replaceOne",
+  "deleteOne",
+  "deleteMany",
 ];
 
 /**
  * Soft delete reutilizable para cualquier modelo.
  *
- * - Añade `deletedAt` (null = no eliminado).
+ * - Añade `deletedAt` (null = no eliminado). Es lo único que marca un documento como
+ *   eliminado: su status se conserva para restaurarlo como estaba.
  * - Middleware de consultas: excluye automáticamente los eliminados, salvo que
  *   la consulta filtre por `deletedAt` explícitamente o pida incluirlos con
  *   `.setOptions({ withDeleted: true })`.
  * - `Model.softDeleteById(id)`: marca el documento como eliminado en vez de borrarlo.
  * - `Model.restoreById(id, fields)`: restaura un documento eliminado (`deletedAt` a null).
  *
- * @param {object} options.deletedFields campos extra a fijar al eliminar (p.ej. status)
+ * No cubre `aggregate` ni `estimatedDocumentCount`: un pipeline tiene que empezar con
+ * `{ $match: { deletedAt: null } }`, y el recuento estimado no admite filtro.
  */
-export function softDeletePlugin(schema, { deletedFields = {} } = {}) {
+export function softDeletePlugin(schema) {
   schema.add({ deletedAt: { type: Date, default: null } });
 
   schema.pre(QUERIES_TO_FILTER, function () {
@@ -32,7 +42,7 @@ export function softDeletePlugin(schema, { deletedFields = {} } = {}) {
   schema.statics.softDeleteById = function (id) {
     return this.findOneAndUpdate(
       { _id: id, deletedAt: null },
-      { deletedAt: new Date(), ...deletedFields },
+      { deletedAt: new Date() },
       { returnDocument: "after" }
     );
   };

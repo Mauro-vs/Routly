@@ -40,5 +40,5 @@ export function cannotChange(...fields) {
   );
 }
 
-// Al restaurar, isActive es opcional (si no llega, el documento vuelve inactivo)
+// Al restaurar, isActive es opcional (si no llega, vuelve con el estado que tenía)
 export const restoreSchema = setActiveSchema.partial();

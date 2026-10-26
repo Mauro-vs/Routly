@@ -1,10 +1,11 @@
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { locationRepository } from "../repositories/location.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
-import { conflict, notFound } from "../utils/errors.js";
+import { notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
+  assertNotTaken,
   assertNoDependents,
   ensureWritten,
   findExisting,
@@ -55,7 +56,7 @@ export const locationService = {
 
   async create(data) {
     const place = { city: data.city, region: data.region, country: data.country ?? DEFAULT_COUNTRY };
-    if (await locationRepository.existsByPlace(place)) throw conflict(DUPLICATED);
+    assertNotTaken(await locationRepository.findDuplicateByPlace(place), DUPLICATED);
 
     const { _id } = await locationRepository.create(toDocument(data));
     return locationService.getById(_id);
@@ -72,7 +73,7 @@ export const locationService = {
         region: data.region ?? location.region,
         country: data.country ?? location.country,
       };
-      if (await locationRepository.existsByPlace(place, id)) throw conflict(DUPLICATED);
+      assertNotTaken(await locationRepository.findDuplicateByPlace(place, id), DUPLICATED);
     }
 
     return toResponse(
@@ -99,11 +100,11 @@ export const locationService = {
     await imageService.removeByOwner("location", id, location.deletedAt);
   },
 
-  async restore(id, isActive = false) {
+  async restore(id, isActive) {
     const deleted = await findRestorable(locationRepository, id, "Location");
 
     const location = ensureWritten(
-      await locationRepository.restoreById(id, { status: statusFromActive(isActive) }),
+      await locationRepository.restoreById(id, restoredStatus(isActive)),
       "Location"
     );
     await imageService.restoreByOwner("location", id, deleted.deletedAt);

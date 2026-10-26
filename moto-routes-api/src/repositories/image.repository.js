@@ -1,13 +1,10 @@
 import { Image } from "../models/image.model.js";
 import { IMAGE_OWNERS } from "../models/imageOwners.js";
-import { DELETED_FIELDS, STATUS } from "../models/status.js";
-
-const NOT_DELETED = { deletedAt: null };
 
 export const imageRepository = {
   // Por posición dentro de su dueño
   findAll(filter = {}) {
-    return Image.find({ ...filter, ...NOT_DELETED }).sort({ position: 1, createdAt: 1 }).lean();
+    return Image.find(filter).sort({ position: 1, createdAt: 1 }).lean();
   },
 
   findDeleted() {
@@ -15,7 +12,7 @@ export const imageRepository = {
   },
 
   findById(id) {
-    return Image.findOne({ _id: id, ...NOT_DELETED }).lean();
+    return Image.findOne({ _id: id }).lean();
   },
 
   findDeletedById(id) {
@@ -24,7 +21,7 @@ export const imageRepository = {
 
   // El dueño de una imagen, en la colección que indica ownerType (sin los eliminados)
   findOwner(ownerType, ownerId) {
-    return IMAGE_OWNERS[ownerType].findOne({ _id: ownerId, ...NOT_DELETED }).lean();
+    return IMAGE_OWNERS[ownerType].findOne({ _id: ownerId }).lean();
   },
 
   // Imagen principal de varios dueños a la vez, para añadir coverImage a un listado
@@ -34,7 +31,6 @@ export const imageRepository = {
       ownerId: { $in: ownerIds },
       isCover: true,
       isActive: true,
-      ...NOT_DELETED,
     })
       .select("ownerId url alt")
       .lean();
@@ -42,21 +38,21 @@ export const imageRepository = {
 
   // La siguiente candidata a imagen principal: la primera activa por posición
   findFirstActive(ownerType, ownerId, excludeId) {
-    return Image.findOne({ ownerType, ownerId, isActive: true, _id: { $ne: excludeId }, ...NOT_DELETED })
+    return Image.findOne({ ownerType, ownerId, isActive: true, _id: { $ne: excludeId } })
       .sort({ position: 1, createdAt: 1 })
       .lean();
   },
 
   findLastPosition(ownerType, ownerId) {
-    return Image.findOne({ ownerType, ownerId, ...NOT_DELETED }).sort({ position: -1 }).lean();
+    return Image.findOne({ ownerType, ownerId }).sort({ position: -1 }).lean();
   },
 
   hasCover(ownerType, ownerId) {
-    return Image.exists({ ownerType, ownerId, isCover: true, ...NOT_DELETED });
+    return Image.exists({ ownerType, ownerId, isCover: true });
   },
 
   unsetCover(ownerType, ownerId) {
-    return Image.updateMany({ ownerType, ownerId, isCover: true, ...NOT_DELETED }, { isCover: false });
+    return Image.updateMany({ ownerType, ownerId, isCover: true }, { isCover: false });
   },
 
   create(data) {
@@ -64,7 +60,7 @@ export const imageRepository = {
   },
 
   updateById(id, data) {
-    return Image.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+    return Image.findOneAndUpdate({ _id: id }, data, {
       returnDocument: "after",
       runValidators: true,
     }).lean();
@@ -80,14 +76,12 @@ export const imageRepository = {
 
   // Cascada con la papelera: se marcan con el mismo deletedAt que su dueño...
   softDeleteByOwner(ownerType, ownerId, deletedAt) {
-    return Image.updateMany({ ownerType, ownerId, ...NOT_DELETED }, { deletedAt, ...DELETED_FIELDS });
+    return Image.updateMany({ ownerType, ownerId }, { deletedAt });
   },
 
-  // ...y al restaurarlo vuelven solo esas, no las que se habían eliminado antes a mano
+  // ...y al restaurarlo vuelven solo esas, no las que se habían eliminado antes a mano.
+  // Conservan su estado y su isCover: vuelven tal como estaban.
   restoreByOwner(ownerType, ownerId, deletedAt) {
-    return Image.updateMany(
-      { ownerType, ownerId, deletedAt },
-      { deletedAt: null, status: STATUS.ACTIVE, isActive: true }
-    );
+    return Image.updateMany({ ownerType, ownerId, deletedAt }, { deletedAt: null });
   },
 };

@@ -1,4 +1,4 @@
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { locationRepository } from "../repositories/location.repository.js";
@@ -102,10 +102,9 @@ export const routeService = {
     await imageService.removeByOwner("route", id, route.deletedAt);
   },
 
-  // Solo se restauran rutas eliminadas, y vuelven inactivas salvo que se pida
-  // isActive: true. deletedAt y status cambian en la misma operación, así que
-  // una ruta nunca queda activa mientras sigue eliminada.
-  async restore(id, isActive = false) {
+  // Solo se restauran rutas eliminadas. Vuelven con el estado que tenían, salvo que
+  // se pida otro con isActive; deletedAt y status cambian en la misma operación.
+  async restore(id, isActive) {
     const deleted = await findRestorable(routeRepository, id, "Route");
 
     // Sus referencias tienen que seguir existiendo (aunque estén inactivas)
@@ -113,7 +112,7 @@ export const routeService = {
       await assertRestorable(repository, deleted[field], field, resource);
     }
 
-    await routeRepository.restoreById(id, { status: statusFromActive(isActive) });
+    await routeRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("route", id, deleted.deletedAt);
     return routeService.getById(id);
   },

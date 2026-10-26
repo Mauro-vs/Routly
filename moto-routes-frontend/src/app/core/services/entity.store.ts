@@ -311,14 +311,10 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       this._items.update((items) => items.filter((item) => item._id !== id));
       if (this._selected()?._id === id) this._selected.set(null);
       // Pasa a la papelera, si ya se había cargado (si no, llegará con su primera carga).
-      // La fecha exacta la pone el servidor; esta sirve hasta volver a pedirla.
+      // Conserva su estado, como en la API. La fecha exacta la pone el servidor; esta
+      // sirve hasta volver a pedirla.
       if (this._deletedLoaded()) {
-        const trashed: T = {
-          ...entity,
-          isActive: false,
-          status: 'deleted',
-          deletedAt: new Date().toISOString(),
-        };
+        const trashed: T = { ...entity, deletedAt: new Date().toISOString() };
         this._deleted.update((deleted) => [
           trashed,
           ...deleted.filter((item) => item._id !== id),

@@ -1,10 +1,8 @@
 import { Location, LOCATION_COLLATION } from "../models/location.model.js";
 
-const NOT_DELETED = { deletedAt: null };
-
 export const locationRepository = {
   findAll(filter = {}) {
-    return Location.find({ ...filter, ...NOT_DELETED })
+    return Location.find(filter)
       .sort({ city: 1 })
       .collation(LOCATION_COLLATION)
       .lean();
@@ -15,11 +13,11 @@ export const locationRepository = {
   },
 
   findById(id) {
-    return Location.findOne({ _id: id, ...NOT_DELETED }).lean();
+    return Location.findOne({ _id: id }).lean();
   },
 
   findBySlug(slug) {
-    return Location.findOne({ slug, ...NOT_DELETED }).lean();
+    return Location.findOne({ slug }).lean();
   },
 
   findDeletedById(id) {
@@ -28,10 +26,15 @@ export const locationRepository = {
 
   // Ciudad, región y país repetidos, sin distinguir mayúsculas ni tildes e incluyendo
   // las eliminadas. Una región que no se envía cuenta como null.
-  existsByPlace({ city, region, country }, excludeId) {
+  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  findDuplicateByPlace({ city, region, country }, excludeId) {
     const filter = { city, region: region ?? null, country };
     if (excludeId) filter._id = { $ne: excludeId };
-    return Location.exists(filter).collation(LOCATION_COLLATION).setOptions({ withDeleted: true });
+    return Location.findOne(filter)
+      .select("deletedAt")
+      .collation(LOCATION_COLLATION)
+      .setOptions({ withDeleted: true })
+      .lean();
   },
 
   create(data) {
@@ -39,7 +42,7 @@ export const locationRepository = {
   },
 
   updateById(id, data) {
-    return Location.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+    return Location.findOneAndUpdate({ _id: id }, data, {
       returnDocument: "after",
       runValidators: true,
     }).lean();

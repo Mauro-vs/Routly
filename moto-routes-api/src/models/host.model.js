@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { DELETED_FIELDS } from "./status.js";
 
 // Perfil público de un anfitrión. La cuenta está en users.
 const hostSchema = new mongoose.Schema(
@@ -24,6 +23,6 @@ hostSchema.virtual("user", {
 
 hostSchema.plugin(statusPlugin);
 hostSchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] });
-hostSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+hostSchema.plugin(softDeletePlugin);
 
 export const Host = mongoose.model("Host", hostSchema);

@@ -1,14 +1,12 @@
 import mongoose from "mongoose";
 import { Departure } from "../models/departure.model.js";
 
-const NOT_DELETED = { deletedAt: null };
-
 const withExperience = (query) => query.populate("experience", "title slug");
 
 export const departureRepository = {
   // Por fecha de salida, de la más próxima a la más lejana
   findAll(filter = {}) {
-    return withExperience(Departure.find({ ...filter, ...NOT_DELETED }).sort({ startAt: 1 })).lean();
+    return withExperience(Departure.find(filter).sort({ startAt: 1 })).lean();
   },
 
   findDeleted() {
@@ -18,15 +16,15 @@ export const departureRepository = {
   },
 
   findById(id) {
-    return withExperience(Departure.findOne({ _id: id, ...NOT_DELETED })).lean();
+    return withExperience(Departure.findOne({ _id: id })).lean();
   },
 
   findBySlug(slug) {
-    return withExperience(Departure.findOne({ slug, ...NOT_DELETED })).lean();
+    return withExperience(Departure.findOne({ slug })).lean();
   },
 
   findBySku(sku) {
-    return withExperience(Departure.findOne({ sku, ...NOT_DELETED })).lean();
+    return withExperience(Departure.findOne({ sku })).lean();
   },
 
   findDeletedById(id) {
@@ -34,13 +32,16 @@ export const departureRepository = {
   },
 
   exists(filter) {
-    return Departure.exists({ ...filter, ...NOT_DELETED });
+    return Departure.exists(filter);
   },
 
   // Las salidas de una experiencia, también las eliminadas: solo lo que hace falta
   // para rehacer su slug
   findAllByExperience(experienceId) {
-    return Departure.find({ experienceId }).select("startAt").setOptions({ withDeleted: true }).lean();
+    return Departure.find({ experienceId })
+      .select("startAt")
+      .setOptions({ withDeleted: true })
+      .lean();
   },
 
   // Un slug distinto por salida, en una sola operación. bulkWrite no pasa por los
@@ -62,7 +63,7 @@ export const departureRepository = {
 
   updateById(id, data) {
     return withExperience(
-      Departure.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+      Departure.findOneAndUpdate({ _id: id }, data, {
         returnDocument: "after",
         runValidators: true,
       })

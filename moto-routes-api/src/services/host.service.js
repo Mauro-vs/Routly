@@ -1,12 +1,13 @@
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
-import { conflict, fieldError, notFound } from "../utils/errors.js";
+import { fieldError, notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
+  assertNotTaken,
   assertNoDependents,
   assertReference,
   assertRestorable,
@@ -48,9 +49,10 @@ export const hostService = {
       throw fieldError("userId", "userId must reference a user with the host role");
     }
 
-    if (await hostRepository.existsByUser(data.userId)) {
-      throw conflict("This user already has a host profile");
-    }
+    assertNotTaken(
+      await hostRepository.findDuplicateByUser(data.userId),
+      "This user already has a host profile"
+    );
 
     const { _id } = await hostRepository.create(data);
     return hostService.getById(_id);
@@ -84,12 +86,12 @@ export const hostService = {
     await imageService.removeByOwner("host", id, host.deletedAt);
   },
 
-  async restore(id, isActive = false) {
+  async restore(id, isActive) {
     const deleted = await findRestorable(hostRepository, id, "Host");
 
     await assertRestorable(userRepository, deleted.userId, "userId", "user");
 
-    await hostRepository.restoreById(id, { status: statusFromActive(isActive) });
+    await hostRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("host", id, deleted.deletedAt);
     return hostService.getById(id);
   },

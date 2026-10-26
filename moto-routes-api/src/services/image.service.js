@@ -1,4 +1,4 @@
-import { STATUS, statusFromActive } from "../models/status.js";
+import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { imageRepository } from "../repositories/image.repository.js";
 import { conflict, fieldError } from "../utils/errors.js";
 import { assertHasChanges, ensureWritten, findExisting, findRestorable } from "./references.js";
@@ -89,8 +89,9 @@ export const imageService = {
     if (image.isCover) await promoteNextCover(image.ownerType, image.ownerId, id);
   },
 
-  async restore(id, isActive = false) {
-    const status = statusFromActive(isActive);
+  // Vuelve con el estado que tenía, salvo que se pida otro. No vuelve como principal:
+  // solo lo es si su dueño se ha quedado sin ninguna y ella está activa.
+  async restore(id, isActive) {
     const deleted = await findRestorable(imageRepository, id, "Image");
 
     if (!(await imageRepository.findOwner(deleted.ownerType, deleted.ownerId))) {
@@ -98,7 +99,7 @@ export const imageService = {
     }
 
     const restored = ensureWritten(
-      await imageRepository.restoreById(id, { status, isCover: false }),
+      await imageRepository.restoreById(id, { ...restoredStatus(isActive), isCover: false }),
       "Image"
     );
     if (restored.isActive && !(await imageRepository.hasCover(deleted.ownerType, deleted.ownerId))) {

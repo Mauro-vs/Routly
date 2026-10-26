@@ -1,10 +1,11 @@
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
-import { conflict, notFound } from "../utils/errors.js";
+import { notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
+  assertNotTaken,
   assertNoDependents,
   ensureWritten,
   findExisting,
@@ -37,9 +38,10 @@ export const categoryService = {
 
   // "Montaña" y "MONTAÑA", o "Costa" y "Cósta", cuentan como el mismo nombre
   async create(data) {
-    if (await categoryRepository.existsByName(data.name)) {
-      throw conflict("A category with this name already exists");
-    }
+    assertNotTaken(
+      await categoryRepository.findDuplicateByName(data.name),
+      "A category with this name already exists"
+    );
 
     const { _id } = await categoryRepository.create(data);
     return categoryService.getById(_id);
@@ -50,8 +52,11 @@ export const categoryService = {
 
     await categoryService.getById(id);
 
-    if (data.name !== undefined && (await categoryRepository.existsByName(data.name, id))) {
-      throw conflict("A category with this name already exists");
+    if (data.name !== undefined) {
+      assertNotTaken(
+        await categoryRepository.findDuplicateByName(data.name, id),
+        "A category with this name already exists"
+      );
     }
 
     return ensureWritten(await categoryRepository.updateById(id, data), "Category");
@@ -77,11 +82,11 @@ export const categoryService = {
     await imageService.removeByOwner("category", id, category.deletedAt);
   },
 
-  async restore(id, isActive = false) {
+  async restore(id, isActive) {
     const deleted = await findRestorable(categoryRepository, id, "Category");
 
     const category = ensureWritten(
-      await categoryRepository.restoreById(id, { status: statusFromActive(isActive) }),
+      await categoryRepository.restoreById(id, restoredStatus(isActive)),
       "Category"
     );
     await imageService.restoreByOwner("category", id, deleted.deletedAt);

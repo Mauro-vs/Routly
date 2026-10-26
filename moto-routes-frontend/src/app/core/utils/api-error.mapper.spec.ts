@@ -140,6 +140,18 @@ describe('translateFieldMessage', () => {
     expect(message('A user with this email already exists')).toBe('Ya existe un usuario con ese email.');
   });
 
+  it('un duplicado que está en la papelera lo dice', () => {
+    const message = (detail: string): string =>
+      toApiError(httpError(409, { statusCode: 409, message: detail })).message;
+
+    expect(message('A category with this name already exists in the trash')).toBe(
+      'Ya existe una categoría con ese nombre en la papelera: se puede restaurar desde allí.',
+    );
+    expect(message('This user already has a host profile in the trash')).toBe(
+      'Ese usuario ya tiene un perfil de anfitrión en la papelera: se puede restaurar desde allí.',
+    );
+  });
+
   it('un PATCH sin campos se explica como "no hay cambios"', () => {
     const error = toApiError(httpError(400, { statusCode: 400, message: 'No fields to update' }));
     expect(error.type).toBe('validation');

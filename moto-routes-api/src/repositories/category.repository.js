@@ -1,11 +1,9 @@
 import { Category, CATEGORY_COLLATION } from "../models/category.model.js";
 
-const NOT_DELETED = { deletedAt: null };
-
 export const categoryRepository = {
   // Ordenadas por nombre, con el orden alfabético del español
   findAll(filter = {}) {
-    return Category.find({ ...filter, ...NOT_DELETED })
+    return Category.find(filter)
       .sort({ name: 1 })
       .collation(CATEGORY_COLLATION)
       .lean();
@@ -16,11 +14,11 @@ export const categoryRepository = {
   },
 
   findById(id) {
-    return Category.findOne({ _id: id, ...NOT_DELETED }).lean();
+    return Category.findOne({ _id: id }).lean();
   },
 
   findBySlug(slug) {
-    return Category.findOne({ slug, ...NOT_DELETED }).lean();
+    return Category.findOne({ slug }).lean();
   },
 
   findDeletedById(id) {
@@ -28,9 +26,14 @@ export const categoryRepository = {
   },
 
   // Sin distinguir mayúsculas ni tildes, e incluyendo las eliminadas
-  existsByName(name, excludeId) {
+  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  findDuplicateByName(name, excludeId) {
     const filter = excludeId ? { name, _id: { $ne: excludeId } } : { name };
-    return Category.exists(filter).collation(CATEGORY_COLLATION).setOptions({ withDeleted: true });
+    return Category.findOne(filter)
+      .select("deletedAt")
+      .collation(CATEGORY_COLLATION)
+      .setOptions({ withDeleted: true })
+      .lean();
   },
 
   create(data) {
@@ -38,7 +41,7 @@ export const categoryRepository = {
   },
 
   updateById(id, data) {
-    return Category.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+    return Category.findOneAndUpdate({ _id: id }, data, {
       returnDocument: "after",
       runValidators: true,
     }).lean();

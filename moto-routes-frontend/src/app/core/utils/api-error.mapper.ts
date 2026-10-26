@@ -138,9 +138,10 @@ const DUPLICATED_FIELDS: Record<string, string> = {
 const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> = [
   [/ is not deleted$/, () => 'Ese registro ya estaba restaurado.'],
   [
-    /^An? (\w+) with this (.+) already exists$/,
+    /^An? (\w+) with this (.+) already exists( in the trash)?$/,
     (m) =>
-      `Ya existe ${RESOURCES[m[1]]?.a ?? 'un registro'} con ${DUPLICATED_FIELDS[m[2]] ?? 'esos datos'}.`,
+      `Ya existe ${RESOURCES[m[1]]?.a ?? 'un registro'} con ${DUPLICATED_FIELDS[m[2]] ?? 'esos datos'}` +
+      (m[3] ? ' en la papelera: se puede restaurar desde allí.' : '.'),
   ],
   [
     /^Cannot restore: \w+ references a deleted (\w+)$/,
@@ -156,7 +157,13 @@ const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string
     (m) => `Los roles base no se pueden ${DELETE_ACTIONS[m[1]] ?? 'modificar así'}.`,
   ],
   [/^User has a host profile$/, () => 'Tiene perfil de anfitrión: necesita conservar el rol de anfitrión.'],
-  [/^This user already has a host profile$/, () => 'Ese usuario ya tiene perfil de anfitrión.'],
+  [
+    /^This user already has a host profile( in the trash)?$/,
+    (m) =>
+      m[1]
+        ? 'Ese usuario ya tiene un perfil de anfitrión en la papelera: se puede restaurar desde allí.'
+        : 'Ese usuario ya tiene perfil de anfitrión.',
+  ],
   [/^maxParticipants is lower than/, () => 'Hay salidas con más plazas que ese máximo.'],
   [/^Inactive images cannot be the cover$/, () => 'Una imagen inactiva no puede ser la principal.'],
 ];

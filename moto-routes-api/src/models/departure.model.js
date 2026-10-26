@@ -3,7 +3,6 @@ import { SKU_PATTERN } from "../utils/sku.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { integer, twoDecimals } from "./validators.js";
-import { DELETED_FIELDS } from "./status.js";
 
 // state es lo que pasa en el mundo real; status, si se muestra en el panel
 export const DEPARTURE_STATES = Object.freeze(["scheduled", "cancelled", "completed"]);
@@ -34,7 +33,7 @@ departureSchema.virtual("experience", {
 });
 
 departureSchema.plugin(statusPlugin);
-departureSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+departureSchema.plugin(softDeletePlugin);
 
 // Para listar las fechas de una experiencia en orden
 departureSchema.index({ experienceId: 1, startAt: 1 });

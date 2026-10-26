@@ -1,9 +1,10 @@
-import { STATUS, statusFromActive } from "../models/status.js";
+import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
 import {
   assertHasChanges,
+  assertNotTaken,
   assertNoDependents,
   ensureWritten,
   findExisting,
@@ -38,9 +39,10 @@ export const roleService = {
 
   // isSystem no llega desde la API (Zod lo descarta); solo lo envía el seed
   async create(data) {
-    if (await roleRepository.existsByName(data.name)) {
-      throw conflict("A role with this name already exists");
-    }
+    assertNotTaken(
+      await roleRepository.findDuplicateByName(data.name),
+      "A role with this name already exists"
+    );
 
     const { _id } = await roleRepository.create(data);
     return roleService.getById(_id);
@@ -53,9 +55,10 @@ export const roleService = {
 
     if (data.name !== undefined && data.name !== role.name) {
       if (role.isSystem) throw conflict("System roles cannot be renamed");
-      if (await roleRepository.existsByName(data.name)) {
-        throw conflict("A role with this name already exists");
-      }
+      assertNotTaken(
+        await roleRepository.findDuplicateByName(data.name),
+        "A role with this name already exists"
+      );
     }
     if (role.isSystem && data.status === STATUS.INACTIVE) {
       throw conflict("System roles cannot be deactivated");
@@ -80,11 +83,11 @@ export const roleService = {
     ensureWritten(await roleRepository.softDeleteById(id), "Role");
   },
 
-  // Vuelve inactivo salvo que se pida isActive: true
-  async restore(id, isActive = false) {
+  // Vuelve con el estado que tenía, salvo que se pida otro con isActive
+  async restore(id, isActive) {
     await findRestorable(roleRepository, id, "Role");
     return ensureWritten(
-      await roleRepository.restoreById(id, { status: statusFromActive(isActive) }),
+      await roleRepository.restoreById(id, restoredStatus(isActive)),
       "Role"
     );
   },

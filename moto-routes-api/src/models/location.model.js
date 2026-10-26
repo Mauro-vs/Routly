@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { DELETED_FIELDS } from "./status.js";
 
 // Ciudad, región y país se comparan sin distinguir mayúsculas ni tildes
 export const LOCATION_COLLATION = Object.freeze({ locale: "es", strength: 1 });
@@ -36,7 +35,7 @@ const locationSchema = new mongoose.Schema(
 
 locationSchema.plugin(statusPlugin);
 locationSchema.plugin(slugPlugin, { source: (doc) => doc.city, fields: ["city"] });
-locationSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+locationSchema.plugin(softDeletePlugin);
 
 locationSchema.index({ city: 1, region: 1, country: 1 }, { unique: true, collation: LOCATION_COLLATION });
 // Preparado para búsquedas por cercanía

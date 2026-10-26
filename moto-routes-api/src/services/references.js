@@ -61,6 +61,17 @@ export async function assertReference(repository, id, field, resource, { mustBeA
   return document;
 }
 
+/**
+ * 409 si el valor único (nombre, email...) ya lo usa otro documento. Si ese documento
+ * está en la papelera se dice, porque lo que toca es restaurarlo y no crear otro.
+ *
+ * @param existing resultado de findDuplicateBy...: null o { _id, deletedAt }
+ */
+export function assertNotTaken(existing, message) {
+  if (!existing) return;
+  throw conflict(existing.deletedAt ? `${message} in the trash` : message);
+}
+
 /** 409 si quedan documentos no eliminados que dependen del que se quiere eliminar. */
 export async function assertNoDependents(repository, filter, message) {
   if (await repository.exists(filter)) throw conflict(message);

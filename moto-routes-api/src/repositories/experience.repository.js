@@ -1,14 +1,12 @@
 import { Experience } from "../models/experience.model.js";
 
-const NOT_DELETED = { deletedAt: null };
-
 const withRelations = (query) =>
   query.populate("host", "name slug").populate("route", "title slug");
 
 export const experienceRepository = {
   findAll(filter = {}) {
     return withRelations(
-      Experience.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 })
+      Experience.find(filter).sort({ createdAt: -1 })
     ).lean();
   },
 
@@ -19,11 +17,11 @@ export const experienceRepository = {
   },
 
   findById(id) {
-    return withRelations(Experience.findOne({ _id: id, ...NOT_DELETED })).lean();
+    return withRelations(Experience.findOne({ _id: id })).lean();
   },
 
   findBySlug(slug) {
-    return withRelations(Experience.findOne({ slug, ...NOT_DELETED })).lean();
+    return withRelations(Experience.findOne({ slug })).lean();
   },
 
   findDeletedById(id) {
@@ -31,7 +29,7 @@ export const experienceRepository = {
   },
 
   exists(filter) {
-    return Experience.exists({ ...filter, ...NOT_DELETED });
+    return Experience.exists(filter);
   },
 
   create(data) {
@@ -40,7 +38,7 @@ export const experienceRepository = {
 
   updateById(id, data) {
     return withRelations(
-      Experience.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+      Experience.findOneAndUpdate({ _id: id }, data, {
         returnDocument: "after",
         runValidators: true,
       })

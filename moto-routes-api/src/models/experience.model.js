@@ -3,7 +3,6 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { integer } from "./validators.js";
-import { DELETED_FIELDS } from "./status.js";
 
 // Salida guiada que un anfitrión organiza sobre una ruta
 const experienceSchema = new mongoose.Schema(
@@ -37,6 +36,6 @@ experienceSchema.virtual("route", {
 
 experienceSchema.plugin(statusPlugin);
 experienceSchema.plugin(slugPlugin, { source: (doc) => doc.title, fields: ["title"] });
-experienceSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+experienceSchema.plugin(softDeletePlugin);
 
 export const Experience = mongoose.model("Experience", experienceSchema);

@@ -1,8 +1,5 @@
 import { Route } from "../models/route.model.js";
 
-// Solo documentos no eliminados (soft delete)
-const NOT_DELETED = { deletedAt: null };
-
 // Cada ruta trae su categoría y sus dos ubicaciones, no solo los ids
 const withRelations = (query) =>
   query
@@ -12,7 +9,7 @@ const withRelations = (query) =>
 
 export const routeRepository = {
   findAll(filter = {}) {
-    return withRelations(Route.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 })).lean();
+    return withRelations(Route.find(filter).sort({ createdAt: -1 })).lean();
   },
 
   // Solo las eliminadas, de la eliminada más reciente a la más antigua. Como el
@@ -22,11 +19,11 @@ export const routeRepository = {
   },
 
   findById(id) {
-    return withRelations(Route.findOne({ _id: id, ...NOT_DELETED })).lean();
+    return withRelations(Route.findOne({ _id: id })).lean();
   },
 
   findBySlug(slug) {
-    return withRelations(Route.findOne({ slug, ...NOT_DELETED })).lean();
+    return withRelations(Route.findOne({ slug })).lean();
   },
 
   // Para restaurar: hacen falta sus referencias y su deletedAt antes de ponerlo a null
@@ -35,7 +32,7 @@ export const routeRepository = {
   },
 
   exists(filter) {
-    return Route.exists({ ...filter, ...NOT_DELETED });
+    return Route.exists(filter);
   },
 
   create(data) {
@@ -44,7 +41,7 @@ export const routeRepository = {
 
   updateById(id, data) {
     return withRelations(
-      Route.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, { returnDocument: "after", runValidators: true })
+      Route.findOneAndUpdate({ _id: id }, data, { returnDocument: "after", runValidators: true })
     ).lean();
   },
 

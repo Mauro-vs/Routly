@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { DELETED_FIELDS } from "./status.js";
 
 // Comparación en español sin distinguir mayúsculas ni tildes: "Montaña" = "montana"
 export const CATEGORY_COLLATION = Object.freeze({ locale: "es", strength: 1 });
@@ -17,7 +16,7 @@ const categorySchema = new mongoose.Schema(
 
 categorySchema.plugin(statusPlugin);
 categorySchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] });
-categorySchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+categorySchema.plugin(softDeletePlugin);
 
 categorySchema.index({ name: 1 }, { unique: true, collation: CATEGORY_COLLATION });
 

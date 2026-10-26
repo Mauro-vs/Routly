@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { DELETED_FIELDS } from "./status.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -25,6 +24,6 @@ userSchema.virtual("role", {
 
 userSchema.plugin(statusPlugin);
 userSchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] });
-userSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+userSchema.plugin(softDeletePlugin);
 
 export const User = mongoose.model("User", userSchema);

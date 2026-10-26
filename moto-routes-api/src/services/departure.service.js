@@ -1,4 +1,4 @@
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
@@ -151,12 +151,12 @@ export const departureService = {
     ensureWritten(await departureRepository.softDeleteById(id), "Departure");
   },
 
-  async restore(id, isActive = false) {
+  async restore(id, isActive) {
     const deleted = await findRestorable(departureRepository, id, "Departure");
 
     await assertRestorable(experienceRepository, deleted.experienceId, "experienceId", "experience");
 
-    await departureRepository.restoreById(id, { status: statusFromActive(isActive) });
+    await departureRepository.restoreById(id, restoredStatus(isActive));
     return departureService.getById(id);
   },
 };

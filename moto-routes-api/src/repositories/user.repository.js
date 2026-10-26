@@ -1,13 +1,11 @@
 import { User } from "../models/user.model.js";
 
-const NOT_DELETED = { deletedAt: null };
-
 // passwordHash nunca sale: el modelo lo tiene con select: false
 const withRole = (query) => query.populate("role", "name label");
 
 export const userRepository = {
   findAll(filter = {}) {
-    return withRole(User.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 })).lean();
+    return withRole(User.find(filter).sort({ createdAt: -1 })).lean();
   },
 
   findDeleted() {
@@ -15,11 +13,11 @@ export const userRepository = {
   },
 
   findById(id) {
-    return withRole(User.findOne({ _id: id, ...NOT_DELETED })).lean();
+    return withRole(User.findOne({ _id: id })).lean();
   },
 
   findBySlug(slug) {
-    return withRole(User.findOne({ slug, ...NOT_DELETED })).lean();
+    return withRole(User.findOne({ slug })).lean();
   },
 
   // Para restaurar: hace falta su deletedAt antes de ponerlo a null
@@ -28,13 +26,14 @@ export const userRepository = {
   },
 
   exists(filter) {
-    return User.exists({ ...filter, ...NOT_DELETED });
+    return User.exists(filter);
   },
 
   // Incluye los eliminados: el correo sigue reservado para poder restaurarlos
-  existsByEmail(email, excludeId) {
+  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  findDuplicateByEmail(email, excludeId) {
     const filter = excludeId ? { email, _id: { $ne: excludeId } } : { email };
-    return User.exists(filter).setOptions({ withDeleted: true });
+    return User.findOne(filter).select("deletedAt").setOptions({ withDeleted: true }).lean();
   },
 
   create(data) {
@@ -43,7 +42,7 @@ export const userRepository = {
 
   updateById(id, data) {
     return withRole(
-      User.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, { returnDocument: "after", runValidators: true })
+      User.findOneAndUpdate({ _id: id }, data, { returnDocument: "after", runValidators: true })
     ).lean();
   },
 

@@ -134,8 +134,8 @@ Cada colección tiene sus seis archivos, uno por capa. Por ejemplo, para `routes
 |---|---|---|---|
 | Rutas | `routes/route.routes.js` | Asocia método y URL a un controlador, y aplica `validate()` con el esquema de Zod | Lógica |
 | Controlador | `controllers/route.controller.js` | `async/await` con `try/catch`: lee `req`, llama al service y responde con el código adecuado (200, 201, 204). Si algo falla, pasa el error con `next(error)` | Consultar la base de datos |
-| Service | `services/route.service.js` | Reglas de negocio: 404 si no existe, 400 si una referencia no es válida, 409 si hay dependientes o el slug está repetido. Gestiona el slug, las relaciones y la cascada de imágenes | Conocer `req` o `res` |
-| Repositorio | `repositories/route.repository.js` | Consultas a Mongoose con `populate` de las relaciones. Devuelven objetos planos (`.lean()`) y filtran `deletedAt` | Decidir errores HTTP |
+| Service | `services/route.service.js` | Reglas de negocio: 404 si no existe, 400 si una referencia no es válida, 409 si hay dependientes o un dato único está repetido. Gestiona las relaciones y la cascada de imágenes | Conocer `req` o `res` |
+| Repositorio | `repositories/route.repository.js` | Consultas a Mongoose con `populate` de las relaciones. Devuelven objetos planos (`.lean()`). Los eliminados los excluye el plugin `softDelete` | Decidir errores HTTP |
 | Modelo | `models/route.model.js` | Esquema, relaciones (`ref`), índices y plugins | |
 | Esquema | `schemas/route.schema.js` | Validación de Zod de la petición | |
 
@@ -145,7 +145,7 @@ Lo que es igual en todas las colecciones no se repite: está en un solo sitio.
 
 | Archivo | Qué hace |
 |---|---|
-| `models/status.js` | Los estados (`active`, `inactive`, `deleted`) y lo que se fija al eliminar |
+| `models/status.js` | Los estados (`active`, `inactive`) y el estado con el que vuelve un documento al restaurarlo |
 | `models/plugins/status.plugin.js` | Añade `status` e `isActive` y mantiene `isActive` derivado de `status` |
 | `models/plugins/slug.plugin.js` | Añade `slug` (único) y lo regenera cuando cambia el campo del que sale |
 | `models/plugins/softDelete.plugin.js` | Borrado lógico: `deletedAt`, filtro automático, `softDeleteById` y `restoreById` |
@@ -337,7 +337,7 @@ Además:
 | GET | `/api/images?ownerType=route&ownerId=<id>` | Imágenes de un dueño, por posición | 200 |
 | GET | `/api/departures/sku/:sku` | Una salida por su SKU (también en minúsculas) | 200 |
 
-En el `PATCH /:id` se puede enviar `status` con `active` o `inactive`. El valor `deleted` solo se alcanza con `PATCH /:id/delete`.
+En el `PATCH /:id` se puede enviar `status` con `active` o `inactive`. Eliminar no es un estado: lo marca `deletedAt`.
 
 ## Activo / inactivo frente a eliminado
 
@@ -350,20 +350,21 @@ Son dos cosas distintas y se gestionan con operaciones independientes, en todas 
 
 - Un documento inactivo sigue apareciendo en el listado, en `/inactives` y por ID o slug, y se puede editar. Lo que no se puede es usarlo en documentos nuevos.
 - Desactivar nunca elimina: `deletedAt` no se toca.
-- Un documento eliminado queda siempre inactivo: el soft delete fija `isActive: false`.
+- Eliminar no cambia el estado: el documento conserva `status` e `isActive`, y lo que lo marca como eliminado es `deletedAt`. Así se puede restaurar como estaba.
 - Un documento eliminado no se puede activar con `/active` (404). La única forma de recuperarlo es restaurarlo.
-- `status` resume ambos campos (`active`, `inactive` o `deleted`) e `isActive` se deriva de él en el modelo, por eso siempre coinciden.
+- `status` es `active` o `inactive`, e `isActive` se deriva de él en el modelo (también en los `updateOne` y `updateMany`), por eso siempre coinciden.
 - Activar algo que ya está activo (o desactivar algo inactivo) devuelve el documento tal cual: no se escribe y `updatedAt` no cambia.
 
 ## Soft delete y papelera
 
 Nada se borra físicamente desde la API.
 
-- `PATCH /:id/delete` fija `deletedAt` a la fecha actual, `status: "deleted"` e `isActive: false`.
+- `PATCH /:id/delete` fija `deletedAt` a la fecha actual. No toca `status` ni `isActive`.
 - Un documento eliminado no aparece en ningún listado y devuelve **404** en GET (por ID, slug o SKU), en el PATCH y si se intenta eliminar otra vez.
 - La única consulta que devuelve eliminados es `GET /deleted` (la papelera), del eliminado más reciente al más antiguo.
 - No existe ningún endpoint `DELETE`: como el documento se modifica y no se borra, se usa `PATCH`.
-- Los repositorios filtran `deletedAt: null` de forma explícita en todas sus consultas. Además, el plugin `softDelete` lo añade a todas las búsquedas y actualizaciones como red de seguridad, salvo que la consulta ya indique `deletedAt` o pida incluirlos con `.setOptions({ withDeleted: true })` (solo lo usan las comprobaciones de unicidad: slug, email, nombre...).
+- El plugin `softDelete` añade `deletedAt: null` a todas las consultas con filtro (búsquedas, recuentos, `distinct`, actualizaciones, reemplazos y borrados), salvo que la consulta ya indique `deletedAt` o pida incluirlos con `.setOptions({ withDeleted: true })` (lo usan las comprobaciones de duplicados y el rehacer los slugs de las salidas). Es la única fuente de ese filtro: los repositorios no lo repiten. No cubre `aggregate`: un pipeline tiene que empezar con `{ $match: { deletedAt: null } }`.
+- Si un dato único (nombre, email, lugar, usuario de un anfitrión) lo tiene un documento de la papelera, el 409 lo dice: `A category with this name already exists in the trash`. Lo que toca es restaurarlo, no crear otro.
 
 ### Restaurar
 
@@ -372,11 +373,12 @@ Nada se borra físicamente desde la API.
 | Body | Resultado |
 |------|-----------|
 | `{ "isActive": true }` | Restaurado y activo (`status: "active"`) |
-| `{ "isActive": false }` o sin body | Restaurado pero inactivo (`status: "inactive"`) |
+| `{ "isActive": false }` | Restaurado pero inactivo (`status: "inactive"`) |
+| Sin body | Restaurado con el estado que tenía al eliminarlo |
 
 - Solo actúa sobre documentos eliminados. Si no lo está responde **409** (`Route is not deleted`); si no existe, **404**.
 - Si alguna de sus referencias está en la papelera, **409** (ver [Reglas entre colecciones](#reglas-entre-colecciones)).
-- `deletedAt` y `status` cambian en la misma operación, así que un documento nunca queda activo mientras sigue eliminado.
+- `deletedAt` y `status` cambian en la misma operación.
 
 ## Imágenes
 
@@ -385,7 +387,7 @@ Todas las imágenes van en una sola colección. Cada una apunta a su dueño con 
 - **Quién puede tener imágenes** sale de un único registro, `IMAGE_OWNERS` en `models/imageOwners.js`: `route`, `user`, `host`, `experience`, `category` y `location`. Para que otra colección tenga imágenes basta con añadir una línea.
 - **Imagen principal.** La primera imagen de cada dueño es la principal (`isCover: true`): portada de la ruta, foto de perfil del usuario o del anfitrión. Al marcar otra, la anterior se desmarca. Una imagen inactiva o eliminada no puede ser la principal: si se desactiva o se elimina, pasa a serlo la siguiente por `position`.
 - **`coverImage`.** Rutas, usuarios y anfitriones devuelven su imagen principal en `coverImage: { _id, url, alt }`, o `null`. La galería completa se pide con `GET /api/images?ownerType=route&ownerId=<id>`.
-- **Cascada con la papelera.** Al eliminar un documento, sus imágenes se eliminan con el mismo `deletedAt`. Al restaurarlo vuelven esas, pero no las que se habían eliminado antes a mano.
+- **Cascada con la papelera.** Al eliminar un documento, sus imágenes se eliminan con el mismo `deletedAt`. Al restaurarlo vuelven esas, tal como estaban (activas o inactivas, y la principal sigue siéndolo), pero no las que se habían eliminado antes a mano. Son dos escrituras sin transacción: ver `NOTES.md`.
 - El dueño puede estar inactivo (así se preparan las imágenes de una ruta antes de activarla), pero no eliminado.
 
 ## SKU de las salidas

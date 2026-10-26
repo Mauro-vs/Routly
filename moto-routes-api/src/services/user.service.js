@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
@@ -7,6 +7,7 @@ import { conflict, notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
+  assertNotTaken,
   assertNoDependents,
   assertReference,
   assertRestorable,
@@ -50,9 +51,10 @@ export const userService = {
   },
 
   async create(data) {
-    if (await userRepository.existsByEmail(data.email)) {
-      throw conflict("A user with this email already exists");
-    }
+    assertNotTaken(
+      await userRepository.findDuplicateByEmail(data.email),
+      "A user with this email already exists"
+    );
 
     // Sin roleId, el usuario es rider
     const role = data.roleId
@@ -60,7 +62,10 @@ export const userService = {
       : await roleRepository.findByName(DEFAULT_ROLE);
     if (!role) throw new Error(`Default role "${DEFAULT_ROLE}" is missing`);
 
-    const { _id } = await userRepository.create({ ...(await withPasswordHash(data)), roleId: role._id });
+    const { _id } = await userRepository.create({
+      ...(await withPasswordHash(data)),
+      roleId: role._id,
+    });
     return userService.getById(_id);
   },
 
@@ -69,8 +74,11 @@ export const userService = {
 
     const user = await userService.getById(id);
 
-    if (data.email !== undefined && (await userRepository.existsByEmail(data.email, id))) {
-      throw conflict("A user with this email already exists");
+    if (data.email !== undefined) {
+      assertNotTaken(
+        await userRepository.findDuplicateByEmail(data.email, id),
+        "A user with this email already exists"
+      );
     }
 
     if (data.roleId !== undefined && data.roleId !== String(user.roleId)) {
@@ -104,12 +112,12 @@ export const userService = {
     await imageService.removeByOwner("user", id, user.deletedAt);
   },
 
-  async restore(id, isActive = false) {
+  async restore(id, isActive) {
     const deleted = await findRestorable(userRepository, id, "User");
 
     await assertRestorable(roleRepository, deleted.roleId, "roleId", "role");
 
-    await userRepository.restoreById(id, { status: statusFromActive(isActive) });
+    await userRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("user", id, deleted.deletedAt);
     return userService.getById(id);
   },

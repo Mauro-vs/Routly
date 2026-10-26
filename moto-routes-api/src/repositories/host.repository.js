@@ -1,12 +1,10 @@
 import { Host } from "../models/host.model.js";
 
-const NOT_DELETED = { deletedAt: null };
-
 const withUser = (query) => query.populate("user", "name email");
 
 export const hostRepository = {
   findAll(filter = {}) {
-    return withUser(Host.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 })).lean();
+    return withUser(Host.find(filter).sort({ createdAt: -1 })).lean();
   },
 
   findDeleted() {
@@ -14,11 +12,11 @@ export const hostRepository = {
   },
 
   findById(id) {
-    return withUser(Host.findOne({ _id: id, ...NOT_DELETED })).lean();
+    return withUser(Host.findOne({ _id: id })).lean();
   },
 
   findBySlug(slug) {
-    return withUser(Host.findOne({ slug, ...NOT_DELETED })).lean();
+    return withUser(Host.findOne({ slug })).lean();
   },
 
   findDeletedById(id) {
@@ -26,12 +24,13 @@ export const hostRepository = {
   },
 
   exists(filter) {
-    return Host.exists({ ...filter, ...NOT_DELETED });
+    return Host.exists(filter);
   },
 
   // Incluye los eliminados: un usuario solo puede tener un perfil, también en la papelera
-  existsByUser(userId) {
-    return Host.exists({ userId }).setOptions({ withDeleted: true });
+  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  findDuplicateByUser(userId) {
+    return Host.findOne({ userId }).select("deletedAt").setOptions({ withDeleted: true }).lean();
   },
 
   create(data) {
@@ -40,7 +39,7 @@ export const hostRepository = {
 
   updateById(id, data) {
     return withUser(
-      Host.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, { returnDocument: "after", runValidators: true })
+      Host.findOneAndUpdate({ _id: id }, data, { returnDocument: "after", runValidators: true })
     ).lean();
   },
 

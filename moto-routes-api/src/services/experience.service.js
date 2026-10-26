@@ -1,4 +1,4 @@
-import { statusFromActive } from "../models/status.js";
+import { restoredStatus, statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
@@ -111,14 +111,14 @@ export const experienceService = {
     await imageService.removeByOwner("experience", id, experience.deletedAt);
   },
 
-  async restore(id, isActive = false) {
+  async restore(id, isActive) {
     const deleted = await findRestorable(experienceRepository, id, "Experience");
 
     for (const { field, repository, resource } of REFERENCES) {
       await assertRestorable(repository, deleted[field], field, resource);
     }
 
-    await experienceRepository.restoreById(id, { status: statusFromActive(isActive) });
+    await experienceRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("experience", id, deleted.deletedAt);
     return experienceService.getById(id);
   },

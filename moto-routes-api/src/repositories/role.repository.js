@@ -1,11 +1,8 @@
 import { Role } from "../models/role.model.js";
 
-// Solo documentos no eliminados (soft delete)
-const NOT_DELETED = { deletedAt: null };
-
 export const roleRepository = {
   findAll(filter = {}) {
-    return Role.find({ ...filter, ...NOT_DELETED }).sort({ createdAt: -1 }).lean();
+    return Role.find(filter).sort({ createdAt: -1 }).lean();
   },
 
   // La papelera: de la eliminada más reciente a la más antigua
@@ -14,11 +11,11 @@ export const roleRepository = {
   },
 
   findById(id) {
-    return Role.findOne({ _id: id, ...NOT_DELETED }).lean();
+    return Role.findOne({ _id: id }).lean();
   },
 
   findBySlug(slug) {
-    return Role.findOne({ slug, ...NOT_DELETED }).lean();
+    return Role.findOne({ slug }).lean();
   },
 
   findDeletedById(id) {
@@ -26,12 +23,13 @@ export const roleRepository = {
   },
 
   findByName(name) {
-    return Role.findOne({ name, ...NOT_DELETED }).lean();
+    return Role.findOne({ name }).lean();
   },
 
   // Incluye los eliminados: su nombre y su slug siguen reservados para poder restaurarlos
-  existsByName(name) {
-    return Role.exists({ name }).setOptions({ withDeleted: true });
+  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  findDuplicateByName(name) {
+    return Role.findOne({ name }).select("deletedAt").setOptions({ withDeleted: true }).lean();
   },
 
   create(data) {
@@ -39,7 +37,7 @@ export const roleRepository = {
   },
 
   updateById(id, data) {
-    return Role.findOneAndUpdate({ _id: id, ...NOT_DELETED }, data, {
+    return Role.findOneAndUpdate({ _id: id }, data, {
       returnDocument: "after",
       runValidators: true,
     }).lean();

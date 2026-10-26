@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { DELETED_FIELDS, STATUS } from "./status.js";
+import { STATUS } from "./status.js";
 
 // Se mantiene el nombre antiguo para no romper los imports existentes
 export const ROUTE_STATUS = STATUS;
@@ -48,6 +48,6 @@ routeSchema.virtual("endLocation", {
 
 routeSchema.plugin(statusPlugin);
 routeSchema.plugin(slugPlugin, { source: (doc) => doc.title, fields: ["title"] });
-routeSchema.plugin(softDeletePlugin, { deletedFields: DELETED_FIELDS });
+routeSchema.plugin(softDeletePlugin);
 
 export const Route = mongoose.model("Route", routeSchema);
