@@ -1,4 +1,5 @@
 import { Experience } from "../models/experience.model.js";
+import { toUpdate } from "../utils/update.js";
 
 const withRelations = (query) =>
   query.populate("host", "name slug").populate("route", "title slug");
@@ -38,7 +39,7 @@ export const experienceRepository = {
 
   updateById(id, data) {
     return withRelations(
-      Experience.findOneAndUpdate({ _id: id }, data, {
+      Experience.findOneAndUpdate({ _id: id }, toUpdate(data), {
         returnDocument: "after",
         runValidators: true,
       })

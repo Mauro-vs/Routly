@@ -1,19 +1,16 @@
 import { z } from "zod";
-import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
+import { EXPERIENCE_LANGUAGES } from "../models/experience.model.js";
+import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
-const experienceFields = z.object({
+const experienceFields = z.strictObject({
   hostId: objectIdSchema,
   routeId: objectIdSchema,
-  title: z.string().trim().min(1).max(120),
+  title: z.string().trim().min(2).max(120),
   description: z.string().trim().max(2000).optional(),
   meetingPoint: z.string().trim().max(200).optional(),
-  language: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .regex(/^[a-z]{2}$/)
-    .optional(),
-  duration: z.number().min(0),
+  language: z.string().trim().toLowerCase().pipe(z.enum(EXPERIENCE_LANGUAGES)).optional(),
+  // Horas, con paradas: como mucho 30 días
+  duration: z.number().positive().max(720),
   minParticipants: z.number().int().min(1).optional(),
   maxParticipants: z.number().int().min(1).max(100),
 });
@@ -33,7 +30,10 @@ export const createExperienceSchema = experienceFields.refine(
 // service con el valor guardado
 export const updateExperienceSchema = experienceFields
   .partial()
-  .extend({ status: statusSchema.optional(), ...cannotChange("_id", "slug") })
+  .extend({
+    ...clearable(experienceFields, "description", "meetingPoint"),
+    ...cannotChange("_id", "slug"),
+  })
   .refine(
     (data) =>
       data.minParticipants === undefined ||

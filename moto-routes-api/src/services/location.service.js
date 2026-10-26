@@ -15,9 +15,11 @@ import {
 const DUPLICATED = "A location with this city, region and country already exists";
 const DEFAULT_COUNTRY = "España";
 
-// La API recibe latitude y longitude; se guardan como punto GeoJSON [longitud, latitud]
+// La API recibe latitude y longitude; se guardan como punto GeoJSON [longitud, latitud].
+// Las dos a null (solo al editar) quitan las coordenadas.
 function toDocument({ latitude, longitude, ...data }) {
   if (latitude === undefined) return data;
+  if (latitude === null) return { ...data, coordinates: null };
   return { ...data, coordinates: { type: "Point", coordinates: [longitude, latitude] } };
 }
 
@@ -68,9 +70,10 @@ export const locationService = {
     const location = await locationService.getById(id);
 
     if (data.city !== undefined || data.region !== undefined || data.country !== undefined) {
+      // region a null es "sin región", no "la que tenía"
       const place = {
         city: data.city ?? location.city,
-        region: data.region ?? location.region,
+        region: data.region === undefined ? location.region : data.region,
         country: data.country ?? location.country,
       };
       assertNotTaken(await locationRepository.findDuplicateByPlace(place, id), DUPLICATED);

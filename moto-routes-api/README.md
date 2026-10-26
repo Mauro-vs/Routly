@@ -277,7 +277,7 @@ erDiagram
 | `departures` | `startAt`, `endAt`, `capacity`, `price`, `state`, `sku` | `experienceId` → `experiences` | `experience` |
 | `images` | `url`, `alt`, `position`, `isCover` | `ownerType` + `ownerId` → cualquiera de `IMAGE_OWNERS` | |
 
-Además, **todas** tienen `_id`, `slug` (menos `images`), `status`, `isActive`, `deletedAt`, `createdAt` y `updatedAt`, que gestiona el servidor: si el cliente los envía, se ignoran (salvo `status`, ver abajo).
+Además, **todas** tienen `_id`, `slug` (menos `images`), `status`, `isActive`, `deletedAt`, `createdAt` y `updatedAt`, que gestiona el servidor: si el cliente los envía, la API responde 400 (`<campo> is not allowed` o `<campo> cannot be changed`).
 
 El detalle de cada campo (tipos, límites, valores por defecto, índices y reglas) está en [`DATABASE.md`](../DATABASE.md).
 
@@ -337,7 +337,7 @@ Además:
 | GET | `/api/images?ownerType=route&ownerId=<id>` | Imágenes de un dueño, por posición | 200 |
 | GET | `/api/departures/sku/:sku` | Una salida por su SKU (también en minúsculas) | 200 |
 
-En el `PATCH /:id` se puede enviar `status` con `active` o `inactive`. Eliminar no es un estado: lo marca `deletedAt`.
+El `PATCH /:id` no acepta `status`: activar y desactivar solo se hace con `PATCH /:id/active`. Eliminar no es un estado: lo marca `deletedAt`.
 
 ## Activo / inactivo frente a eliminado
 
@@ -410,7 +410,7 @@ Cada salida tiene un `sku`: su código comercial, el que verán reservas, factur
 
 Todo lo que envía el cliente se valida con esquemas de Zod **antes de llegar al controlador**.
 
-- Cada colección tiene sus esquemas en `src/schemas/<recurso>.schema.js`: `create<Recurso>Schema` para el POST y `update<Recurso>Schema` para el PATCH (los mismos campos, opcionales, más `status`). Algunas tienen además reglas entre campos con `.refine()`: `latitude` y `longitude` juntas, `endAt` después de `startAt`, `minParticipants` no mayor que `maxParticipants`.
+- Cada colección tiene sus esquemas en `src/schemas/<recurso>.schema.js`: `create<Recurso>Schema` para el POST y `update<Recurso>Schema` para el PATCH (los mismos campos, opcionales). Son `z.strictObject`: un campo que no está en el esquema es un 400 en ese campo (`color is not allowed`), no se descarta sin avisar. Algunas tienen además reglas entre campos con `.refine()`: `latitude` y `longitude` juntas, `endAt` después de `startAt`, `minParticipants` no mayor que `maxParticipants`.
 - Los comunes están en `src/schemas/common.schema.js`:
 
 | Esquema | Valida |
@@ -418,9 +418,10 @@ Todo lo que envía el cliente se valida con esquemas de Zod **antes de llegar al
 | `idParamSchema` | `:id` con formato de ObjectId (24 caracteres hexadecimales) |
 | `slugParamSchema` | `:slug` en minúsculas, números y guiones |
 | `objectIdSchema` | Las referencias (`roleId`, `categoryId`...) |
-| `statusSchema` | `status` del PATCH: `active` o `inactive` |
 | `setActiveSchema` | Body de `/active`: `isActive` obligatorio y booleano |
 | `restoreSchema` | Body de `/restore`: `isActive` opcional |
+| `cannotChange(...campos)` | Campos que existen pero no se pueden cambiar en un PATCH: 400 `<campo> cannot be changed` |
+| `clearable(campos, ...nombres)` | Campos opcionales que en un PATCH se vacían enviando `null` (el repositorio lo convierte en `$unset`) |
 
 - Se aplican en las rutas con el middleware `validate` (`src/middlewares/validate.js`), que valida `params`, `query` y `body`:
 
@@ -430,7 +431,28 @@ router.patch("/:id", validate({ params: idParamSchema, body: updateRouteSchema }
 router.get("/", validate({ query: imageQuerySchema }), imageController.list);
 ```
 
-- Si los datos son válidos, `req.body` (y `req.query`) se sustituyen por la versión limpia: textos sin espacios sobrantes y **sin los campos que no están en el esquema** (por eso el cliente no puede fijar `slug`, `sku`, `isActive`, `deletedAt`, `isSystem` ni `passwordHash`).
+- Si los datos son válidos, `req.params`, `req.body` y `req.query` se sustituyen por la versión limpia: textos sin espacios sobrantes, el SKU en mayúsculas y las fechas como `Date`.
+- El cliente no puede fijar `slug`, `sku`, `status`, `isActive`, `deletedAt`, `isSystem` ni `passwordHash`: no están en los esquemas y se rechazan.
+- El body admite como mucho 50 kB (`express.json({ limit: "50kb" })`); si es mayor, 413.
+
+**Reglas de los campos que no son solo longitud o formato**
+
+| Campo | Regla |
+|---|---|
+| `routes.distance`, `routes.duration` | Mayor que 0; como mucho 5.000 km y 240 h |
+| `routes.title`, `experiences.title` | Entre 2 y 120 caracteres |
+| `experiences.duration` | Mayor que 0; como mucho 720 h (30 días) |
+| `experiences.language` | `es`, `en`, `fr`, `de`, `it`, `pt`, `ca`, `eu` o `gl` (los mismos que ofrece el panel) |
+| `departures.price` | Entre 0 y 100.000 €, con dos decimales como mucho |
+| `departures.startAt`, `endAt` | ISO 8601 con hora y zona; `startAt` en el futuro al crear y al cambiarla, y sin otra salida de la misma experiencia a esa hora |
+| `departures.capacity` | Entre el mínimo y el máximo de participantes de su experiencia |
+| `departures.state` | `completed` solo si la salida ya terminó; una `cancelled` no se reabre |
+| `users.password` | Entre 8 y 72 caracteres, con al menos una letra y un número |
+| `images.url` | Solo `https` |
+| `roles.label` | Única, sin distinguir mayúsculas ni tildes |
+| `locations.region` | Vacía es "sin región": no se guarda, y al editar se borra |
+
+Se pueden vaciar con `null` en el PATCH: `description` (rutas, categorías, roles y experiencias), `meetingPoint`, `biography`, `alt`, `region`, y `latitude` con `longitude` (las dos a la vez).
 - Si no lo son, Zod lanza un error y el `errorHandler` responde 400 con un `details` por campo. No se llega a consultar la base de datos.
 - El modelo de Mongoose mantiene sus propias reglas como segunda barrera. Si cambia un límite, hay que cambiarlo en el esquema de Zod **y** en el modelo.
 - Swagger genera los cuerpos de las peticiones a partir de estos mismos esquemas (`z.toJSONSchema`), así que la documentación siempre coincide con la validación.
@@ -465,14 +487,16 @@ Todas las respuestas de error tienen el mismo formato:
 | Referencia que no existe, está eliminada o inactiva | 400 |
 | Regla de un campo (fecha pasada, plazas de más...) | 400 |
 | `PATCH /:id` sin ningún campo que cambiar: `No fields to update` | 400 |
+| Campo que no está en el esquema: `<campo> is not allowed`, con `details` | 400 |
 | Campo que no se puede cambiar en un `PATCH` (`_id`, `slug`, `sku`, `userId`...): `<campo> cannot be changed`, con `details` | 400 |
 | JSON mal formado | 400 |
 | Validación del modelo de Mongoose (segunda barrera) | 400 |
+| Body de más de 50 kB | 413 |
 | Documento no encontrado o eliminado, también si se elimina mientras se edita | 404 |
 | Endpoint inexistente | 404 |
-| Eliminar con dependientes, o tocar un rol base | 409 |
+| Eliminar con dependientes, tocar un rol base, o cambiar el mínimo o el máximo de participantes de una experiencia por debajo o por encima de sus salidas | 409 |
 | Restaurar algo que no está eliminado, o con una referencia eliminada | 409 |
-| Valor único repetido (email, nombre, lugar, slug...) | 409 |
+| Valor único repetido (email, nombre, etiqueta de rol, lugar, slug...). Si lo tiene un documento de la papelera, el mensaje acaba en `in the trash` | 409 |
 | Error inesperado | 500 |
 
 > [!NOTE]

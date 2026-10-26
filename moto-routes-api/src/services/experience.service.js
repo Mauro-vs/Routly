@@ -85,6 +85,14 @@ export const experienceService = {
       throw conflict("maxParticipants is lower than the capacity of an existing departure");
     }
 
+    // Ni con menos plazas que el nuevo mínimo
+    if (
+      data.minParticipants !== undefined &&
+      (await departureRepository.exists({ experienceId: id, capacity: { $lt: data.minParticipants } }))
+    ) {
+      throw conflict("minParticipants is higher than the capacity of an existing departure");
+    }
+
     await experienceRepository.updateById(id, data);
     if (data.title !== undefined && data.title !== experience.title) {
       await departureService.renameExperience(id, data.title);

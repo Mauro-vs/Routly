@@ -14,7 +14,7 @@ const departureSchema = new mongoose.Schema(
     endAt: { type: Date, required: true },
     capacity: { type: Number, required: true, min: 1, validate: integer },
     // Euros por persona
-    price: { type: Number, required: true, min: 0, validate: twoDecimals },
+    price: { type: Number, required: true, min: 0, max: 100000, validate: twoDecimals },
     state: { type: String, enum: DEPARTURE_STATES, default: "scheduled" },
     // Código comercial fijo (RTL-DEP-AAMMDD-XXXXX, con la fecha del alta): lo genera el
     // service y no cambia nunca

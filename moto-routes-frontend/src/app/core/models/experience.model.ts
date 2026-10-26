@@ -48,8 +48,8 @@ export const EXPERIENCE_LIMITS = {
 } as const;
 
 /**
- * Idiomas que ofrece el formulario. La API acepta cualquier código de dos letras;
- * esta lista es para elegir sin tener que saberse el código.
+ * Idiomas que ofrece el formulario: los mismos que acepta la API
+ * (EXPERIENCE_LANGUAGES en experience.model.js).
  */
 export const EXPERIENCE_LANGUAGES: Readonly<Record<string, string>> = {
   es: 'Español',

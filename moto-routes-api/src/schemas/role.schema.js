@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { cannotChange, statusSchema } from "./common.schema.js";
+import { cannotChange, clearable } from "./common.schema.js";
 
 // isSystem no está en el esquema: solo lo fija el seed
 
-const roleFields = z.object({
+const roleFields = z.strictObject({
   name: z
     .string()
     .trim()
@@ -18,6 +18,6 @@ const roleFields = z.object({
 export const createRoleSchema = roleFields;
 
 export const updateRoleSchema = roleFields.partial().extend({
-  status: statusSchema.optional(),
+  ...clearable(roleFields, "description"),
   ...cannotChange("_id", "slug", "isSystem"),
 });

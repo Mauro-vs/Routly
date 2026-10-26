@@ -23,7 +23,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { applyServerErrors, controlErrorMessage } from '../../utils/form-errors';
-import { httpUrl, notBlank } from '../../utils/validators';
+import { httpsUrl, notBlank } from '../../utils/validators';
 import { ErrorStateComponent } from '../error-state/error-state.component';
 import { FormFieldComponent } from '../form-field/form-field.component';
 import { InputDirective } from '../form-field/input.directive';
@@ -103,7 +103,7 @@ export class ImageGalleryComponent {
   protected readonly addForm = new FormGroup({
     url: new FormControl('', {
       nonNullable: true,
-      validators: [notBlank, httpUrl, Validators.maxLength(IMAGE_LIMITS.url)],
+      validators: [notBlank, httpsUrl, Validators.maxLength(IMAGE_LIMITS.url)],
     }),
     alt: new FormControl('', {
       nonNullable: true,

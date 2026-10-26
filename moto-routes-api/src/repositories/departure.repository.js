@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Departure } from "../models/departure.model.js";
+import { toUpdate } from "../utils/update.js";
 
 const withExperience = (query) => query.populate("experience", "title slug");
 
@@ -63,7 +64,7 @@ export const departureRepository = {
 
   updateById(id, data) {
     return withExperience(
-      Departure.findOneAndUpdate({ _id: id }, data, {
+      Departure.findOneAndUpdate({ _id: id }, toUpdate(data), {
         returnDocument: "after",
         runValidators: true,
       })

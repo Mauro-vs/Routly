@@ -1,14 +1,16 @@
 import { z } from "zod";
 import { IMAGE_OWNER_TYPES } from "../models/imageOwners.js";
-import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
+// Solo https: el panel se sirve por https y una imagen http se bloquearía como
+// contenido mixto
 const imageUrl = z
   .string()
   .trim()
   .max(2048)
-  .pipe(z.url({ protocol: /^https?$/ }));
+  .pipe(z.url({ protocol: /^https$/ }));
 
-const imageFields = z.object({
+const imageFields = z.strictObject({
   ownerType: z.enum(IMAGE_OWNER_TYPES),
   ownerId: objectIdSchema,
   url: imageUrl,
@@ -23,7 +25,10 @@ export const createImageSchema = imageFields;
 export const updateImageSchema = imageFields
   .omit({ ownerType: true, ownerId: true })
   .partial()
-  .extend({ status: statusSchema.optional(), ...cannotChange("_id", "ownerType", "ownerId") });
+  .extend({
+    ...clearable(imageFields, "alt"),
+    ...cannotChange("_id", "ownerType", "ownerId"),
+  });
 
 // GET /api/images?ownerType=route&ownerId=<id>: los dos o ninguno
 export const imageQuerySchema = z

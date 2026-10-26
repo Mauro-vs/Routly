@@ -152,6 +152,41 @@ describe('translateFieldMessage', () => {
     );
   });
 
+  it('traduce las reglas nuevas de la auditoría de la API', () => {
+    const field = (name: string, detail: string): string | undefined =>
+      toApiError(
+        httpError(400, { statusCode: 400, message: 'Validation failed', details: [{ field: name, message: detail }] }),
+      ).fieldErrors?.[name];
+    const conflict = (detail: string): string =>
+      toApiError(httpError(409, { statusCode: 409, message: detail })).message;
+
+    expect(field('distance', 'distance must be greater than 0')).toBe('Tiene que ser mayor que 0.');
+    expect(field('distance', 'distance must be greater than or equal to 0')).toBe('El valor mínimo es 0.');
+    expect(field('password', 'password must contain at least one letter and one number')).toBe(
+      'Usa al menos una letra y un número.',
+    );
+    expect(field('capacity', 'capacity must be greater than or equal to the experience minParticipants')).toBe(
+      'No puede ser menor que el mínimo de participantes de la experiencia.',
+    );
+    expect(field('startAt', 'startAt already has a departure of this experience')).toBe(
+      'Ya hay una salida de esta experiencia a esa hora.',
+    );
+    expect(field('state', 'state of a cancelled departure cannot be changed')).toBe(
+      'Una salida cancelada no se puede reabrir.',
+    );
+    expect(field('state', 'state cannot be completed before the departure ends')).toBe(
+      'Solo se puede marcar como realizada cuando ya ha terminado.',
+    );
+    expect(field('color', 'color is not allowed')).toBe('Este dato no se puede enviar.');
+    expect(conflict('A role with this label already exists')).toBe('Ya existe un rol con ese nombre visible.');
+    expect(conflict('minParticipants is higher than the capacity of an existing departure')).toBe(
+      'Hay salidas con menos plazas que ese mínimo.',
+    );
+    expect(toApiError(httpError(413, { statusCode: 413, message: 'Request body is larger than 51200 bytes' })).message).toBe(
+      'Los datos enviados son demasiado grandes.',
+    );
+  });
+
   it('un PATCH sin campos se explica como "no hay cambios"', () => {
     const error = toApiError(httpError(400, { statusCode: 400, message: 'No fields to update' }));
     expect(error.type).toBe('validation');

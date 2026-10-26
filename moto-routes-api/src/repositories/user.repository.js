@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import { toUpdate } from "../utils/update.js";
 
 // passwordHash nunca sale: el modelo lo tiene con select: false
 const withRole = (query) => query.populate("role", "name label");
@@ -30,7 +31,7 @@ export const userRepository = {
   },
 
   // Incluye los eliminados: el correo sigue reservado para poder restaurarlos
-  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  // Devuelve su deletedAt: así se sabe si el duplicado está en la papelera
   findDuplicateByEmail(email, excludeId) {
     const filter = excludeId ? { email, _id: { $ne: excludeId } } : { email };
     return User.findOne(filter).select("deletedAt").setOptions({ withDeleted: true }).lean();
@@ -42,7 +43,10 @@ export const userRepository = {
 
   updateById(id, data) {
     return withRole(
-      User.findOneAndUpdate({ _id: id }, data, { returnDocument: "after", runValidators: true })
+      User.findOneAndUpdate({ _id: id }, toUpdate(data), {
+        returnDocument: "after",
+        runValidators: true,
+      })
     ).lean();
   },
 

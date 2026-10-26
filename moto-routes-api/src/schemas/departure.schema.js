@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DEPARTURE_STATES } from "../models/departure.model.js";
 import { SKU_PATTERN } from "../utils/sku.js";
-import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, objectIdSchema } from "./common.schema.js";
 
 // sku y slug no están en el esquema: los genera el service
 
@@ -9,13 +9,13 @@ import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
 // z.coerce.date() aceptaba cualquier cosa convertible (true, 0, "2026").
 const isoDate = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
 
-const departureFields = z.object({
+const departureFields = z.strictObject({
   experienceId: objectIdSchema,
   startAt: isoDate,
   endAt: isoDate,
   capacity: z.number().int().min(1),
   // Euros por persona, con dos decimales como máximo
-  price: z.number().min(0).multipleOf(0.01),
+  price: z.number().min(0).max(100000).multipleOf(0.01),
   state: z.enum(DEPARTURE_STATES).optional(),
 });
 
@@ -31,10 +31,7 @@ export const createDepartureSchema = departureFields.refine(
 export const updateDepartureSchema = departureFields
   .omit({ experienceId: true })
   .partial()
-  .extend({
-    status: statusSchema.optional(),
-    ...cannotChange("_id", "slug", "sku", "experienceId"),
-  })
+  .extend(cannotChange("_id", "slug", "sku", "experienceId"))
   .refine(
     (data) => data.startAt === undefined || data.endAt === undefined || data.endAt > data.startAt,
     datesError

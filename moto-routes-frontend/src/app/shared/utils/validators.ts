@@ -67,13 +67,13 @@ export function endAfterStart(start: string, end: string): ValidatorFn {
   };
 }
 
-/** Una dirección web completa, con `http://` o `https://`, como pide la API. */
-export function httpUrl(control: AbstractControl): ValidationErrors | null {
+/** Una dirección web completa con `https://`, como pide la API. */
+export function httpsUrl(control: AbstractControl): ValidationErrors | null {
   const value: unknown = control.value;
   if (typeof value !== 'string' || value.trim() === '') return null;
   try {
     const { protocol } = new URL(value.trim());
-    return protocol === 'http:' || protocol === 'https:' ? null : { url: true };
+    return protocol === 'https:' ? null : { url: true };
   } catch {
     return { url: true };
   }

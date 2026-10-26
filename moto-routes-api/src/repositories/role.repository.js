@@ -1,4 +1,5 @@
-import { Role } from "../models/role.model.js";
+import { Role, ROLE_COLLATION } from "../models/role.model.js";
+import { toUpdate } from "../utils/update.js";
 
 export const roleRepository = {
   findAll(filter = {}) {
@@ -26,10 +27,20 @@ export const roleRepository = {
     return Role.findOne({ name }).lean();
   },
 
-  // Incluye los eliminados: su nombre y su slug siguen reservados para poder restaurarlos
-  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  // También entre los eliminados (su nombre sigue reservado para poder restaurarlos):
+  // con su deletedAt se sabe si está en la papelera
   findDuplicateByName(name) {
     return Role.findOne({ name }).select("deletedAt").setOptions({ withDeleted: true }).lean();
+  },
+
+  // Igual, por la etiqueta: sin distinguir mayúsculas ni tildes
+  findDuplicateByLabel(label, excludeId) {
+    const filter = excludeId ? { label, _id: { $ne: excludeId } } : { label };
+    return Role.findOne(filter)
+      .select("deletedAt")
+      .collation(ROLE_COLLATION)
+      .setOptions({ withDeleted: true })
+      .lean();
   },
 
   create(data) {
@@ -37,7 +48,7 @@ export const roleRepository = {
   },
 
   updateById(id, data) {
-    return Role.findOneAndUpdate({ _id: id }, data, {
+    return Role.findOneAndUpdate({ _id: id }, toUpdate(data), {
       returnDocument: "after",
       runValidators: true,
     }).lean();

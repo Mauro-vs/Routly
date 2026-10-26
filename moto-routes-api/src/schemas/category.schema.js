@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { cannotChange, statusSchema } from "./common.schema.js";
+import { cannotChange, clearable } from "./common.schema.js";
 
-const categoryFields = z.object({
+const categoryFields = z.strictObject({
   name: z.string().trim().min(2).max(60),
   description: z.string().trim().max(300).optional(),
 });
@@ -9,6 +9,6 @@ const categoryFields = z.object({
 export const createCategorySchema = categoryFields;
 
 export const updateCategorySchema = categoryFields.partial().extend({
-  status: statusSchema.optional(),
+  ...clearable(categoryFields, "description"),
   ...cannotChange("_id", "slug"),
 });

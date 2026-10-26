@@ -37,11 +37,15 @@ export const roleService = {
     return role;
   },
 
-  // isSystem no llega desde la API (Zod lo descarta); solo lo envía el seed
+  // isSystem no llega desde la API (Zod lo rechaza); solo lo envía el seed
   async create(data) {
     assertNotTaken(
       await roleRepository.findDuplicateByName(data.name),
       "A role with this name already exists"
+    );
+    assertNotTaken(
+      await roleRepository.findDuplicateByLabel(data.label),
+      "A role with this label already exists"
     );
 
     const { _id } = await roleRepository.create(data);
@@ -60,6 +64,13 @@ export const roleService = {
         "A role with this name already exists"
       );
     }
+    if (data.label !== undefined) {
+      assertNotTaken(
+        await roleRepository.findDuplicateByLabel(data.label, id),
+        "A role with this label already exists"
+      );
+    }
+    // status solo llega desde setActive: el PATCH /:id no lo acepta
     if (role.isSystem && data.status === STATUS.INACTIVE) {
       throw conflict("System roles cannot be deactivated");
     }

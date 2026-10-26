@@ -2,19 +2,22 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { integer } from "./validators.js";
+import { integer, positive } from "./validators.js";
+
+// Idiomas en los que se puede ofrecer una experiencia (los mismos que el panel)
+export const EXPERIENCE_LANGUAGES = Object.freeze(["es", "en", "fr", "de", "it", "pt", "ca", "eu", "gl"]);
 
 // Salida guiada que un anfitrión organiza sobre una ruta
 const experienceSchema = new mongoose.Schema(
   {
     hostId: { type: mongoose.Schema.Types.ObjectId, ref: "Host", required: true, index: true },
     routeId: { type: mongoose.Schema.Types.ObjectId, ref: "Route", required: true, index: true },
-    title: { type: String, required: true, trim: true, maxlength: 120 },
+    title: { type: String, required: true, trim: true, minlength: 2, maxlength: 120 },
     description: { type: String, trim: true, maxlength: 2000 },
     meetingPoint: { type: String, trim: true, maxlength: 200 },
-    language: { type: String, lowercase: true, trim: true, match: /^[a-z]{2}$/, default: "es" },
-    // Horas totales de la experiencia, con paradas
-    duration: { type: Number, required: true, min: 0 },
+    language: { type: String, lowercase: true, trim: true, enum: EXPERIENCE_LANGUAGES, default: "es" },
+    // Horas totales de la experiencia, con paradas: como mucho 30 días
+    duration: { type: Number, required: true, max: 720, validate: positive },
     minParticipants: { type: Number, min: 1, default: 1, validate: integer },
     maxParticipants: { type: Number, required: true, min: 1, max: 100, validate: integer },
   },

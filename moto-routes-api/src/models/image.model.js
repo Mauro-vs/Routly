@@ -10,7 +10,7 @@ const imageSchema = new mongoose.Schema(
   {
     ownerType: { type: String, enum: IMAGE_OWNER_TYPES, required: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, required: true },
-    url: { type: String, required: true, trim: true, maxlength: 2048 },
+    url: { type: String, required: true, trim: true, maxlength: 2048, match: /^https:\/\//i },
     alt: { type: String, trim: true, maxlength: 200 },
     position: { type: Number, min: 0, default: 0, validate: integer },
     // Imagen principal: portada de una ruta, foto de perfil de un usuario...

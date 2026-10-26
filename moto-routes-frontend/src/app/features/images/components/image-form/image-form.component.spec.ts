@@ -30,12 +30,14 @@ describe('ImageFormComponent', () => {
     ]);
   });
 
-  it('rechaza una dirección sin http ni https', async () => {
-    const form = await renderForm(ImageFormComponent, { record: IMAGE });
-    form.type('url', 'ftp://img.routly.dev/a.jpg');
-    await form.submit();
+  for (const url of ['ftp://img.routly.dev/a.jpg', 'http://img.routly.dev/a.jpg']) {
+    it(`rechaza una dirección que no es https: ${url}`, async () => {
+      const form = await renderForm(ImageFormComponent, { record: IMAGE });
+      form.type('url', url);
+      await form.submit();
 
-    expect(form.saved).toEqual([]);
-    expect(form.element.textContent).toContain('Escribe una dirección completa');
-  });
+      expect(form.saved).toEqual([]);
+      expect(form.element.textContent).toContain('Escribe una dirección completa');
+    });
+  }
 });

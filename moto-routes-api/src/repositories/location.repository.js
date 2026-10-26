@@ -1,4 +1,5 @@
 import { Location, LOCATION_COLLATION } from "../models/location.model.js";
+import { toUpdate } from "../utils/update.js";
 
 export const locationRepository = {
   findAll(filter = {}) {
@@ -26,7 +27,7 @@ export const locationRepository = {
 
   // Ciudad, región y país repetidos, sin distinguir mayúsculas ni tildes e incluyendo
   // las eliminadas. Una región que no se envía cuenta como null.
-  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  // Devuelve su deletedAt: así se sabe si el duplicado está en la papelera
   findDuplicateByPlace({ city, region, country }, excludeId) {
     const filter = { city, region: region ?? null, country };
     if (excludeId) filter._id = { $ne: excludeId };
@@ -42,7 +43,7 @@ export const locationRepository = {
   },
 
   updateById(id, data) {
-    return Location.findOneAndUpdate({ _id: id }, data, {
+    return Location.findOneAndUpdate({ _id: id }, toUpdate(data), {
       returnDocument: "after",
       runValidators: true,
     }).lean();

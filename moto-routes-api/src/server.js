@@ -23,7 +23,9 @@ const PORT = process.env.PORT || 3000;
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
 app.use(morganMiddleware);
-app.use(express.json());
+// El body más grande es una experiencia con su descripción (unos 3 kB): 50 kB da margen
+// y corta peticiones desmedidas con un 413
+app.use(express.json({ limit: "50kb" }));
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });

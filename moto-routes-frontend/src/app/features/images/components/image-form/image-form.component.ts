@@ -12,14 +12,14 @@ import { InputDirective } from '../../../../shared/components/form-field/input.d
 import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm, editedText } from '../../../../shared/forms/entity-form';
-import { httpUrl, notBlank } from '../../../../shared/utils/validators';
+import { httpsUrl, notBlank } from '../../../../shared/utils/validators';
 
 // Los mismos criterios que src/schemas/image.schema.js en la API.
 function createImageForm() {
   return new FormGroup({
     url: new FormControl('', {
       nonNullable: true,
-      validators: [notBlank, httpUrl, Validators.maxLength(IMAGE_LIMITS.url)],
+      validators: [notBlank, httpsUrl, Validators.maxLength(IMAGE_LIMITS.url)],
     }),
     alt: new FormControl('', {
       nonNullable: true,

@@ -1,4 +1,5 @@
 import { Host } from "../models/host.model.js";
+import { toUpdate } from "../utils/update.js";
 
 const withUser = (query) => query.populate("user", "name email");
 
@@ -28,7 +29,7 @@ export const hostRepository = {
   },
 
   // Incluye los eliminados: un usuario solo puede tener un perfil, también en la papelera
-  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  // Devuelve su deletedAt: así se sabe si el duplicado está en la papelera
   findDuplicateByUser(userId) {
     return Host.findOne({ userId }).select("deletedAt").setOptions({ withDeleted: true }).lean();
   },
@@ -39,7 +40,10 @@ export const hostRepository = {
 
   updateById(id, data) {
     return withUser(
-      Host.findOneAndUpdate({ _id: id }, data, { returnDocument: "after", runValidators: true })
+      Host.findOneAndUpdate({ _id: id }, toUpdate(data), {
+        returnDocument: "after",
+        runValidators: true,
+      })
     ).lean();
   },
 

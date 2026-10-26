@@ -1,4 +1,5 @@
 import { Route } from "../models/route.model.js";
+import { toUpdate } from "../utils/update.js";
 
 // Cada ruta trae su categoría y sus dos ubicaciones, no solo los ids
 const withRelations = (query) =>
@@ -41,7 +42,10 @@ export const routeRepository = {
 
   updateById(id, data) {
     return withRelations(
-      Route.findOneAndUpdate({ _id: id }, data, { returnDocument: "after", runValidators: true })
+      Route.findOneAndUpdate({ _id: id }, toUpdate(data), {
+        returnDocument: "after",
+        runValidators: true,
+      })
     ).lean();
   },
 

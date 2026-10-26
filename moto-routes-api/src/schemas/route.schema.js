@@ -1,30 +1,22 @@
 import { z } from "zod";
-import { cannotChange, objectIdSchema, statusSchema } from "./common.schema.js";
+import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
-// Los campos que no aparecen en un esquema se descartan (comportamiento por
-// defecto de z.object), así el cliente no puede fijar slug, isActive, deletedAt...
-
-// Las piezas comunes se reexportan para no romper los imports existentes
-export {
-  idParamSchema,
-  restoreSchema as restoreRouteSchema,
-  setActiveSchema,
-  slugParamSchema,
-} from "./common.schema.js";
-
-export const createRouteSchema = z.object({
-  title: z.string().trim().min(1).max(120),
+const routeFields = z.strictObject({
+  title: z.string().trim().min(2).max(120),
   description: z.string().trim().max(500).optional(),
   difficulty: z.enum(["easy", "medium", "hard"]),
-  distance: z.number().min(0),
-  duration: z.number().min(0),
+  // Kilómetros y horas: una ruta tiene que tener recorrido
+  distance: z.number().positive().max(5000),
+  duration: z.number().positive().max(240),
   categoryId: objectIdSchema,
   startLocationId: objectIdSchema,
   // Puede ser igual que startLocationId: ruta circular
   endLocationId: objectIdSchema,
 });
 
-export const updateRouteSchema = createRouteSchema.partial().extend({
-  status: statusSchema.optional(),
+export const createRouteSchema = routeFields;
+
+export const updateRouteSchema = routeFields.partial().extend({
+  ...clearable(routeFields, "description"),
   ...cannotChange("_id", "slug"),
 });

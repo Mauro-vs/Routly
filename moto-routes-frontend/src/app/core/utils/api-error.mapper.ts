@@ -15,6 +15,7 @@ const MESSAGES = {
   forbidden: 'No tienes permiso para hacer esto.',
   notFound: 'No se ha encontrado lo que buscabas. Puede que se haya eliminado.',
   conflict: 'Ya existe un registro con esos datos.',
+  tooLarge: 'Los datos enviados son demasiado grandes.',
   client: 'La API no ha aceptado la petición.',
   unknown: 'Ha ocurrido un error inesperado. Vuelve a intentarlo.',
 } as const;
@@ -24,6 +25,7 @@ const CLIENT_MESSAGES: Record<number, string> = {
   403: MESSAGES.forbidden,
   404: MESSAGES.notFound,
   409: MESSAGES.conflict,
+  413: MESSAGES.tooLarge,
 };
 
 /**
@@ -130,6 +132,7 @@ const DELETE_ACTIONS: Record<string, string> = {
 /** Los 409 de la API no siempre son duplicados: cada motivo tiene su texto. */
 const DUPLICATED_FIELDS: Record<string, string> = {
   name: 'ese nombre',
+  label: 'ese nombre visible',
   email: 'ese email',
   slug: 'esa dirección',
   'city, region and country': 'esa ciudad, región y país',
@@ -165,6 +168,7 @@ const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string
         : 'Ese usuario ya tiene perfil de anfitrión.',
   ],
   [/^maxParticipants is lower than/, () => 'Hay salidas con más plazas que ese máximo.'],
+  [/^minParticipants is higher than/, () => 'Hay salidas con menos plazas que ese mínimo.'],
   [/^Inactive images cannot be the cover$/, () => 'Una imagen inactiva no puede ser la principal.'],
 ];
 
@@ -194,8 +198,17 @@ const FIELD_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> 
     /^must be less than or equal to the experience maxParticipants$/,
     () => 'No puede superar el máximo de participantes de la experiencia.',
   ],
+  [
+    /^must be greater than or equal to the experience minParticipants$/,
+    () => 'No puede ser menor que el mínimo de participantes de la experiencia.',
+  ],
   [/^must be after startAt$/, () => 'Tiene que ser posterior al inicio.'],
   [/^must be in the future$/, () => 'Elige una fecha futura.'],
+  [/^already has a departure of this experience$/, () => 'Ya hay una salida de esta experiencia a esa hora.'],
+  [/^of a cancelled departure cannot be changed$/, () => 'Una salida cancelada no se puede reabrir.'],
+  [/^cannot be completed before the departure ends$/, () => 'Solo se puede marcar como realizada cuando ya ha terminado.'],
+  [/^must contain at least one letter and one number$/, () => 'Usa al menos una letra y un número.'],
+  [/^is not allowed$/, () => 'Este dato no se puede enviar.'],
   [/^and longitude must be sent together$/, () => 'Indica la latitud y la longitud, o ninguna de las dos.'],
   [/^must be an integer$/, () => 'Escribe un número entero.'],
   [/^must have at most 2 decimals$/, () => 'Usa como mucho dos decimales.'],
@@ -205,6 +218,8 @@ const FIELD_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> 
   [/^must be at most (\d+) characters$/, (m) => `Escribe como máximo ${m[1]} caracteres.`],
   [/^must be greater than or equal to (.+)$/, (m) => `El valor mínimo es ${m[1]}.`],
   [/^must be less than or equal to (.+)$/, (m) => `El valor máximo es ${m[1]}.`],
+  [/^must be greater than (.+)$/, (m) => `Tiene que ser mayor que ${m[1]}.`],
+  [/^must be less than (.+)$/, (m) => `Tiene que ser menor que ${m[1]}.`],
   [/^must be one of: (.+)$/, (m) => `Elige uno de estos valores: ${m[1]}.`],
   [/^must be a valid number$/, () => 'Escribe un número.'],
   [/^must be a valid boolean$/, () => 'Indica sí o no.'],

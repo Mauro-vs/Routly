@@ -7,7 +7,18 @@ export function notFoundHandler(req, res, next) {
   next(createError(`Endpoint ${req.method} ${req.originalUrl} not found`, 404));
 }
 
-// Convierte un issue de Zod en { field, message }. Nunca se devuelve issue.input.
+// Convierte un issue de Zod en uno o varios { field, message }. Nunca se devuelve issue.input.
+function zodDetails(issue) {
+  // Campos que no están en el esquema (z.strictObject): un detalle por campo
+  if (issue.code === "unrecognized_keys") {
+    return issue.keys.map((key) => {
+      const field = [...issue.path, key].join(".");
+      return { field, message: `${field} is not allowed` };
+    });
+  }
+  return [zodDetail(issue)];
+}
+
 function zodDetail(issue) {
   const field = issue.path.join(".") || "body";
   const isString = issue.origin === "string";
@@ -28,15 +39,17 @@ function zodDetail(issue) {
       case "invalid_value":
         rule = `must be one of: ${issue.values.join(", ")}`;
         break;
+      // inclusive: false es un límite estricto (.positive(), .gt()): "greater than 0"
       case "too_small":
-        if (!isString) rule = `must be greater than or equal to ${issue.minimum}`;
-        else if (issue.minimum === 1) rule = "cannot be empty";
-        else rule = `must be at least ${issue.minimum} characters`;
+        if (isString) {
+          rule = issue.minimum === 1 ? "cannot be empty" : `must be at least ${issue.minimum} characters`;
+        } else {
+          rule = `must be greater than ${issue.inclusive === false ? "" : "or equal to "}${issue.minimum}`;
+        }
         break;
       case "too_big":
-        rule = isString
-          ? `must be at most ${issue.maximum} characters`
-          : `must be less than or equal to ${issue.maximum}`;
+        if (isString) rule = `must be at most ${issue.maximum} characters`;
+        else rule = `must be less than ${issue.inclusive === false ? "" : "or equal to "}${issue.maximum}`;
         break;
       case "invalid_format":
         rule = "has an invalid format";
@@ -82,7 +95,7 @@ function normalizeError(err) {
     return {
       statusCode: 400,
       message: "Validation failed",
-      details: err.issues.map(zodDetail),
+      details: err.issues.flatMap(zodDetails),
     };
   }
 
@@ -104,6 +117,10 @@ function normalizeError(err) {
   if (err?.code === 11000) {
     const field = Object.keys(err.keyValue ?? {})[0] ?? "field";
     return { statusCode: 409, message: `A resource with this ${field} already exists` };
+  }
+
+  if (err?.type === "entity.too.large") {
+    return { statusCode: 413, message: `Request body is larger than ${err.limit} bytes` };
   }
 
   if (err?.type === "entity.parse.failed") {

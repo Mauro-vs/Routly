@@ -23,12 +23,38 @@ function departureSlug(experienceTitle, startAt, id) {
   return buildSlug(`${experienceTitle} ${year}-${month}-${day}`, id);
 }
 
+// Las plazas tienen que caber entre el mínimo y el máximo de participantes de la experiencia
 function assertCapacity(capacity, experience) {
   if (capacity > experience.maxParticipants) {
     throw fieldError(
       "capacity",
       "capacity must be less than or equal to the experience maxParticipants"
     );
+  }
+  if (capacity < experience.minParticipants) {
+    throw fieldError(
+      "capacity",
+      "capacity must be greater than or equal to the experience minParticipants"
+    );
+  }
+}
+
+// Una salida cancelada no se reabre, y solo se marca como realizada cuando ya ha terminado
+function assertState(state, currentState, endAt) {
+  if (currentState === "cancelled" && state !== "cancelled") {
+    throw fieldError("state", "state of a cancelled departure cannot be changed");
+  }
+  if (state === "completed" && endAt > new Date()) {
+    throw fieldError("state", "state cannot be completed before the departure ends");
+  }
+}
+
+// Una experiencia no puede tener dos salidas a la misma hora
+async function assertFreeStart(experienceId, startAt, excludeId) {
+  const filter = { experienceId, startAt };
+  if (excludeId) filter._id = { $ne: excludeId };
+  if (await departureRepository.exists(filter)) {
+    throw fieldError("startAt", "startAt already has a departure of this experience");
   }
 }
 
@@ -82,6 +108,8 @@ export const departureService = {
 
     assertFuture(data.startAt);
     assertCapacity(data.capacity, experience);
+    assertState(data.state ?? "scheduled", undefined, data.endAt);
+    await assertFreeStart(data.experienceId, data.startAt);
 
     // El slug lleva el sufijo del _id: hay que conocerlo antes de crear
     const _id = departureRepository.generateId();
@@ -118,6 +146,12 @@ export const departureService = {
     if (endAt <= startAt) throw fieldError("endAt", "endAt must be after startAt");
 
     if (data.capacity !== undefined) assertCapacity(data.capacity, experience);
+    if (data.state !== undefined || data.endAt !== undefined) {
+      assertState(data.state ?? departure.state, departure.state, endAt);
+    }
+    if (data.startAt !== undefined) {
+      await assertFreeStart(departure.experienceId, data.startAt, id);
+    }
 
     // El slug sí sigue a la fecha de salida
     const changes = data.startAt

@@ -370,7 +370,8 @@ function crudPaths(resource) {
       },
       post: {
         summary: `Crear ${singular}`,
-        description: "slug, status, isActive, deletedAt y las fechas los genera el servidor.",
+        description:
+          "slug, status, isActive, deletedAt y las fechas los genera el servidor. Un campo que no está en el esquema da 400.",
         tags,
         requestBody: body(`Create${schema}Input`),
         responses: {
@@ -408,7 +409,8 @@ function crudPaths(resource) {
       },
       patch: {
         summary: `Editar ${singular}`,
-        description: "Edición parcial. status admite active o inactive.",
+        description:
+          "Edición parcial. Para activar o desactivar se usa PATCH /:id/active. Los campos opcionales de texto se vacían enviando null.",
         tags,
         parameters: [idParam],
         requestBody: body(`Update${schema}Input`),

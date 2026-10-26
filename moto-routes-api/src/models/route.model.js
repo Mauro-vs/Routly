@@ -3,21 +3,23 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { STATUS } from "./status.js";
+import { positive } from "./validators.js";
 
 // Se mantiene el nombre antiguo para no romper los imports existentes
 export const ROUTE_STATUS = STATUS;
 
 const routeSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true, maxlength: 120 },
+    title: { type: String, required: true, trim: true, minlength: 2, maxlength: 120 },
     description: { type: String, trim: true, maxlength: 500 },
     difficulty: {
       type: String,
       required: true,
       enum: ["easy", "medium", "hard"],
     },
-    distance: { type: Number, required: true, min: 0 },
-    duration: { type: Number, required: true, min: 0 },
+    // Kilómetros y horas
+    distance: { type: Number, required: true, max: 5000, validate: positive },
+    duration: { type: Number, required: true, max: 240, validate: positive },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true, index: true },
     startLocationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location", required: true, index: true },
     // Puede ser la misma que el origen: ruta circular

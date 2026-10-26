@@ -1,4 +1,5 @@
 import { Category, CATEGORY_COLLATION } from "../models/category.model.js";
+import { toUpdate } from "../utils/update.js";
 
 export const categoryRepository = {
   // Ordenadas por nombre, con el orden alfabético del español
@@ -26,7 +27,7 @@ export const categoryRepository = {
   },
 
   // Sin distinguir mayúsculas ni tildes, e incluyendo las eliminadas
-  // También entre los eliminados: con su deletedAt se sabe si está en la papelera
+  // Devuelve su deletedAt: así se sabe si el duplicado está en la papelera
   findDuplicateByName(name, excludeId) {
     const filter = excludeId ? { name, _id: { $ne: excludeId } } : { name };
     return Category.findOne(filter)
@@ -41,7 +42,7 @@ export const categoryRepository = {
   },
 
   updateById(id, data) {
-    return Category.findOneAndUpdate({ _id: id }, data, {
+    return Category.findOneAndUpdate({ _id: id }, toUpdate(data), {
       returnDocument: "after",
       runValidators: true,
     }).lean();

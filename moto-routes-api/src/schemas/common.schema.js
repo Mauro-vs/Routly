@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { STATUS } from "../models/status.js";
 
-// Piezas de validación que comparten todas las colecciones
+// Piezas de validación que comparten todas las colecciones.
+// Los body usan z.strictObject: un campo que no está en el esquema es un 400
+// ("color is not allowed"), no se descarta sin avisar.
 
 export const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/);
 
@@ -13,17 +14,14 @@ export const slugParamSchema = z.object({
   slug: z.string().max(200).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
 });
 
-// `deleted` solo se alcanza con el soft delete (PATCH /:id/delete), nunca desde el cliente
-export const statusSchema = z.enum([STATUS.ACTIVE, STATUS.INACTIVE]);
-
-export const setActiveSchema = z.object({
+// Activar y desactivar solo se hace con PATCH /:id/active: el PATCH /:id no acepta status
+export const setActiveSchema = z.strictObject({
   isActive: z.boolean(),
 });
 
 /**
- * Campos que existen pero no se pueden cambiar en un PATCH. Sin esto, Zod los
- * descartaría sin avisar; así el cliente recibe un 400 en el campo:
- * "sku cannot be changed".
+ * Campos que existen pero no se pueden cambiar en un PATCH. Sin esto, el cliente
+ * recibiría un "is not allowed" genérico; así sabe el motivo: "sku cannot be changed".
  *
  * Uso: updateXSchema = fields.partial().extend({ ...cannotChange("_id", "slug") })
  */
@@ -38,6 +36,16 @@ export function cannotChange(...fields) {
         .optional(),
     ])
   );
+}
+
+/**
+ * Campos opcionales que en un PATCH se pueden vaciar enviando null. El repositorio
+ * convierte ese null en un $unset: el campo desaparece del documento.
+ *
+ * Uso: updateXSchema = fields.partial().extend({ ...clearable(fields, "description") })
+ */
+export function clearable(fields, ...names) {
+  return Object.fromEntries(names.map((name) => [name, fields.shape[name].nullable()]));
 }
 
 // Al restaurar, isActive es opcional (si no llega, vuelve con el estado que tenía)

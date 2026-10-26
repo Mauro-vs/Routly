@@ -1,5 +1,6 @@
 import { Image } from "../models/image.model.js";
 import { IMAGE_OWNERS } from "../models/imageOwners.js";
+import { toUpdate } from "../utils/update.js";
 
 export const imageRepository = {
   // Por posición dentro de su dueño
@@ -60,7 +61,7 @@ export const imageRepository = {
   },
 
   updateById(id, data) {
-    return Image.findOneAndUpdate({ _id: id }, data, {
+    return Image.findOneAndUpdate({ _id: id }, toUpdate(data), {
       returnDocument: "after",
       runValidators: true,
     }).lean();
