@@ -57,8 +57,8 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
   <tr>
     <td valign="top">
       <img src="docs/assets/icon-chart.svg" width="44" alt=""><br>
-      <b>Resumen del catálogo</b><br>
-      Cuántos registros hay en cada colección, kilómetros totales, reparto por dificultad y últimos cambios, de un vistazo.
+      <b>Dashboard</b><br>
+      Kilómetros, rutas activas, próximas salidas con sus plazas y precio medio, salidas por mes y reparto por categoría y dificultad, de un vistazo.
     </td>
     <td valign="top">
       <img src="docs/assets/icon-errors.svg" width="44" alt=""><br>
@@ -84,11 +84,11 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/resumen.png" alt="Resumen del catálogo"></td>
+    <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard con cifras, salidas por mes y reparto de rutas"></td>
     <td width="50%"><img src="docs/screenshots/rutas-lista.png" alt="Listado de rutas en tabla"></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Resumen</b>: el estado del catálogo de un vistazo</sub></td>
+    <td align="center"><sub><b>Dashboard</b>: rutas y salidas de un vistazo</sub></td>
     <td align="center"><sub><b>Vista en tabla</b>: la ruta inactiva se distingue sin depender del color</sub></td>
   </tr>
   <tr>

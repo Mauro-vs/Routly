@@ -95,6 +95,19 @@ describe('DashboardStore', () => {
     expect(store.byDifficulty().map((item) => item.value)).toEqual([1, 0, 2]);
   });
 
+  it('con muchas categorías, a partir de la séptima se resumen sin barra', async () => {
+    const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+    await loadWith(names.map((name, index) => route(String(index), name, 'easy', 10)), []);
+
+    expect(store.byCategory().length).toBe(6);
+    expect(store.otherCategories()).toEqual({ count: 3, routes: 3 });
+  });
+
+  it('con pocas categorías no hay resumen', async () => {
+    await loadWith([route('1', 'Costa', 'easy', 10)], []);
+    expect(store.otherCategories()).toBeNull();
+  });
+
   it('las próximas salidas son las programadas que no han empezado, con sus plazas y su precio medio', async () => {
     await loadWith(
       [route('1', 'Costa', 'easy', 10)],

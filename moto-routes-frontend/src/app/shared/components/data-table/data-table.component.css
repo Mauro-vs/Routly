@@ -69,7 +69,43 @@ tbody tr {
 /* también con el teclado: la fila del control con el foco se ilumina igual */
 tbody tr:hover,
 tbody tr:focus-within {
-  background: var(--color-bg);
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+}
+
+/* Una fila que aparece (al cargar, filtrar o cambiar de página) entra con un fundido
+   breve y escalonado. Las que ya estaban no se mueven: el @for las conserva. */
+.row {
+  animation: row-in var(--motion-base) var(--motion-ease) both;
+  animation-delay: calc(var(--row, 0) * 25ms);
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* Cabecera fija bajo la barra superior. Necesita que la tabla no sea un contenedor de
+   desplazamiento: a este ancho sus columnas caben, así que el overflow sobra. */
+@media (min-width: 1100px) {
+  :host {
+    overflow: visible;
+  }
+
+  th {
+    position: sticky;
+    top: var(--layout-topbar);
+    z-index: 1;
+  }
+
+  th:first-child {
+    border-top-left-radius: var(--radius-lg);
+  }
+
+  th:last-child {
+    border-top-right-radius: var(--radius-lg);
+  }
 }
 
 /* fila apagada (por ejemplo, un registro inactivo): fondo gris y texto atenuado */

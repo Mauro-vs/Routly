@@ -62,10 +62,13 @@
                 <b>{{ day(departure.startAt) }}</b>{{ month(departure.startAt) }}
               </time>
               <div class="agenda__text">
-                <a [routerLink]="['/departures', departure.slug]">
+                <a [routerLink]="['/departures', departure.slug]" [title]="departure.experience?.title ?? 'Salida'">
                   {{ departure.experience?.title ?? 'Salida' }}
                 </a>
-                <small>{{ time(departure.startAt) }} · {{ departure.capacity }} plazas · {{ money(departure.price) }}</small>
+                <small>
+                  {{ time(departure.startAt) }} · {{ departure.capacity }}
+                  {{ departure.capacity === 1 ? 'plaza' : 'plazas' }} · {{ money(departure.price) }}
+                </small>
               </div>
             </li>
           }
@@ -79,6 +82,13 @@
         <span>{{ store.total() }} rutas</span>
       </header>
       <ui-bar-list label="Rutas por categoría" unit="rutas" [items]="store.byCategory()" />
+      @if (store.otherCategories(); as other) {
+        <p class="quiet others">
+          Y {{ other.count }} categorías más, con {{ other.routes }}
+          {{ other.routes === 1 ? 'ruta' : 'rutas' }} en total.
+          <a routerLink="/categories">Ver todas</a>
+        </p>
+      }
     </section>
 
     <section class="card panel" aria-labelledby="by-difficulty">
@@ -97,7 +107,7 @@
           <li>
             <div class="recent__text" [class.is-inactive]="!route.isActive">
               <a [routerLink]="['/routes', route.slug]" [title]="route.title">{{ route.title }}</a>
-              <small>{{ summary(route) }}</small>
+              <small [title]="summary(route)">{{ summary(route) }}</small>
             </div>
             <time [attr.datetime]="route.updatedAt">{{ updated(route) }}</time>
           </li>

@@ -9,6 +9,8 @@ import { NavBadgeService } from '../../../core/services/nav-badge.service';
 
 const RECENT_COUNT = 4;
 const UPCOMING_COUNT = 5;
+/** Categorías con barra propia; el resto se suma en "Otras". */
+const CATEGORY_COUNT = 6;
 /** Meses de la gráfica de salidas: el actual y los cinco siguientes. */
 const MONTHS = 6;
 
@@ -59,8 +61,8 @@ export class DashboardStore {
     })),
   );
 
-  /** Rutas por categoría, de la que más tiene a la que menos (y por nombre si empatan). */
-  readonly byCategory = computed(() => {
+  /** Todas las categorías, de la que más rutas tiene a la que menos (y por nombre si empatan). */
+  private readonly categories = computed(() => {
     const counts = new Map<string, number>();
     for (const route of this._routes()) {
       const name = route.category?.name ?? 'Sin categoría';
@@ -69,6 +71,20 @@ export class DashboardStore {
     return [...counts]
       .map(([label, value]) => ({ label, value }))
       .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, 'es'));
+  });
+
+  /** Con muchas categorías, solo las CATEGORY_COUNT primeras llevan barra. */
+  private readonly categoriesFold = computed(() => this.categories().length > CATEGORY_COUNT + 1);
+
+  readonly byCategory = computed(() =>
+    this.categoriesFold() ? this.categories().slice(0, CATEGORY_COUNT) : this.categories(),
+  );
+
+  /** Las que se quedan sin barra, resumidas en una línea de texto (null si no hay). */
+  readonly otherCategories = computed(() => {
+    if (!this.categoriesFold()) return null;
+    const rest = this.categories().slice(CATEGORY_COUNT);
+    return { count: rest.length, routes: rest.reduce((sum, item) => sum + item.value, 0) };
   });
 
   readonly recent = computed(() =>

@@ -54,6 +54,14 @@
   color: var(--color-text-muted);
 }
 
+.others {
+  margin: 12px 0 0;
+}
+
+.others a {
+  white-space: nowrap;
+}
+
 /* ---------- próximas salidas: agenda ---------- */
 .agenda {
   display: grid;
