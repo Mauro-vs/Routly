@@ -1,5 +1,5 @@
 <div class="side__head">
-  <a class="brand" routerLink="/" aria-label="Routly, ir al resumen">
+  <a class="brand" routerLink="/" aria-label="Routly, ir al Dashboard">
     <app-brand-mark />
     <span translate="no">Routly</span>
     <small>Admin</small>
@@ -16,19 +16,48 @@
   }
 </div>
 
-<nav class="nav" aria-label="Principal">
-  <ul>
-    <ng-container *ngTemplateOutlet="entry; context: { $implicit: home }" />
-  </ul>
+<nav class="nav" aria-label="Principal" #nav>
+  <!-- Marca de la sección activa: se desliza de una a otra (ver placeIndicator) -->
+  <span
+    class="nav__indicator"
+    aria-hidden="true"
+    [style.opacity]="indicatorY() === null ? 0 : 1"
+    [class.is-ready]="indicatorReady()"
+    [style.transform]="'translateY(' + (indicatorY() ?? 0) + 'px)'"
+  ></span>
 
-  @for (group of groups; track group.label; let index = $index) {
-    <p class="nav__label" [id]="'nav-group-' + index">{{ group.label }}</p>
-    <ul [attr.aria-labelledby]="'nav-group-' + index">
-      @for (item of group.items; track item.id) {
-        <ng-container *ngTemplateOutlet="entry; context: { $implicit: item }" />
-      }
+  <div #navContent>
+    <ul>
+      <ng-container *ngTemplateOutlet="entry; context: { $implicit: home }" />
     </ul>
-  }
+
+    @for (group of groups; track group.label; let index = $index) {
+      <div class="nav__group" [class.is-collapsed]="isCollapsed(group.label)">
+        <button
+          type="button"
+          class="nav__label"
+          [id]="'nav-group-' + index"
+          [attr.aria-expanded]="!isCollapsed(group.label)"
+          [attr.aria-controls]="'nav-list-' + index"
+          (click)="toggle(group.label)"
+        >
+          {{ group.label }}
+          @if (isCollapsed(group.label) && hasActive(group)) {
+            <span class="nav__here" aria-hidden="true"></span>
+            <span class="sr-only">(contiene la página actual)</span>
+          }
+          <ui-icon class="nav__chevron" name="caret-right" />
+        </button>
+        <div class="nav__collapse" [id]="'nav-list-' + index" [inert]="isCollapsed(group.label)">
+          <ul [attr.aria-labelledby]="'nav-group-' + index">
+            @for (item of group.items; track item.id) {
+              <ng-container *ngTemplateOutlet="entry; context: { $implicit: item }" />
+            }
+          </ul>
+        </div>
+      </div>
+    }
+  </div>
 
   <ng-template #entry let-item>
     @if (item.pending) {

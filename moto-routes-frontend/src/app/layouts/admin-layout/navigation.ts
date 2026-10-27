@@ -29,7 +29,7 @@ interface NavGroup {
 
 export const NAV_HOME: NavItem = {
   id: 'overview',
-  label: 'Resumen',
+  label: 'Dashboard',
   icon: 'squares-four',
   path: '/',
   exact: true,

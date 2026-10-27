@@ -35,6 +35,15 @@
   --color-danger: #b3261e;
   --color-danger-bg: #fbe3e0;
 
+  /* gráficas: una serie usa el verde de marca; las series de estado (programada,
+     realizada, cancelada) van en este orden fijo. Validado con el validador de
+     paletas (luminosidad, croma, daltonismo y contraste sobre blanco). */
+  --color-chart-1: #1b7a4e;
+  --color-chart-2: #3d6aa8;
+  --color-chart-3: #b3261e;
+  --color-chart-track: var(--color-surface-2);
+  --color-chart-grid: var(--color-border);
+
   --font-sans: 'Onest Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
@@ -66,6 +75,8 @@
   --motion-base: 200ms;
   --motion-slow: 300ms;
   --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* para lo que se mueve de un sitio a otro sin entrar ni salir (la marca del menú) */
+  --motion-ease-move: cubic-bezier(0.77, 0, 0.175, 1);
 
   --layout-sidebar: 244px;
   --layout-topbar: 60px;

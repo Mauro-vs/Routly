@@ -67,6 +67,7 @@
 
 /* ---------- navegación ---------- */
 .nav {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -81,13 +82,86 @@
   list-style: none;
 }
 
+/* ---------- grupos plegables ---------- */
 .nav__label {
-  margin: 18px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  margin: 12px 0 2px;
   padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-on-sidebar-muted);
+  font: inherit;
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-on-sidebar-muted);
+  cursor: pointer;
+  transition: color var(--motion-fast) ease;
 }
+
+.nav__label:hover {
+  color: var(--color-on-sidebar);
+}
+
+.nav__chevron {
+  margin-left: auto;
+  font-size: 12px;
+  transform: rotate(90deg);
+  transition: transform var(--motion-base) var(--motion-ease);
+}
+
+.is-collapsed .nav__chevron {
+  transform: rotate(0deg);
+}
+
+/* grupo plegado con la página actual */
+.nav__here {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.nav__collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--motion-base) var(--motion-ease);
+}
+
+.is-collapsed .nav__collapse {
+  grid-template-rows: 0fr;
+}
+
+.nav__collapse > ul {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* foco por dentro: el plegado lo recortaría */
+.nav__collapse a:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ---------- marca de la sección activa ---------- */
+.nav__indicator {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.nav__indicator.is-ready {
+  transition: transform var(--motion-base) var(--motion-ease-move);
+}
+
+/* Con movimiento reducido, base.css anula estas transiciones. */
 
 .nav__item {
   display: flex;
@@ -132,7 +206,7 @@ a.nav__item:hover {
   font-weight: 500;
 }
 
-/* Nueve contadores en lima competirían entre sí: solo destaca el de la sección abierta. */
+/* solo destaca en lima el contador de la sección abierta */
 .nav__count {
   margin-left: auto;
   min-width: 22px;

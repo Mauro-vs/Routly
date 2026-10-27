@@ -138,7 +138,7 @@ src/app/
 ├── layouts/
 │   └── admin-layout/      Sidebar con grupos y contadores, barra superior y navigation.ts
 ├── features/
-│   ├── dashboard/         Resumen
+│   ├── dashboard/         Dashboard: cifras y gráficas de rutas y salidas
 │   └── routes/, categories/, locations/, experiences/, departures/,
 │       users/, hosts/, roles/, images/
 │       ├── components/    El formulario de la colección (<x>-form)
@@ -169,7 +169,7 @@ Cada colección tiene las mismas cinco páginas:
 | `/<colección>/trash` | Papelera: restaurar activo o inactivo |
 | `/<colección>/id/:id` | Lleva al detalle de un registro del que solo se sabe el `_id` (relaciones sin slug) |
 
-Las imágenes no tienen slug ni página de crear: su detalle es `/images/:id` y se añaden desde la galería de su dueño. El Resumen (`/`) muestra cuántos registros hay en cada colección y las cifras de las rutas.
+Las imágenes no tienen slug ni página de crear: su detalle es `/images/:id` y se añaden desde la galería de su dueño. El Dashboard (`/`) muestra las cifras del catálogo y de las salidas (km, rutas activas, próximas salidas, plazas y precio medio), las salidas por mes y estado, las rutas por categoría y por dificultad, y las últimas modificadas. Las gráficas son componentes propios en SVG/CSS (`ui-stat-strip`, `ui-bar-list`, `ui-column-chart`), sin librerías, con su versión en texto y en tabla.
 
 ### Cómo viajan los datos
 
@@ -256,7 +256,7 @@ Todos los endpoints de la API están en el panel:
 |---|---|---|
 | `GET /health` | `ApiStatusService.check` | Indicador de conexión del sidebar |
 | `GET /api/docs` | Enlace | "Documentación API" en el sidebar |
-| `GET /api/routes` | `RoutesService.getAll` | Listado y Resumen |
+| `GET /api/routes` | `RoutesService.getAll` | Listado y Dashboard |
 | `GET /api/routes/actives` | `RoutesService.getActives` | Filtro "Activas" del listado |
 | `GET /api/routes/inactives` | `RoutesService.getInactives` | Filtro "Inactivas" del listado |
 | `GET /api/routes/deleted` | `RoutesService.getDeleted` | Papelera y su contador |
@@ -453,7 +453,8 @@ npx ng test --watch=false --browsers=ChromeHeadless
 
 - El detalle no lista lo que cuelga de un registro (las salidas de una experiencia, las rutas de una categoría): la API no filtra por relación. Está propuesto en `NOTES.md`.
 - El listado global de imágenes muestra el tipo de dueño y enlaza a él, pero no su nombre: la API solo devuelve `ownerType` y `ownerId`.
-- Los contadores del menú y del Resumen piden cada listado completo: la API no tiene un endpoint de totales.
+- Los contadores del menú y el Dashboard piden cada listado completo: la API no tiene un endpoint de totales.
+- El Dashboard no muestra tendencias, ocupación ni comparativas con meses anteriores: la API no guarda histórico ni reservas. Está propuesto en `NOTES.md`.
 - No hay borrado definitivo: la API no tiene borrado físico.
 - No hay modo oscuro: el panel solo tiene tema claro.
 

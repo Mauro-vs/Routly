@@ -22,7 +22,7 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        title: 'Resumen',
+        title: 'Dashboard',
         loadComponent: () =>
           import('./features/dashboard/pages/dashboard/dashboard.component').then(
             (m) => m.DashboardComponent,
