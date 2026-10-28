@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import express from "express";
+import { authorizeOwnership, authorizeRoles } from "../middlewares/authorize.js";
 import { errorHandler } from "../middlewares/errorHandler.js";
+import { canAccessUserResource } from "../utils/access.js";
 import { forbidden, unauthorized } from "../utils/errors.js";
 
 // Los 401 y 403 pasan por el errorHandler real: mismo formato que el resto de errores.
@@ -19,6 +21,20 @@ before(async () => {
   app.get("/forbidden", () => {
     throw forbidden();
   });
+
+  // authorizeRoles y authorizeOwnership sin base de datos: req.user llega en una cabecera
+  app.use((req, res, next) => {
+    const user = req.headers["x-test-user"];
+    if (user) req.user = JSON.parse(user);
+    next();
+  });
+  app.get("/hosts-only", authorizeRoles("host", "admin"), (req, res) => res.json({ ok: true }));
+  const USERS = { u1: { _id: "u1" } };
+  app.get(
+    "/users/:id",
+    authorizeOwnership((req) => USERS[req.params.id], canAccessUserResource, "User"),
+    (req, res) => res.json({ ok: true })
+  );
   app.use(errorHandler);
 
   server = await new Promise((resolve) => {
@@ -62,4 +78,21 @@ test("403: mensaje fijo y sin WWW-Authenticate", async () => {
     error: "Forbidden",
     message: "You do not have permission to access this resource",
   });
+});
+
+const as = (user) => ({ headers: { "x-test-user": JSON.stringify(user) } });
+
+test("authorizeRoles: sin req.user 401, otro rol 403, rol permitido pasa", async () => {
+  assert.equal((await fetch(`${base}/hosts-only`)).status, 401);
+  assert.equal((await fetch(`${base}/hosts-only`, as({ id: "u1", role: "rider" }))).status, 403);
+  assert.equal((await fetch(`${base}/hosts-only`, as({ id: "u1", role: "host" }))).status, 200);
+  assert.equal((await fetch(`${base}/hosts-only`, as({ id: "u1", role: "admin" }))).status, 200);
+});
+
+test("authorizeOwnership: el dueño y el admin pasan; otro, 403; si no existe, 404", async () => {
+  assert.equal((await fetch(`${base}/users/u1`)).status, 401);
+  assert.equal((await fetch(`${base}/users/u1`, as({ id: "u1", role: "rider" }))).status, 200);
+  assert.equal((await fetch(`${base}/users/u1`, as({ id: "u2", role: "rider" }))).status, 403);
+  assert.equal((await fetch(`${base}/users/u1`, as({ id: "u9", role: "admin" }))).status, 200);
+  assert.equal((await fetch(`${base}/users/u7`, as({ id: "u9", role: "admin" }))).status, 404);
 });

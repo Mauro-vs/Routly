@@ -18,6 +18,7 @@ import { locationService } from "./services/location.service.js";
 import { roleService } from "./services/role.service.js";
 import { routeService } from "./services/route.service.js";
 import { userService } from "./services/user.service.js";
+import { SYSTEM_ACTOR } from "./utils/access.js";
 
 // Contraseña de todos los usuarios del seed. Solo para desarrollo.
 const DEV_PASSWORD = "routly-dev-1234";
@@ -236,7 +237,7 @@ try {
         ownerId: String(created._id),
         url: photo(index === 0 ? created.slug : `${created.slug}-${index + 1}`, "1200/800"),
         alt: `${route.title}, foto ${index + 1}`,
-      });
+      }, SYSTEM_ACTOR);
     }
 
     if (state === "inactive") await routeService.setActive(created._id, false);
@@ -249,7 +250,7 @@ try {
       ownerId: String(user._id),
       url: photo(user.slug, "400/400"),
       alt: `Foto de perfil de ${user.name}`,
-    });
+    }, SYSTEM_ACTOR);
   }
   for (const host of Object.values(hosts)) {
     await imageService.create({
@@ -257,7 +258,7 @@ try {
       ownerId: String(host._id),
       url: photo(host.slug, "400/400"),
       alt: `Foto de ${host.name}`,
-    });
+    }, SYSTEM_ACTOR);
   }
 
   const experiences = {};
@@ -266,7 +267,7 @@ try {
       ...experience,
       hostId: String(hosts[host]._id),
       routeId: String(routes[route]._id),
-    });
+    }, SYSTEM_ACTOR);
   }
 
   for (const { experience, start, hours, ...departure } of DEPARTURES) {
@@ -275,7 +276,7 @@ try {
       experienceId: String(experiences[experience]._id),
       startAt: start,
       endAt: new Date(start.getTime() + hours * 60 * 60 * 1000),
-    });
+    }, SYSTEM_ACTOR);
   }
 
   for (const Model of MODELS) {

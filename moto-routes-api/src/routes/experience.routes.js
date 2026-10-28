@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { experienceController } from "../controllers/experience.controller.js";
+import { adminOnly, hostOrAdmin } from "../middlewares/authorize.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
 import { createExperienceSchema, updateExperienceSchema } from "../schemas/experience.schema.js";
@@ -10,25 +11,28 @@ const router = Router();
 router.get("/", experienceController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
 router.get("/actives", experienceController.listActives);
-router.get("/inactives", experienceController.listInactives);
-router.get("/deleted", experienceController.listDeleted);
+router.get("/inactives", adminOnly, experienceController.listInactives);
+router.get("/deleted", adminOnly, experienceController.listDeleted);
 router.get("/slug/:slug", validate({ params: slugParamSchema }), experienceController.getBySlug);
 router.get("/:id", validate({ params: idParamSchema }), experienceController.getById);
-router.post("/", validate({ body: createExperienceSchema }), experienceController.create);
+router.post("/", hostOrAdmin, validate({ body: createExperienceSchema }), experienceController.create);
 router.patch(
   "/:id",
+  hostOrAdmin,
   validate({ params: idParamSchema, body: updateExperienceSchema }),
   experienceController.update
 );
 router.patch(
   "/:id/active",
+  hostOrAdmin,
   validate({ params: idParamSchema, body: setActiveSchema }),
   experienceController.setActive
 );
 // Soft delete: no se borra el documento, se marca como eliminado
-router.patch("/:id/delete", validate({ params: idParamSchema }), experienceController.remove);
+router.patch("/:id/delete", hostOrAdmin, validate({ params: idParamSchema }), experienceController.remove);
 router.patch(
   "/:id/restore",
+  hostOrAdmin,
   validate({ params: idParamSchema, body: restoreSchema }),
   experienceController.restore
 );

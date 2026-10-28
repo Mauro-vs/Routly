@@ -3,7 +3,8 @@ import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
-import { conflict, fieldError, notFound } from "../utils/errors.js";
+import { canModifyExperience, canModifyHost, isAdminUser } from "../utils/access.js";
+import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { departureService } from "./departure.service.js";
 import { imageService } from "./image.service.js";
 import {
@@ -31,6 +32,18 @@ async function assertReferences(data, current = {}) {
   }
 }
 
+// ABAC: el admin, con todas; un anfitrión, solo con las de su perfil de anfitrión
+async function assertOwnHost(actor, hostId) {
+  if (isAdminUser(actor)) return;
+  if (!canModifyHost(actor, await hostRepository.findPlainById(hostId))) throw forbidden();
+}
+
+async function assertOwnExperience(actor, experience) {
+  if (isAdminUser(actor)) return;
+  const host = await hostRepository.findPlainById(experience.hostId);
+  if (!canModifyExperience(actor, { ...experience, host })) throw forbidden();
+}
+
 export const experienceService = {
   async list() {
     return experienceRepository.findAll();
@@ -54,18 +67,22 @@ export const experienceService = {
     return experience;
   },
 
-  async create(data) {
+  async create(data, actor) {
     await assertReferences(data);
+    await assertOwnHost(actor, data.hostId);
 
     const { _id } = await experienceRepository.create(data);
     return experienceService.getById(_id);
   },
 
-  async update(id, data) {
+  async update(id, data, actor) {
     assertHasChanges(data);
 
     const experience = await findCurrent(experienceRepository, id, "Experience");
+    await assertOwnExperience(actor, experience);
     await assertReferences(data, experience);
+    // Un anfitrión no puede pasar su experiencia a otro anfitrión
+    if (data.hostId !== undefined) await assertOwnHost(actor, data.hostId);
 
     // Si solo llega uno de los dos límites, se compara con el guardado
     const minParticipants = data.minParticipants ?? experience.minParticipants;
@@ -99,14 +116,15 @@ export const experienceService = {
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
-  async setActive(id, isActive) {
+  async setActive(id, isActive, actor) {
     const current = await findCurrent(experienceRepository, id, "Experience");
+    await assertOwnExperience(actor, current);
     if (current.isActive === isActive) return experienceService.getById(id);
-    return experienceService.update(id, { status: statusFromActive(isActive) });
+    return experienceService.update(id, { status: statusFromActive(isActive) }, actor);
   },
 
-  async remove(id) {
-    await findCurrent(experienceRepository, id, "Experience");
+  async remove(id, actor) {
+    await assertOwnExperience(actor, await findCurrent(experienceRepository, id, "Experience"));
     await assertNoDependents(
       departureRepository,
       { experienceId: id },
@@ -117,8 +135,9 @@ export const experienceService = {
     await imageService.removeByOwner("experience", id, experience.deletedAt);
   },
 
-  async restore(id, isActive) {
+  async restore(id, isActive, actor) {
     const deleted = await findRestorable(experienceRepository, id, "Experience");
+    await assertOwnExperience(actor, deleted);
 
     for (const { field, repository, resource } of REFERENCES) {
       await assertRestorable(repository, deleted[field], field, resource);

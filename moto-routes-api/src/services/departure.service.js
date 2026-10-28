@@ -1,7 +1,9 @@
 import { restoredStatus, statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
-import { conflict, fieldError, notFound } from "../utils/errors.js";
+import { hostRepository } from "../repositories/host.repository.js";
+import { canModifyDeparture, canModifyExperience, isAdminUser } from "../utils/access.js";
+import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { madridDateParts } from "../utils/dates.js";
 import { buildSku } from "../utils/sku.js";
 import { buildSlug } from "../utils/slugify.js";
@@ -66,6 +68,22 @@ function assertFuture(startAt) {
   }
 }
 
+// ABAC: el admin, con todas; un anfitrión, solo con las salidas de sus experiencias
+async function withHost(experience) {
+  return experience && { ...experience, host: await hostRepository.findPlainById(experience.hostId) };
+}
+
+async function assertOwnExperience(actor, experience) {
+  if (isAdminUser(actor)) return;
+  if (!canModifyExperience(actor, await withHost(experience))) throw forbidden();
+}
+
+async function assertOwnDeparture(actor, departure) {
+  if (isAdminUser(actor)) return;
+  const experience = await withHost(await experienceRepository.findPlainById(departure.experienceId));
+  if (!canModifyDeparture(actor, { ...departure, experience })) throw forbidden();
+}
+
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
 
 export const departureService = {
@@ -98,13 +116,14 @@ export const departureService = {
     return departure;
   },
 
-  async create(data) {
+  async create(data, actor) {
     const experience = await assertReference(
       experienceRepository,
       data.experienceId,
       "experienceId",
       "experience"
     );
+    await assertOwnExperience(actor, experience);
 
     assertFuture(data.startAt);
     assertCapacity(data.capacity, experience);
@@ -128,10 +147,11 @@ export const departureService = {
   },
 
   // experienceId no llega: no se puede cambiar. El SKU tampoco cambia nunca.
-  async update(id, data) {
+  async update(id, data, actor) {
     assertHasChanges(data);
 
     const departure = await findCurrent(departureRepository, id, "Departure");
+    await assertOwnDeparture(actor, departure);
     const experience = await experienceRepository.findPlainById(departure.experienceId);
     // No debería pasar (una experiencia con salidas no se puede eliminar), pero sin ella
     // no se puede calcular el slug ni comprobar las plazas
@@ -174,19 +194,21 @@ export const departureService = {
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
-  async setActive(id, isActive) {
+  async setActive(id, isActive, actor) {
     const current = await findCurrent(departureRepository, id, "Departure");
+    await assertOwnDeparture(actor, current);
     if (current.isActive === isActive) return departureService.getById(id);
-    return departureService.update(id, { status: statusFromActive(isActive) });
+    return departureService.update(id, { status: statusFromActive(isActive) }, actor);
   },
 
-  async remove(id) {
-    await findCurrent(departureRepository, id, "Departure");
+  async remove(id, actor) {
+    await assertOwnDeparture(actor, await findCurrent(departureRepository, id, "Departure"));
     ensureWritten(await departureRepository.softDeleteById(id), "Departure");
   },
 
-  async restore(id, isActive) {
+  async restore(id, isActive, actor) {
     const deleted = await findRestorable(departureRepository, id, "Departure");
+    await assertOwnDeparture(actor, deleted);
 
     await assertRestorable(experienceRepository, deleted.experienceId, "experienceId", "experience");
 

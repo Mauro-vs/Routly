@@ -10,8 +10,11 @@ const ALGORITHM = "HS256";
  * Firma el token de un usuario. La caducidad es la exp estándar (JWT_EXPIRES_IN).
  * Payload: sub (id), email, role (su name) y tv (tokenVersion: si cambia en la base de
  * datos, los tokens anteriores dejan de servir).
+ *
+ * @param role el name del rol ("admin", "host", "rider"), no el documento
  */
 export function createToken({ _id, email, role, tokenVersion = 0 }) {
+  if (typeof role !== "string") throw new Error("createToken needs the role name");
   const { secret, expiresIn } = loadAuthConfig();
   return jwt.sign({ sub: String(_id), email, role, tv: tokenVersion }, secret, {
     algorithm: ALGORITHM,

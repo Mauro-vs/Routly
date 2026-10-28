@@ -15,7 +15,9 @@ export function loadAuthConfig() {
   if (config) return config;
 
   const secret = process.env.JWT_SECRET;
-  const expiresIn = process.env.JWT_EXPIRES_IN || DEFAULT_EXPIRES_IN;
+  const rawExpiresIn = process.env.JWT_EXPIRES_IN || DEFAULT_EXPIRES_IN;
+  // jsonwebtoken lee "3600" (texto sin unidad) como milisegundos: sin unidad son segundos
+  const expiresIn = /^\d+$/.test(rawExpiresIn) ? Number(rawExpiresIn) : rawExpiresIn;
 
   if (!secret) {
     throw new Error("JWT_SECRET is not defined in environment variables (see .env.example)");

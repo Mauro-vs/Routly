@@ -1,9 +1,11 @@
+import { ROLES } from "../models/role.model.js";
 import { restoredStatus, statusFromActive } from "../models/status.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
-import { fieldError, notFound } from "../utils/errors.js";
+import { canModifyHost } from "../utils/access.js";
+import { fieldError, forbidden, notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
@@ -17,7 +19,7 @@ import {
   findRestorable,
 } from "./references.js";
 
-const HOST_ROLE = "host";
+const HOST_ROLE = ROLES.HOST;
 
 export const hostService = {
   async list() {
@@ -59,20 +61,22 @@ export const hostService = {
     return hostService.getById(_id);
   },
 
-  // userId no llega: no se puede cambiar después de crear
-  async update(id, data) {
+  // userId no llega: no se puede cambiar después de crear. ABAC: el admin, o el propio
+  // anfitrión (crear, activar y eliminar son solo del admin: lo dice la ruta)
+  async update(id, data, actor) {
     assertHasChanges(data);
 
-    await findCurrent(hostRepository, id, "Host");
+    const host = await findCurrent(hostRepository, id, "Host");
+    if (!canModifyHost(actor, host)) throw forbidden();
     ensureWritten(await hostRepository.updateById(id, data), "Host");
     return hostService.getById(id);
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt
-  async setActive(id, isActive) {
+  async setActive(id, isActive, actor) {
     const current = await findCurrent(hostRepository, id, "Host");
     if (current.isActive === isActive) return hostService.getById(id);
-    return hostService.update(id, { status: statusFromActive(isActive) });
+    return hostService.update(id, { status: statusFromActive(isActive) }, actor);
   },
 
   async remove(id) {

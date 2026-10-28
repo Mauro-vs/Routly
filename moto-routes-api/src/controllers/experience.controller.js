@@ -54,7 +54,7 @@ export const experienceController = {
 
   async create(req, res, next) {
     try {
-      const experience = await experienceService.create(req.body);
+      const experience = await experienceService.create(req.body, req.user);
       res.status(201).json(experience);
     } catch (error) {
       next(error);
@@ -63,7 +63,7 @@ export const experienceController = {
 
   async update(req, res, next) {
     try {
-      res.json(await experienceService.update(req.params.id, req.body));
+      res.json(await experienceService.update(req.params.id, req.body, req.user));
     } catch (error) {
       next(error);
     }
@@ -71,7 +71,7 @@ export const experienceController = {
 
   async setActive(req, res, next) {
     try {
-      res.json(await experienceService.setActive(req.params.id, req.body.isActive));
+      res.json(await experienceService.setActive(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }
@@ -79,7 +79,7 @@ export const experienceController = {
 
   async remove(req, res, next) {
     try {
-      await experienceService.remove(req.params.id);
+      await experienceService.remove(req.params.id, req.user);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -88,7 +88,7 @@ export const experienceController = {
 
   async restore(req, res, next) {
     try {
-      res.json(await experienceService.restore(req.params.id, req.body.isActive));
+      res.json(await experienceService.restore(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }

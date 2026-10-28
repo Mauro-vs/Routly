@@ -64,7 +64,17 @@ NODE_ENV=development
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/moto_routes
 CORS_ORIGIN=http://localhost:4200
+JWT_SECRET=<secreto largo y aleatorio>
+JWT_EXPIRES_IN=7d
 ```
+
+`JWT_SECRET` es obligatorio: sin él el servidor no arranca. Firma los tokens (HS256) y en producción tiene que tener al menos 32 caracteres. Para generar uno:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+`JWT_EXPIRES_IN` es la caducidad de los tokens: un texto como `1h` o `7d`, o un número de segundos. Si no se define, `1h`. En producción se recomienda `1h`.
 
 `CORS_ORIGIN` solo se usa con `NODE_ENV=production`: es la lista de orígenes (separados por comas) que pueden llamar a la API. En desarrollo se acepta cualquier origen; en producción, si no se define, no se acepta ninguno.
 

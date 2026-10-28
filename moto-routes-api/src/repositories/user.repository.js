@@ -22,6 +22,12 @@ export const userRepository = {
     return User.findOne({ _id: id }).lean();
   },
 
+  // Para authenticate: el usuario del token, con su tokenVersion y el name de su rol.
+  // No devuelve los eliminados (plugin softDelete)
+  findAuthById(id) {
+    return User.findOne({ _id: id }).select("+tokenVersion").populate("role", "name").lean();
+  },
+
   findBySlug(slug) {
     return withRole(User.findOne({ slug })).lean();
   },
@@ -55,6 +61,12 @@ export const userRepository = {
 
   softDeleteById(id) {
     return User.softDeleteById(id).lean();
+  },
+
+  // Sube tokenVersion: todos los tokens ya emitidos dejan de servir. También en la
+  // papelera, para que restaurar no devuelva la vida a los tokens de antes
+  revokeTokens(id) {
+    return User.updateOne({ _id: id }, { $inc: { tokenVersion: 1 } }).setOptions({ withDeleted: true });
   },
 
   restoreById(id, data) {

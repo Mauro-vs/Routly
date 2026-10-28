@@ -10,6 +10,16 @@ import locationRoutes from "../routes/location.routes.js";
 import roleRoutes from "../routes/role.routes.js";
 import routeRoutes from "../routes/route.routes.js";
 import userRoutes from "../routes/user.routes.js";
+import { User } from "../models/user.model.js";
+import { roleService } from "../services/role.service.js";
+import { userService } from "../services/user.service.js";
+import { createToken } from "../utils/jwt.js";
+
+// Los tests firman con su propio secreto si no hay uno definido
+process.env.JWT_SECRET ??= "secreto-de-los-tests-con-mas-de-32-caracteres";
+
+export const ADMIN_EMAIL = "admin@test.dev";
+export const TEST_PASSWORD = "clave1234";
 
 /**
  * Entorno de los tests de integración: la API real (routers, services, modelos y
@@ -19,10 +29,15 @@ import userRoutes from "../routes/user.routes.js";
  * El servidor se toma de MONGODB_TEST_URI (por defecto mongodb://localhost:27017):
  * hace falta tener MongoDB en marcha.
  *
+ * Crea un admin (ADMIN_EMAIL) y las peticiones de api van con su token. Para probar con
+ * otro usuario, api.loginAs(email); sin sesión, api.anonymous.
+ *
  * Uso, en un archivo *.test.js:
  *   const api = await startApi("slug");
  *   after(() => api.stop());
  *   const { status, body } = await api.post("/categories", { name: "Montaña" });
+ *   const rider = await api.loginAs("marta@example.com");
+ *   assert.equal((await rider.post("/categories", { name: "X" })).status, 403);
  */
 export async function startApi(name) {
   const uri = process.env.MONGODB_TEST_URI ?? "mongodb://localhost:27017";
@@ -61,19 +76,54 @@ export async function startApi(name) {
   });
   const base = `http://localhost:${server.address().port}/api`;
 
-  const request = async (method, path, body) => {
-    const response = await fetch(base + path, {
-      method,
-      headers: { "content-type": "application/json" },
-      body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
-    });
-    return { status: response.status, body: response.status === 204 ? null : await response.json() };
+  // Un cliente con el token que se le pase (o sin ninguno)
+  const client = (token) => {
+    const request = async (method, path, body) => {
+      const headers = { "content-type": "application/json" };
+      if (token) headers.authorization = `Bearer ${token}`;
+      const response = await fetch(base + path, {
+        method,
+        headers,
+        body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
+      });
+      return {
+        status: response.status,
+        headers: response.headers,
+        body: response.status === 204 ? null : await response.json(),
+      };
+    };
+    return {
+      token,
+      get: (path) => request("GET", path),
+      post: (path, body) => request("POST", path, body),
+      patch: (path, body) => request("PATCH", path, body),
+    };
   };
 
+  // Un token como el del login, firmado con los datos que hay ahora en la base de datos
+  async function loginAs(email) {
+    const user = await User.findOne({ email }).select("+tokenVersion").populate("role", "name").lean();
+    if (!user) throw new Error(`No user with email ${email}`);
+    return client(createToken({ ...user, role: user.role.name }));
+  }
+
+  // El admin se crea con los services: sin admin no se puede crear nada por la API
+  const adminRole = await roleService.create({ name: "admin", label: "Administrador", isSystem: true });
+  await userService.create({
+    name: "Admin Tests",
+    email: ADMIN_EMAIL,
+    password: TEST_PASSWORD,
+    roleId: String(adminRole._id),
+  });
+  const admin = await loginAs(ADMIN_EMAIL);
+
   return {
-    get: (path) => request("GET", path),
-    post: (path, body) => request("POST", path, body),
-    patch: (path, body) => request("PATCH", path, body),
+    ...admin,
+    base,
+    adminRole,
+    anonymous: client(null),
+    as: client,
+    loginAs,
     async stop() {
       await new Promise((resolve) => server.close(resolve));
       await mongoose.connection.dropDatabase();

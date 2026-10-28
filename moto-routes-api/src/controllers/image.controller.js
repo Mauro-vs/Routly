@@ -46,7 +46,7 @@ export const imageController = {
 
   async create(req, res, next) {
     try {
-      const image = await imageService.create(req.body);
+      const image = await imageService.create(req.body, req.user);
       res.status(201).json(image);
     } catch (error) {
       next(error);
@@ -55,7 +55,7 @@ export const imageController = {
 
   async update(req, res, next) {
     try {
-      res.json(await imageService.update(req.params.id, req.body));
+      res.json(await imageService.update(req.params.id, req.body, req.user));
     } catch (error) {
       next(error);
     }
@@ -63,7 +63,7 @@ export const imageController = {
 
   async setActive(req, res, next) {
     try {
-      res.json(await imageService.setActive(req.params.id, req.body.isActive));
+      res.json(await imageService.setActive(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }
@@ -71,7 +71,7 @@ export const imageController = {
 
   async remove(req, res, next) {
     try {
-      await imageService.remove(req.params.id);
+      await imageService.remove(req.params.id, req.user);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -80,7 +80,7 @@ export const imageController = {
 
   async restore(req, res, next) {
     try {
-      res.json(await imageService.restore(req.params.id, req.body.isActive));
+      res.json(await imageService.restore(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }

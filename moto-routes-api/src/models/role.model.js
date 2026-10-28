@@ -15,6 +15,9 @@ export const ROLE_LIMITS = Object.freeze({
 // La clave del rol: minúsculas, números y guiones ("admin", "guia-local")
 export const ROLE_NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+// Los roles base (isSystem) que usa el código: autorización, rol por defecto, anfitriones
+export const ROLES = Object.freeze({ ADMIN: "admin", HOST: "host", RIDER: "rider" });
+
 export const ROLE_COLLATION = Object.freeze({ locale: "es", strength: 1 });
 
 // name es la clave que usa el código (admin, host, rider); label, el nombre visible

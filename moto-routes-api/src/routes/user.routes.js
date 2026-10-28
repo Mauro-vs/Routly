@@ -1,11 +1,15 @@
 import { Router } from "express";
 import { userController } from "../controllers/user.controller.js";
+import { adminOnly } from "../middlewares/authorize.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
 import { createUserSchema, updateUserSchema } from "../schemas/user.schema.js";
 
 // La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
+
+// Todo /api/users, también las lecturas, es solo del admin
+router.use(adminOnly);
 
 router.get("/", userController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id

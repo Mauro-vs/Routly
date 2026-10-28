@@ -63,7 +63,7 @@ export const hostController = {
 
   async update(req, res, next) {
     try {
-      res.json(await hostService.update(req.params.id, req.body));
+      res.json(await hostService.update(req.params.id, req.body, req.user));
     } catch (error) {
       next(error);
     }
@@ -71,7 +71,7 @@ export const hostController = {
 
   async setActive(req, res, next) {
     try {
-      res.json(await hostService.setActive(req.params.id, req.body.isActive));
+      res.json(await hostService.setActive(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }

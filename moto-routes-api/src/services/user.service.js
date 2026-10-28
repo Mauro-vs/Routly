@@ -1,4 +1,5 @@
-import { restoredStatus, statusFromActive } from "../models/status.js";
+import { ROLES } from "../models/role.model.js";
+import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
@@ -17,8 +18,8 @@ import {
   findRestorable,
 } from "./references.js";
 
-const DEFAULT_ROLE = "rider";
-const HOST_ROLE = "host";
+const DEFAULT_ROLE = ROLES.RIDER;
+const HOST_ROLE = ROLES.HOST;
 
 // La contraseña nunca se guarda ni se devuelve: solo su hash, que el modelo oculta
 async function withPasswordHash({ password, ...data }) {
@@ -90,6 +91,10 @@ export const userService = {
     }
 
     ensureWritten(await userRepository.updateById(id, await withPasswordHash(data)), "User");
+    // Otra contraseña o desactivado: las sesiones abiertas se cierran
+    if (data.password !== undefined || data.status === STATUS.INACTIVE) {
+      await userRepository.revokeTokens(id);
+    }
     return userService.getById(id);
   },
 
@@ -109,6 +114,7 @@ export const userService = {
     );
 
     const user = ensureWritten(await userRepository.softDeleteById(id), "User");
+    await userRepository.revokeTokens(id);
     await imageService.removeByOwner("user", id, user.deletedAt);
   },
 

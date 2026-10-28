@@ -62,7 +62,7 @@ export const departureController = {
 
   async create(req, res, next) {
     try {
-      const departure = await departureService.create(req.body);
+      const departure = await departureService.create(req.body, req.user);
       res.status(201).json(departure);
     } catch (error) {
       next(error);
@@ -71,7 +71,7 @@ export const departureController = {
 
   async update(req, res, next) {
     try {
-      res.json(await departureService.update(req.params.id, req.body));
+      res.json(await departureService.update(req.params.id, req.body, req.user));
     } catch (error) {
       next(error);
     }
@@ -79,7 +79,7 @@ export const departureController = {
 
   async setActive(req, res, next) {
     try {
-      res.json(await departureService.setActive(req.params.id, req.body.isActive));
+      res.json(await departureService.setActive(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }
@@ -87,7 +87,7 @@ export const departureController = {
 
   async remove(req, res, next) {
     try {
-      await departureService.remove(req.params.id);
+      await departureService.remove(req.params.id, req.user);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -96,7 +96,7 @@ export const departureController = {
 
   async restore(req, res, next) {
     try {
-      res.json(await departureService.restore(req.params.id, req.body.isActive));
+      res.json(await departureService.restore(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }
