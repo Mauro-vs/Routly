@@ -39,6 +39,11 @@ export const hostRepository = {
     return Host.findOne({ userId }).select("deletedAt").setOptions({ withDeleted: true }).lean();
   },
 
+  // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
+  findIds(filter) {
+    return Host.distinct("_id", filter);
+  },
+
   create(data) {
     return Host.create(data);
   },

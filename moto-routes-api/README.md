@@ -20,7 +20,7 @@ Forma parte del monorepo de Routly. La visión general del proyecto está en el 
 - [Instalación](#instalación) · [Configuración](#configuración) · [Ejecución](#ejecución) · [Seed](#seed)
 - [Arquitectura](#arquitectura) · [Estructura del proyecto](#estructura-del-proyecto)
 - [Colecciones y relaciones](#colecciones-y-relaciones) · [Endpoints](#endpoints)
-- [Activo / inactivo frente a eliminado](#activo--inactivo-frente-a-eliminado) · [Soft delete y papelera](#soft-delete-y-papelera)
+- [Activo / inactivo frente a eliminado](#activo--inactivo-frente-a-eliminado) · [Soft delete y papelera](#soft-delete-y-papelera) · [Integridad referencial](#integridad-referencial)
 - [Imágenes](#imágenes) · [SKU de las salidas](#sku-de-las-salidas)
 - [Validación (Zod)](#validación-zod) · [Manejo de errores](#manejo-de-errores)
 - [Autenticación y autorización](#autenticación-y-autorización) · [Seguridad (Helmet)](#seguridad-helmet) · [Logs (Morgan)](#logs-morgan)
@@ -96,6 +96,9 @@ npm run seed
 # Crear el perfil de los usuarios que no lo tengan (bases de datos de antes de los perfiles)
 npm run migrate:profiles
 
+# Comprobar la integridad referencial (y repararla con -- --fix)
+npm run check:integrity
+
 # Tests
 npm test
 ```
@@ -104,7 +107,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 104 tests con `node:test`:
+`npm test` ejecuta 120 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -115,6 +118,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/auth-errors.test.js` | Formato exacto de los 401 y 403, `WWW-Authenticate`, `authorizeRoles`, `authorizeOwnership` y el límite de intentos (429) |
 | `src/testing/auth.test.js` | `authenticate` (sin token, otro formato, caducado, desactivado, eliminado, `tokenVersion`, rol leído al momento), cada fila de la matriz y ABAC con dos anfitriones |
 | `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout` (lista negra), `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
+| `src/testing/integrity.test.js` | Integridad referencial: carreras sin transacciones (0 huérfanos), cascadas que fallan, galería de un dueño eliminado, restaurar un host sin rol, rol inactivo, visibilidad pública y `check:integrity` |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
@@ -277,9 +281,11 @@ src/
 │   └── common.schema.js           Piezas comunes (:id, :slug, cannotChange, clearable...)
 ├── repositories/<recurso>.repository.js
 ├── services/
+│   ├── visibility.js              Qué se ve en público (lo que cuelga de un padre inactivo, no)
+│   ├── integrity.service.js       La comprobación de npm run check:integrity
 │   ├── <recurso>.service.js       También auth.service.js (login, registro, sesión) y
 │   │                              profile.service.js (solo lo usa user.service.js)
-│   └── references.js              Comprobaciones entre colecciones
+│   └── references.js              Comprobaciones entre colecciones, doble comprobación y cascadas
 ├── controllers/<recurso>.controller.js   Más auth y profile
 ├── routes/<recurso>.routes.js           Más auth (/api/auth) y profile (/api/profile)
 ├── middlewares/
@@ -305,6 +311,7 @@ src/
 │   └── *.test.js                  Tests de integración
 ├── seed.js                        Datos de ejemplo
 ├── migrate-profiles.js            Perfil vacío para los usuarios que no lo tengan
+├── check-integrity.js             Comprueba (y repara) la integridad referencial
 └── server.js                      Punto de entrada
 ```
 
@@ -352,7 +359,7 @@ El detalle de cada campo (tipos, límites, valores por defecto, índices y regla
 MongoDB no tiene claves foráneas, así que las relaciones las vigilan los services:
 
 1. **Referencias al guardar.** Al crear, o al editar una referencia, el documento al que apunta tiene que existir, no estar eliminado y estar activo. Si no, 400 con `details` en ese campo, por ejemplo `categoryId must reference an active category`. Excepción: el dueño de una imagen puede estar inactivo.
-2. **Desactivar no se propaga.** Una categoría inactiva no desactiva sus rutas; solo impide usarla en rutas nuevas.
+2. **Desactivar no escribe en cascada.** Una categoría inactiva no desactiva sus rutas: impide usarla en rutas nuevas y oculta sus rutas en los `GET` públicos (ver [Integridad referencial](#integridad-referencial)).
 3. **No se elimina nada con dependientes no eliminados** (409):
 
 | Para eliminar... | No puede tener... | Mensaje |
@@ -365,7 +372,60 @@ MongoDB no tiene claves foráneas, así que las relaciones las vigilan los servi
 | una ruta | experiencias | `Cannot delete a route that has experiences` |
 | una experiencia | salidas | `Cannot delete an experience that has departures` |
 
-4. **Restaurar comprueba las referencias.** Si una ruta se restaura y su categoría está en la papelera: 409 `Cannot restore: categoryId references a deleted category`.
+4. **Restaurar comprueba las referencias.** Si una ruta se restaura y su categoría está en la papelera: 409 `Cannot restore: categoryId references a deleted category`. Un anfitrión, además, solo se restaura si su usuario sigue teniendo el rol `host`: 409 `Cannot restore: userId references a user without the host role`.
+
+### Integridad referencial
+
+MongoDB no tiene claves foráneas ni borrado en cascada: un `ref` de Mongoose solo sirve para el `populate`, y la base de datos acepta un `ObjectId` que no apunta a nada. La integridad la mantienen los services, con las piezas de `services/references.js`, y se puede verificar desde fuera con `npm run check:integrity`.
+
+| Relación | Al crear o editar | Al eliminar el padre | Al restaurar el hijo |
+|---|---|---|---|
+| `users.roleId` → `roles` | rol activo | 409 si tiene usuarios | el rol tiene que existir |
+| `profiles.userId` → `users` (1:1) | nace con el usuario | **cascada** | **cascada** |
+| `hosts.userId` → `users` (1:1) | usuario activo con rol `host` | 409 si tiene host | el usuario tiene que existir **y tener el rol `host`** |
+| `routes.categoryId` → `categories` | activa | 409 si tiene rutas | tiene que existir |
+| `routes.startLocationId` / `endLocationId` → `locations` | activas | 409 si las usan rutas | tienen que existir |
+| `experiences.hostId` → `hosts` | activo y propio (ABAC) | 409 si tiene experiencias | tiene que existir |
+| `experiences.routeId` → `routes` | activa | 409 si tiene experiencias | tiene que existir |
+| `departures.experienceId` → `experiences` | activa; no se puede cambiar | 409 si tiene salidas | tiene que existir |
+| `images.ownerType` + `ownerId` → 6 colecciones | el dueño existe; no se puede cambiar | **cascada** | el dueño tiene que existir |
+| `revokedtokens.userId` → `users` | la crea el logout | se borra sola (TTL) | — |
+
+Todos los campos de referencia tienen índice.
+
+**1. Sin transacciones: doble comprobación.** El MongoDB local es standalone y no tiene transacciones, así que entre comprobar una referencia y escribir puede colarse otra petición: crear una ruta mientras se elimina su categoría. Cada lado escribe y después **vuelve a comprobar**:
+- `confirmReferences`: después de crear, editar o restaurar, las referencias recién escritas siguen vivas. Si no, deshace la escritura (borra el alta, devuelve la referencia anterior o devuelve el documento a la papelera) y responde el mismo 400 de siempre.
+- `softDeleteWithCascades`: después de eliminar, el padre sigue sin dependientes vivos. Si se ha creado uno entretanto, se restaura todo y responde 409.
+
+En el peor caso fallan las dos peticiones, pero nunca queda una referencia huérfana. Lo prueba `integrity.test.js` con 30 carreras seguidas.
+
+**2. Cascadas que no se quedan a medias.** `softDeleteWithCascades` aplica primero las cascadas (imágenes y perfil) y después marca al dueño, todos con el mismo `deletedAt`. Si algo falla, deshace las cascadas: el dueño sigue vivo con todo lo suyo. Al restaurar, solo vuelven las imágenes que se eliminaron con él (mismo `deletedAt`), no las que se habían eliminado antes a mano.
+
+**3. Lo que cuelga de un padre inactivo no se ve en público.** Desactivar no escribe nada en cascada, pero los `GET` públicos (sin token, o con un token que no es de admin) ocultan lo que depende de algo inactivo. El admin lo sigue viendo todo. Al reactivar el padre, todo vuelve tal cual. La regla está en `services/visibility.js`:
+
+| Se oculta… | si está inactivo… |
+|---|---|
+| una ruta | su categoría o alguna de sus ubicaciones |
+| un anfitrión | su usuario |
+| una experiencia | su anfitrión (o el usuario de este), su ruta o los padres de esta |
+| una salida | su experiencia, o cualquiera de los de arriba |
+
+En un listado no aparece; por id, slug o SKU responde 404. Las escrituras no cambian: un host sigue pudiendo editar su experiencia aunque no se vea en público.
+
+**4. La galería de un dueño eliminado** (`GET /api/images?ownerType&ownerId`) responde 404 (`Category not found`). La de uno inactivo sí se ve.
+
+**5. Comprobación desde fuera: `npm run check:integrity`.** Revisa toda la base de datos por si algo se escribió sin pasar por los services (un script, una edición a mano, un proceso cortado):
+- documentos activos que apuntan a un padre inexistente o eliminado;
+- imágenes vivas de un dueño eliminado;
+- usuarios sin perfil, perfiles sin usuario o con un `deletedAt` distinto del de su usuario;
+- anfitriones cuyo usuario ya no tiene el rol `host`.
+
+Sale con código 1 si encuentra algo, así que sirve en un CI. Con `-- --fix` repara lo que se puede reparar solo, **sin borrar nada físicamente**: desactiva al hijo, manda la imagen a la papelera con su dueño o alinea el perfil con su usuario. El anfitrión sin rol `host` lo tiene que decidir una persona: solo se informa.
+
+```bash
+npm run check:integrity
+npm run check:integrity -- --fix
+```
 
 Reglas propias de cada colección:
 
@@ -431,7 +491,7 @@ Son dos cosas distintas y se gestionan con operaciones independientes, en todas 
 | `isActive` | Si el documento está activo o inactivo | `PATCH /:id/active` con `{ "isActive": true }` o `{ "isActive": false }` |
 | `deletedAt` | Si está eliminado (soft delete) | `PATCH /:id/delete` |
 
-- Un documento inactivo sigue apareciendo en el listado, en `/inactives` y por ID o slug, y se puede editar. Lo que no se puede es usarlo en documentos nuevos.
+- Un documento inactivo sigue apareciendo en el listado, en `/inactives` y por ID o slug, y se puede editar. Lo que no se puede es usarlo en documentos nuevos. Lo que **cuelga** de él deja de verse en público (ver [Integridad referencial](#integridad-referencial)).
 - Desactivar nunca elimina: `deletedAt` no se toca.
 - Eliminar no cambia el estado: el documento conserva `status` e `isActive`, y lo que lo marca como eliminado es `deletedAt`. Así se puede restaurar como estaba.
 - Un documento eliminado no se puede activar con `/active` (404). La única forma de recuperarlo es restaurarlo.

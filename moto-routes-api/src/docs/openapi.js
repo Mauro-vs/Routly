@@ -124,6 +124,8 @@ const RESOURCES = [
   {
     path: "hosts",
     tag: "Hosts",
+    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
+    hiddenWhen: "su usuario",
     access: { edit: "owner", owner: "el propio anfitrión (su perfil de anfitrión)" },
     schema: "Host",
     singular: "anfitrión",
@@ -143,6 +145,7 @@ const RESOURCES = [
     conflicts: {
       create: "El usuario ya tiene un perfil de anfitrión",
       remove: "El anfitrión tiene experiencias",
+      restore: "No está eliminado, su usuario está eliminado o ya no tiene el rol host",
     },
   },
   {
@@ -195,6 +198,8 @@ const RESOURCES = [
   {
     path: "routes",
     tag: "Routes",
+    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
+    hiddenWhen: "su categoría o alguna de sus ubicaciones",
     schema: "Route",
     singular: "ruta",
     plural: "rutas",
@@ -225,6 +230,8 @@ const RESOURCES = [
   {
     path: "experiences",
     tag: "Experiences",
+    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
+    hiddenWhen: "su anfitrión, su ruta o sus padres",
     access: { write: "owner", owner: "el anfitrión de la experiencia: hostId tiene que ser su perfil de anfitrión" },
     schema: "Experience",
     singular: "experiencia",
@@ -256,6 +263,8 @@ const RESOURCES = [
   {
     path: "departures",
     tag: "Departures",
+    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
+    hiddenWhen: "su experiencia o lo que hay por encima",
     access: { write: "owner", owner: "el anfitrión de la experiencia de la salida" },
     schema: "Departure",
     singular: "salida",
@@ -282,7 +291,8 @@ const RESOURCES = [
       "/api/departures/sku/{sku}": {
         get: {
           summary: "Obtener salida por SKU",
-          description: "Se acepta en minúsculas. 404 si no existe o está en la papelera.",
+          description:
+            "Se acepta en minúsculas. 404 si no existe, está en la papelera o, sin ser admin, cuelga de algo inactivo.",
           tags: ["Departures"],
           parameters: [
             {
@@ -424,7 +434,12 @@ function crudPaths(resource) {
   // Por defecto: leer, público; escribir, solo admin. Inactivos y papelera, siempre admin.
   const { read = "public", write = "admin", edit = write, owner } = resource.access ?? {};
   const as = (level) => (operation) => secured(operation, level, owner);
-  const asRead = as(read);
+  // En los GET públicos de las colecciones con padres, la regla de visibilidad (services/visibility.js)
+  const visibility = resource.hiddenWhen &&
+    `Sin token, o con uno que no es de admin, no salen los que tienen inactivo(s) ${resource.hiddenWhen}: no aparecen en el listado y por id o slug dan 404.`;
+  const withVisibility = (operation) =>
+    visibility ? { ...operation, description: [operation.description, visibility].filter(Boolean).join(" ") } : operation;
+  const asRead = (operation) => as(read)(withVisibility(operation));
   const asAdmin = as("admin");
   const asWrite = as(write);
   const asEdit = as(edit);
@@ -436,7 +451,13 @@ function crudPaths(resource) {
         description: "Sin los eliminados (soft delete).",
         tags,
         ...(resource.listParameters && { parameters: resource.listParameters }),
-        responses: { 200: list("Listado", ref), ...(resource.listParameters && { 400: error("Filtro incompleto o inválido") }) },
+        responses: {
+          200: list("Listado", ref),
+          ...(resource.listParameters && {
+            400: error("Filtro incompleto o inválido"),
+            404: error("El dueño del filtro no existe o está eliminado"),
+          }),
+        },
       }),
       post: asWrite({
         summary: `Crear ${singular}`,
@@ -533,7 +554,7 @@ function crudPaths(resource) {
           200: ok("Restaurado", ref),
           400: error("ID inválido"),
           404: error("No encontrado"),
-          409: error("No está eliminado, o una de sus referencias está eliminada"),
+          409: error(conflicts.restore ?? "No está eliminado, o una de sus referencias está eliminada"),
         },
       }),
     },

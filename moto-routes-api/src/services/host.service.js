@@ -7,6 +7,7 @@ import { userRepository } from "../repositories/user.repository.js";
 import { canModifyHost } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
+import { assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
   assertNotTaken,
@@ -24,26 +25,30 @@ const HOST_ROLE = ROLES.HOST;
 const userReference = (id) => ({ repository: userRepository, id, field: "userId", resource: "user" });
 
 export const hostService = {
-  async list() {
-    return imageService.attachCovers("host", await hostRepository.findAll());
+  // scope (services/visibility.js): en PUBLIC, sin los anfitriones de un usuario inactivo
+  async list(scope) {
+    return imageService.attachCovers("host", await hostRepository.findAll(await scopeFilter("host", scope)));
   },
 
-  async listByActive(isActive) {
-    return imageService.attachCovers("host", await hostRepository.findAll({ isActive }));
+  async listByActive(isActive, scope) {
+    const filter = { isActive, ...(await scopeFilter("host", scope)) };
+    return imageService.attachCovers("host", await hostRepository.findAll(filter));
   },
 
   async listDeleted() {
     return hostRepository.findDeleted();
   },
 
-  async getById(id) {
+  async getById(id, scope) {
     const host = await findExisting(hostRepository, id, "Host");
+    await assertVisible(hostRepository, "host", host, scope, "Host");
     return imageService.attachCover("host", host);
   },
 
-  async getBySlug(slug) {
+  async getBySlug(slug, scope) {
     const host = await hostRepository.findBySlug(slug);
     if (!host) throw notFound("Host");
+    await assertVisible(hostRepository, "host", host, scope, "Host");
     return imageService.attachCover("host", host);
   },
 

@@ -1,4 +1,5 @@
 import { departureService } from "../services/departure.service.js";
+import { scopeOf } from "../services/visibility.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { departureService } from "../services/departure.service.js";
 export const departureController = {
   async list(req, res, next) {
     try {
-      res.json(await departureService.list());
+      res.json(await departureService.list(scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -14,7 +15,7 @@ export const departureController = {
 
   async listActives(req, res, next) {
     try {
-      res.json(await departureService.listByActive(true));
+      res.json(await departureService.listByActive(true, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export const departureController = {
 
   async getById(req, res, next) {
     try {
-      res.json(await departureService.getById(req.params.id));
+      res.json(await departureService.getById(req.params.id, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -46,7 +47,7 @@ export const departureController = {
 
   async getBySlug(req, res, next) {
     try {
-      res.json(await departureService.getBySlug(req.params.slug));
+      res.json(await departureService.getBySlug(req.params.slug, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -54,7 +55,7 @@ export const departureController = {
 
   async getBySku(req, res, next) {
     try {
-      res.json(await departureService.getBySku(req.params.sku));
+      res.json(await departureService.getBySku(req.params.sku, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

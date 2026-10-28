@@ -1,4 +1,5 @@
 import { routeService } from "../services/route.service.js";
+import { scopeOf } from "../services/visibility.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { routeService } from "../services/route.service.js";
 export const routeController = {
   async list(req, res, next) {
     try {
-      res.json(await routeService.list());
+      res.json(await routeService.list(scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -14,7 +15,7 @@ export const routeController = {
 
   async listActives(req, res, next) {
     try {
-      res.json(await routeService.listByActive(true));
+      res.json(await routeService.listByActive(true, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export const routeController = {
 
   async getById(req, res, next) {
     try {
-      res.json(await routeService.getById(req.params.id));
+      res.json(await routeService.getById(req.params.id, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -46,7 +47,7 @@ export const routeController = {
 
   async getBySlug(req, res, next) {
     try {
-      res.json(await routeService.getBySlug(req.params.slug));
+      res.json(await routeService.getBySlug(req.params.slug, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

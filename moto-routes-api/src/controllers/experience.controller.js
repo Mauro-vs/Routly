@@ -1,4 +1,5 @@
 import { experienceService } from "../services/experience.service.js";
+import { scopeOf } from "../services/visibility.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { experienceService } from "../services/experience.service.js";
 export const experienceController = {
   async list(req, res, next) {
     try {
-      res.json(await experienceService.list());
+      res.json(await experienceService.list(scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -14,7 +15,7 @@ export const experienceController = {
 
   async listActives(req, res, next) {
     try {
-      res.json(await experienceService.listByActive(true));
+      res.json(await experienceService.listByActive(true, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export const experienceController = {
 
   async getById(req, res, next) {
     try {
-      res.json(await experienceService.getById(req.params.id));
+      res.json(await experienceService.getById(req.params.id, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -46,7 +47,7 @@ export const experienceController = {
 
   async getBySlug(req, res, next) {
     try {
-      res.json(await experienceService.getBySlug(req.params.slug));
+      res.json(await experienceService.getBySlug(req.params.slug, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

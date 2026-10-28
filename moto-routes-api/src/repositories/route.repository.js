@@ -41,6 +41,11 @@ export const routeRepository = {
     return Route.exists(filter);
   },
 
+  // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
+  findIds(filter) {
+    return Route.distinct("_id", filter);
+  },
+
   create(data) {
     return Route.create(data);
   },

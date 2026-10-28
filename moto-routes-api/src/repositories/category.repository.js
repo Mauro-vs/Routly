@@ -37,6 +37,11 @@ export const categoryRepository = {
       .lean();
   },
 
+  // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
+  findIds(filter) {
+    return Category.distinct("_id", filter);
+  },
+
   create(data) {
     return Category.create(data);
   },

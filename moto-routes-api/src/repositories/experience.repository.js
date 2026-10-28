@@ -38,6 +38,11 @@ export const experienceRepository = {
     return Experience.exists(filter);
   },
 
+  // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
+  findIds(filter) {
+    return Experience.distinct("_id", filter);
+  },
+
   create(data) {
     return Experience.create(data);
   },

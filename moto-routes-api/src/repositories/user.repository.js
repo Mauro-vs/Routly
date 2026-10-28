@@ -77,6 +77,11 @@ export const userRepository = {
     return User.findOne(filter).select("deletedAt").setOptions({ withDeleted: true }).lean();
   },
 
+  // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
+  findIds(filter) {
+    return User.distinct("_id", filter);
+  },
+
   create(data) {
     return User.create(data);
   },

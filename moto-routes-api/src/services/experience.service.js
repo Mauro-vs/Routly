@@ -7,6 +7,7 @@ import { canModifyExperience, canModifyHost, isAdminUser } from "../utils/access
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { departureService } from "./departure.service.js";
 import { imageService } from "./image.service.js";
+import { assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
   assertReference,
@@ -55,25 +56,29 @@ async function assertOwnExperience(actor, experience) {
 }
 
 export const experienceService = {
-  async list() {
-    return experienceRepository.findAll();
+  // scope (services/visibility.js): en PUBLIC, sin las de un anfitrión o una ruta ocultos
+  async list(scope) {
+    return experienceRepository.findAll(await scopeFilter("experience", scope));
   },
 
-  async listByActive(isActive) {
-    return experienceRepository.findAll({ isActive });
+  async listByActive(isActive, scope) {
+    return experienceRepository.findAll({ isActive, ...(await scopeFilter("experience", scope)) });
   },
 
   async listDeleted() {
     return experienceRepository.findDeleted();
   },
 
-  async getById(id) {
-    return findExisting(experienceRepository, id, "Experience");
+  async getById(id, scope) {
+    const experience = await findExisting(experienceRepository, id, "Experience");
+    await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
+    return experience;
   },
 
-  async getBySlug(slug) {
+  async getBySlug(slug, scope) {
     const experience = await experienceRepository.findBySlug(slug);
     if (!experience) throw notFound("Experience");
+    await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
     return experience;
   },
 

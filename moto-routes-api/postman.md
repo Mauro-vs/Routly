@@ -199,6 +199,8 @@ Las nueve colecciones tienen los mismos endpoints. Cambia `<colección>` por `ro
 
 Las lecturas del catálogo son públicas; `/inactives`, `/deleted` y las escrituras piden token (ver [Quién puede qué](#quién-puede-qué)).
 
+En público (sin token, o con uno que no es de admin) **no sale lo que cuelga de algo inactivo**: las rutas de una categoría o ubicación inactiva, los anfitriones de un usuario inactivo, las experiencias de un anfitrión o una ruta ocultos y sus salidas. En el listado no aparecen y por id, slug o SKU dan 404. Con el token del admin se ve todo.
+
 `slug`, `status` (al crear), `isActive`, `deletedAt`, `createdAt` y `updatedAt` los genera el servidor. Si se envían en el body, se ignoran.
 
 ### Activar o desactivar
@@ -386,6 +388,7 @@ Response `201`:
 | El usuario no tiene el rol `host` | 400 en `userId`: `userId must reference a user with the host role` |
 | El usuario ya tiene perfil | 409 `This user already has a host profile` |
 | Eliminar un anfitrión con experiencias | 409 `Cannot delete a host that has experiences` |
+| Restaurar un anfitrión cuyo usuario ya no tiene el rol `host` | 409 `Cannot restore: userId references a user without the host role` |
 
 ---
 
@@ -595,6 +598,7 @@ Response `201`:
 |---|---|
 | El dueño no existe o está eliminado | 400 en `ownerId`: `ownerId must reference an existing route` |
 | Filtro con solo `ownerType` o solo `ownerId` | 400: `ownerType and ownerId must be sent together` |
+| Galería de un dueño que no existe o está eliminado | 404: `Category not found` (o el dueño que sea) |
 | Marcar como principal una imagen inactiva | 409 `Inactive images cannot be the cover` |
 
 Al eliminar el dueño, sus imágenes van a la papelera con él, y vuelven al restaurarlo.

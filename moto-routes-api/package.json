@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "seed": "node src/seed.js",
     "migrate:profiles": "node src/migrate-profiles.js",
+    "check:integrity": "node src/check-integrity.js",
     "test": "node --test"
   },
   "keywords": [],

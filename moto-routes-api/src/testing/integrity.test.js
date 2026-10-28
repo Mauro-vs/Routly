@@ -203,3 +203,113 @@ test("con un rol desactivado no se inicia sesión y los tokens dejan de servir",
   await api.patch(`/roles/${role._id}/active`, { isActive: true });
   assert.equal((await guide.get("/auth/me")).status, 200);
 });
+
+// ---------- visibilidad pública: lo que cuelga de un padre inactivo ----------
+
+const ids = (response) => (response.body ?? []).map((item) => item._id);
+
+// Desactiva un padre, ejecuta la prueba y lo vuelve a activar pase lo que pase
+async function whileInactive(path, check) {
+  await api.patch(`${path}/active`, { isActive: false });
+  try {
+    await check();
+  } finally {
+    await api.patch(`${path}/active`, { isActive: true });
+  }
+}
+
+test("categoría inactiva: su ruta, sus experiencias y sus salidas desaparecen del público, no del admin", async () => {
+  await whileInactive(`/categories/${data.category._id}`, async () => {
+    assert.ok(!ids(await api.anonymous.get("/routes")).includes(data.route._id));
+    assert.equal((await api.anonymous.get(`/routes/${data.route._id}`)).status, 404);
+    assert.equal((await api.anonymous.get(`/routes/slug/${data.route.slug}`)).status, 404);
+    assert.ok(!ids(await api.anonymous.get("/experiences")).includes(data.experience._id));
+    assert.ok(!ids(await api.anonymous.get("/departures/actives")).includes(data.departure._id));
+    assert.equal((await api.anonymous.get(`/departures/sku/${data.departure.sku}`)).status, 404);
+
+    // El admin lo sigue viendo todo
+    assert.ok(ids(await api.get("/routes")).includes(data.route._id));
+    assert.equal((await api.get(`/departures/${data.departure._id}`)).status, 200);
+  });
+  // Al reactivar la categoría, todo vuelve tal cual
+  assert.equal((await api.anonymous.get(`/departures/${data.departure._id}`)).status, 200);
+});
+
+test("ubicación inactiva (origen o destino): oculta sus rutas", async () => {
+  await whileInactive(`/locations/${data.location._id}`, async () => {
+    assert.equal((await api.anonymous.get(`/routes/${data.route._id}`)).status, 404);
+    assert.equal((await api.anonymous.get(`/experiences/${data.experience._id}`)).status, 404);
+  });
+});
+
+test("usuario anfitrión desactivado: se ocultan su perfil de anfitrión, sus experiencias y sus salidas", async () => {
+  await whileInactive(`/users/${data.user._id}`, async () => {
+    assert.ok(!ids(await api.anonymous.get("/hosts")).includes(data.host._id));
+    assert.equal((await api.anonymous.get(`/hosts/${data.host._id}`)).status, 404);
+    assert.equal((await api.anonymous.get(`/experiences/${data.experience._id}`)).status, 404);
+    assert.equal((await api.anonymous.get(`/departures/${data.departure._id}`)).status, 404);
+    assert.ok(ids(await api.get("/hosts")).includes(data.host._id));
+  });
+  assert.equal((await api.anonymous.get(`/hosts/${data.host._id}`)).status, 200);
+});
+
+test("ruta o anfitrión inactivos: ocultan sus experiencias y sus salidas", async () => {
+  for (const path of [`/routes/${data.route._id}`, `/hosts/${data.host._id}`]) {
+    await whileInactive(path, async () => {
+      assert.equal((await api.anonymous.get(`/experiences/${data.experience._id}`)).status, 404, path);
+      assert.ok(!ids(await api.anonymous.get("/departures")).includes(data.departure._id), path);
+    });
+  }
+  await whileInactive(`/experiences/${data.experience._id}`, async () => {
+    assert.equal((await api.anonymous.get(`/departures/${data.departure._id}`)).status, 404);
+  });
+});
+
+test("un rider o un anfitrión ven lo mismo que un anónimo; un token que no sirve es un 401", async () => {
+  await api.post("/users", { name: "Rider Vis", email: "vis@example.com", password: TEST_PASSWORD, roleId: data.rider._id });
+  const rider = await api.loginAs("vis@example.com");
+  const host = await api.loginAs("ana@example.com");
+  await whileInactive(`/categories/${data.category._id}`, async () => {
+    assert.equal((await rider.get(`/routes/${data.route._id}`)).status, 404);
+    assert.equal((await host.get(`/routes/${data.route._id}`)).status, 404);
+  });
+  assert.equal((await api.as("token-que-no-sirve.x.y").get("/routes")).status, 401);
+});
+
+// ---------- npm run check:integrity ----------
+
+test("check:integrity detecta lo escrito por fuera de los services y repara lo que puede", async () => {
+  const { checkIntegrity, fixIntegrity } = await import("../services/integrity.service.js");
+  const { Profile } = await import("../models/profile.model.js");
+  const { User } = await import("../models/user.model.js");
+  const { Host } = await import("../models/host.model.js");
+  assert.deepEqual(await checkIntegrity(), []);
+
+  // Escrituras a mano, sin pasar por los services
+  const category = (await api.post("/categories", { name: "Rota a mano" })).body;
+  const route = (await api.post("/routes", routeBody("Ruta rota", category._id))).body;
+  await api.post("/images", { ownerType: "category", ownerId: category._id, url: "https://x.dev/z.jpg" });
+  await Category.updateOne({ _id: category._id }, { deletedAt: new Date() });
+  const lonely = (await api.post("/users", { name: "Sin perfil", email: "sinperfil@example.com", password: TEST_PASSWORD })).body;
+  await Profile.deleteOne({ userId: lonely._id });
+  const exHost = (await api.post("/users", { name: "Sin rol", email: "sinrol@example.com", password: TEST_PASSWORD, roleId: data.hostRole._id })).body;
+  const host = (await api.post("/hosts", { userId: exHost._id, name: "Sin rol" })).body;
+  await User.updateOne({ _id: exHost._id }, { roleId: data.rider._id });
+
+  const problems = await checkIntegrity();
+  const details = problems.map(({ collection, detail }) => `${collection}: ${detail}`);
+  assert.ok(details.includes("routes: categoryId references a deleted Category"));
+  assert.ok(details.includes("images: ownerId references a deleted category"));
+  assert.ok(details.includes("users: user has no profile"));
+  assert.ok(details.includes("hosts: userId references a user without the host role"));
+
+  assert.equal(await fixIntegrity(problems), problems.length - 1);
+  // Solo queda lo que tiene que decidir una persona
+  const pending = await checkIntegrity();
+  assert.deepEqual(pending.map(({ id }) => id), [host._id]);
+  assert.equal((await Route.findById(route._id).lean()).isActive, false);
+  assert.equal(await Profile.countDocuments({ userId: lonely._id }), 1);
+
+  await Host.updateOne({ _id: host._id }, { deletedAt: new Date() });
+  assert.deepEqual(await checkIntegrity(), []);
+});

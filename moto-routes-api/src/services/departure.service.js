@@ -17,6 +17,7 @@ import {
   findExisting,
   findRestorable,
 } from "./references.js";
+import { assertVisible, scopeFilter } from "./visibility.js";
 
 const SKU_TYPE = "DEP";
 const SKU_ATTEMPTS = 3;
@@ -95,32 +96,37 @@ const experienceReference = (id) => ({
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
 
 export const departureService = {
-  async list() {
-    return departureRepository.findAll();
+  // scope (services/visibility.js): en PUBLIC, sin las de una experiencia oculta
+  async list(scope) {
+    return departureRepository.findAll(await scopeFilter("departure", scope));
   },
 
-  async listByActive(isActive) {
-    return departureRepository.findAll({ isActive });
+  async listByActive(isActive, scope) {
+    return departureRepository.findAll({ isActive, ...(await scopeFilter("departure", scope)) });
   },
 
   async listDeleted() {
     return departureRepository.findDeleted();
   },
 
-  async getById(id) {
-    return findExisting(departureRepository, id, "Departure");
+  async getById(id, scope) {
+    const departure = await findExisting(departureRepository, id, "Departure");
+    await assertVisible(departureRepository, "departure", departure, scope, "Departure");
+    return departure;
   },
 
-  async getBySlug(slug) {
+  async getBySlug(slug, scope) {
     const departure = await departureRepository.findBySlug(slug);
     if (!departure) throw notFound("Departure");
+    await assertVisible(departureRepository, "departure", departure, scope, "Departure");
     return departure;
   },
 
   // Llega ya en mayúsculas: lo normaliza skuParamSchema
-  async getBySku(sku) {
+  async getBySku(sku, scope) {
     const departure = await departureRepository.findBySku(sku);
     if (!departure) throw notFound("Departure");
+    await assertVisible(departureRepository, "departure", departure, scope, "Departure");
     return departure;
   },
 

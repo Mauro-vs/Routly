@@ -5,6 +5,7 @@ import { locationRepository } from "../repositories/location.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
+import { assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
   assertReference,
@@ -46,13 +47,15 @@ const referencesOf = (data) =>
 // Los datos llegan ya validados y limpios por los esquemas de Zod
 // (src/schemas/route.schema.js), aplicados en las rutas con validate().
 export const routeService = {
-  async list() {
-    return imageService.attachCovers("route", await routeRepository.findAll());
+  // scope (services/visibility.js): sin él lo ve todo; en PUBLIC, sin lo que cuelga de un padre inactivo
+  async list(scope) {
+    return imageService.attachCovers("route", await routeRepository.findAll(await scopeFilter("route", scope)));
   },
 
   // Las rutas eliminadas nunca aparecen, tampoco entre las inactivas
-  async listByActive(isActive) {
-    return imageService.attachCovers("route", await routeRepository.findAll({ isActive }));
+  async listByActive(isActive, scope) {
+    const filter = { isActive, ...(await scopeFilter("route", scope)) };
+    return imageService.attachCovers("route", await routeRepository.findAll(filter));
   },
 
   // La papelera: solo rutas eliminadas. Es la única consulta que las devuelve.
@@ -60,14 +63,16 @@ export const routeService = {
     return routeRepository.findDeleted();
   },
 
-  async getById(id) {
+  async getById(id, scope) {
     const route = await findExisting(routeRepository, id, "Route");
+    await assertVisible(routeRepository, "route", route, scope, "Route");
     return imageService.attachCover("route", route);
   },
 
-  async getBySlug(slug) {
+  async getBySlug(slug, scope) {
     const route = await routeRepository.findBySlug(slug);
     if (!route) throw notFound("Route");
+    await assertVisible(routeRepository, "route", route, scope, "Route");
     return imageService.attachCover("route", route);
   },
 

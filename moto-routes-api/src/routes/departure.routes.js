@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { departureController } from "../controllers/departure.controller.js";
 import { adminOnly, hostOrAdmin } from "../middlewares/authorize.js";
+import { optionalAuth } from "../middlewares/authenticate.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
 import { createDepartureSchema, skuParamSchema, updateDepartureSchema } from "../schemas/departure.schema.js";
@@ -8,14 +9,14 @@ import { createDepartureSchema, skuParamSchema, updateDepartureSchema } from "..
 // La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
 
-router.get("/", departureController.list);
+router.get("/", optionalAuth, departureController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
-router.get("/actives", departureController.listActives);
+router.get("/actives", optionalAuth, departureController.listActives);
 router.get("/inactives", adminOnly, departureController.listInactives);
 router.get("/deleted", adminOnly, departureController.listDeleted);
-router.get("/slug/:slug", validate({ params: slugParamSchema }), departureController.getBySlug);
-router.get("/sku/:sku", validate({ params: skuParamSchema }), departureController.getBySku);
-router.get("/:id", validate({ params: idParamSchema }), departureController.getById);
+router.get("/slug/:slug", optionalAuth, validate({ params: slugParamSchema }), departureController.getBySlug);
+router.get("/sku/:sku", optionalAuth, validate({ params: skuParamSchema }), departureController.getBySku);
+router.get("/:id", optionalAuth, validate({ params: idParamSchema }), departureController.getById);
 router.post("/", hostOrAdmin, validate({ body: createDepartureSchema }), departureController.create);
 router.patch(
   "/:id",
