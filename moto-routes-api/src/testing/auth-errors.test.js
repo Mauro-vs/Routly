@@ -3,6 +3,7 @@ import { after, before, test } from "node:test";
 import express from "express";
 import { authorizeOwnership, authorizeRoles } from "../middlewares/authorize.js";
 import { errorHandler } from "../middlewares/errorHandler.js";
+import { createAuthLimiter } from "../middlewares/rateLimit.js";
 import { canAccessUserResource } from "../utils/access.js";
 import { forbidden, unauthorized } from "../utils/errors.js";
 
@@ -35,6 +36,8 @@ before(async () => {
     authorizeOwnership((req) => USERS[req.params.id], canAccessUserResource, "User"),
     (req, res) => res.json({ ok: true })
   );
+  // El límite de intentos, con 2 en vez de 10 y sin saltarse en los tests
+  app.post("/login", createAuthLimiter({ limit: 2, skip: () => false }), (req, res) => res.json({ ok: true }));
   app.use(errorHandler);
 
   server = await new Promise((resolve) => {
@@ -95,4 +98,18 @@ test("authorizeOwnership: el dueño y el admin pasan; otro, 403; si no existe, 4
   assert.equal((await fetch(`${base}/users/u1`, as({ id: "u2", role: "rider" }))).status, 403);
   assert.equal((await fetch(`${base}/users/u1`, as({ id: "u9", role: "admin" }))).status, 200);
   assert.equal((await fetch(`${base}/users/u7`, as({ id: "u9", role: "admin" }))).status, 404);
+});
+
+test("límite de intentos: a partir del tercero, 429 con el formato de error de siempre", async () => {
+  assert.equal((await fetch(`${base}/login`, { method: "POST" })).status, 200);
+  assert.equal((await fetch(`${base}/login`, { method: "POST" })).status, 200);
+
+  const blocked = await fetch(`${base}/login`, { method: "POST" });
+  assert.equal(blocked.status, 429);
+  assert.ok(blocked.headers.get("ratelimit"));
+  assert.deepEqual(await blocked.json(), {
+    statusCode: 429,
+    error: "Too Many Requests",
+    message: "Too many attempts, please try again later",
+  });
 });

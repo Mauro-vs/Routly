@@ -54,7 +54,7 @@ export const userController = {
 
   async create(req, res, next) {
     try {
-      const user = await userService.create(req.body);
+      const user = await userService.create(req.body, req.user);
       res.status(201).json(user);
     } catch (error) {
       next(error);
@@ -63,7 +63,7 @@ export const userController = {
 
   async update(req, res, next) {
     try {
-      res.json(await userService.update(req.params.id, req.body));
+      res.json(await userService.update(req.params.id, req.body, req.user));
     } catch (error) {
       next(error);
     }
@@ -71,7 +71,7 @@ export const userController = {
 
   async setActive(req, res, next) {
     try {
-      res.json(await userService.setActive(req.params.id, req.body.isActive));
+      res.json(await userService.setActive(req.params.id, req.body.isActive, req.user));
     } catch (error) {
       next(error);
     }
@@ -79,7 +79,7 @@ export const userController = {
 
   async remove(req, res, next) {
     try {
-      await userService.remove(req.params.id);
+      await userService.remove(req.params.id, req.user);
       res.status(204).send();
     } catch (error) {
       next(error);

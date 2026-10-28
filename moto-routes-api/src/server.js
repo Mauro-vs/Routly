@@ -8,12 +8,14 @@ import { helmetMiddleware } from "./config/helmet.js";
 import { morganMiddleware } from "./config/morgan.js";
 import { swaggerSpec } from "./config/swagger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import departureRoutes from "./routes/departure.routes.js";
 import experienceRoutes from "./routes/experience.routes.js";
 import hostRoutes from "./routes/host.routes.js";
 import imageRoutes from "./routes/image.routes.js";
 import locationRoutes from "./routes/location.routes.js";
+import profileRoutes from "./routes/profile.routes.js";
 import roleRoutes from "./routes/role.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -36,6 +38,8 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api/auth", authRoutes);
+app.use("/api/profile", profileRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/hosts", hostRoutes);

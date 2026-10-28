@@ -1,12 +1,14 @@
 import express from "express";
 import mongoose from "mongoose";
 import { errorHandler, notFoundHandler } from "../middlewares/errorHandler.js";
+import authRoutes from "../routes/auth.routes.js";
 import categoryRoutes from "../routes/category.routes.js";
 import departureRoutes from "../routes/departure.routes.js";
 import experienceRoutes from "../routes/experience.routes.js";
 import hostRoutes from "../routes/host.routes.js";
 import imageRoutes from "../routes/image.routes.js";
 import locationRoutes from "../routes/location.routes.js";
+import profileRoutes from "../routes/profile.routes.js";
 import roleRoutes from "../routes/role.routes.js";
 import routeRoutes from "../routes/route.routes.js";
 import userRoutes from "../routes/user.routes.js";
@@ -15,8 +17,9 @@ import { roleService } from "../services/role.service.js";
 import { userService } from "../services/user.service.js";
 import { createToken } from "../utils/jwt.js";
 
-// Los tests firman con su propio secreto si no hay uno definido
+// Los tests firman con su propio secreto si no hay uno definido, y sin límite de intentos
 process.env.JWT_SECRET ??= "secreto-de-los-tests-con-mas-de-32-caracteres";
+process.env.NODE_ENV ??= "test";
 
 export const ADMIN_EMAIL = "admin@test.dev";
 export const TEST_PASSWORD = "clave1234";
@@ -57,6 +60,8 @@ export async function startApi(name) {
   const app = express();
   app.use(express.json({ limit: "50kb" }));
   const routers = {
+    auth: authRoutes,
+    profile: profileRoutes,
     roles: roleRoutes,
     users: userRoutes,
     hosts: hostRoutes,

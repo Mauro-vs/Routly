@@ -1,8 +1,12 @@
+// Registra Profile: el populate de profile lo necesita aunque nadie más lo haya importado
+import "../models/profile.model.js";
 import { User } from "../models/user.model.js";
 import { toUpdate } from "../utils/update.js";
 
-// passwordHash nunca sale: el modelo lo tiene con select: false
-const withRole = (query) => query.populate("role", "name label");
+// passwordHash y tokenVersion nunca salen: el modelo los tiene con select: false.
+// El perfil va siempre dentro del usuario, como profile (el populate necesita su userId)
+const withRole = (query) =>
+  query.populate("role", "name label").populate("profile", "-__v -deletedAt");
 
 export const userRepository = {
   findAll(filter = {}) {
@@ -26,6 +30,31 @@ export const userRepository = {
   // No devuelve los eliminados (plugin softDelete)
   findAuthById(id) {
     return User.findOne({ _id: id }).select("+tokenVersion").populate("role", "name").lean();
+  },
+
+  // Para el login: con el hash y el tokenVersion, que nunca salen en otra consulta
+  findForLogin(email) {
+    return User.findOne({ email })
+      .select("+passwordHash +tokenVersion")
+      .populate("role", "name")
+      .lean();
+  },
+
+  findPasswordHash(id) {
+    return User.findOne({ _id: id }).select("+passwordHash").lean();
+  },
+
+  // Para la migración de perfiles: los usuarios (también eliminados) que no están en ids
+  findWithoutIds(ids) {
+    return User.find({ _id: { $nin: ids } })
+      .select("email deletedAt")
+      .setOptions({ withDeleted: true })
+      .lean();
+  },
+
+  // Para la regla del último admin
+  countActiveByRole(roleId) {
+    return User.countDocuments({ roleId, isActive: true });
   },
 
   findBySlug(slug) {
@@ -61,6 +90,16 @@ export const userRepository = {
 
   softDeleteById(id) {
     return User.softDeleteById(id).lean();
+  },
+
+  // Un cambio en el perfil también es un cambio del usuario: se ve en su updatedAt
+  touch(id) {
+    return User.updateOne({ _id: id }, { $set: { updatedAt: new Date() } });
+  },
+
+  // Solo para deshacer un alta a medias (falló la creación del perfil): nadie lo ha usado
+  deleteCreatedById(id) {
+    return User.deleteOne({ _id: id });
   },
 
   // Sube tokenVersion: todos los tokens ya emitidos dejan de servir. También en la

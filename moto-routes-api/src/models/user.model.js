@@ -42,6 +42,14 @@ userSchema.virtual("role", {
   justOne: true,
 });
 
+// Su perfil (User 1 → 1 Profile): el perfil guarda el userId, el usuario no guarda nada
+userSchema.virtual("profile", {
+  ref: "Profile",
+  localField: "_id",
+  foreignField: "userId",
+  justOne: true,
+});
+
 userSchema.plugin(statusPlugin);
 userSchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] });
 userSchema.plugin(softDeletePlugin);

@@ -6,6 +6,7 @@ import { Experience } from "./models/experience.model.js";
 import { Host } from "./models/host.model.js";
 import { Image } from "./models/image.model.js";
 import { Location } from "./models/location.model.js";
+import { Profile } from "./models/profile.model.js";
 import { Role } from "./models/role.model.js";
 import { Route } from "./models/route.model.js";
 import { User } from "./models/user.model.js";
@@ -23,7 +24,7 @@ import { SYSTEM_ACTOR } from "./utils/access.js";
 // Contraseña de todos los usuarios del seed. Solo para desarrollo.
 const DEV_PASSWORD = "routly-dev-1234";
 
-const MODELS = [Image, Departure, Experience, Route, Location, Category, Host, User, Role];
+const MODELS = [Image, Departure, Experience, Route, Location, Category, Host, Profile, User, Role];
 
 const ROLES = [
   { name: "admin", label: "Administrador", description: "Gestiona todo el panel", isSystem: true },
@@ -31,12 +32,37 @@ const ROLES = [
   { name: "rider", label: "Motorista", description: "Reserva experiencias y sigue rutas", isSystem: true },
 ];
 
+// Cada usuario nace con su perfil (userService.create): con estos datos, o vacío
 const USERS = [
   { key: "admin", name: "Admin Routly", email: "admin@routly.dev", role: "admin" },
-  { key: "lucia", name: "Lucía Ferrer", email: "lucia@routly.dev", role: "host" },
-  { key: "pablo", name: "Pablo Ortega", email: "pablo@routly.dev", role: "host" },
+  {
+    key: "lucia",
+    name: "Lucía Ferrer",
+    email: "lucia@routly.dev",
+    role: "host",
+    profile: { city: "Palma", bikeModel: "BMW R 1250 GS", experienceLevel: "expert", phone: "+34600111222" },
+  },
+  {
+    key: "pablo",
+    name: "Pablo Ortega",
+    email: "pablo@routly.dev",
+    role: "host",
+    profile: { city: "Huesca", bikeModel: "Honda Africa Twin", experienceLevel: "advanced" },
+  },
   // Sin rol: el service le asigna rider
-  { key: "marta", name: "Marta Gil", email: "marta@routly.dev" },
+  {
+    key: "marta",
+    name: "Marta Gil",
+    email: "marta@routly.dev",
+    profile: {
+      bio: "Empecé hace dos años y ya no paro de buscar puertos.",
+      city: "Logroño",
+      birthDate: new Date("1994-03-12T00:00:00.000Z"),
+      bikeModel: "Yamaha MT-07",
+      experienceLevel: "intermediate",
+      emergencyContact: { name: "Jorge Gil", phone: "+34600333444" },
+    },
+  },
 ];
 
 const HOSTS = [
@@ -201,11 +227,14 @@ try {
 
   const users = {};
   for (const { key, role, ...user } of USERS) {
-    users[key] = await userService.create({
-      ...user,
-      password: DEV_PASSWORD,
-      ...(role && { roleId: String(roles[role]._id) }),
-    });
+    users[key] = await userService.create(
+      {
+        ...user,
+        password: DEV_PASSWORD,
+        ...(role && { roleId: String(roles[role]._id) }),
+      },
+      SYSTEM_ACTOR
+    );
   }
 
   const hosts = {};
