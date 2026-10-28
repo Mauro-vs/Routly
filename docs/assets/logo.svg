@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 4 271 92" role="img" aria-label="Routly">
+  <title>Routly</title>
+  <!-- La R (forma rellena: cuchilla, ojo biselado y pata en diagonal) arranca la carretera, que corre
+       bajo el nombre y termina en la cola de la y. Inclinación 16°. La línea central va recortada. -->
+  <g transform="translate(20 0) skewX(-16)">
+    <mask id="routly-road" maskUnits="userSpaceOnUse" x="-40" y="0" width="330" height="110">
+      <rect x="-40" y="0" width="330" height="110" fill="#fff"/>
+      <path d="M86 86 H246" fill="none" stroke="#000" stroke-width="2.4" stroke-dasharray="10 5"/>
+    </mask>
+    <g mask="url(#routly-road)">
+      <path fill="#1b7a4e" fill-rule="evenodd" d="M-12 13 L16 10 H62 L80 28 V44 L66 58 H58 L78.2 80 H258 V86 L252 92 L71.2 92 L40 58 H34 V92 H16 V26 Z M34 26 H56 L64 34 V42 H34 Z"/>
+      <g fill="none" stroke="#1b7a4e" stroke-width="13" stroke-linejoin="miter">
+      <path d="M98 46 H120 V68 H98 Z"/>
+      <path d="M140 40 V62 L146 68 H160 M160 40 V74"/>
+      <path d="M182 24 V62 L188 68 H196 M174 46 H194"/>
+      <path d="M212 22 V74"/>
+      <path d="M230 40 V60 L236 66 H252 M252 40 V82"/>
+      </g>
+    </g>
+  </g>
+</svg>

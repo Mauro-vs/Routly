@@ -1,41 +1,56 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-/** Símbolo de Routly: el casco sobre la placa lima. Es decorativo. */
+let nextId = 0;
+
+/**
+ * Logo de Routly: la R (con su cuchilla) arranca una carretera que corre bajo el nombre y acaba en
+ * la cola de la y. Es el mismo dibujo que docs/assets/logo.svg, pero toma el color del texto.
+ * Es decorativo: el enlace que lo contiene lleva el nombre accesible.
+ */
 @Component({
   selector: 'app-brand-mark',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <svg viewBox="0 6 57 41" fill="none" focusable="false">
-      <path
-        fill="currentColor"
-        fill-rule="evenodd"
-        d="M32 9C46 9 55 17 55 29C55 34 53.5 38 50 41C47 43.5 43 44 40 42.5C36 41 33 37.5 30 37C26 36.5 21 38 16.5 40C12 37 10 33 10 28C10 16.5 20 9 32 9ZM33 19C39 17.5 47 18.5 51 21C52.5 21.9 52.5 24.5 51 25.6C47 28.5 39 29 34 27.6C32.2 27.1 31.5 25.5 31.8 23.8L32.2 20.8C32.4 19.8 32.4 19.2 33 19Z"
-      />
-      <path
-        stroke="currentColor"
-        stroke-width="3"
-        stroke-linecap="round"
-        d="M8 24H3M9 30H2.5M8.5 36H4"
-      />
+    <svg viewBox="0 4 271 92" focusable="false">
+      <g transform="translate(20 0) skewX(-16)">
+        <!-- La línea central de la carretera se recorta: deja ver el fondo -->
+        <mask [attr.id]="maskId" maskUnits="userSpaceOnUse" x="-40" y="0" width="330" height="110">
+          <rect x="-40" y="0" width="330" height="110" fill="#fff" />
+          <path d="M86 86H246" fill="none" stroke="#000" stroke-width="2.4" stroke-dasharray="10 5" />
+        </mask>
+        <g [attr.mask]="'url(#' + maskId + ')'">
+          <path
+            fill="currentColor"
+            fill-rule="evenodd"
+            d="M-12 13L16 10H62L80 28V44L66 58H58L78.2 80H258V86L252 92H71.2L40 58H34V92H16V26ZM34 26H56L64 34V42H34Z"
+          />
+          <g fill="none" stroke="currentColor" stroke-width="13" stroke-linejoin="miter">
+            <path d="M98 46H120V68H98Z" />
+            <path d="M140 40V62L146 68H160M160 40V74" />
+            <path d="M182 24V62L188 68H196M174 46H194" />
+            <path d="M212 22V74" />
+            <path d="M230 40V60L236 66H252M252 40V82" />
+          </g>
+        </g>
+      </g>
     </svg>
   `,
   styles: `
     :host {
-      display: grid;
+      display: block;
       flex: none;
-      place-items: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-md);
-      background: var(--color-accent);
-      color: var(--color-on-accent);
+      color: var(--color-accent);
     }
 
     svg {
       display: block;
-      width: 22px;
+      width: auto;
+      height: 32px;
     }
   `,
   host: { 'aria-hidden': 'true' },
 })
-export class BrandMarkComponent {}
+export class BrandMarkComponent {
+  // Un id por instancia: el sidebar puede estar dos veces en la página (escritorio y cajón)
+  protected readonly maskId = `routly-road-${nextId++}`;
+}

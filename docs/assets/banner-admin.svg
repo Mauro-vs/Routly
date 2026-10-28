@@ -21,13 +21,7 @@ text{font-family:Onest,'Segoe UI',system-ui,sans-serif}
   <path d="M664 120 C664 -64.90880000000001 1036.4 -29.120000000000005 1196 97.632 S1009.8 304.90880000000004 664 120Z" fill="none" stroke="#16382a" stroke-width="1.5"/>
   <path d="M620 120 C620 -104.02800000000002 1054 -56.400000000000006 1240 93.53999999999999 S1023 344.028 620 120Z" fill="none" stroke="#16382a" stroke-width="1.5"/>
 </g>
-<g class="in" style="animation-delay:.1s"><g transform="translate(64 58)">
-  <rect width="52" height="52" rx="14.560000000000002" fill="#c6f04d"/>
-  <g transform="translate(7.8 6.76) scale(0.63859649122807) translate(0 -6)">
-    <path fill="#16260a" fill-rule="evenodd" d="M32 9C46 9 55 17 55 29C55 34 53.5 38 50 41C47 43.5 43 44 40 42.5C36 41 33 37.5 30 37C26 36.5 21 38 16.5 40C12 37 10 33 10 28C10 16.5 20 9 32 9ZM33 19C39 17.5 47 18.5 51 21C52.5 21.9 52.5 24.5 51 25.6C47 28.5 39 29 34 27.6C32.2 27.1 31.5 25.5 31.8 23.8L32.2 20.8C32.4 19.8 32.4 19.2 33 19Z"/>
-    <path stroke="#16260a" stroke-width="3" stroke-linecap="round" d="M8 24H3M9 30H2.5M8.5 36H4"/>
-  </g>
-</g></g>
+<g class="in" style="animation-delay:.1s"><g transform="translate(64 58)"><rect width="52" height="52" rx="12.48" fill="#c6f04d"/><svg width="52" height="52" viewBox="0 0 100 100"><g transform="translate(18.45 15.3) scale(0.68)"><g transform="translate(15.7 0) skewX(-16)"><mask id="banner-admin-road" maskUnits="userSpaceOnUse" x="-30" y="0" width="160" height="110"><rect x="-30" y="0" width="160" height="110" fill="#fff"/><path d="M84 86 H99" fill="none" stroke="#000" stroke-width="2.4" stroke-dasharray="7 4"/></mask><path mask="url(#banner-admin-road)" fill="#16260a" fill-rule="evenodd" d="M-12 13 L16 10 H62 L80 28 V44 L66 58 H58 L78.2 80 H100 V92 L71.2 92 L40 58 H34 V92 H16 V26 Z M34 26 H56 L64 34 V42 H34 Z"/></g></g></svg></g></g>
 <text class="in" style="animation-delay:.2s" x="132" y="100" font-size="48" font-weight="700" letter-spacing="-1.5" fill="#e8f3ec">Routly Admin</text>
 <text class="in" style="animation-delay:.35s" x="66" y="158" font-size="21" fill="#9fb8aa">Panel de administración en Angular 20</text>
 <path d="M640 120 H1208" stroke="#16382a" stroke-width="10" stroke-linecap="round"/>

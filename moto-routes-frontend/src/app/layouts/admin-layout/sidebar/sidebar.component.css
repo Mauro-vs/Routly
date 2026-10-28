@@ -23,11 +23,8 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-radius: var(--radius-md);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  letter-spacing: -0.02em;
   text-decoration: none;
 }
 

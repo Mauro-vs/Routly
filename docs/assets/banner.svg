@@ -22,14 +22,7 @@ text{font-family:Onest,'Segoe UI',system-ui,sans-serif}
   <path d="M700 190 C700 -46.982 1120 3.4000000000000057 1300 162.01 S1090 426.98199999999997 700 190Z" fill="none" stroke="#16382a" stroke-width="1.5"/>
   <path d="M654 190 C654 -89.656 1138.4 -25.120000000000005 1346 157.732 S1103.8 469.656 654 190Z" fill="none" stroke="#16382a" stroke-width="1.5"/>
 </g>
-<g class="in" style="animation-delay:.1s"><g transform="translate(72 74)">
-  <rect width="64" height="64" rx="17.92" fill="#c6f04d"/>
-  <g transform="translate(9.6 8.32) scale(0.7859649122807016) translate(0 -6)">
-    <path fill="#16260a" fill-rule="evenodd" d="M32 9C46 9 55 17 55 29C55 34 53.5 38 50 41C47 43.5 43 44 40 42.5C36 41 33 37.5 30 37C26 36.5 21 38 16.5 40C12 37 10 33 10 28C10 16.5 20 9 32 9ZM33 19C39 17.5 47 18.5 51 21C52.5 21.9 52.5 24.5 51 25.6C47 28.5 39 29 34 27.6C32.2 27.1 31.5 25.5 31.8 23.8L32.2 20.8C32.4 19.8 32.4 19.2 33 19Z"/>
-    <path stroke="#16260a" stroke-width="3" stroke-linecap="round" d="M8 24H3M9 30H2.5M8.5 36H4"/>
-  </g>
-</g></g>
-<text class="in" style="animation-delay:.2s" x="156" y="128" font-size="64" font-weight="700" letter-spacing="-2" fill="#e8f3ec">Routly</text>
+<g class="in" style="animation-delay:.1s"><svg x="66" y="52" width="330" height="112.03" viewBox="0 4 271 92"><g transform="translate(20 0) skewX(-16)"><mask id="banner-road" maskUnits="userSpaceOnUse" x="-40" y="0" width="330" height="110"><rect x="-40" y="0" width="330" height="110" fill="#fff"/><path d="M86 86 H246" fill="none" stroke="#000" stroke-width="2.4" stroke-dasharray="10 5"/></mask><g mask="url(#banner-road)"><path fill="#c6f04d" fill-rule="evenodd" d="M-12 13 L16 10 H62 L80 28 V44 L66 58 H58 L78.2 80 H258 V86 L252 92 L71.2 92 L40 58 H34 V92 H16 V26 Z M34 26 H56 L64 34 V42 H34 Z"/><g fill="none" stroke="#c6f04d" stroke-width="13" stroke-linejoin="miter"><path d="M98 46 H120 V68 H98 Z"/><path d="M140 40 V62 L146 68 H160 M160 40 V74"/><path d="M182 24 V62 L188 68 H196 M174 46 H194"/><path d="M212 22 V74"/><path d="M230 40 V60 L236 66 H252 M252 40 V82"/></g></g></g></svg></g>
 <text class="in" style="animation-delay:.35s" x="74" y="196" font-size="26" font-weight="400" fill="#9fb8aa">Rutas en moto, ordenadas y listas para rodar.</text>
 <g class="in" style="animation-delay:.5s">
   <g transform="translate(74 238)">
