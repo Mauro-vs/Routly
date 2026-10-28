@@ -1,4 +1,5 @@
 import { imageService } from "../services/image.service.js";
+import { scopeOf } from "../services/visibility.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { imageService } from "../services/image.service.js";
 export const imageController = {
   async list(req, res, next) {
     try {
-      res.json(await imageService.list(req.query));
+      res.json(await imageService.list(req.query, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -14,7 +15,7 @@ export const imageController = {
 
   async listActives(req, res, next) {
     try {
-      res.json(await imageService.listByActive(true));
+      res.json(await imageService.listByActive(true, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export const imageController = {
 
   async getById(req, res, next) {
     try {
-      res.json(await imageService.getById(req.params.id));
+      res.json(await imageService.getById(req.params.id, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

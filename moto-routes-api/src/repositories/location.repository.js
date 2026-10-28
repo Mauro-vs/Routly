@@ -38,6 +38,10 @@ export const locationRepository = {
       .lean();
   },
 
+  exists(filter) {
+    return Location.exists(filter);
+  },
+
   // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
   findIds(filter) {
     return Location.distinct("_id", filter);

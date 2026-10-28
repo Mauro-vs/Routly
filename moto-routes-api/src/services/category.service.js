@@ -12,27 +12,32 @@ import {
   findExisting,
   findRestorable,
 } from "./references.js";
+import { assertVisible, scopeFilter } from "./visibility.js";
 
 export const categoryService = {
-  async list() {
-    return categoryRepository.findAll();
+  // scope (services/visibility.js): en PUBLIC, solo las activas
+  async list(scope) {
+    return categoryRepository.findAll(await scopeFilter("category", scope));
   },
 
-  async listByActive(isActive) {
-    return categoryRepository.findAll({ isActive });
+  async listByActive(isActive, scope) {
+    return categoryRepository.findAll({ isActive, ...(await scopeFilter("category", scope)) });
   },
 
   async listDeleted() {
     return categoryRepository.findDeleted();
   },
 
-  async getById(id) {
-    return findExisting(categoryRepository, id, "Category");
+  async getById(id, scope) {
+    const category = await findExisting(categoryRepository, id, "Category");
+    await assertVisible(categoryRepository, "category", category, scope, "Category");
+    return category;
   },
 
-  async getBySlug(slug) {
+  async getBySlug(slug, scope) {
     const category = await categoryRepository.findBySlug(slug);
     if (!category) throw notFound("Category");
+    await assertVisible(categoryRepository, "category", category, scope, "Category");
     return category;
   },
 

@@ -1,4 +1,5 @@
 import { locationService } from "../services/location.service.js";
+import { scopeOf } from "../services/visibility.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { locationService } from "../services/location.service.js";
 export const locationController = {
   async list(req, res, next) {
     try {
-      res.json(await locationService.list());
+      res.json(await locationService.list(scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -14,7 +15,7 @@ export const locationController = {
 
   async listActives(req, res, next) {
     try {
-      res.json(await locationService.listByActive(true));
+      res.json(await locationService.listByActive(true, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export const locationController = {
 
   async getById(req, res, next) {
     try {
-      res.json(await locationService.getById(req.params.id));
+      res.json(await locationService.getById(req.params.id, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -46,7 +47,7 @@ export const locationController = {
 
   async getBySlug(req, res, next) {
     try {
-      res.json(await locationService.getBySlug(req.params.slug));
+      res.json(await locationService.getBySlug(req.params.slug, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

@@ -12,6 +12,10 @@ export const imageRepository = {
     return Image.find({ deletedAt: { $ne: null } }).sort({ deletedAt: -1 }).lean();
   },
 
+  exists(filter) {
+    return Image.exists(filter);
+  },
+
   findById(id) {
     return Image.findOne({ _id: id }).lean();
   },

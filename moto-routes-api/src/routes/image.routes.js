@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { imageController } from "../controllers/image.controller.js";
-import { authenticate } from "../middlewares/authenticate.js";
+import { authenticate, optionalAuth } from "../middlewares/authenticate.js";
 import { adminOnly } from "../middlewares/authorize.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema } from "../schemas/common.schema.js";
@@ -10,12 +10,12 @@ import { createImageSchema, imageQuerySchema, updateImageSchema } from "../schem
 // Escribir pide sesión; quién puede tocar cada imagen lo decide el service (ABAC)
 const router = Router();
 
-router.get("/", validate({ query: imageQuerySchema }), imageController.list);
+router.get("/", optionalAuth, validate({ query: imageQuerySchema }), imageController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
-router.get("/actives", imageController.listActives);
+router.get("/actives", optionalAuth, imageController.listActives);
 router.get("/inactives", adminOnly, imageController.listInactives);
 router.get("/deleted", adminOnly, imageController.listDeleted);
-router.get("/:id", validate({ params: idParamSchema }), imageController.getById);
+router.get("/:id", optionalAuth, validate({ params: idParamSchema }), imageController.getById);
 router.post("/", authenticate, validate({ body: createImageSchema }), imageController.create);
 router.patch(
   "/:id",

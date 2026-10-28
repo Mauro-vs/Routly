@@ -13,6 +13,7 @@ import {
   findExisting,
   findRestorable,
 } from "./references.js";
+import { assertOwnerVisible, assertVisible, scopeFilter } from "./visibility.js";
 
 // La imagen principal (isCover) es la portada de una ruta, la foto de perfil de un
 // usuario... Siempre hay como mucho una por dueño, y nunca es una imagen inactiva.
@@ -57,24 +58,30 @@ async function assertOwnImage(actor, { ownerType, ownerId }) {
 
 export const imageService = {
   // Con ownerType y ownerId devuelve la galería de un dueño, que tiene que estar vivo: las
-  // imágenes de algo eliminado no se enseñan (404)
-  async list(filter = {}) {
-    if (filter.ownerType && !(await imageRepository.findOwner(filter.ownerType, filter.ownerId))) {
-      throw notFound(ownerName(filter.ownerType));
+  // imágenes de algo eliminado no se enseñan (404). En PUBLIC (services/visibility.js), tampoco
+  // las de un dueño oculto, ni las imágenes inactivas.
+  async list(filter = {}, scope) {
+    if (filter.ownerType) {
+      if (!(await imageRepository.findOwner(filter.ownerType, filter.ownerId))) {
+        throw notFound(ownerName(filter.ownerType));
+      }
+      await assertOwnerVisible(filter.ownerType, filter.ownerId, scope, ownerName(filter.ownerType));
     }
-    return imageRepository.findAll(filter);
+    return imageRepository.findAll({ ...filter, ...(await scopeFilter("image", scope)) });
   },
 
-  async listByActive(isActive) {
-    return imageRepository.findAll({ isActive });
+  async listByActive(isActive, scope) {
+    return imageRepository.findAll({ isActive, ...(await scopeFilter("image", scope)) });
   },
 
   async listDeleted() {
     return imageRepository.findDeleted();
   },
 
-  async getById(id) {
-    return findExisting(imageRepository, id, "Image");
+  async getById(id, scope) {
+    const image = await findExisting(imageRepository, id, "Image");
+    await assertVisible(imageRepository, "image", image, scope, "Image");
+    return image;
   },
 
   // El dueño tiene que existir y no estar eliminado, pero puede estar inactivo:

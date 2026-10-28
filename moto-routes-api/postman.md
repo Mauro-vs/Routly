@@ -199,7 +199,7 @@ Las nueve colecciones tienen los mismos endpoints. Cambia `<colección>` por `ro
 
 Las lecturas del catálogo son públicas; `/inactives`, `/deleted` y las escrituras piden token (ver [Quién puede qué](#quién-puede-qué)).
 
-En público (sin token, o con uno que no es de admin) **no sale lo que cuelga de algo inactivo**: las rutas de una categoría o ubicación inactiva, los anfitriones de un usuario inactivo, las experiencias de un anfitrión o una ruta ocultos y sus salidas. En el listado no aparecen y por id, slug o SKU dan 404. Con el token del admin se ve todo.
+En público (sin token, o con uno que no es de admin) **solo sale lo activo, y con toda su cadena activa**: no salen los documentos inactivos ni lo que cuelga de algo inactivo (las rutas de una categoría o ubicación inactiva, los anfitriones de un usuario inactivo, las experiencias de un anfitrión o una ruta ocultos, sus salidas, ni las imágenes inactivas o de un dueño oculto). En el listado no aparecen y por id, slug o SKU dan 404. Con el token del admin se ve todo.
 
 `slug`, `status` (al crear), `isActive`, `deletedAt`, `createdAt` y `updatedAt` los genera el servidor. Si se envían en el body, se ignoran.
 
@@ -598,7 +598,7 @@ Response `201`:
 |---|---|
 | El dueño no existe o está eliminado | 400 en `ownerId`: `ownerId must reference an existing route` |
 | Filtro con solo `ownerType` o solo `ownerId` | 400: `ownerType and ownerId must be sent together` |
-| Galería de un dueño que no existe o está eliminado | 404: `Category not found` (o el dueño que sea) |
+| Galería de un dueño que no existe o está eliminado (o, en público, oculto) | 404: `Category not found` (o el dueño que sea) |
 | Marcar como principal una imagen inactiva | 409 `Inactive images cannot be the cover` |
 
 Al eliminar el dueño, sus imágenes van a la papelera con él, y vuelven al restaurarlo.

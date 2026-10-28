@@ -12,6 +12,7 @@ import {
   findExisting,
   findRestorable,
 } from "./references.js";
+import { assertVisible, scopeFilter } from "./visibility.js";
 
 const DUPLICATED = "A location with this city, region and country already exists";
 const DEFAULT_COUNTRY = "España";
@@ -34,26 +35,30 @@ function toResponse(location) {
 }
 
 export const locationService = {
-  async list() {
-    return (await locationRepository.findAll()).map(toResponse);
+  // scope (services/visibility.js): en PUBLIC, solo las activas
+  async list(scope) {
+    return (await locationRepository.findAll(await scopeFilter("location", scope))).map(toResponse);
   },
 
-  async listByActive(isActive) {
-    return (await locationRepository.findAll({ isActive })).map(toResponse);
+  async listByActive(isActive, scope) {
+    const filter = { isActive, ...(await scopeFilter("location", scope)) };
+    return (await locationRepository.findAll(filter)).map(toResponse);
   },
 
   async listDeleted() {
     return (await locationRepository.findDeleted()).map(toResponse);
   },
 
-  async getById(id) {
+  async getById(id, scope) {
     const location = await findExisting(locationRepository, id, "Location");
+    await assertVisible(locationRepository, "location", location, scope, "Location");
     return toResponse(location);
   },
 
-  async getBySlug(slug) {
+  async getBySlug(slug, scope) {
     const location = await locationRepository.findBySlug(slug);
     if (!location) throw notFound("Location");
+    await assertVisible(locationRepository, "location", location, scope, "Location");
     return toResponse(location);
   },
 

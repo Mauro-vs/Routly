@@ -107,7 +107,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 120 tests con `node:test`:
+`npm test` ejecuta 122 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -359,7 +359,7 @@ El detalle de cada campo (tipos, límites, valores por defecto, índices y regla
 MongoDB no tiene claves foráneas, así que las relaciones las vigilan los services:
 
 1. **Referencias al guardar.** Al crear, o al editar una referencia, el documento al que apunta tiene que existir, no estar eliminado y estar activo. Si no, 400 con `details` en ese campo, por ejemplo `categoryId must reference an active category`. Excepción: el dueño de una imagen puede estar inactivo.
-2. **Desactivar no escribe en cascada.** Una categoría inactiva no desactiva sus rutas: impide usarla en rutas nuevas y oculta sus rutas en los `GET` públicos (ver [Integridad referencial](#integridad-referencial)).
+2. **Desactivar no escribe en cascada.** Una categoría inactiva no desactiva sus rutas: impide usarla en rutas nuevas y, en los `GET` públicos, deja de verse ella y sus rutas (ver [Integridad referencial](#integridad-referencial)).
 3. **No se elimina nada con dependientes no eliminados** (409):
 
 | Para eliminar... | No puede tener... | Mensaje |
@@ -401,18 +401,20 @@ En el peor caso fallan las dos peticiones, pero nunca queda una referencia huér
 
 **2. Cascadas que no se quedan a medias.** `softDeleteWithCascades` aplica primero las cascadas (imágenes y perfil) y después marca al dueño, todos con el mismo `deletedAt`. Si algo falla, deshace las cascadas: el dueño sigue vivo con todo lo suyo. Al restaurar, solo vuelven las imágenes que se eliminaron con él (mismo `deletedAt`), no las que se habían eliminado antes a mano.
 
-**3. Lo que cuelga de un padre inactivo no se ve en público.** Desactivar no escribe nada en cascada, pero los `GET` públicos (sin token, o con un token que no es de admin) ocultan lo que depende de algo inactivo. El admin lo sigue viendo todo. Al reactivar el padre, todo vuelve tal cual. La regla está en `services/visibility.js`:
+**3. En público solo se ve lo activo, con toda su cadena activa.** Desactivar no escribe nada en cascada, pero los `GET` públicos (sin token, o con un token que no es de admin) ocultan lo inactivo **y lo que depende de algo inactivo**. El admin lo sigue viendo todo. Al reactivar, todo vuelve tal cual. La regla está en `services/visibility.js`:
 
 | Se oculta… | si está inactivo… |
 |---|---|
-| una ruta | su categoría o alguna de sus ubicaciones |
-| un anfitrión | su usuario |
-| una experiencia | su anfitrión (o el usuario de este), su ruta o los padres de esta |
-| una salida | su experiencia, o cualquiera de los de arriba |
+| una categoría o una ubicación | ella misma |
+| una ruta | ella, su categoría o alguna de sus ubicaciones |
+| un anfitrión | él o su usuario |
+| una experiencia | ella, su anfitrión (o el usuario de este), su ruta o los padres de esta |
+| una salida | ella, su experiencia o cualquiera de los de arriba |
+| una imagen | ella o su dueño (o si su dueño está oculto por lo anterior) |
 
 En un listado no aparece; por id, slug o SKU responde 404. Las escrituras no cambian: un host sigue pudiendo editar su experiencia aunque no se vea en público.
 
-**4. La galería de un dueño eliminado** (`GET /api/images?ownerType&ownerId`) responde 404 (`Category not found`). La de uno inactivo sí se ve.
+**4. La galería de un dueño eliminado** (`GET /api/images?ownerType&ownerId`) responde 404 (`Category not found`). En público, también la de un dueño oculto; el admin la sigue viendo.
 
 **5. Comprobación desde fuera: `npm run check:integrity`.** Revisa toda la base de datos por si algo se escribió sin pasar por los services (un script, una edición a mano, un proceso cortado):
 - documentos activos que apuntan a un padre inexistente o eliminado;
@@ -491,7 +493,8 @@ Son dos cosas distintas y se gestionan con operaciones independientes, en todas 
 | `isActive` | Si el documento está activo o inactivo | `PATCH /:id/active` con `{ "isActive": true }` o `{ "isActive": false }` |
 | `deletedAt` | Si está eliminado (soft delete) | `PATCH /:id/delete` |
 
-- Un documento inactivo sigue apareciendo en el listado, en `/inactives` y por ID o slug, y se puede editar. Lo que no se puede es usarlo en documentos nuevos. Lo que **cuelga** de él deja de verse en público (ver [Integridad referencial](#integridad-referencial)).
+- Para el admin, un documento inactivo sigue apareciendo en el listado, en `/inactives` y por ID o slug, y se puede editar. Lo que no se puede es usarlo en documentos nuevos.
+- **En público** (sin token, o con uno que no es de admin) no se ve ni él ni lo que cuelga de él (ver [Integridad referencial](#integridad-referencial)).
 - Desactivar nunca elimina: `deletedAt` no se toca.
 - Eliminar no cambia el estado: el documento conserva `status` e `isActive`, y lo que lo marca como eliminado es `deletedAt`. Así se puede restaurar como estaba.
 - Un documento eliminado no se puede activar con `/active` (404). La única forma de recuperarlo es restaurarlo.

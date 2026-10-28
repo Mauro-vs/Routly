@@ -124,8 +124,8 @@ const RESOURCES = [
   {
     path: "hosts",
     tag: "Hosts",
-    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
-    hiddenWhen: "su usuario",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen los activos cuyo usuario también lo esté",
     access: { edit: "owner", owner: "el propio anfitrión (su perfil de anfitrión)" },
     schema: "Host",
     singular: "anfitrión",
@@ -151,6 +151,8 @@ const RESOURCES = [
   {
     path: "categories",
     tag: "Categories",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen las activas",
     schema: "Category",
     singular: "categoría",
     plural: "categorías",
@@ -173,6 +175,8 @@ const RESOURCES = [
   {
     path: "locations",
     tag: "Locations",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen las activas",
     schema: "Location",
     singular: "ubicación",
     plural: "ubicaciones",
@@ -198,8 +202,8 @@ const RESOURCES = [
   {
     path: "routes",
     tag: "Routes",
-    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
-    hiddenWhen: "su categoría o alguna de sus ubicaciones",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen las activas cuya categoría y ubicaciones también lo estén",
     schema: "Route",
     singular: "ruta",
     plural: "rutas",
@@ -230,8 +234,8 @@ const RESOURCES = [
   {
     path: "experiences",
     tag: "Experiences",
-    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
-    hiddenWhen: "su anfitrión, su ruta o sus padres",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen las activas cuyo anfitrión y ruta (y los padres de esta) también lo estén",
     access: { write: "owner", owner: "el anfitrión de la experiencia: hostId tiene que ser su perfil de anfitrión" },
     schema: "Experience",
     singular: "experiencia",
@@ -263,8 +267,8 @@ const RESOURCES = [
   {
     path: "departures",
     tag: "Departures",
-    // GET públicos: sin token o sin ser admin, se ocultan los que cuelgan de un padre inactivo
-    hiddenWhen: "su experiencia o lo que hay por encima",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen las activas cuya experiencia, y todo lo que hay por encima, también lo esté",
     access: { write: "owner", owner: "el anfitrión de la experiencia de la salida" },
     schema: "Departure",
     singular: "salida",
@@ -292,7 +296,7 @@ const RESOURCES = [
         get: {
           summary: "Obtener salida por SKU",
           description:
-            "Se acepta en minúsculas. 404 si no existe, está en la papelera o, sin ser admin, cuelga de algo inactivo.",
+            "Se acepta en minúsculas. 404 si no existe, está en la papelera o, sin ser admin, está inactiva o cuelga de algo inactivo.",
           tags: ["Departures"],
           parameters: [
             {
@@ -315,6 +319,8 @@ const RESOURCES = [
   {
     path: "images",
     tag: "Images",
+    // Lo que ve el público (services/visibility.js)
+    publicView: "solo salen las activas de un dueño visible; la galería de un dueño oculto da 404",
     access: {
       write: "owner",
       owner:
@@ -434,9 +440,9 @@ function crudPaths(resource) {
   // Por defecto: leer, público; escribir, solo admin. Inactivos y papelera, siempre admin.
   const { read = "public", write = "admin", edit = write, owner } = resource.access ?? {};
   const as = (level) => (operation) => secured(operation, level, owner);
-  // En los GET públicos de las colecciones con padres, la regla de visibilidad (services/visibility.js)
-  const visibility = resource.hiddenWhen &&
-    `Sin token, o con uno que no es de admin, no salen los que tienen inactivo(s) ${resource.hiddenWhen}: no aparecen en el listado y por id o slug dan 404.`;
+  // En los GET públicos del catálogo, la regla de visibilidad (services/visibility.js)
+  const visibility = resource.publicView &&
+    `Sin token, o con uno que no es de admin, ${resource.publicView}: lo demás no aparece en el listado y por id o slug da 404. El admin lo ve todo.`;
   const withVisibility = (operation) =>
     visibility ? { ...operation, description: [operation.description, visibility].filter(Boolean).join(" ") } : operation;
   const asRead = (operation) => as(read)(withVisibility(operation));

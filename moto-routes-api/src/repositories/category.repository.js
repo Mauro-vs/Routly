@@ -37,6 +37,10 @@ export const categoryRepository = {
       .lean();
   },
 
+  exists(filter) {
+    return Category.exists(filter);
+  },
+
   // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
   findIds(filter) {
     return Category.distinct("_id", filter);

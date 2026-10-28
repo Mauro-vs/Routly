@@ -1,4 +1,5 @@
 import { categoryService } from "../services/category.service.js";
+import { scopeOf } from "../services/visibility.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { categoryService } from "../services/category.service.js";
 export const categoryController = {
   async list(req, res, next) {
     try {
-      res.json(await categoryService.list());
+      res.json(await categoryService.list(scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -14,7 +15,7 @@ export const categoryController = {
 
   async listActives(req, res, next) {
     try {
-      res.json(await categoryService.listByActive(true));
+      res.json(await categoryService.listByActive(true, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export const categoryController = {
 
   async getById(req, res, next) {
     try {
-      res.json(await categoryService.getById(req.params.id));
+      res.json(await categoryService.getById(req.params.id, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }
@@ -46,7 +47,7 @@ export const categoryController = {
 
   async getBySlug(req, res, next) {
     try {
-      res.json(await categoryService.getBySlug(req.params.slug));
+      res.json(await categoryService.getBySlug(req.params.slug, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

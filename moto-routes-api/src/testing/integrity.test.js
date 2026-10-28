@@ -151,12 +151,13 @@ test("eliminar un dueño marca a la vez las imágenes y al dueño, con el mismo 
 
 // ---------- galería de un dueño eliminado ----------
 
-test("la galería de un dueño eliminado es un 404; la de uno inactivo, no", async () => {
+test("la galería de un dueño eliminado es un 404; la de uno inactivo, solo para el público", async () => {
   const category = (await api.post("/categories", { name: "Galería" })).body;
   await api.post("/images", { ownerType: "category", ownerId: category._id, url: "https://x.dev/d.jpg" });
 
   await api.patch(`/categories/${category._id}/active`, { isActive: false });
-  assert.equal((await api.anonymous.get(`/images?ownerType=category&ownerId=${category._id}`)).status, 200);
+  assert.equal((await api.anonymous.get(`/images?ownerType=category&ownerId=${category._id}`)).status, 404);
+  assert.equal((await api.get(`/images?ownerType=category&ownerId=${category._id}`)).status, 200);
 
   await api.patch(`/categories/${category._id}/delete`);
   const response = await api.anonymous.get(`/images?ownerType=category&ownerId=${category._id}`);
@@ -274,6 +275,45 @@ test("un rider o un anfitrión ven lo mismo que un anónimo; un token que no sir
     assert.equal((await host.get(`/routes/${data.route._id}`)).status, 404);
   });
   assert.equal((await api.as("token-que-no-sirve.x.y").get("/routes")).status, 401);
+});
+
+test("en público tampoco se ven los inactivos, en ninguna colección del catálogo", async () => {
+  const cases = [
+    [`/categories/${data.category._id}`, "/categories"],
+    [`/locations/${data.location._id}`, "/locations"],
+    [`/routes/${data.route._id}`, "/routes"],
+    [`/hosts/${data.host._id}`, "/hosts"],
+    [`/experiences/${data.experience._id}`, "/experiences"],
+    [`/departures/${data.departure._id}`, "/departures"],
+  ];
+  for (const [path, list] of cases) {
+    const id = path.split("/").pop();
+    await whileInactive(path, async () => {
+      assert.ok(!ids(await api.anonymous.get(list)).includes(id), path);
+      assert.equal((await api.anonymous.get(path)).status, 404, path);
+      // El admin lo sigue viendo, también en el listado general
+      assert.ok(ids(await api.get(list)).includes(id), path);
+      assert.equal((await api.get(path)).status, 200, path);
+    });
+    assert.equal((await api.anonymous.get(path)).status, 200, `${path} al reactivar`);
+  }
+});
+
+test("imágenes: en público, ni las inactivas ni las de un dueño oculto", async () => {
+  const image = (await api.post("/images", { ownerType: "route", ownerId: data.route._id, url: "https://x.dev/e.jpg" })).body;
+
+  await whileInactive(`/images/${image._id}`, async () => {
+    assert.equal((await api.anonymous.get(`/images/${image._id}`)).status, 404);
+    assert.ok(!ids(await api.anonymous.get(`/images?ownerType=route&ownerId=${data.route._id}`)).includes(image._id));
+  });
+  await whileInactive(`/categories/${data.category._id}`, async () => {
+    // La ruta queda oculta, y con ella su galería y sus imágenes
+    assert.equal((await api.anonymous.get(`/images?ownerType=route&ownerId=${data.route._id}`)).status, 404);
+    assert.ok(!ids(await api.anonymous.get("/images")).includes(image._id));
+    assert.equal((await api.anonymous.get(`/images/${image._id}`)).status, 404);
+    assert.ok(ids(await api.get("/images")).includes(image._id));
+  });
+  assert.equal((await api.anonymous.get(`/images/${image._id}`)).status, 200);
 });
 
 // ---------- npm run check:integrity ----------

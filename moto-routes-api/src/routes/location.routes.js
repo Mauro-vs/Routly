@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { locationController } from "../controllers/location.controller.js";
 import { adminOnly } from "../middlewares/authorize.js";
+import { optionalAuth } from "../middlewares/authenticate.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
 import { createLocationSchema, updateLocationSchema } from "../schemas/location.schema.js";
@@ -8,13 +9,13 @@ import { createLocationSchema, updateLocationSchema } from "../schemas/location.
 // La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
 
-router.get("/", locationController.list);
+router.get("/", optionalAuth, locationController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
-router.get("/actives", locationController.listActives);
+router.get("/actives", optionalAuth, locationController.listActives);
 router.get("/inactives", adminOnly, locationController.listInactives);
 router.get("/deleted", adminOnly, locationController.listDeleted);
-router.get("/slug/:slug", validate({ params: slugParamSchema }), locationController.getBySlug);
-router.get("/:id", validate({ params: idParamSchema }), locationController.getById);
+router.get("/slug/:slug", optionalAuth, validate({ params: slugParamSchema }), locationController.getBySlug);
+router.get("/:id", optionalAuth, validate({ params: idParamSchema }), locationController.getById);
 router.post("/", adminOnly, validate({ body: createLocationSchema }), locationController.create);
 router.patch(
   "/:id",
