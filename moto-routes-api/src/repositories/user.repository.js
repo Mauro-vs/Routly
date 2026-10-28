@@ -44,7 +44,7 @@ export const userRepository = {
     return User.findOne({ _id: id }).select("+passwordHash").lean();
   },
 
-  // Para la migración de perfiles: los usuarios (también eliminados) que no están en ids
+  // Para check:integrity: los usuarios (también eliminados) que no están en ids
   findWithoutIds(ids) {
     return User.find({ _id: { $nin: ids } })
       .select("email deletedAt")

@@ -93,9 +93,6 @@ npm start
 # Reiniciar la base de datos con datos de ejemplo
 npm run seed
 
-# Crear el perfil de los usuarios que no lo tengan (bases de datos de antes de los perfiles)
-npm run migrate:profiles
-
 # Comprobar la integridad referencial (y repararla con -- --fix)
 npm run check:integrity
 
@@ -310,7 +307,6 @@ src/
 │   ├── app.js                     La API sobre una base de datos temporal, para los tests
 │   └── *.test.js                  Tests de integración
 ├── seed.js                        Datos de ejemplo
-├── migrate-profiles.js            Perfil vacío para los usuarios que no lo tengan
 ├── check-integrity.js             Comprueba (y repara) la integridad referencial
 └── server.js                      Punto de entrada
 ```
@@ -753,7 +749,7 @@ El perfil no tiene vida propia: **todo pasa por `userService`**, que es el únic
 - **Se elimina y se restaura con el usuario,** con el mismo `deletedAt`. No tiene estado ni papelera propios, ni endpoints para crearlo o eliminarlo.
 - **Sale siempre dentro del usuario,** como `profile`.
 
-Para una base de datos de antes de los perfiles: `npm run migrate:profiles` crea el perfil vacío de cada usuario que no lo tenga y avisa de cada uno.
+Si un usuario se quedara sin perfil (por ejemplo, en una base de datos de antes de los perfiles), `npm run check:integrity` lo detecta y `npm run check:integrity -- --fix` le crea uno vacío.
 
 ### Reglas de los admins
 

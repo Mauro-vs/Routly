@@ -165,8 +165,8 @@ export const userService = {
     return userService.getById(id);
   },
 
-  // Solo desde update. Un usuario de antes de los perfiles que aún no tiene el suyo lo
-  // recibe aquí, con un aviso: la migración (npm run migrate:profiles) debería haberlo creado
+  // Solo desde update. Un usuario que aún no tiene el suyo (de antes de los perfiles) lo
+  // recibe aquí, con un aviso: npm run check:integrity -- --fix debería haberlo creado
   async updateProfile(id, profile, actor) {
     const actorId = actor?.id ?? id;
     if (await profileService.update(id, profile, actorId)) return;

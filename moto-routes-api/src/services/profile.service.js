@@ -26,8 +26,8 @@ export const profileService = {
   },
 
   /**
-   * Migración: crea un perfil vacío a cada usuario que no lo tenga (también a los
-   * eliminados, con su deletedAt) y devuelve cuántos y cuáles, para avisar de ellos.
+   * Crea un perfil vacío a cada usuario que no lo tenga (también a los eliminados, con su
+   * deletedAt) y devuelve cuáles. Lo usa la reparación de npm run check:integrity -- --fix.
    */
   async createMissing() {
     const withProfile = await profileRepository.findUserIds();

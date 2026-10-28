@@ -7,7 +7,7 @@ export const profileRepository = {
     return Profile.findOne({ userId }).lean();
   },
 
-  // Para la migración: los usuarios que ya tienen perfil
+  // Para check:integrity: los usuarios que ya tienen perfil
   findUserIds() {
     return Profile.distinct("userId");
   },
