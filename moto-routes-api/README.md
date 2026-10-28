@@ -35,7 +35,8 @@ JavaScript moderno sobre **Node.js**, con módulos ES (`"type": "module"` en `pa
 | [Express](https://expressjs.com) | 5.2 | Servidor HTTP y enrutado |
 | [Mongoose](https://mongoosejs.com) | 9.10 | Modelos sobre MongoDB, relaciones con `ref` y `populate`, validación de segundo nivel, hooks y plugins |
 | [Zod](https://zod.dev) | 4.6 | Validación y limpieza de `params`, `query` y `body` antes del controlador. También genera los esquemas de Swagger |
-| [bcrypt](https://github.com/kelektiv/node.bcrypt.js) | 6.0 | Hash de las contraseñas de los usuarios |
+| [argon2](https://github.com/ranisalt/node-argon2) | 0.45 | Hash de las contraseñas con Argon2id |
+| [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) | 9.0 | Firma y verificación de los JWT (HS256) |
 | [Helmet](https://helmetjs.github.io) | 8.3 | Cabeceras de seguridad |
 | [cors](https://github.com/expressjs/cors) | 2.8 | Orígenes y métodos permitidos |
 | [Morgan](https://github.com/expressjs/morgan) | 1.12 | Logs HTTP en consola y en archivo |
@@ -477,7 +478,7 @@ router.get("/", validate({ query: imageQuerySchema }), imageController.list);
 | `departures.startAt`, `endAt` | ISO 8601 con hora y zona; `startAt` en el futuro al crear y al cambiarla, y sin otra salida de la misma experiencia a esa hora |
 | `departures.capacity` | Entre el mínimo y el máximo de participantes de su experiencia |
 | `departures.state` | `completed` solo si la salida ya terminó; una `cancelled` no se reabre |
-| `users.password` | Entre 8 y 72 caracteres, con al menos una letra y un número |
+| `users.password` | Entre 8 y 128 caracteres, con al menos una letra y un número |
 | `images.url` | Solo `https` |
 | `roles.label` | Única, sin distinguir mayúsculas ni tildes |
 | `locations.region` | Vacía es "sin región": no se guarda, y al editar se borra |
@@ -550,7 +551,7 @@ Además Helmet oculta `X-Powered-By` y añade `X-Content-Type-Options: nosniff`,
 
 Solo en `production`: se activan `Strict-Transport-Security` (HSTS) y `upgrade-insecure-requests`, que requieren HTTPS.
 
-Las contraseñas se guardan con bcrypt (10 rondas) y `passwordHash` está marcado con `select: false` en el modelo: no sale en ninguna consulta.
+Las contraseñas se guardan con Argon2id (19 MiB, 2 pasadas, 1 hilo: los mínimos de OWASP) y `passwordHash` está marcado con `select: false` en el modelo: no sale en ninguna consulta.
 
 </details>
 

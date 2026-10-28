@@ -1,9 +1,9 @@
-import bcrypt from "bcrypt";
 import { restoredStatus, statusFromActive } from "../models/status.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
+import { hashPassword } from "../utils/passwd.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
@@ -17,14 +17,13 @@ import {
   findRestorable,
 } from "./references.js";
 
-const BCRYPT_ROUNDS = 10;
 const DEFAULT_ROLE = "rider";
 const HOST_ROLE = "host";
 
 // La contraseña nunca se guarda ni se devuelve: solo su hash, que el modelo oculta
 async function withPasswordHash({ password, ...data }) {
   if (password === undefined) return data;
-  return { ...data, passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS) };
+  return { ...data, passwordHash: await hashPassword(password) };
 }
 
 export const userService = {

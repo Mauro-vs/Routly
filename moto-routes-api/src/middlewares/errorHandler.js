@@ -128,24 +128,32 @@ function normalizeError(err) {
   }
 
   // Errores propios (utils/errors.js) y errores 4xx de Express/body-parser.
-  // fieldError() trae details con el mismo formato que los errores de Zod.
+  // fieldError() trae details con el mismo formato que los errores de Zod, y
+  // unauthorized() un code (TOKEN_EXPIRED, TOKEN_INVALID) cuando el token no sirve.
   if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 500) {
-    return { statusCode: err.status, message: err.message, details: err.details };
+    const code = typeof err.code === "string" ? err.code : undefined;
+    return { statusCode: err.status, message: err.message, details: err.details, code };
   }
 
   return { statusCode: 500, message: "Internal server error" };
 }
 
 export function errorHandler(err, req, res, next) {
-  const { statusCode, message, details } = normalizeError(err);
+  const { statusCode, message, details, code } = normalizeError(err);
 
   // La traza completa solo se ve en el servidor, nunca en la respuesta
   if (statusCode >= 500) console.error(err);
+
+  // RFC 6750: un 401 dice cómo autenticarse; si había token pero no sirve, lo indica
+  if (statusCode === 401) {
+    res.set("WWW-Authenticate", code ? 'Bearer error="invalid_token"' : "Bearer");
+  }
 
   res.status(statusCode).json({
     statusCode,
     error: STATUS_CODES[statusCode],
     message,
+    ...(code && { code }),
     ...(details && { details }),
   });
 }

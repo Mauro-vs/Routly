@@ -82,7 +82,7 @@ const RESOURCES = [
     plural: "usuarios",
     create: createUserSchema,
     update: updateUserSchema,
-    description: "La API recibe password y guarda solo su hash (bcrypt). passwordHash nunca se devuelve.",
+    description: "La API recibe password y guarda solo su hash (Argon2id). passwordHash nunca se devuelve.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c910",
       name: "Lucía Ferrer",

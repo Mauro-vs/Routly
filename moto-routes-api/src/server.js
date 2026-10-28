@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
+import { loadAuthConfig } from "./config/auth.js";
 import { corsMiddleware } from "./config/cors.js";
 import { connectDB } from "./config/db.js";
 import { helmetMiddleware } from "./config/helmet.js";
@@ -16,6 +17,9 @@ import locationRoutes from "./routes/location.routes.js";
 import roleRoutes from "./routes/role.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import userRoutes from "./routes/user.routes.js";
+
+// Sin un JWT_SECRET válido no se arranca: mejor fallar aquí que en el primer login
+loadAuthConfig();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

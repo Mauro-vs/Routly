@@ -27,6 +27,9 @@ const userSchema = new mongoose.Schema(
     },
     // Nunca sale en las consultas: hay que pedirlo explícitamente con select("+passwordHash")
     passwordHash: { type: String, required: true, select: false },
+    // Va en el token (tv): al subirlo (cambio de contraseña, desactivar, eliminar, cerrar
+    // todas las sesiones) los tokens anteriores dejan de servir. Tampoco sale nunca.
+    tokenVersion: { type: Number, default: 0, min: 0, select: false },
     roleId: { type: mongoose.Schema.Types.ObjectId, ref: "Role", required: true, index: true },
   },
   { timestamps: true }

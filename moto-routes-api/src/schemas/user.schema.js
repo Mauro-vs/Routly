@@ -2,12 +2,13 @@ import { z } from "zod";
 import { USER_LIMITS as LIMITS } from "../models/user.model.js";
 import { cannotChange, objectIdSchema } from "./common.schema.js";
 
-// La API recibe password y guarda solo su hash: passwordHash nunca se acepta del cliente.
-// 72 es el máximo que bcrypt tiene en cuenta.
+// La API recibe password y guarda solo su hash (Argon2id): passwordHash nunca se acepta
+// del cliente. Argon2 no tiene el límite de 72 de bcrypt; 128 deja usar frases largas y
+// evita hashear textos enormes.
 const password = z
   .string()
   .min(8)
-  .max(72)
+  .max(128)
   .refine((value) => /\p{L}/u.test(value) && /\d/.test(value), {
     message: "password must contain at least one letter and one number",
   });
@@ -23,5 +24,5 @@ const userFields = z.strictObject({
 export const createUserSchema = userFields;
 
 export const updateUserSchema = userFields.partial().extend({
-  ...cannotChange("_id", "slug", "passwordHash"),
+  ...cannotChange("_id", "slug", "passwordHash", "tokenVersion"),
 });

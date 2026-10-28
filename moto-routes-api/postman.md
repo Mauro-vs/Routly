@@ -180,7 +180,7 @@ Response `201`:
 ```
 
 - Sin `roleId`, el usuario es `rider`.
-- `password` tiene de 8 a 72 caracteres. Se guarda solo su hash: **`passwordHash` nunca aparece en una respuesta**.
+- `password` tiene de 8 a 128 caracteres. Se guarda solo su hash: **`passwordHash` nunca aparece en una respuesta**.
 - El correo se guarda en minúsculas.
 
 | Caso | Respuesta |
