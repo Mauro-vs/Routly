@@ -28,6 +28,11 @@ export const profileRepository = {
     return Profile.updateOne({ userId }, { deletedAt });
   },
 
+  // Solo para deshacer el alta de un usuario que no ha llegado a usarse
+  deleteByUserId(userId) {
+    return Profile.deleteOne({ userId });
+  },
+
   // ...y vuelve con él
   restoreByUserId(userId) {
     return Profile.updateOne({ userId }, { deletedAt: null });

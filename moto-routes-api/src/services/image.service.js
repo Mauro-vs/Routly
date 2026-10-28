@@ -4,9 +4,10 @@ import { hostRepository } from "../repositories/host.repository.js";
 import { imageRepository } from "../repositories/image.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { canModifyImageOwner, isAdminUser } from "../utils/access.js";
-import { conflict, fieldError, forbidden } from "../utils/errors.js";
+import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import {
   assertHasChanges,
+  confirmReferences,
   ensureWritten,
   findCurrent,
   findExisting,
@@ -21,6 +22,17 @@ async function promoteNextCover(ownerType, ownerId, excludeId) {
   const next = await imageRepository.findFirstActive(ownerType, ownerId, excludeId);
   if (next) await imageRepository.updateById(next._id, { isCover: true });
 }
+
+// "route" → "Route": el nombre del dueño en los mensajes
+const ownerName = (ownerType) => ownerType[0].toUpperCase() + ownerType.slice(1);
+
+// El dueño, como referencia para confirmReferences
+const ownerReference = ({ ownerType, ownerId }) => ({
+  repository: { findById: (id) => imageRepository.findOwner(ownerType, id) },
+  id: ownerId,
+  field: "ownerId",
+  resource: ownerType,
+});
 
 // El dueño de una imagen con lo que hace falta para saber de quién es: un usuario, un
 // anfitrión, o una experiencia con su anfitrión. El resto solo los gestiona el admin.
@@ -44,8 +56,12 @@ async function assertOwnImage(actor, { ownerType, ownerId }) {
 }
 
 export const imageService = {
-  // Con ownerType y ownerId devuelve la galería de un dueño
+  // Con ownerType y ownerId devuelve la galería de un dueño, que tiene que estar vivo: las
+  // imágenes de algo eliminado no se enseñan (404)
   async list(filter = {}) {
+    if (filter.ownerType && !(await imageRepository.findOwner(filter.ownerType, filter.ownerId))) {
+      throw notFound(ownerName(filter.ownerType));
+    }
     return imageRepository.findAll(filter);
   },
 
@@ -79,6 +95,8 @@ export const imageService = {
     if (isCover) await imageRepository.unsetCover(ownerType, ownerId);
 
     const image = await imageRepository.create({ ...data, position, isCover });
+    // Sin transacciones: el dueño tiene que seguir vivo después de escribir
+    await confirmReferences([ownerReference(data)], () => imageRepository.deleteCreatedById(image._id));
     return imageService.getById(image._id);
   },
 
@@ -137,6 +155,9 @@ export const imageService = {
       await imageRepository.restoreById(id, { ...restoredStatus(isActive), isCover: false }),
       "Image"
     );
+    await confirmReferences([ownerReference(deleted)], () =>
+      imageRepository.softDeleteById(id, deleted.deletedAt)
+    );
     if (restored.isActive && !(await imageRepository.hasCover(deleted.ownerType, deleted.ownerId))) {
       await imageRepository.updateById(id, { isCover: true });
     }
@@ -168,7 +189,15 @@ export const imageService = {
     return withCover;
   },
 
-  // Cascada con la papelera: las imágenes se eliminan y se restauran con su dueño
+  // Cascada con la papelera: las imágenes se eliminan y se restauran con su dueño.
+  // cascade() es la pieza que recibe softDeleteWithCascades
+  cascade(ownerType, ownerId) {
+    return {
+      remove: (deletedAt) => imageService.removeByOwner(ownerType, ownerId, deletedAt),
+      restore: (deletedAt) => imageService.restoreByOwner(ownerType, ownerId, deletedAt),
+    };
+  },
+
   async removeByOwner(ownerType, ownerId, deletedAt) {
     await imageRepository.softDeleteByOwner(ownerType, ownerId, deletedAt);
   },

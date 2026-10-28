@@ -67,12 +67,17 @@ export const imageRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Image.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Image.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {
     return Image.restoreById(id, data).lean();
+  },
+
+  // Solo para deshacer un alta que no ha llegado a usarse (su referencia se eliminó a la vez)
+  deleteCreatedById(id) {
+    return Image.deleteOne({ _id: id });
   },
 
   // Cascada con la papelera: se marcan con el mismo deletedAt que su dueño...

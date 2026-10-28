@@ -11,6 +11,7 @@ import {
   assertHasChanges,
   assertReference,
   assertRestorable,
+  confirmReferences,
   ensureWritten,
   findCurrent,
   findExisting,
@@ -84,6 +85,13 @@ async function assertOwnDeparture(actor, departure) {
   if (!canModifyDeparture(actor, { ...departure, experience })) throw forbidden();
 }
 
+const experienceReference = (id) => ({
+  repository: experienceRepository,
+  id,
+  field: "experienceId",
+  resource: "experience",
+});
+
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
 
 export const departureService = {
@@ -138,6 +146,10 @@ export const departureService = {
     for (let attempt = 1; attempt <= SKU_ATTEMPTS; attempt++) {
       try {
         await departureRepository.create({ ...data, _id, slug, sku: buildSku(SKU_TYPE) });
+        // Sin transacciones: la experiencia tiene que seguir viva después de escribir
+        await confirmReferences([experienceReference(data.experienceId)], () =>
+          departureRepository.deleteCreatedById(_id)
+        );
         return departureService.getById(_id);
       } catch (error) {
         if (!isSkuClash(error)) throw error;
@@ -213,6 +225,9 @@ export const departureService = {
     await assertRestorable(experienceRepository, deleted.experienceId, "experienceId", "experience");
 
     await departureRepository.restoreById(id, restoredStatus(isActive));
+    await confirmReferences([experienceReference(deleted.experienceId)], () =>
+      departureRepository.softDeleteById(id, deleted.deletedAt)
+    );
     return departureService.getById(id);
   },
 };

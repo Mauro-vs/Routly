@@ -6,7 +6,7 @@ import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNotTaken,
-  assertNoDependents,
+  softDeleteWithCascades,
   ensureWritten,
   findCurrent,
   findExisting,
@@ -73,14 +73,15 @@ export const categoryService = {
 
   async remove(id) {
     await findCurrent(categoryRepository, id, "Category");
-    await assertNoDependents(
-      routeRepository,
-      { categoryId: id },
-      "Cannot delete a category that has routes"
-    );
-
-    const category = ensureWritten(await categoryRepository.softDeleteById(id), "Category");
-    await imageService.removeByOwner("category", id, category.deletedAt);
+    await softDeleteWithCascades({
+      repository: categoryRepository,
+      id,
+      resource: "Category",
+      dependents: [
+        { repository: routeRepository, filter: { categoryId: id }, message: "Cannot delete a category that has routes" },
+      ],
+      cascades: [imageService.cascade("category", id)],
+    });
   },
 
   async restore(id, isActive) {

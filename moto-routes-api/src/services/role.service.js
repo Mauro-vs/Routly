@@ -5,7 +5,7 @@ import { conflict, notFound } from "../utils/errors.js";
 import {
   assertHasChanges,
   assertNotTaken,
-  assertNoDependents,
+  softDeleteWithCascades,
   ensureWritten,
   findCurrent,
   findExisting,
@@ -90,9 +90,14 @@ export const roleService = {
     const role = await findCurrent(roleRepository, id, "Role");
 
     if (role.isSystem) throw conflict("System roles cannot be deleted");
-    await assertNoDependents(userRepository, { roleId: id }, "Cannot delete a role that has users");
-
-    ensureWritten(await roleRepository.softDeleteById(id), "Role");
+    await softDeleteWithCascades({
+      repository: roleRepository,
+      id,
+      resource: "Role",
+      dependents: [
+        { repository: userRepository, filter: { roleId: id }, message: "Cannot delete a role that has users" },
+      ],
+    });
   },
 
   // Vuelve con el estado que tenía, salvo que se pida otro con isActive

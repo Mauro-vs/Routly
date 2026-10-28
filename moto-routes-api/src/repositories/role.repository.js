@@ -54,8 +54,8 @@ export const roleRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Role.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Role.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {

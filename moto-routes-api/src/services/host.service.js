@@ -5,21 +5,23 @@ import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { canModifyHost } from "../utils/access.js";
-import { fieldError, forbidden, notFound } from "../utils/errors.js";
+import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNotTaken,
-  assertNoDependents,
   assertReference,
-  assertRestorable,
+  confirmReferences,
   ensureWritten,
   findCurrent,
   findExisting,
   findRestorable,
+  softDeleteWithCascades,
 } from "./references.js";
 
 const HOST_ROLE = ROLES.HOST;
+
+const userReference = (id) => ({ repository: userRepository, id, field: "userId", resource: "user" });
 
 export const hostService = {
   async list() {
@@ -58,6 +60,8 @@ export const hostService = {
     );
 
     const { _id } = await hostRepository.create(data);
+    // Sin transacciones: el usuario tiene que seguir vivo después de escribir
+    await confirmReferences([userReference(data.userId)], () => hostRepository.deleteCreatedById(_id));
     return hostService.getById(_id);
   },
 
@@ -81,23 +85,35 @@ export const hostService = {
 
   async remove(id) {
     await findCurrent(hostRepository, id, "Host");
-    await assertNoDependents(
-      experienceRepository,
-      { hostId: id },
-      "Cannot delete a host that has experiences"
-    );
-
-    const host = ensureWritten(await hostRepository.softDeleteById(id), "Host");
-    await imageService.removeByOwner("host", id, host.deletedAt);
+    await softDeleteWithCascades({
+      repository: hostRepository,
+      id,
+      resource: "Host",
+      dependents: [
+        { repository: experienceRepository, filter: { hostId: id }, message: "Cannot delete a host that has experiences" },
+      ],
+      cascades: [imageService.cascade("host", id)],
+    });
   },
 
   async restore(id, isActive) {
     const deleted = await findRestorable(hostRepository, id, "Host");
 
-    await assertRestorable(userRepository, deleted.userId, "userId", "user");
+    // Su usuario tiene que existir y seguir siendo anfitrión: mientras el host estaba en la
+    // papelera se le pudo quitar el rol
+    const user = await userRepository.findPlainById(deleted.userId);
+    if (!user) throw conflict("Cannot restore: userId references a deleted user");
+    const role = await roleRepository.findById(user.roleId);
+    if (role?.name !== HOST_ROLE) {
+      throw conflict("Cannot restore: userId references a user without the host role");
+    }
 
     await hostRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("host", id, deleted.deletedAt);
+    await confirmReferences([userReference(deleted.userId)], async () => {
+      await imageService.removeByOwner("host", id, deleted.deletedAt);
+      await hostRepository.softDeleteById(id, deleted.deletedAt);
+    });
     return hostService.getById(id);
   },
 };

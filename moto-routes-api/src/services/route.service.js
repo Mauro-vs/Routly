@@ -7,13 +7,14 @@ import { notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
-  assertNoDependents,
   assertReference,
   assertRestorable,
+  confirmReferences,
   ensureWritten,
   findCurrent,
   findExisting,
   findRestorable,
+  softDeleteWithCascades,
 } from "./references.js";
 
 // Cada referencia de la ruta: el campo, su repositorio y el recurso para los mensajes
@@ -32,6 +33,15 @@ async function assertReferences(data, current = {}) {
     }
   }
 }
+
+// Las referencias de data como piezas de confirmReferences (solo las que llegan)
+const referencesOf = (data) =>
+  REFERENCES.filter(({ field }) => data[field] !== undefined).map(({ field, repository, resource }) => ({
+    repository,
+    id: data[field],
+    field,
+    resource,
+  }));
 
 // Los datos llegan ya validados y limpios por los esquemas de Zod
 // (src/schemas/route.schema.js), aplicados en las rutas con validate().
@@ -67,6 +77,8 @@ export const routeService = {
     await assertReferences(data);
 
     const { _id } = await routeRepository.create(data);
+    // Sin transacciones: las referencias tienen que seguir vivas después de escribir
+    await confirmReferences(referencesOf(data), () => routeRepository.deleteCreatedById(_id));
     return routeService.getById(_id);
   },
 
@@ -77,6 +89,11 @@ export const routeService = {
     await assertReferences(data, route);
 
     ensureWritten(await routeRepository.updateById(id, data), "Route");
+    // Las que cambian tienen que seguir vivas; si no, vuelven a las de antes
+    const changed = referencesOf(data).filter(({ field }) => data[field] !== String(route[field]));
+    await confirmReferences(changed, () =>
+      routeRepository.updateById(id, Object.fromEntries(changed.map(({ field }) => [field, route[field]])))
+    );
     return routeService.getById(id);
   },
 
@@ -93,14 +110,15 @@ export const routeService = {
   // Sus imágenes se eliminan con ella, con el mismo deletedAt
   async remove(id) {
     await findCurrent(routeRepository, id, "Route");
-    await assertNoDependents(
-      experienceRepository,
-      { routeId: id },
-      "Cannot delete a route that has experiences"
-    );
-
-    const route = ensureWritten(await routeRepository.softDeleteById(id), "Route");
-    await imageService.removeByOwner("route", id, route.deletedAt);
+    await softDeleteWithCascades({
+      repository: routeRepository,
+      id,
+      resource: "Route",
+      dependents: [
+        { repository: experienceRepository, filter: { routeId: id }, message: "Cannot delete a route that has experiences" },
+      ],
+      cascades: [imageService.cascade("route", id)],
+    });
   },
 
   // Solo se restauran rutas eliminadas. Vuelven con el estado que tenían, salvo que
@@ -115,6 +133,11 @@ export const routeService = {
 
     await routeRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("route", id, deleted.deletedAt);
+    // Si una referencia se ha eliminado entretanto, vuelve a la papelera con lo suyo
+    await confirmReferences(referencesOf(deleted), async () => {
+      await imageService.removeByOwner("route", id, deleted.deletedAt);
+      await routeRepository.softDeleteById(id, deleted.deletedAt);
+    });
     return routeService.getById(id);
   },
 };

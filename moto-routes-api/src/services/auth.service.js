@@ -39,8 +39,8 @@ export const authService = {
     const user = await userRepository.findForLogin(email);
     const valid = await verifyPassword(user?.passwordHash ?? (await getDummyHash()), password);
 
-    // Los eliminados ya no llegan (plugin softDelete); los inactivos y sin rol, no entran
-    if (!user || !valid || !user.isActive || !user.role) throw invalidCredentials();
+    // Los eliminados ya no llegan (plugin softDelete); los inactivos o sin un rol activo, no entran
+    if (!user || !valid || !user.isActive || !user.role?.isActive) throw invalidCredentials();
 
     // Parámetros de Argon2 de antes: se rehace el hash ahora que se tiene la contraseña
     if (needsRehash(user.passwordHash)) {

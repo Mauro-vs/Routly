@@ -9,13 +9,14 @@ import { departureService } from "./departure.service.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
-  assertNoDependents,
   assertReference,
   assertRestorable,
+  confirmReferences,
   ensureWritten,
   findCurrent,
   findExisting,
   findRestorable,
+  softDeleteWithCascades,
 } from "./references.js";
 
 const REFERENCES = [
@@ -31,6 +32,15 @@ async function assertReferences(data, current = {}) {
     }
   }
 }
+
+// Las referencias de data como piezas de confirmReferences (solo las que llegan)
+const referencesOf = (data) =>
+  REFERENCES.filter(({ field }) => data[field] !== undefined).map(({ field, repository, resource }) => ({
+    repository,
+    id: data[field],
+    field,
+    resource,
+  }));
 
 // ABAC: el admin, con todas; un anfitrión, solo con las de su perfil de anfitrión
 async function assertOwnHost(actor, hostId) {
@@ -72,6 +82,8 @@ export const experienceService = {
     await assertOwnHost(actor, data.hostId);
 
     const { _id } = await experienceRepository.create(data);
+    // Sin transacciones: las referencias tienen que seguir vivas después de escribir
+    await confirmReferences(referencesOf(data), () => experienceRepository.deleteCreatedById(_id));
     return experienceService.getById(_id);
   },
 
@@ -109,6 +121,11 @@ export const experienceService = {
     }
 
     ensureWritten(await experienceRepository.updateById(id, data), "Experience");
+    // Las que cambian tienen que seguir vivas; si no, vuelven a las de antes
+    const changed = referencesOf(data).filter(({ field }) => data[field] !== String(experience[field]));
+    await confirmReferences(changed, () =>
+      experienceRepository.updateById(id, Object.fromEntries(changed.map(({ field }) => [field, experience[field]])))
+    );
     if (data.title !== undefined && data.title !== experience.title) {
       await departureService.renameExperience(id, data.title);
     }
@@ -125,14 +142,19 @@ export const experienceService = {
 
   async remove(id, actor) {
     await assertOwnExperience(actor, await findCurrent(experienceRepository, id, "Experience"));
-    await assertNoDependents(
-      departureRepository,
-      { experienceId: id },
-      "Cannot delete an experience that has departures"
-    );
-
-    const experience = ensureWritten(await experienceRepository.softDeleteById(id), "Experience");
-    await imageService.removeByOwner("experience", id, experience.deletedAt);
+    await softDeleteWithCascades({
+      repository: experienceRepository,
+      id,
+      resource: "Experience",
+      dependents: [
+        {
+          repository: departureRepository,
+          filter: { experienceId: id },
+          message: "Cannot delete an experience that has departures",
+        },
+      ],
+      cascades: [imageService.cascade("experience", id)],
+    });
   },
 
   async restore(id, isActive, actor) {
@@ -145,6 +167,11 @@ export const experienceService = {
 
     await experienceRepository.restoreById(id, restoredStatus(isActive));
     await imageService.restoreByOwner("experience", id, deleted.deletedAt);
+    // Si una referencia se ha eliminado entretanto, vuelve a la papelera con lo suyo
+    await confirmReferences(referencesOf(deleted), async () => {
+      await imageService.removeByOwner("experience", id, deleted.deletedAt);
+      await experienceRepository.softDeleteById(id, deleted.deletedAt);
+    });
     return experienceService.getById(id);
   },
 };

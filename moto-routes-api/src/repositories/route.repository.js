@@ -52,12 +52,17 @@ export const routeRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Route.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Route.softDeleteById(id, deletedAt).lean();
   },
 
   // Al revés que el resto: solo encuentra documentos eliminados (deletedAt != null)
   restoreById(id, data) {
     return Route.restoreById(id, data).lean();
+  },
+
+  // Solo para deshacer un alta que no ha llegado a usarse (su referencia se eliminó a la vez)
+  deleteCreatedById(id) {
+    return Route.deleteOne({ _id: id });
   },
 };

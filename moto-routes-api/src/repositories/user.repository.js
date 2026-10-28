@@ -29,14 +29,14 @@ export const userRepository = {
   // Para authenticate: el usuario del token, con su tokenVersion y el name de su rol.
   // No devuelve los eliminados (plugin softDelete)
   findAuthById(id) {
-    return User.findOne({ _id: id }).select("+tokenVersion").populate("role", "name").lean();
+    return User.findOne({ _id: id }).select("+tokenVersion").populate("role", "name isActive").lean();
   },
 
   // Para el login: con el hash y el tokenVersion, que nunca salen en otra consulta
   findForLogin(email) {
     return User.findOne({ email })
       .select("+passwordHash +tokenVersion")
-      .populate("role", "name")
+      .populate("role", "name isActive")
       .lean();
   },
 
@@ -88,8 +88,8 @@ export const userRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return User.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return User.softDeleteById(id, deletedAt).lean();
   },
 
   // Un cambio en el perfil también es un cambio del usuario: se ve en su updatedAt

@@ -103,6 +103,74 @@ export async function assertRestorable(repository, id, field, resource) {
   }
 }
 
+/*
+ * ---------- Sin transacciones: doble comprobación ----------
+ *
+ * MongoDB en standalone no tiene transacciones, así que entre comprobar una referencia y
+ * escribir puede colarse otra petición (crear una ruta mientras se elimina su categoría).
+ * Cada lado escribe y después vuelve a comprobar: si el otro ha llegado antes, deshace lo
+ * suyo. En el peor caso fallan los dos, pero nunca queda una referencia huérfana.
+ */
+
+/**
+ * Segunda comprobación después de crear, editar o restaurar: las referencias que se acaban
+ * de escribir siguen vivas. Si alguna se ha eliminado entretanto, deshace la escritura con
+ * undo() y lanza el mismo 400 que assertReference.
+ *
+ * @param references [{ repository, id, field, resource }]
+ */
+export async function confirmReferences(references, undo) {
+  for (const { repository, id, field, resource } of references) {
+    if (!(await findPlain(repository, id))) {
+      await undo();
+      throw fieldError(field, `${field} must reference an active ${resource}`);
+    }
+  }
+}
+
+/**
+ * Soft delete de un documento con sus cascadas, sin dejar nada a medias:
+ *
+ * 1. Sin dependientes vivos (409).
+ * 2. Primero las cascadas (imágenes, perfil), con el mismo deletedAt que el dueño; después
+ *    el dueño. Si algo falla, las cascadas se deshacen: el dueño sigue vivo con todo lo suyo.
+ * 3. Segunda comprobación: si se ha creado un dependiente entretanto, se restaura todo (409).
+ *
+ * @param dependents [{ repository, filter, message }]
+ * @param cascades [{ remove(deletedAt), restore(deletedAt) }]
+ */
+export async function softDeleteWithCascades({ repository, id, resource, dependents = [], cascades = [] }) {
+  for (const dependent of dependents) {
+    await assertNoDependents(dependent.repository, dependent.filter, dependent.message);
+  }
+
+  const deletedAt = new Date();
+  const undoCascades = () => Promise.all(cascades.map((cascade) => cascade.restore(deletedAt)));
+
+  let deleted;
+  try {
+    for (const cascade of cascades) await cascade.remove(deletedAt);
+    deleted = await repository.softDeleteById(id, deletedAt);
+  } catch (error) {
+    await undoCascades();
+    throw error;
+  }
+  // Lo ha eliminado otra petición entretanto
+  if (!deleted) {
+    await undoCascades();
+    throw notFound(resource);
+  }
+
+  for (const dependent of dependents) {
+    if (await dependent.repository.exists(dependent.filter)) {
+      await repository.restoreById(id);
+      await undoCascades();
+      throw conflict(dependent.message);
+    }
+  }
+  return deleted;
+}
+
 /**
  * Devuelve el documento eliminado que se quiere restaurar. Si no está eliminado, 409;
  * si no existe, 404.

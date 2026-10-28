@@ -50,11 +50,16 @@ export const hostRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Host.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Host.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {
     return Host.restoreById(id, data).lean();
+  },
+
+  // Solo para deshacer un alta que no ha llegado a usarse (su referencia se eliminó a la vez)
+  deleteCreatedById(id) {
+    return Host.deleteOne({ _id: id });
   },
 };

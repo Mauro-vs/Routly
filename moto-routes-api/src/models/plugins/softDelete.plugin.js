@@ -23,7 +23,8 @@ const QUERIES_TO_FILTER = [
  * - Middleware de consultas: excluye automáticamente los eliminados, salvo que
  *   la consulta filtre por `deletedAt` explícitamente o pida incluirlos con
  *   `.setOptions({ withDeleted: true })`.
- * - `Model.softDeleteById(id)`: marca el documento como eliminado en vez de borrarlo.
+ * - `Model.softDeleteById(id, deletedAt?)`: marca el documento como eliminado en vez de borrarlo.
+ *   El deletedAt se puede dar: las cascadas usan el mismo valor que su dueño.
  * - `Model.restoreById(id, fields)`: restaura un documento eliminado (`deletedAt` a null).
  *
  * No cubre `aggregate` ni `estimatedDocumentCount`: un pipeline tiene que empezar con
@@ -39,10 +40,10 @@ export function softDeletePlugin(schema) {
     }
   });
 
-  schema.statics.softDeleteById = function (id) {
+  schema.statics.softDeleteById = function (id, deletedAt = new Date()) {
     return this.findOneAndUpdate(
       { _id: id, deletedAt: null },
-      { deletedAt: new Date() },
+      { deletedAt },
       { returnDocument: "after" }
     );
   };

@@ -6,7 +6,7 @@ import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
   assertNotTaken,
-  assertNoDependents,
+  softDeleteWithCascades,
   ensureWritten,
   findCurrent,
   findExisting,
@@ -93,14 +93,19 @@ export const locationService = {
 
   async remove(id) {
     await findCurrent(locationRepository, id, "Location");
-    await assertNoDependents(
-      routeRepository,
-      { $or: [{ startLocationId: id }, { endLocationId: id }] },
-      "Cannot delete a location that is used by routes"
-    );
-
-    const location = ensureWritten(await locationRepository.softDeleteById(id), "Location");
-    await imageService.removeByOwner("location", id, location.deletedAt);
+    await softDeleteWithCascades({
+      repository: locationRepository,
+      id,
+      resource: "Location",
+      dependents: [
+        {
+          repository: routeRepository,
+          filter: { $or: [{ startLocationId: id }, { endLocationId: id }] },
+          message: "Cannot delete a location that is used by routes",
+        },
+      ],
+      cascades: [imageService.cascade("location", id)],
+    });
   },
 
   async restore(id, isActive) {

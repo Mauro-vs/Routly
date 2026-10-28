@@ -9,7 +9,7 @@ const BEARER = /^Bearer ([A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*)$/i;
 /**
  * Exige sesión. Lee Authorization: Bearer <token>, comprueba la firma y la caducidad
  * (verifyToken), que el token no se haya cerrado con un logout (lista negra) y que el
- * usuario siga existiendo: no eliminado, activo y con el mismo tokenVersion.
+ * usuario siga existiendo: no eliminado, activo, con un rol activo y el mismo tokenVersion.
  *
  * Deja en req.user { id, email, role, name }, con el rol leído de la base de datos: un
  * cambio de rol se aplica en la siguiente petición, sin esperar al token. Y en req.auth
@@ -31,7 +31,7 @@ export async function authenticate(req, res, next) {
       revokedTokenRepository.isRevoked(payload.jti),
     ]);
 
-    if (revoked || !user || !user.isActive || !user.role || user.tokenVersion !== payload.tv) {
+    if (revoked || !user || !user.isActive || !user.role?.isActive || user.tokenVersion !== payload.tv) {
       throw unauthorized("TOKEN_INVALID");
     }
 

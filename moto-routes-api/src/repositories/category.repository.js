@@ -48,8 +48,8 @@ export const categoryRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Category.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Category.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {

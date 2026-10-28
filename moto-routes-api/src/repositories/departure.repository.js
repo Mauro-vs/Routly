@@ -74,11 +74,16 @@ export const departureRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Departure.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Departure.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {
     return Departure.restoreById(id, data).lean();
+  },
+
+  // Solo para deshacer un alta que no ha llegado a usarse (su referencia se eliminó a la vez)
+  deleteCreatedById(id) {
+    return Departure.deleteOne({ _id: id });
   },
 };

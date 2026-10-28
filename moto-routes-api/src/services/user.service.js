@@ -2,6 +2,7 @@ import { ROLES } from "../models/role.model.js";
 import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
+import { profileRepository } from "../repositories/profile.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
 import { hashPassword, verifyPassword } from "../utils/passwd.js";
@@ -10,16 +11,19 @@ import { profileService } from "./profile.service.js";
 import {
   assertHasChanges,
   assertNotTaken,
-  assertNoDependents,
   assertReference,
   assertRestorable,
+  confirmReferences,
   ensureWritten,
   findCurrent,
   findExisting,
   findRestorable,
+  softDeleteWithCascades,
 } from "./references.js";
 
 const DEFAULT_ROLE = ROLES.RIDER;
+
+const roleReference = (id) => ({ repository: roleRepository, id, field: "roleId", resource: "role" });
 const HOST_ROLE = ROLES.HOST;
 
 // La contraseña nunca se guarda ni se devuelve: solo su hash, que el modelo oculta
@@ -102,6 +106,11 @@ export const userService = {
       await userRepository.deleteCreatedById(_id);
       throw error;
     }
+    // Sin transacciones: el rol tiene que seguir vivo; si no, se deshace el alta entera
+    await confirmReferences([roleReference(role._id)], async () => {
+      await profileRepository.deleteByUserId(_id);
+      await userRepository.deleteCreatedById(_id);
+    });
     return userService.getById(_id);
   },
 
@@ -137,6 +146,11 @@ export const userService = {
     const changesUser = hasValues(data);
     if (changesUser) {
       ensureWritten(await userRepository.updateById(id, await withPasswordHash(data)), "User");
+      if (data.roleId !== undefined && data.roleId !== String(user.roleId)) {
+        await confirmReferences([roleReference(data.roleId)], () =>
+          userRepository.updateById(id, { roleId: user.roleId })
+        );
+      }
     }
     if (changesProfile) {
       await userService.updateProfile(id, profile, actor);
@@ -182,16 +196,20 @@ export const userService = {
     const current = await findCurrent(userRepository, id, "User");
     if (isSelf(actor, id)) throw conflict("You cannot delete your own account");
     await assertAdminRemains(current);
-    await assertNoDependents(
-      hostRepository,
-      { userId: id },
-      "Cannot delete a user that has a host profile"
-    );
-
-    const user = ensureWritten(await userRepository.softDeleteById(id), "User");
+    await softDeleteWithCascades({
+      repository: userRepository,
+      id,
+      resource: "User",
+      dependents: [
+        { repository: hostRepository, filter: { userId: id }, message: "Cannot delete a user that has a host profile" },
+      ],
+      // El perfil y las imágenes van con él
+      cascades: [
+        { remove: (deletedAt) => profileService.removeFor(id, deletedAt), restore: () => profileService.restoreFor(id) },
+        imageService.cascade("user", id),
+      ],
+    });
     await userRepository.revokeTokens(id);
-    await profileService.removeFor(id, user.deletedAt);
-    await imageService.removeByOwner("user", id, user.deletedAt);
   },
 
   async restore(id, isActive) {
@@ -202,6 +220,11 @@ export const userService = {
     await userRepository.restoreById(id, restoredStatus(isActive));
     await profileService.restoreFor(id);
     await imageService.restoreByOwner("user", id, deleted.deletedAt);
+    await confirmReferences([roleReference(deleted.roleId)], async () => {
+      await imageService.removeByOwner("user", id, deleted.deletedAt);
+      await profileService.removeFor(id, deleted.deletedAt);
+      await userRepository.softDeleteById(id, deleted.deletedAt);
+    });
     return userService.getById(id);
   },
 };

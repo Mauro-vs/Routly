@@ -49,11 +49,16 @@ export const experienceRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Experience.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Experience.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {
     return Experience.restoreById(id, data).lean();
+  },
+
+  // Solo para deshacer un alta que no ha llegado a usarse (su referencia se eliminó a la vez)
+  deleteCreatedById(id) {
+    return Experience.deleteOne({ _id: id });
   },
 };

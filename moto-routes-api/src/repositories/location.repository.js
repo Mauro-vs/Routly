@@ -49,8 +49,8 @@ export const locationRepository = {
     }).lean();
   },
 
-  softDeleteById(id) {
-    return Location.softDeleteById(id).lean();
+  softDeleteById(id, deletedAt) {
+    return Location.softDeleteById(id, deletedAt).lean();
   },
 
   restoreById(id, data) {
