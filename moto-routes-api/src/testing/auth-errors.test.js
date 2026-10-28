@@ -38,6 +38,12 @@ before(async () => {
   );
   // El límite de intentos, con 2 en vez de 10 y sin saltarse en los tests
   app.post("/login", createAuthLimiter({ limit: 2, skip: () => false }), (req, res) => res.json({ ok: true }));
+  // Como el del login: solo cuentan los fallos (aquí, ?ok=0)
+  app.post(
+    "/login-failures",
+    createAuthLimiter({ limit: 2, skip: () => false, onlyFailures: true }),
+    (req, res) => res.status(req.query.ok === "1" ? 200 : 401).json({})
+  );
   app.use(errorHandler);
 
   server = await new Promise((resolve) => {
@@ -112,4 +118,13 @@ test("límite de intentos: a partir del tercero, 429 con el formato de error de 
     error: "Too Many Requests",
     message: "Too many attempts, please try again later",
   });
+});
+
+test("en el login solo cuentan los intentos fallidos", async () => {
+  const post = (ok) => fetch(`${base}/login-failures?ok=${ok}`, { method: "POST" });
+
+  for (let i = 0; i < 5; i++) assert.equal((await post(1)).status, 200);
+  assert.equal((await post(0)).status, 401);
+  assert.equal((await post(0)).status, 401);
+  assert.equal((await post(0)).status, 429);
 });

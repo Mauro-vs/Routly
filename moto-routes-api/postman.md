@@ -9,6 +9,8 @@ Content-Type: application/json
 
 Los ejemplos usan los datos de `npm run seed`. Los `_id` cambian cada vez que se ejecuta: cópialos de un listado antes de probar.
 
+Las peticiones que piden sesión llevan además `Authorization: Bearer <token>`: ver [Autenticación](#autenticación-jwt).
+
 ---
 
 ## Health Check
@@ -19,6 +21,160 @@ Response `200`:
 ```json
 { "ok": true }
 ```
+
+---
+
+## Autenticación (JWT)
+
+Casi todas las escrituras piden sesión. Primero se hace login y después se envía el token en cada petición.
+
+### 1. Login
+
+**POST** `/api/auth/login`
+
+```json
+{ "email": "admin@routly.dev", "password": "routly-dev-1234" }
+```
+
+Response `200`:
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 604800,
+  "user": {
+    "_id": "6ad647681b0b769e10cbcc81",
+    "name": "Admin Routly",
+    "email": "admin@routly.dev",
+    "role": { "_id": "6ad647681b0b769e10cbcc7b", "name": "admin", "label": "Administrador" },
+    "profile": { "_id": "6ad647681b0b769e10cbcc82", "userId": "6ad647681b0b769e10cbcc81", "updatedBy": "6ad647681b0b769e10cbcc81" },
+    "coverImage": { "_id": "6ad647691b0b769e10cbccbd", "url": "https://picsum.photos/seed/admin-routly-cbcc81/400/400", "alt": "Foto de perfil de Admin Routly" }
+  }
+}
+```
+
+`expiresIn` son los segundos que dura el token (`JWT_EXPIRES_IN`).
+
+Usuarios del seed, todos con la contraseña `routly-dev-1234`:
+
+| Email | Rol | Para probar |
+|---|---|---|
+| `admin@routly.dev` | admin | Todo |
+| `lucia@routly.dev` | host | Su experiencia "Tramuntana al amanecer", sus salidas e imágenes |
+| `pablo@routly.dev` | host | Su experiencia "Travesía de los Pirineos" (y que no puede tocar la de Lucía) |
+| `marta@routly.dev` | rider | Su perfil y su foto; nada del catálogo |
+
+### 2. Enviar el token en Postman
+
+- En la petición (o mejor, en la colección): pestaña **Authorization** → tipo **Bearer Token** → pegar el token, sin la palabra `Bearer`.
+- Para no copiarlo cada vez, en la pestaña **Scripts → Post-response** del login:
+  ```js
+  pm.collectionVariables.set("token", pm.response.json().token);
+  ```
+  y en la Authorization de la colección, `{{token}}`. Cada petición hereda "Inherit auth from parent".
+
+Es lo mismo que añadir la cabecera:
+```
+Authorization: Bearer <token>
+```
+
+### Registro
+
+**POST** `/api/auth/register` (sin token)
+
+```json
+{ "name": "Rider Nuevo", "email": "nuevo@routly.dev", "password": "clave1234" }
+```
+
+Response `201`: lo mismo que el login. Siempre con el rol `rider` y con su perfil vacío. Si se envía `roleId`: 400 `roleId is not allowed`.
+
+### Sesión
+
+| Petición | Qué hace | Éxito |
+|---|---|---|
+| **GET** `/api/auth/me` | El usuario de la sesión, con su rol y su perfil | 200 |
+| **POST** `/api/auth/logout-all` | Cierra todas las sesiones: todos los tokens del usuario dejan de servir | 204 |
+
+Cerrar la sesión en un solo dispositivo es borrar el token: no hay endpoint.
+
+### Errores de autenticación
+
+| Caso | Respuesta |
+|---|---|
+| Sin token en un endpoint que lo pide | 401 `Authentication required` |
+| Token caducado | 401 `Authentication required`, con `"code": "TOKEN_EXPIRED"` |
+| Token manipulado, de otro formato, de un usuario desactivado o eliminado, o de antes de cambiar la contraseña | 401 `Authentication required`, con `"code": "TOKEN_INVALID"` |
+| Login con correo inexistente, contraseña mal o cuenta inactiva | 401 `Invalid email or password` (el mismo en los tres casos) |
+| Con sesión, pero sin el rol o sin ser el dueño | 403 `You do not have permission to access this resource` |
+| Más de 10 logins fallidos (o 10 registros) en 15 minutos desde la misma IP | 429 `Too many attempts, please try again later` |
+
+```json
+{ "statusCode": 401, "error": "Unauthorized", "message": "Authentication required", "code": "TOKEN_EXPIRED" }
+```
+
+```json
+{ "statusCode": 403, "error": "Forbidden", "message": "You do not have permission to access this resource" }
+```
+
+### Quién puede qué
+
+| Endpoint | Sin token | Marta (rider) | Lucía (host) | Admin |
+|---|---|---|---|---|
+| `GET` del catálogo (`/`, `/actives`, `/:id`, `/slug`, `/sku`) | ✔ | ✔ | ✔ | ✔ |
+| `/inactives` y `/deleted` | 401 | 403 | 403 | ✔ |
+| Escrituras de rutas, categorías y ubicaciones | 401 | 403 | 403 | ✔ |
+| Escrituras de experiencias y salidas | 401 | 403 | solo las suyas | ✔ |
+| Escrituras de imágenes | 401 | solo su foto | su foto, su perfil de anfitrión y sus experiencias | ✔ |
+| `PATCH /api/hosts/:id` | 401 | 403 | solo el suyo | ✔ |
+| Todo `/api/users` y `/api/roles` | 401 | 403 | 403 | ✔ |
+| `/api/profile/me` | 401 | ✔ | ✔ | ✔ |
+| `/api/profile/:userId` | 401 | solo el suyo | solo el suyo | ✔ |
+
+Prueba rápida de ABAC: con el token de Pablo, **PATCH** `/api/experiences/<id de "Tramuntana al amanecer">` con `{ "duration": 6 }` → 403. Con el de Lucía → 200.
+
+---
+
+## Perfil
+
+El perfil pertenece al usuario: se crea con él, se elimina y se restaura con él, y llega siempre dentro del usuario como `profile`. No hay endpoints para crearlo ni eliminarlo.
+
+**GET** `/api/profile/me` → el usuario de la sesión con su perfil.
+
+**PATCH** `/api/profile/me`
+
+```json
+{
+  "name": "Marta Gil",
+  "profile": {
+    "city": "Logroño",
+    "phone": "+34600111222",
+    "birthDate": "1994-03-12",
+    "bikeModel": "Yamaha MT-07",
+    "experienceLevel": "intermediate",
+    "emergencyContact": { "name": "Jorge Gil", "phone": "+34600333444" }
+  }
+}
+```
+
+- Todo es opcional: solo cambia lo que se envía. `null` vacía un campo: `{ "profile": { "city": null } }`.
+- `phone` en formato internacional (`+34...`); `birthDate`, solo el día y con 14 años como mínimo; `experienceLevel`: `beginner`, `intermediate`, `advanced` o `expert`; `emergencyContact` se envía entero.
+- El rol, el estado y la contraseña no se cambian aquí: 400 `roleId cannot be changed`, `status cannot be changed`, `password cannot be changed`.
+- Cada cambio guarda quién lo hizo (`profile.updatedBy`) y actualiza el `updatedAt` del usuario.
+
+**PATCH** `/api/profile/me/password`
+
+```json
+{ "currentPassword": "routly-dev-1234", "newPassword": "otra-clave-5678" }
+```
+
+Response `200`: una sesión nueva (`token`, `user`...). Los tokens anteriores dejan de servir, también en otros dispositivos.
+
+| Caso | Respuesta |
+|---|---|
+| `currentPassword` incorrecta | 400 en `currentPassword`: `currentPassword is incorrect` |
+| `newPassword` igual a la actual | 400 en `newPassword`: `newPassword must be different from currentPassword` |
+
+**GET** y **PATCH** `/api/profile/:userId`: lo mismo para un usuario concreto. Solo el propio usuario o un admin; otro usuario, 403.
 
 ---
 
@@ -39,6 +195,8 @@ Las nueve colecciones tienen los mismos endpoints. Cambia `<colección>` por `ro
 | **PATCH** `/api/<colección>/:id/active` | Activar o desactivar | 200 |
 | **PATCH** `/api/<colección>/:id/delete` | Eliminar (soft delete) | 204 |
 | **PATCH** `/api/<colección>/:id/restore` | Restaurar | 200 |
+
+Las lecturas del catálogo son públicas; `/inactives`, `/deleted` y las escrituras piden token (ver [Quién puede qué](#quién-puede-qué)).
 
 `slug`, `status` (al crear), `isActive`, `deletedAt`, `createdAt` y `updatedAt` los genera el servidor. Si se envían en el body, se ignoran.
 
@@ -145,6 +303,8 @@ Response `400` (JSON mal formado):
 
 ## Users
 
+Solo admin, también para leer.
+
 **POST** `/api/users`
 
 ```json
@@ -152,9 +312,12 @@ Response `400` (JSON mal formado):
   "name": "Ana Ruiz",
   "email": "ana@routly.dev",
   "password": "una-contraseña-larga",
-  "roleId": "<id de un rol>"
+  "roleId": "<id de un rol>",
+  "profile": { "city": "Jaca", "experienceLevel": "beginner" }
 }
 ```
+
+`profile` es opcional: el usuario nace siempre con su perfil, vacío o con estos datos.
 
 Response `201`:
 ```json
@@ -171,6 +334,14 @@ Response `201`:
   "updatedAt": "2026-10-19T16:38:00.932Z",
   "__v": 0,
   "role": { "_id": "6ad647681b0b769e10cbcc7d", "name": "rider", "label": "Motorista" },
+  "profile": {
+    "_id": "6ad647681b0b769e10cbcc86",
+    "userId": "6ad647681b0b769e10cbcc85",
+    "city": "Logroño",
+    "bikeModel": "Yamaha MT-07",
+    "experienceLevel": "intermediate",
+    "updatedBy": "6ad647681b0b769e10cbcc85"
+  },
   "coverImage": {
     "_id": "6ad647691b0b769e10cbccbf",
     "url": "https://picsum.photos/seed/marta-gil-cbcc85/400/400",
@@ -180,7 +351,8 @@ Response `201`:
 ```
 
 - Sin `roleId`, el usuario es `rider`.
-- `password` tiene de 8 a 128 caracteres. Se guarda solo su hash: **`passwordHash` nunca aparece en una respuesta**.
+- `password` tiene de 8 a 128 caracteres. Se guarda solo su hash (Argon2id): **ni `passwordHash` ni `tokenVersion` aparecen en una respuesta**.
+- **PATCH** `/api/users/:id` acepta también `profile`, con los mismos campos que [`/api/profile/me`](#perfil). Cambiar la contraseña o desactivar al usuario cierra sus sesiones.
 - El correo se guarda en minúsculas.
 
 | Caso | Respuesta |
@@ -189,6 +361,8 @@ Response `201`:
 | `roleId` inexistente, eliminado o inactivo | 400 en `roleId`: `roleId must reference an active role` |
 | Quitar el rol `host` a un usuario con perfil de anfitrión | 409 `User has a host profile` |
 | Eliminar un usuario con perfil de anfitrión | 409 `Cannot delete a user that has a host profile` |
+| El admin se quita el rol, se desactiva o se elimina a sí mismo | 409 `You cannot change your own role` / `You cannot deactivate your own account` / `You cannot delete your own account` |
+| Quitar el rol, desactivar o eliminar al último admin activo | 409 `There must be at least one active admin` |
 
 ---
 
@@ -412,6 +586,7 @@ Response `201`:
 - La primera imagen de un dueño es la principal (`isCover: true`). `position` va al final si no se envía.
 - Para cambiar la principal: **PATCH** `/api/images/:id` con `{ "isCover": true }`. La anterior se desmarca.
 - Las imágenes no tienen slug: no hay `GET /slug/:slug`.
+- **Quién puede escribir:** el admin, todas. Cada usuario, su foto de perfil (`ownerType: "user"` con su propio `_id`): así cambia Marta su foto. Un anfitrión, además, las de su perfil de anfitrión y sus experiencias. Las de otro dueño: 403.
 
 **GET** `/api/images?ownerType=route&ownerId=<id>` → la galería de un dueño, por posición.
 

@@ -198,6 +198,12 @@ test("imágenes: las de sus experiencias y su perfil sí; las de una ruta, no", 
   assert.equal((await ana.post("/images", image("route", data.route._id))).status, 403);
   assert.equal((await luis.patch(`/images/${own.body._id}`, { alt: "Mía" })).status, 403);
   assert.equal((await ana.patch(`/images/${own.body._id}`, { alt: "Mía" })).status, 200);
+  // Cada usuario, su propia foto; la de otro, no; un rider, nada más
+  const martaId = (await marta.get("/auth/me")).body._id;
+  assert.equal((await marta.post("/images", image("user", martaId))).status, 201);
+  assert.equal((await marta.post("/images", image("user", luisData.user._id))).status, 403);
+  assert.equal((await marta.post("/images", image("experience", data.experience._id))).status, 403);
+  assert.equal((await api.anonymous.post("/images", image("user", martaId))).status, 401);
   // Un dueño que no existe sigue siendo un 400, no un 403
   assert.equal((await ana.post("/images", image("experience", "6710a1b2c3d4e5f6a7b8c999"))).status, 400);
 });

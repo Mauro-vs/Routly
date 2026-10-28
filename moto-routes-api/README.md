@@ -23,7 +23,7 @@ Forma parte del monorepo de Routly. La visión general del proyecto está en el 
 - [Activo / inactivo frente a eliminado](#activo--inactivo-frente-a-eliminado) · [Soft delete y papelera](#soft-delete-y-papelera)
 - [Imágenes](#imágenes) · [SKU de las salidas](#sku-de-las-salidas)
 - [Validación (Zod)](#validación-zod) · [Manejo de errores](#manejo-de-errores)
-- [Seguridad (Helmet)](#seguridad-helmet) · [Logs (Morgan)](#logs-morgan)
+- [Autenticación y autorización](#autenticación-y-autorización) · [Seguridad (Helmet)](#seguridad-helmet) · [Logs (Morgan)](#logs-morgan)
 - [Cómo añadir un recurso](#cómo-añadir-un-recurso)
 
 ## Lenguaje y librerías
@@ -37,6 +37,7 @@ JavaScript moderno sobre **Node.js**, con módulos ES (`"type": "module"` en `pa
 | [Zod](https://zod.dev) | 4.6 | Validación y limpieza de `params`, `query` y `body` antes del controlador. También genera los esquemas de Swagger |
 | [argon2](https://github.com/ranisalt/node-argon2) | 0.45 | Hash de las contraseñas con Argon2id |
 | [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) | 9.0 | Firma y verificación de los JWT (HS256) |
+| [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) | 8.7 | Límite de intentos en el login y el registro |
 | [Helmet](https://helmetjs.github.io) | 8.3 | Cabeceras de seguridad |
 | [cors](https://github.com/expressjs/cors) | 2.8 | Orígenes y métodos permitidos |
 | [Morgan](https://github.com/expressjs/morgan) | 1.12 | Logs HTTP en consola y en archivo |
@@ -92,6 +93,9 @@ npm start
 # Reiniciar la base de datos con datos de ejemplo
 npm run seed
 
+# Crear el perfil de los usuarios que no lo tengan (bases de datos de antes de los perfiles)
+npm run migrate:profiles
+
 # Tests
 npm test
 ```
@@ -100,11 +104,18 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 42 tests con `node:test`:
+`npm test` ejecuta 100 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
 | `src/utils/sku.test.js` | Formato del SKU, fecha del alta en hora de Madrid y alfabeto sin caracteres ambiguos |
+| `src/utils/passwd.test.js` | Hash Argon2id con los parámetros de OWASP, contraseña correcta e incorrecta, hash mal formado y `needsRehash` |
+| `src/utils/jwt.test.js` | Firma HS256 y payload, sin token, caducado, firma alterada, algoritmo `none`, otro secreto, HS512 y payload incompleto |
+| `src/utils/access.test.js` | Las funciones de ABAC sin base de datos: dueño, otro usuario, admin, cadena host → experiencia → salida e imágenes |
+| `src/testing/auth-errors.test.js` | Formato exacto de los 401 y 403, `WWW-Authenticate`, `authorizeRoles`, `authorizeOwnership` y el límite de intentos (429) |
+| `src/testing/auth.test.js` | `authenticate` (sin token, otro formato, caducado, desactivado, eliminado, `tokenVersion`, rol leído al momento), cada fila de la matriz y ABAC con dos anfitriones |
+| `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
+| `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
@@ -122,6 +133,7 @@ Con el servidor en marcha, la documentación interactiva está en `http://localh
 |---|---|
 | `roles` | `admin` (Administrador), `host` (Anfitrión) y `rider` (Motorista): los tres son roles base protegidos |
 | `users` | Admin Routly (`admin@routly.dev`, admin), Lucía Ferrer (`lucia@routly.dev`, host), Pablo Ortega (`pablo@routly.dev`, host) y Marta Gil (`marta@routly.dev`, rider) |
+| `profiles` | Uno por usuario. Lucía, Pablo y Marta con datos; el del admin, vacío |
 | `hosts` | Los perfiles de Lucía y Pablo |
 | `categories` | Costa, Montaña, Puertos y Viñedos |
 | `locations` | Barcelona, Huesca, Lleida, Logroño, Haro, Granada, Palma, Sóller, Panes y Potes, con coordenadas reales |
@@ -134,7 +146,9 @@ Con el servidor en marcha, la documentación interactiva está en `http://localh
 > - El seed **borra físicamente** todas las colecciones. Es la única excepción al soft delete y solo debe usarse en desarrollo.
 > - Todos los usuarios tienen la contraseña **`routly-dev-1234`**. Es solo para desarrollo.
 
-Los datos se crean a través de los services, así que pasan por las mismas reglas que una petición a la API: hash de la contraseña, referencias, slug, SKU...
+Los datos se crean a través de los services, así que pasan por las mismas reglas que una petición a la API: hash de la contraseña, perfil de cada usuario, referencias, slug, SKU... El seed actúa como admin (`SYSTEM_ACTOR`, en `utils/access.js`).
+
+Para probar los permisos: el admin puede con todo; Lucía y Pablo, cada uno con su experiencia ("Tramuntana al amanecer" y "Travesía de los Pirineos"), y Marta, rider, solo con su perfil.
 
 ## Arquitectura
 
@@ -227,11 +241,11 @@ Si algo falla en cualquier punto (Zod, el service o Mongoose), el error llega a 
 2. `cors`: orígenes permitidos y métodos `GET`, `POST` y `PATCH`.
 3. `morgan`: logs.
 4. `express.json({ limit: "50kb" })`: lee el body (más grande, 413).
-5. `GET /health`, `/api/docs` y los routers de las nueve colecciones.
+5. `GET /health`, `/api/docs`, `/api/auth`, `/api/profile` y los routers de las nueve colecciones. Dentro de cada router, en cada ruta: `authenticate` y el rol (`adminOnly`, `hostOrAdmin`), después `validate()` y después el controlador. La propiedad la comprueba el service.
 6. `notFoundHandler`: 404 para cualquier otra URL.
 7. `errorHandler`: siempre el último.
 
-El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista. Si falla, el proceso termina con un error.
+Antes de nada, `loadAuthConfig()` comprueba `JWT_SECRET` y `JWT_EXPIRES_IN`: si falta el secreto o no es válido, el servidor no arranca. El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista. Si falla, el proceso termina con un error.
 
 ## Estructura del proyecto
 
@@ -241,14 +255,15 @@ El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista.
 ```
 src/
 ├── config/
+│   ├── auth.js                    JWT_SECRET y JWT_EXPIRES_IN (comprobados al arrancar)
 │   ├── db.js                      Conexión a MongoDB
 │   ├── cors.js                    Orígenes y métodos permitidos
 │   ├── helmet.js                  Cabeceras de seguridad
 │   ├── morgan.js                  Logs en consola y en logs/
 │   └── swagger.js                 Definición OpenAPI
 ├── models/
-│   ├── <recurso>.model.js         Uno por colección: role, user, host, category, location,
-│   │                              route, experience, departure, image. Exporta sus límites
+│   ├── <recurso>.model.js         Uno por colección: role, user, profile, host, category,
+│   │                              location, route, experience, departure, image. Exporta sus límites
 │   ├── imageOwners.js             Colecciones que pueden tener imágenes
 │   ├── status.js                  Estados comunes
 │   ├── validators.js              Validadores propios de Mongoose
@@ -257,23 +272,30 @@ src/
 │       ├── status.plugin.js       status e isActive
 │       └── slug.plugin.js         slug único
 ├── schemas/
-│   ├── <recurso>.schema.js        Esquemas de Zod de cada colección
+│   ├── <recurso>.schema.js        Esquemas de Zod de cada colección, y auth.schema.js (registro y login)
 │   └── common.schema.js           Piezas comunes (:id, :slug, cannotChange, clearable...)
 ├── repositories/<recurso>.repository.js
 ├── services/
-│   ├── <recurso>.service.js
+│   ├── <recurso>.service.js       También auth.service.js (login, registro, sesión) y
+│   │                              profile.service.js (solo lo usa user.service.js)
 │   └── references.js              Comprobaciones entre colecciones
-├── controllers/<recurso>.controller.js
-├── routes/<recurso>.routes.js
+├── controllers/<recurso>.controller.js   Más auth y profile
+├── routes/<recurso>.routes.js           Más auth (/api/auth) y profile (/api/profile)
 ├── middlewares/
+│   ├── authenticate.js            JWT → req.user (401)
+│   ├── authorize.js               Roles (authorizeRoles, isAdmin) y propiedad (authorizeOwnership)
+│   ├── rateLimit.js               Límite de intentos del login y el registro (429)
 │   ├── validate.js                Aplica los esquemas de Zod (params, query y body)
 │   └── errorHandler.js            404 y formato común de errores
 ├── docs/openapi.js                Documentación de todos los endpoints
 ├── utils/
-│   ├── errors.js                  notFound, conflict, badRequest, fieldError
+│   ├── errors.js                  notFound, conflict, badRequest, fieldError, unauthorized, forbidden
+│   ├── jwt.js                     createToken y verifyToken
+│   ├── passwd.js                  Hash de contraseñas con Argon2id
+│   ├── access.js                  Reglas de ABAC (funciones puras)
+│   ├── *.test.js                  Tests unitarios de sku, jwt, passwd y access
 │   ├── slugify.js                 Generación del slug
 │   ├── sku.js                     Generación del SKU
-│   ├── sku.test.js                Tests del SKU
 │   ├── dates.js                   Fecha en hora de Madrid
 │   ├── update.js                  null de un PATCH → $unset
 │   └── objectId.js                Formato de un ObjectId
@@ -281,6 +303,7 @@ src/
 │   ├── app.js                     La API sobre una base de datos temporal, para los tests
 │   └── *.test.js                  Tests de integración
 ├── seed.js                        Datos de ejemplo
+├── migrate-profiles.js            Perfil vacío para los usuarios que no lo tengan
 └── server.js                      Punto de entrada
 ```
 
@@ -293,6 +316,7 @@ Hay además un [`postman.md`](postman.md) con ejemplos de las peticiones para pr
 ```mermaid
 erDiagram
     roles ||--o{ users : "roleId"
+    users ||--|| profiles : "userId"
     users ||--o| hosts : "userId"
     hosts ||--o{ experiences : "hostId"
     categories ||--o{ routes : "categoryId"
@@ -307,7 +331,8 @@ erDiagram
 | Colección | Campos propios | Relaciones (`ref`) | Al leer trae (`populate`) |
 |---|---|---|---|
 | `roles` | `name` (clave: `admin`, `host`, `rider`), `label`, `description`, `isSystem` | | |
-| `users` | `name`, `email`, `passwordHash` (oculto) | `roleId` → `roles` | `role`, `coverImage` |
+| `users` | `name`, `email`, `passwordHash` y `tokenVersion` (ocultos) | `roleId` → `roles` | `role`, `profile`, `coverImage` |
+| `profiles` | `bio`, `phone`, `city`, `birthDate`, `bikeModel`, `experienceLevel`, `emergencyContact` | `userId` → `users` (uno por usuario), `updatedBy` → `users` | (se lee dentro del usuario) |
 | `hosts` | `name`, `biography` | `userId` → `users` (uno por usuario) | `user`, `coverImage` |
 | `categories` | `name`, `description` | | |
 | `locations` | `city`, `region`, `country`, `latitude`, `longitude` | | |
@@ -316,7 +341,7 @@ erDiagram
 | `departures` | `startAt`, `endAt`, `capacity`, `price`, `state`, `sku` | `experienceId` → `experiences` | `experience` |
 | `images` | `url`, `alt`, `position`, `isCover` | `ownerType` + `ownerId` → cualquiera de `IMAGE_OWNERS` | |
 
-Además, **todas** tienen `_id`, `slug` (menos `images`), `status`, `isActive`, `deletedAt`, `createdAt` y `updatedAt`, que gestiona el servidor: si el cliente los envía, la API responde 400 (`<campo> is not allowed` o `<campo> cannot be changed`).
+Además, **todas** (menos `profiles`, que sigue a su usuario) tienen `_id`, `slug` (menos `images`), `status`, `isActive`, `deletedAt`, `createdAt` y `updatedAt`, que gestiona el servidor: si el cliente los envía, la API responde 400 (`<campo> is not allowed` o `<campo> cannot be changed`).
 
 El detalle de cada campo (tipos, límites, valores por defecto, índices y reglas) está en [`DATABASE.md`](../DATABASE.md).
 
@@ -377,6 +402,20 @@ Además:
 | GET | `/api/docs` | Documentación Swagger | 200 |
 | GET | `/api/images?ownerType=route&ownerId=<id>` | Imágenes de un dueño, por posición | 200 |
 | GET | `/api/departures/sku/:sku` | Una salida por su SKU (también en minúsculas) | 200 |
+
+Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#roles-y-matriz-de-permisos)):
+
+| Método | Ruta | Descripción | Éxito |
+|--------|------|-------------|-------|
+| POST | `/api/auth/register` | Alta pública (rider), con la sesión iniciada | 201 |
+| POST | `/api/auth/login` | Iniciar sesión: `{ token, tokenType, expiresIn, user }` | 200 |
+| GET | `/api/auth/me` | El usuario de la sesión, con su rol y su perfil | 200 |
+| POST | `/api/auth/logout-all` | Cerrar todas las sesiones | 204 |
+| GET | `/api/profile/me` | Mi usuario con mi perfil | 200 |
+| PATCH | `/api/profile/me` | Editar `name`, `email` y `profile` | 200 |
+| PATCH | `/api/profile/me/password` | Cambiar la contraseña (devuelve una sesión nueva) | 200 |
+| GET | `/api/profile/:userId` | Usuario con su perfil (el propio usuario o el admin) | 200 |
+| PATCH | `/api/profile/:userId` | Editar un usuario y su perfil (el propio usuario o el admin) | 200 |
 
 El `PATCH /:id` no acepta `status`: activar y desactivar solo se hace con `PATCH /:id/active`. Eliminar no es un estado: lo marca `deletedAt`.
 
@@ -519,7 +558,7 @@ Todas las respuestas de error tienen el mismo formato:
 }
 ```
 
-`details` solo aparece en errores de validación (de Zod, de Mongoose o de una referencia).
+`details` solo aparece en errores de validación (de Zod, de Mongoose o de una referencia), y `code` en algunos 401 (`TOKEN_EXPIRED`, `TOKEN_INVALID`).
 
 | Caso | Código |
 |------|--------|
@@ -532,16 +571,116 @@ Todas las respuestas de error tienen el mismo formato:
 | Campo que no se puede cambiar en un `PATCH` (`_id`, `slug`, `sku`, `userId`...): `<campo> cannot be changed`, con `details` | 400 |
 | JSON mal formado | 400 |
 | Validación del modelo de Mongoose (segunda barrera) | 400 |
+| Sin token, o con un token caducado, manipulado o de un usuario desactivado o eliminado: `Authentication required` | 401 |
+| Login con credenciales no válidas: `Invalid email or password` | 401 |
+| Con sesión, pero sin el rol o sin ser el dueño: `You do not have permission to access this resource` | 403 |
 | Body de más de 50 kB | 413 |
 | Documento no encontrado o eliminado, también si se elimina mientras se edita | 404 |
 | Endpoint inexistente | 404 |
 | Eliminar con dependientes, tocar un rol base, o cambiar el mínimo o el máximo de participantes de una experiencia por debajo o por encima de sus salidas | 409 |
 | Restaurar algo que no está eliminado, o con una referencia eliminada | 409 |
 | Valor único repetido (email, nombre, etiqueta de rol, lugar, slug...). Si lo tiene un documento de la papelera, el mensaje acaba en `in the trash` | 409 |
+| Un admin que se quita el rol, se desactiva o se elimina a sí mismo, o el último admin activo | 409 |
+| Demasiados intentos de login o de registro: `Too many attempts, please try again later` | 429 |
 | Error inesperado | 500 |
 
 > [!NOTE]
 > En los errores 500 el cliente solo recibe `"Internal server error"`. La traza completa se muestra en la consola del servidor y nunca en la respuesta.
+
+## Autenticación y autorización
+
+La API usa **JWT** para saber quién llama (autenticación), **roles** para saber qué puede hacer (RBAC) y la **propiedad del recurso** para saber sobre qué (ABAC).
+
+### El flujo
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant A as API
+    C->>A: POST /api/auth/login { email, password }
+    A->>A: verifyPassword (Argon2id) y createToken (HS256)
+    A-->>C: { token, tokenType: "Bearer", expiresIn, user }
+    C->>A: PATCH /api/experiences/:id<br/>Authorization: Bearer <token>
+    A->>A: authenticate: firma, caducidad, usuario activo, tokenVersion
+    A->>A: authorizeRoles: ¿host o admin?
+    A->>A: service: ¿la experiencia es suya? (ABAC)
+    A-->>C: 200, o 401 / 403
+```
+
+1. `POST /api/auth/login` (o `/register`) devuelve el token y el usuario con su rol y su perfil.
+2. El cliente envía el token en cada petición: `Authorization: Bearer <token>`. No hay cookies.
+3. Al caducar (`JWT_EXPIRES_IN`) se vuelve a iniciar sesión: no hay refresh token. Cerrar sesión en un dispositivo es borrar el token en el cliente; `POST /api/auth/logout-all` cierra todas.
+
+| Pieza | Archivo | Qué hace |
+|---|---|---|
+| Contraseñas | `utils/passwd.js` | `hashPassword`, `verifyPassword` y `needsRehash` con Argon2id |
+| Token | `utils/jwt.js` | `createToken({ sub, email, role, tv })` y `verifyToken` (solo HS256) |
+| Configuración | `config/auth.js` | `JWT_SECRET` y `JWT_EXPIRES_IN`: sin secreto, el servidor no arranca |
+| Autenticación | `middlewares/authenticate.js` | Lee el Bearer, verifica el token y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos |
+| RBAC | `middlewares/authorize.js` | `authorizeRoles(...roles)`, `isAdmin`, `adminOnly`, `hostOrAdmin` y `authorizeOwnership(load, check)` |
+| ABAC | `utils/access.js` | Funciones puras: `isOwnerOrAdmin`, `canAccessUserResource`, `canModifyHost`, `canModifyExperience`, `canModifyDeparture` y `canModifyImageOwner`. Los services cargan la cadena de dueños y lanzan `forbidden()` |
+| Intentos | `middlewares/rateLimit.js` | Login: 10 intentos **fallidos** cada 15 min por IP. Registro: 10 altas cada 15 min. Después, 429 |
+
+**El token** lleva `sub` (id del usuario), `email`, `role` (su `name`) y `tv` (su `tokenVersion`), además de `iat` y `exp`. Nunca la contraseña ni el hash.
+
+**`tokenVersion`** es un número del usuario (oculto, como `passwordHash`) que va dentro del token. Sube al cambiar la contraseña, al desactivar o eliminar al usuario y con `logout-all`: desde ese momento, todos sus tokens anteriores responden 401 aunque no hayan caducado. Reactivar o restaurar al usuario no les devuelve la vida.
+
+**Por qué Argon2id y no bcrypt.** Es el algoritmo que recomienda OWASP para contraseñas: además de lento, necesita memoria (19 MiB por hash), lo que encarece mucho los ataques con GPU. No tiene el límite de 72 bytes de bcrypt (la contraseña llega a 128 caracteres) y guarda en el propio hash sus parámetros: si se suben, `needsRehash` lo detecta y el login rehace el hash sin que el usuario note nada.
+
+**El login no da pistas.** Si el correo no existe, la contraseña no coincide o la cuenta está inactiva, la respuesta es la misma: `401 Invalid email or password`. Si el correo no existe, se compara igualmente contra un hash ficticio, así el tiempo de respuesta tampoco delata qué correos están registrados.
+
+### Roles y matriz de permisos
+
+| Rol | Puede |
+|---|---|
+| `admin` | Todo el panel y cualquier recurso |
+| `host` | Lo de un rider, y gestionar **sus** experiencias, sus salidas, sus imágenes y su perfil de anfitrión |
+| `rider` | Su cuenta, su perfil y su foto (las reservas llegarán más adelante) |
+
+| Endpoint | Anónimo | rider | host | admin |
+|---|---|---|---|---|
+| `GET` del catálogo (`/`, `/actives`, `/:id`, `/slug`, `/sku`) | ✔ | ✔ | ✔ | ✔ |
+| `/inactives` y `/deleted` de cualquier colección | 401 | 403 | 403 | ✔ |
+| Escrituras de rutas, categorías y ubicaciones | 401 | 403 | 403 | ✔ |
+| Escrituras de experiencias y salidas | 401 | 403 | solo las suyas | ✔ |
+| Escrituras de imágenes | 401 | solo su foto | su foto, su perfil de anfitrión y sus experiencias | ✔ |
+| `PATCH /api/hosts/:id` | 401 | 403 | solo el suyo | ✔ |
+| Crear, activar, eliminar y restaurar hosts | 401 | 403 | 403 | ✔ |
+| Todo `/api/users` y `/api/roles`, también leer | 401 | 403 | 403 | ✔ |
+| `/api/auth/register` y `/api/auth/login` | ✔ | ✔ | ✔ | ✔ |
+| `/api/auth/me`, `/api/auth/logout-all` y `/api/profile/me*` | 401 | ✔ | ✔ | ✔ |
+| `/api/profile/:userId` | 401 | solo el suyo | solo el suyo | ✔ |
+
+"Las suyas" sigue la cadena de propiedad: `Host.userId` → `Experience.hostId` → `Departure.experienceId`. Un anfitrión no puede crear una experiencia en el perfil de otro, ni pasarle la suya. Si el recurso no existe, 404; si existe pero no es suyo, 403.
+
+El orden es siempre el mismo: **autenticación → rol → validación → propiedad**. Sin token, un 401 antes que cualquier 400.
+
+Los dos mensajes son fijos:
+
+```json
+401 → { "statusCode": 401, "error": "Unauthorized", "message": "Authentication required" }
+403 → { "statusCode": 403, "error": "Forbidden", "message": "You do not have permission to access this resource" }
+```
+
+Un 401 lleva la cabecera `WWW-Authenticate: Bearer`. Si había token pero no sirve, además `error="invalid_token"` y un `code` en el body: `TOKEN_EXPIRED` o `TOKEN_INVALID` (el front puede decir "tu sesión ha caducado").
+
+### El perfil pertenece al usuario
+
+`users` es el núcleo de la autenticación (nombre, correo, hash, rol y estado) y `profiles` guarda los datos extendidos: `bio`, `phone`, `city`, `birthDate`, `bikeModel`, `experienceLevel`, `emergencyContact` y `updatedBy`. La relación es **User 1 → 1 Profile**: el perfil guarda el `userId` y el usuario no sabe nada del perfil. La foto es la `coverImage` del usuario.
+
+El perfil no tiene vida propia: **todo pasa por `userService`**, que es el único que llama a `profileService`.
+
+- **Nace con el usuario.** El registro, el alta del admin y el seed crean usuario y perfil a la vez. Si el perfil falla, se borra el usuario recién creado (MongoDB en standalone no tiene transacciones).
+- **Se edita a través del usuario:** `PATCH /api/profile/me`, `PATCH /api/profile/:userId` o `PATCH /api/users/:id`, con un objeto `profile`. Cada cambio guarda `updatedBy` (el propio usuario o un admin) y actualiza el `updatedAt` del usuario.
+- **Se elimina y se restaura con el usuario,** con el mismo `deletedAt`. No tiene estado ni papelera propios, ni endpoints para crearlo o eliminarlo.
+- **Sale siempre dentro del usuario,** como `profile`.
+
+Para una base de datos de antes de los perfiles: `npm run migrate:profiles` crea el perfil vacío de cada usuario que no lo tenga y avisa de cada uno.
+
+### Reglas de los admins
+
+- Un admin no puede quitarse el rol, desactivarse ni eliminarse a sí mismo (409).
+- La plataforma nunca se queda sin un admin activo: quitar el rol, desactivar o eliminar al último da 409 `There must be at least one active admin`.
 
 ## Seguridad (Helmet)
 
@@ -561,7 +700,7 @@ Además Helmet oculta `X-Powered-By` y añade `X-Content-Type-Options: nosniff`,
 
 Solo en `production`: se activan `Strict-Transport-Security` (HSTS) y `upgrade-insecure-requests`, que requieren HTTPS.
 
-Las contraseñas se guardan con Argon2id (19 MiB, 2 pasadas, 1 hilo: los mínimos de OWASP) y `passwordHash` está marcado con `select: false` en el modelo: no sale en ninguna consulta.
+Las contraseñas se guardan con Argon2id (19 MiB, 2 pasadas, 1 hilo: los mínimos de OWASP). `passwordHash` y `tokenVersion` están marcados con `select: false` en el modelo: no salen en ninguna consulta. Ver [Autenticación y autorización](#autenticación-y-autorización).
 
 </details>
 
@@ -591,9 +730,9 @@ Por ejemplo, `reviews`. Cada paso copia el patrón de una colección que ya exis
 1. **Modelo** en `models/review.model.js`, con `statusPlugin`, `slugPlugin` y `softDeletePlugin` (ver `category.model.js`). Las relaciones, con `ref` y un virtual para el `populate`.
 2. **Esquemas de Zod** en `schemas/review.schema.js`, con `z.strictObject` y los límites que exporta el modelo (`REVIEW_LIMITS`). En el PATCH, `cannotChange()` para los campos fijos y `clearable()` para los opcionales que se pueden vaciar.
 3. **Repositorio**, **service** y **controlador**, uno por archivo y con las mismas funciones que los de `routes`. Si el modelo tiene relaciones, el repositorio añade `findPlainById` (sin `populate`) y su `updateById` usa `toUpdate(data)`. En el service: `findCurrent` antes de escribir, `getById` para responder, `assertReference` para las referencias, `assertNoDependents` para los dependientes y `assertNotTaken` para los valores únicos (`services/references.js`).
-4. **Rutas** en `routes/review.routes.js`. Las fijas (`/actives`, `/inactives`, `/deleted`, `/slug/:slug`) van antes de `/:id`.
+4. **Rutas** en `routes/review.routes.js`. Las fijas (`/actives`, `/inactives`, `/deleted`, `/slug/:slug`) van antes de `/:id`. **Permisos:** `adminOnly` en `/inactives`, `/deleted` y las escrituras de admin; si un usuario puede tocar las suyas, `authenticate` o `hostOrAdmin` en la ruta y, en el service, la comprobación de propiedad con un helper de `utils/access.js` (las escrituras reciben el `actor`, `req.user`).
 5. **Registro** en `server.js`: `app.use("/api/reviews", reviewRoutes)`, antes de `notFoundHandler`.
-6. **Documentación:** una entrada más en `RESOURCES`, en `docs/openapi.js`. Los endpoints y los cuerpos se generan solos.
+6. **Documentación:** una entrada más en `RESOURCES`, en `docs/openapi.js`, con su `access` (quién lee y quién escribe). Los endpoints, los cuerpos, los candados y los 401/403 se generan solos, y `docs.test.js` comprueba que coinciden con las rutas.
 7. **Imágenes:** si tiene, `review: Review` en `IMAGE_OWNERS`, y la cascada en su service (`imageService.removeByOwner` y `restoreByOwner`).
 8. Si el panel va a llamar con métodos nuevos, revisa `methods` en `config/cors.js`.
 

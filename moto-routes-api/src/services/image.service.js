@@ -2,6 +2,7 @@ import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { imageRepository } from "../repositories/image.repository.js";
+import { userRepository } from "../repositories/user.repository.js";
 import { canModifyImageOwner, isAdminUser } from "../utils/access.js";
 import { conflict, fieldError, forbidden } from "../utils/errors.js";
 import {
@@ -21,9 +22,10 @@ async function promoteNextCover(ownerType, ownerId, excludeId) {
   if (next) await imageRepository.updateById(next._id, { isCover: true });
 }
 
-// El dueño de una imagen con lo que hace falta para saber de quién es: un anfitrión, o
-// una experiencia con su anfitrión. El resto de dueños solo los gestiona el admin.
+// El dueño de una imagen con lo que hace falta para saber de quién es: un usuario, un
+// anfitrión, o una experiencia con su anfitrión. El resto solo los gestiona el admin.
 async function findOwnerChain(ownerType, ownerId) {
+  if (ownerType === "user") return userRepository.findPlainById(ownerId);
   if (ownerType === "host") return hostRepository.findPlainById(ownerId);
   if (ownerType === "experience") {
     const experience = await experienceRepository.findPlainById(ownerId);
@@ -32,7 +34,8 @@ async function findOwnerChain(ownerType, ownerId) {
   return null;
 }
 
-// ABAC: el admin, con todas; un anfitrión, con las de su perfil y sus experiencias
+// ABAC: el admin, con todas; cada usuario, con su foto; un anfitrión, además, con las de
+// su perfil de anfitrión y sus experiencias
 async function assertOwnImage(actor, { ownerType, ownerId }) {
   if (isAdminUser(actor)) return;
   if (!canModifyImageOwner(actor, ownerType, await findOwnerChain(ownerType, ownerId))) {

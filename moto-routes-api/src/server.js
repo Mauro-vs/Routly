@@ -37,7 +37,12 @@ app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
 
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// persistAuthorization: el token de Authorize no se pierde al recargar la página
+app.use(
+  "/api/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, { swaggerOptions: { persistAuthorization: true } })
+);
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/roles", roleRoutes);

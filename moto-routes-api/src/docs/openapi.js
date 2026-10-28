@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 import { createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
 import { createDepartureSchema, updateDepartureSchema } from "../schemas/departure.schema.js";
 import { createExperienceSchema, updateExperienceSchema } from "../schemas/experience.schema.js";
@@ -7,7 +8,12 @@ import { createImageSchema, updateImageSchema } from "../schemas/image.schema.js
 import { createLocationSchema, updateLocationSchema } from "../schemas/location.schema.js";
 import { createRoleSchema, updateRoleSchema } from "../schemas/role.schema.js";
 import { createRouteSchema, updateRouteSchema } from "../schemas/route.schema.js";
-import { createUserSchema, updateUserSchema } from "../schemas/user.schema.js";
+import {
+  changePasswordSchema,
+  createUserSchema,
+  updateOwnUserSchema,
+  updateUserSchema,
+} from "../schemas/user.schema.js";
 
 /*
  * Documentación OpenAPI de todos los recursos.
@@ -15,7 +21,8 @@ import { createUserSchema, updateUserSchema } from "../schemas/user.schema.js";
  * Los nueve recursos tienen los mismos endpoints, así que las rutas se generan con
  * crudPaths(). Los cuerpos de las peticiones salen de los propios esquemas de Zod
  * (z.toJSONSchema), así la documentación nunca se desincroniza de la validación.
- * Cada recurso solo aporta un ejemplo de respuesta y sus conflictos (409).
+ * Cada recurso solo aporta un ejemplo de respuesta, sus conflictos (409) y quién puede
+ * usar cada endpoint (access): así cada uno lleva su candado, su 401 y su 403.
  */
 
 const MAX_SAFE = Number.MAX_SAFE_INTEGER;
@@ -55,6 +62,7 @@ const RESOURCES = [
   {
     path: "roles",
     tag: "Roles",
+    access: { read: "admin" },
     schema: "Role",
     singular: "rol",
     plural: "roles",
@@ -77,12 +85,15 @@ const RESOURCES = [
   {
     path: "users",
     tag: "Users",
+    access: { read: "admin" },
     schema: "User",
     singular: "usuario",
     plural: "usuarios",
     create: createUserSchema,
     update: updateUserSchema,
-    description: "La API recibe password y guarda solo su hash (Argon2id). passwordHash nunca se devuelve.",
+    description:
+      "La API recibe password y guarda solo su hash (Argon2id): passwordHash y tokenVersion nunca se devuelven. " +
+      "Cada usuario nace con su perfil y lo trae siempre en profile; se edita aquí (profile) o en /api/profile.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c910",
       name: "Lucía Ferrer",
@@ -90,17 +101,30 @@ const RESOURCES = [
       roleId: "6710a1b2c3d4e5f6a7b8c901",
       role: { _id: "6710a1b2c3d4e5f6a7b8c901", name: "host", label: "Anfitrión" },
       coverImage: { _id: "6710a1b2c3d4e5f6a7b8c990", url: "https://picsum.photos/seed/lucia/400/400", alt: "Foto de perfil" },
+      profile: {
+        _id: "6710a1b2c3d4e5f6a7b8c911",
+        userId: "6710a1b2c3d4e5f6a7b8c910",
+        city: "Palma",
+        bikeModel: "BMW R 1250 GS",
+        experienceLevel: "expert",
+        phone: "+34600111222",
+        updatedBy: "6710a1b2c3d4e5f6a7b8c910",
+        createdAt: "2026-10-16T10:00:00.000Z",
+        updatedAt: "2026-10-16T10:00:00.000Z",
+      },
       slug: "lucia-ferrer-b8c910",
     },
     conflicts: {
       create: "Email repetido",
-      update: "Email repetido, o quitar el rol host a un usuario con perfil de anfitrión",
-      remove: "El usuario tiene perfil de anfitrión",
+      update:
+        "Email repetido, quitar el rol host a un usuario con perfil de anfitrión, cambiarse el rol o desactivarse a sí mismo, o dejar sin ningún admin activo",
+      remove: "El usuario tiene perfil de anfitrión, es el propio admin o es el último admin activo",
     },
   },
   {
     path: "hosts",
     tag: "Hosts",
+    access: { edit: "owner", owner: "el propio anfitrión (su perfil de anfitrión)" },
     schema: "Host",
     singular: "anfitrión",
     plural: "anfitriones",
@@ -201,6 +225,7 @@ const RESOURCES = [
   {
     path: "experiences",
     tag: "Experiences",
+    access: { write: "owner", owner: "el anfitrión de la experiencia: hostId tiene que ser su perfil de anfitrión" },
     schema: "Experience",
     singular: "experiencia",
     plural: "experiencias",
@@ -231,6 +256,7 @@ const RESOURCES = [
   {
     path: "departures",
     tag: "Departures",
+    access: { write: "owner", owner: "el anfitrión de la experiencia de la salida" },
     schema: "Departure",
     singular: "salida",
     plural: "salidas",
@@ -279,6 +305,11 @@ const RESOURCES = [
   {
     path: "images",
     tag: "Images",
+    access: {
+      write: "owner",
+      owner:
+        "su dueño: cada usuario, su foto (ownerType user); un anfitrión, además, las de su perfil de anfitrión y sus experiencias. Las de rutas, categorías y ubicaciones, solo el admin",
+    },
     schema: "Image",
     singular: "imagen",
     plural: "imágenes",
@@ -349,6 +380,37 @@ const activeBody = (required) => ({
   },
 });
 
+// ---------- Seguridad: quién puede usar cada endpoint ----------
+
+const bearer = [{ bearerAuth: [] }];
+const unauthorized = { $ref: "#/components/responses/Unauthorized" };
+const forbidden = { $ref: "#/components/responses/Forbidden" };
+const tooManyRequests = { $ref: "#/components/responses/TooManyRequests" };
+
+/**
+ * Añade a una operación el candado (bearerAuth), quién puede usarla y sus 401 y 403.
+ *   public: sin token · user: cualquier sesión · admin: solo admin · owner: admin o el dueño
+ */
+function secured(operation, level, owner) {
+  if (level === "public") return operation;
+
+  const who = {
+    user: "Requiere sesión.",
+    admin: "Solo admin.",
+    owner: `Admin, o ${owner}.`,
+  }[level];
+  return {
+    ...operation,
+    description: [who, operation.description].filter(Boolean).join(" "),
+    security: bearer,
+    responses: {
+      ...operation.responses,
+      401: unauthorized,
+      ...(level !== "user" && { 403: forbidden }),
+    },
+  };
+}
+
 // ---------- Los 11 endpoints de cada recurso ----------
 
 function crudPaths(resource) {
@@ -359,16 +421,24 @@ function crudPaths(resource) {
   const tags = [tag];
   const conflict = (key) => conflicts[key] && { 409: error(conflicts[key]) };
 
+  // Por defecto: leer, público; escribir, solo admin. Inactivos y papelera, siempre admin.
+  const { read = "public", write = "admin", edit = write, owner } = resource.access ?? {};
+  const as = (level) => (operation) => secured(operation, level, owner);
+  const asRead = as(read);
+  const asAdmin = as("admin");
+  const asWrite = as(write);
+  const asEdit = as(edit);
+
   const paths = {
     [base]: {
-      get: {
+      get: asRead({
         summary: `Listar ${plural}`,
         description: "Sin los eliminados (soft delete).",
         tags,
         ...(resource.listParameters && { parameters: resource.listParameters }),
         responses: { 200: list("Listado", ref), ...(resource.listParameters && { 400: error("Filtro incompleto o inválido") }) },
-      },
-      post: {
+      }),
+      post: asWrite({
         summary: `Crear ${singular}`,
         description:
           "slug, status, isActive, deletedAt y las fechas los genera el servidor. Un campo que no está en el esquema da 400.",
@@ -379,35 +449,35 @@ function crudPaths(resource) {
           400: error("Datos no válidos o una referencia que no existe, está eliminada o inactiva"),
           ...conflict("create"),
         },
-      },
+      }),
     },
     [`${base}/actives`]: {
-      get: { summary: `Listar ${plural} activ${ending}`, tags, responses: { 200: list(`Solo activ${ending}`, ref) } },
+      get: asRead({ summary: `Listar ${plural} activ${ending}`, tags, responses: { 200: list(`Solo activ${ending}`, ref) } }),
     },
     [`${base}/inactives`]: {
-      get: {
+      get: asAdmin({
         summary: `Listar ${plural} inactiv${ending}`,
         description: "Los eliminados nunca aparecen aquí.",
         tags,
         responses: { 200: list(`Solo inactiv${ending}`, ref) },
-      },
+      }),
     },
     [`${base}/deleted`]: {
-      get: {
+      get: asAdmin({
         summary: `Papelera de ${plural}`,
         description: "Solo los eliminados, del más reciente al más antiguo.",
         tags,
         responses: { 200: list("Eliminados", ref) },
-      },
+      }),
     },
     [`${base}/{id}`]: {
-      get: {
+      get: asRead({
         summary: `Obtener ${singular} por ID`,
         tags,
         parameters: [idParam],
         responses: { 200: ok("Encontrado", ref), 400: error("ID inválido"), 404: error("No encontrado o eliminado") },
-      },
-      patch: {
+      }),
+      patch: asEdit({
         summary: `Editar ${singular}`,
         description:
           "Edición parcial. Para activar o desactivar se usa PATCH /:id/active. Los campos opcionales de texto se vacían enviando null.",
@@ -420,10 +490,10 @@ function crudPaths(resource) {
           404: error("No encontrado o eliminado"),
           ...conflict("update"),
         },
-      },
+      }),
     },
     [`${base}/{id}/active`]: {
-      patch: {
+      patch: asWrite({
         summary: `Activar o desactivar ${singular}`,
         description:
           "No afecta a deletedAt ni a los documentos que lo usan. Si ya tiene ese estado, se devuelve tal cual, sin cambios.",
@@ -436,10 +506,10 @@ function crudPaths(resource) {
           404: error("No encontrado o eliminado"),
           ...conflict("update"),
         },
-      },
+      }),
     },
     [`${base}/{id}/delete`]: {
-      patch: {
+      patch: asWrite({
         summary: `Eliminar ${singular} (soft delete)`,
         description: "No borra el documento: lo pasa a la papelera.",
         tags,
@@ -450,10 +520,10 @@ function crudPaths(resource) {
           404: error("No encontrado o ya eliminado"),
           ...conflict("remove"),
         },
-      },
+      }),
     },
     [`${base}/{id}/restore`]: {
-      patch: {
+      patch: asWrite({
         summary: `Restaurar ${singular}`,
         description: "Vuelve inactivo salvo que se envíe isActive: true.",
         tags,
@@ -465,32 +535,216 @@ function crudPaths(resource) {
           404: error("No encontrado"),
           409: error("No está eliminado, o una de sus referencias está eliminada"),
         },
-      },
+      }),
     },
   };
 
   if (hasSlug) {
     paths[`${base}/slug/{slug}`] = {
-      get: {
+      get: asRead({
         summary: `Obtener ${singular} por slug`,
         tags,
         parameters: [{ in: "path", name: "slug", required: true, schema: { type: "string" }, example: resource.example.slug }],
         responses: { 200: ok("Encontrado", ref), 400: error("Slug con formato inválido"), 404: error("No encontrado o eliminado") },
-      },
+      }),
     };
   }
 
   return { ...paths, ...resource.extraPaths?.(ref) };
 }
 
-export const apiTags = RESOURCES.map(({ tag, description }) => ({ name: tag, ...(description && { description }) }));
+// ---------- Auth y profile: no siguen el patrón de las colecciones ----------
 
-export const apiPaths = Object.assign({}, ...RESOURCES.map(crudPaths));
+const userRef = { $ref: "#/components/schemas/User" };
+const sessionRef = { $ref: "#/components/schemas/Session" };
+const userIdParam = { ...idParam, name: "userId", description: "ID del usuario (ObjectId)" };
 
-export const apiSchemas = Object.fromEntries(
-  RESOURCES.flatMap(({ schema, create, update, example }) => [
-    [schema, { type: "object", example: { ...example, ...COMMON_FIELDS } }],
-    [`Create${schema}Input`, fromZod(create)],
-    [`Update${schema}Input`, fromZod(update)],
-  ])
-);
+const AUTH_PATHS = {
+  "/api/auth/register": {
+    post: {
+      summary: "Registrarse",
+      description:
+        "Alta pública: siempre con el rol rider (roleId no se acepta) y con su perfil vacío. Devuelve la sesión, como el login. Como mucho 10 altas cada 15 minutos por IP.",
+      tags: ["Auth"],
+      requestBody: body("RegisterInput"),
+      responses: {
+        201: ok("Registrado, con la sesión iniciada", sessionRef),
+        400: error("Datos no válidos, o roleId (is not allowed)"),
+        409: error("Email repetido"),
+        429: tooManyRequests,
+      },
+    },
+  },
+  "/api/auth/login": {
+    post: {
+      summary: "Iniciar sesión",
+      description:
+        "Devuelve el JWT y el usuario con su rol y su perfil. El mismo 401 si el correo no existe, la contraseña no coincide o la cuenta está inactiva. Como mucho 10 intentos fallidos cada 15 minutos por IP.",
+      tags: ["Auth"],
+      requestBody: body("LoginInput"),
+      responses: {
+        200: ok("Sesión iniciada", sessionRef),
+        400: error("Falta el email o la contraseña"),
+        401: {
+          description: "Credenciales no válidas",
+          content: {
+            "application/json": {
+              schema: errorRef,
+              example: { statusCode: 401, error: "Unauthorized", message: "Invalid email or password" },
+            },
+          },
+        },
+        429: tooManyRequests,
+      },
+    },
+  },
+  "/api/auth/me": {
+    get: secured(
+      { summary: "Usuario de la sesión", description: "Con su rol y su perfil.", tags: ["Auth"], responses: { 200: ok("Usuario", userRef) } },
+      "user"
+    ),
+  },
+  "/api/auth/logout-all": {
+    post: secured(
+      {
+        summary: "Cerrar todas las sesiones",
+        description:
+          "Invalida todos los tokens del usuario, también el de esta petición. Cerrar la sesión en un solo dispositivo es cosa del cliente: borrar el token.",
+        tags: ["Auth"],
+        responses: { 204: { description: "Sesiones cerradas" } },
+      },
+      "user"
+    ),
+  },
+};
+
+const profileUpdate = (who) => ({
+  summary: `Editar ${who}`,
+  description:
+    "name, email y profile (datos del perfil; null vacía un campo). El rol, el estado y la contraseña no se cambian aquí (400 cannot be changed).",
+  tags: ["Profile"],
+  requestBody: body("UpdateOwnUserInput"),
+  responses: {
+    200: ok("Actualizado", userRef),
+    400: error("Datos no válidos, o un campo que no se puede cambiar"),
+    409: error("Email repetido"),
+  },
+});
+
+const PROFILE_PATHS = {
+  "/api/profile/me": {
+    get: secured(
+      { summary: "Mi usuario con mi perfil", tags: ["Profile"], responses: { 200: ok("Usuario", userRef) } },
+      "user"
+    ),
+    patch: secured(profileUpdate("mi usuario y mi perfil"), "user"),
+  },
+  "/api/profile/me/password": {
+    patch: secured(
+      {
+        summary: "Cambiar mi contraseña",
+        description:
+          "Pide la actual. Cierra todas las sesiones y devuelve una nueva para seguir en esta. Una contraseña actual incorrecta es un 400 en currentPassword, no un 401: la sesión sigue siendo válida.",
+        tags: ["Profile"],
+        requestBody: body("ChangePasswordInput"),
+        responses: {
+          200: ok("Contraseña cambiada, con la sesión nueva", sessionRef),
+          400: error("currentPassword incorrecta, o newPassword no válida o igual a la actual"),
+        },
+      },
+      "user"
+    ),
+  },
+  "/api/profile/{userId}": {
+    get: secured(
+      {
+        summary: "Usuario con su perfil",
+        tags: ["Profile"],
+        parameters: [userIdParam],
+        responses: { 200: ok("Usuario", userRef), 400: error("ID inválido"), 404: error("No encontrado o eliminado") },
+      },
+      "owner",
+      "el propio usuario"
+    ),
+    patch: secured(
+      {
+        ...profileUpdate("un usuario y su perfil"),
+        parameters: [userIdParam],
+        responses: { ...profileUpdate().responses, 404: error("No encontrado o eliminado") },
+      },
+      "owner",
+      "el propio usuario"
+    ),
+  },
+};
+
+const ERROR_EXAMPLES = {
+  401: { statusCode: 401, error: "Unauthorized", message: "Authentication required", code: "TOKEN_EXPIRED" },
+  403: { statusCode: 403, error: "Forbidden", message: "You do not have permission to access this resource" },
+  429: { statusCode: 429, error: "Too Many Requests", message: "Too many attempts, please try again later" },
+};
+
+const errorExample = (description, example) => ({
+  description,
+  content: { "application/json": { schema: errorRef, example } },
+});
+
+// Lo que swagger.js añade a components: el candado y las respuestas comunes
+export const apiComponents = {
+  securitySchemes: {
+    bearerAuth: {
+      type: "http",
+      scheme: "bearer",
+      bearerFormat: "JWT",
+      description:
+        "El token de POST /api/auth/login (o /register). En Swagger UI: botón Authorize y pegar solo el token, sin \"Bearer\".",
+    },
+  },
+  responses: {
+    Unauthorized: {
+      ...errorExample(
+        "Sin sesión, o el token no sirve (caducado, manipulado, de un usuario desactivado o eliminado, o de antes de cambiar la contraseña). code solo aparece si había token: TOKEN_EXPIRED o TOKEN_INVALID.",
+        ERROR_EXAMPLES[401]
+      ),
+      headers: {
+        "WWW-Authenticate": {
+          description: 'Bearer, o Bearer error="invalid_token" si el token no sirve',
+          schema: { type: "string" },
+        },
+      },
+    },
+    Forbidden: errorExample("Hay sesión, pero el rol o la propiedad del recurso no lo permiten", ERROR_EXAMPLES[403]),
+    TooManyRequests: errorExample("Demasiados intentos desde esta IP: hay que esperar", ERROR_EXAMPLES[429]),
+  },
+};
+
+export const apiTags = [
+  { name: "Auth", description: "Registro, login (JWT) y sesión. Ver el botón Authorize." },
+  { name: "Profile", description: "El usuario de la sesión y su perfil. El perfil pertenece al usuario: nace, se elimina y se restaura con él." },
+  ...RESOURCES.map(({ tag, description }) => ({ name: tag, ...(description && { description }) })),
+];
+
+export const apiPaths = Object.assign({}, AUTH_PATHS, PROFILE_PATHS, ...RESOURCES.map(crudPaths));
+
+export const apiSchemas = {
+  Session: {
+    type: "object",
+    example: {
+      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzEwYTFiMmMzZDRlNWY2YTdiOGM5MTAiLCJyb2xlIjoiaG9zdCJ9.firma",
+      tokenType: "Bearer",
+      expiresIn: 604800,
+      user: { ...RESOURCES.find((resource) => resource.path === "users").example, ...COMMON_FIELDS },
+    },
+  },
+  RegisterInput: fromZod(registerSchema),
+  LoginInput: fromZod(loginSchema),
+  UpdateOwnUserInput: fromZod(updateOwnUserSchema),
+  ChangePasswordInput: fromZod(changePasswordSchema),
+  ...Object.fromEntries(
+    RESOURCES.flatMap(({ schema, create, update, example }) => [
+      [schema, { type: "object", example: { ...example, ...COMMON_FIELDS } }],
+      [`Create${schema}Input`, fromZod(create)],
+      [`Update${schema}Input`, fromZod(update)],
+    ])
+  ),
+};

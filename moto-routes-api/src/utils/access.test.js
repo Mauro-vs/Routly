@@ -56,7 +56,10 @@ test("imágenes: el anfitrión solo toca las de su perfil y sus experiencias", (
   assert.equal(canModifyImageOwner(ANA, "host", anaHost), true);
   assert.equal(canModifyImageOwner(ANA, "experience", experience), true);
   assert.equal(canModifyImageOwner(LUIS, "experience", experience), false);
-  for (const ownerType of ["route", "category", "location", "user"]) {
+  // Cada uno, su propia foto
+  assert.equal(canModifyImageOwner(ANA, "user", { _id: ANA.id }), true);
+  assert.equal(canModifyImageOwner(LUIS, "user", { _id: ANA.id }), false);
+  for (const ownerType of ["route", "category", "location"]) {
     assert.equal(canModifyImageOwner(ANA, ownerType, { userId: ANA.id }), false);
     assert.equal(canModifyImageOwner(ADMIN, ownerType, {}), true);
   }

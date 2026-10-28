@@ -41,12 +41,13 @@ export function canModifyDeparture(user, departure) {
 }
 
 /**
- * Las imágenes son de su dueño (ownerType + ownerId). Fuera del admin, solo se pueden
- * tocar las del propio perfil de anfitrión y las de sus experiencias; las de rutas,
- * categorías, ubicaciones y usuarios, solo el admin.
+ * Las imágenes son de su dueño (ownerType + ownerId). Fuera del admin, cada usuario
+ * gestiona su propia foto (ownerType user) y un anfitrión, además, las de su perfil de
+ * anfitrión y sus experiencias. Las de rutas, categorías y ubicaciones, solo el admin.
  */
 export function canModifyImageOwner(user, ownerType, owner) {
   if (isAdminUser(user)) return true;
+  if (ownerType === "user") return canAccessUserResource(user, owner);
   if (ownerType === "host") return canModifyHost(user, owner);
   if (ownerType === "experience") return canModifyExperience(user, owner);
   return false;
