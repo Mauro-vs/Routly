@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { loadAuthConfig } from "../config/auth.js";
 import { unauthorized } from "./errors.js";
@@ -6,10 +7,13 @@ import { OBJECT_ID_PATTERN } from "./objectId.js";
 // El algoritmo es fijo: verifyToken no acepta ningún otro (ni "none")
 const ALGORITHM = "HS256";
 
+// jti: un UUID por token, para poder invalidar uno concreto (lista negra del logout)
+const JTI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 /**
  * Firma el token de un usuario. La caducidad es la exp estándar (JWT_EXPIRES_IN).
- * Payload: sub (id), email, role (su name) y tv (tokenVersion: si cambia en la base de
- * datos, los tokens anteriores dejan de servir).
+ * Payload: sub (id), email, role (su name), tv (tokenVersion: si cambia en la base de
+ * datos, los tokens anteriores dejan de servir) y jti (su id, para el logout).
  *
  * @param role el name del rol ("admin", "host", "rider"), no el documento
  */
@@ -19,6 +23,7 @@ export function createToken({ _id, email, role, tokenVersion = 0 }) {
   return jwt.sign({ sub: String(_id), email, role, tv: tokenVersion }, secret, {
     algorithm: ALGORITHM,
     expiresIn,
+    jwtid: randomUUID(),
   });
 }
 
@@ -26,7 +31,8 @@ export function createToken({ _id, email, role, tokenVersion = 0 }) {
 const isValidPayload = (payload) =>
   OBJECT_ID_PATTERN.test(payload?.sub) &&
   typeof payload.role === "string" &&
-  Number.isInteger(payload.tv);
+  Number.isInteger(payload.tv) &&
+  JTI_PATTERN.test(payload.jti);
 
 /**
  * Comprueba la firma y la caducidad y devuelve el payload. Si falta, está caducado o

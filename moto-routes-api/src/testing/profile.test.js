@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import argon2 from "argon2";
 import { Profile } from "../models/profile.model.js";
+import { RevokedToken } from "../models/revokedToken.model.js";
 import { User } from "../models/user.model.js";
 import { profileRepository } from "../repositories/profile.repository.js";
 import { userService } from "../services/user.service.js";
@@ -99,6 +100,43 @@ test("/auth/me y logout-all: sin token 401; logout-all cierra todas las sesiones
 
   assert.equal((await client.post("/auth/logout-all")).status, 204);
   assert.equal((await client.get("/auth/me")).status, 401);
+});
+
+test("logout: cierra solo esta sesión; el token deja de servir y las demás siguen", async () => {
+  const { response, client } = await register("logout@example.com");
+  const other = await api.loginAs("logout@example.com");
+  const { jti, exp } = JSON.parse(Buffer.from(client.token.split(".")[1], "base64url"));
+
+  assert.equal((await client.post("/auth/logout")).status, 204);
+
+  const after = await client.get("/auth/me");
+  assert.equal(after.status, 401);
+  assert.equal(after.body.code, "TOKEN_INVALID");
+  // Otra sesión del mismo usuario sigue abierta
+  assert.equal((await other.get("/auth/me")).status, 200);
+  // Y puede volver a entrar
+  assert.equal((await api.anonymous.post("/auth/login", { email: "logout@example.com", password: TEST_PASSWORD })).status, 200);
+
+  // En la lista negra solo va el jti, de quién era y cuándo caduca: nunca el token
+  const entry = await RevokedToken.findOne({ jti }).lean();
+  assert.equal(String(entry.userId), response.body.user._id);
+  assert.equal(entry.expiresAt.getTime(), exp * 1000);
+  assert.ok(!Object.values(entry).includes(client.token));
+});
+
+test("logout: sin token 401; el mismo token no puede cerrar sesión dos veces", async () => {
+  assert.equal((await api.anonymous.post("/auth/logout")).status, 401);
+
+  const { client } = await register("logout2@example.com");
+  assert.equal((await client.post("/auth/logout")).status, 204);
+  assert.equal((await client.post("/auth/logout")).status, 401);
+});
+
+test("la lista negra se vacía sola: índice TTL en expiresAt", async () => {
+  const indexes = await RevokedToken.collection.indexes();
+  const ttl = indexes.find((index) => index.key.expiresAt === 1);
+  assert.equal(ttl.expireAfterSeconds, 0);
+  assert.ok(indexes.find((index) => index.key.jti === 1).unique);
 });
 
 // ---------- profile ----------

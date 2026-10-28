@@ -11,8 +11,9 @@ const router = Router();
 router.post("/register", registerLimiter, validate({ body: registerSchema }), authController.register);
 router.post("/login", loginLimiter, validate({ body: loginSchema }), authController.login);
 router.get("/me", authenticate, authController.me);
-// Cerrar la sesión en este dispositivo es cosa del cliente (borra el token); esto cierra
-// todas, en todos los dispositivos
+// Cierra esta sesión: el token va a la lista negra (el cliente, además, lo borra)
+router.post("/logout", authenticate, authController.logout);
+// Cierra todas las sesiones del usuario, en todos los dispositivos (tokenVersion)
 router.post("/logout-all", authenticate, authController.logoutAll);
 
 export default router;

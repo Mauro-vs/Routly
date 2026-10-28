@@ -29,9 +29,15 @@ test("createToken firma { sub, email, role, tv } con HS256 y verifyToken lo devu
   assert.equal(payload.email, USER.email);
   assert.equal(payload.role, "host");
   assert.equal(payload.tv, 3);
+  assert.match(payload.jti, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   assert.equal(tokenLifetime(token), 3600);
   // La contraseña o el hash nunca van en el token
   assert.ok(!("password" in payload) && !("passwordHash" in payload));
+});
+
+test("cada token tiene su propio jti, aunque sea del mismo usuario y el mismo segundo", () => {
+  const jtis = new Set(Array.from({ length: 20 }, () => verifyToken(createToken(USER)).jti));
+  assert.equal(jtis.size, 20);
 });
 
 test("sin token: 401 sin code", () => {
@@ -67,8 +73,17 @@ test("un token firmado con otro secreto o con otro algoritmo HMAC se rechaza", (
   assertUnauthorized(() => verifyToken(hs512), "TOKEN_INVALID");
 });
 
-test("un token bien firmado pero sin sub, role o tv válidos no sirve", () => {
-  for (const payload of [{ role: "admin", tv: 0 }, { sub: "123", role: "admin", tv: 0 }, { sub: USER._id, tv: 0 }, { sub: USER._id, role: "admin" }]) {
+test("un token bien firmado pero sin sub, role, tv o jti válidos no sirve", () => {
+  const jti = "6f1c9a52-3b0e-4d7a-9c1f-2e8b4a6d0c13";
+  for (const payload of [
+    { role: "admin", tv: 0, jti },
+    { sub: "123", role: "admin", tv: 0, jti },
+    { sub: USER._id, tv: 0, jti },
+    { sub: USER._id, role: "admin", jti },
+    // Un token de antes de la lista negra, sin jti, ya no sirve: hay que iniciar sesión otra vez
+    { sub: USER._id, role: "admin", tv: 0 },
+    { sub: USER._id, role: "admin", tv: 0, jti: "no-es-un-uuid" },
+  ]) {
     assertUnauthorized(() => verifyToken(jwt.sign(payload, SECRET)), "TOKEN_INVALID");
   }
   assertUnauthorized(() => verifyToken("esto.no.es-un-jwt"), "TOKEN_INVALID");

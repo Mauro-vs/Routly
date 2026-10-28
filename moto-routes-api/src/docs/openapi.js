@@ -604,12 +604,24 @@ const AUTH_PATHS = {
       "user"
     ),
   },
+  "/api/auth/logout": {
+    post: secured(
+      {
+        summary: "Cerrar sesión",
+        description:
+          "Cierra esta sesión: el token pasa a la lista negra y deja de servir al momento, aunque no haya caducado. Las sesiones de otros dispositivos siguen abiertas. El cliente, además, borra el token.",
+        tags: ["Auth"],
+        responses: { 204: { description: "Sesión cerrada" } },
+      },
+      "user"
+    ),
+  },
   "/api/auth/logout-all": {
     post: secured(
       {
         summary: "Cerrar todas las sesiones",
         description:
-          "Invalida todos los tokens del usuario, también el de esta petición. Cerrar la sesión en un solo dispositivo es cosa del cliente: borrar el token.",
+          "Invalida todos los tokens del usuario (sube su tokenVersion), también el de esta petición, en todos los dispositivos. Para cerrar solo esta sesión: POST /api/auth/logout.",
         tags: ["Auth"],
         responses: { 204: { description: "Sesiones cerradas" } },
       },

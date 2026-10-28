@@ -1,3 +1,4 @@
+import { revokedTokenRepository } from "../repositories/revokedToken.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { createError } from "../utils/errors.js";
 import { createToken, tokenLifetime } from "../utils/jwt.js";
@@ -50,6 +51,11 @@ export const authService = {
 
   async me(actor) {
     return userService.getById(actor.id);
+  },
+
+  // Cierra esta sesión: su token pasa a la lista negra hasta que caduca. Las demás siguen
+  async logout(actor, auth) {
+    await revokedTokenRepository.revoke({ jti: auth.jti, userId: actor.id, expiresAt: auth.expiresAt });
   },
 
   // Cierra todas las sesiones del usuario, también esta: sube tokenVersion

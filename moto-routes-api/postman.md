@@ -93,9 +93,10 @@ Response `201`: lo mismo que el login. Siempre con el rol `rider` y con su perfi
 | Petición | Qué hace | Éxito |
 |---|---|---|
 | **GET** `/api/auth/me` | El usuario de la sesión, con su rol y su perfil | 200 |
-| **POST** `/api/auth/logout-all` | Cierra todas las sesiones: todos los tokens del usuario dejan de servir | 204 |
+| **POST** `/api/auth/logout` | Cierra **esta** sesión: el token va a la lista negra y deja de servir al momento | 204 |
+| **POST** `/api/auth/logout-all` | Cierra **todas** las sesiones: todos los tokens del usuario dejan de servir | 204 |
 
-Cerrar la sesión en un solo dispositivo es borrar el token: no hay endpoint.
+Para probar el logout: haz login dos veces (dos tokens), llama a `/api/auth/logout` con el primero y repite `/api/auth/me` con cada uno. El primero da `401` con `"code": "TOKEN_INVALID"`; el segundo sigue funcionando. El cliente, además, borra el token.
 
 ### Errores de autenticación
 
@@ -103,7 +104,7 @@ Cerrar la sesión en un solo dispositivo es borrar el token: no hay endpoint.
 |---|---|
 | Sin token en un endpoint que lo pide | 401 `Authentication required` |
 | Token caducado | 401 `Authentication required`, con `"code": "TOKEN_EXPIRED"` |
-| Token manipulado, de otro formato, de un usuario desactivado o eliminado, o de antes de cambiar la contraseña | 401 `Authentication required`, con `"code": "TOKEN_INVALID"` |
+| Token manipulado, de otro formato, cerrado con logout, de un usuario desactivado o eliminado, o de antes de cambiar la contraseña | 401 `Authentication required`, con `"code": "TOKEN_INVALID"` |
 | Login con correo inexistente, contraseña mal o cuenta inactiva | 401 `Invalid email or password` (el mismo en los tres casos) |
 | Con sesión, pero sin el rol o sin ser el dueño | 403 `You do not have permission to access this resource` |
 | Más de 10 logins fallidos (o 10 registros) en 15 minutos desde la misma IP | 429 `Too many attempts, please try again later` |

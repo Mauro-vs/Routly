@@ -104,17 +104,17 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 100 tests con `node:test`:
+`npm test` ejecuta 104 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
 | `src/utils/sku.test.js` | Formato del SKU, fecha del alta en hora de Madrid y alfabeto sin caracteres ambiguos |
 | `src/utils/passwd.test.js` | Hash Argon2id con los parámetros de OWASP, contraseña correcta e incorrecta, hash mal formado y `needsRehash` |
-| `src/utils/jwt.test.js` | Firma HS256 y payload, sin token, caducado, firma alterada, algoritmo `none`, otro secreto, HS512 y payload incompleto |
+| `src/utils/jwt.test.js` | Firma HS256 y payload, `jti` único, sin token, caducado, firma alterada, algoritmo `none`, otro secreto, HS512 y payload incompleto |
 | `src/utils/access.test.js` | Las funciones de ABAC sin base de datos: dueño, otro usuario, admin, cadena host → experiencia → salida e imágenes |
 | `src/testing/auth-errors.test.js` | Formato exacto de los 401 y 403, `WWW-Authenticate`, `authorizeRoles`, `authorizeOwnership` y el límite de intentos (429) |
 | `src/testing/auth.test.js` | `authenticate` (sin token, otro formato, caducado, desactivado, eliminado, `tokenVersion`, rol leído al momento), cada fila de la matriz y ABAC con dos anfitriones |
-| `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
+| `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout` (lista negra), `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
@@ -262,6 +262,7 @@ src/
 │   ├── morgan.js                  Logs en consola y en logs/
 │   └── swagger.js                 Definición OpenAPI
 ├── models/
+│   ├── revokedToken.model.js      Lista negra del logout (jti, con índice TTL)
 │   ├── <recurso>.model.js         Uno por colección: role, user, profile, host, category,
 │   │                              location, route, experience, departure, image. Exporta sus límites
 │   ├── imageOwners.js             Colecciones que pueden tener imágenes
@@ -333,6 +334,7 @@ erDiagram
 | `roles` | `name` (clave: `admin`, `host`, `rider`), `label`, `description`, `isSystem` | | |
 | `users` | `name`, `email`, `passwordHash` y `tokenVersion` (ocultos) | `roleId` → `roles` | `role`, `profile`, `coverImage` |
 | `profiles` | `bio`, `phone`, `city`, `birthDate`, `bikeModel`, `experienceLevel`, `emergencyContact` | `userId` → `users` (uno por usuario), `updatedBy` → `users` | (se lee dentro del usuario) |
+| `revokedtokens` | `jti`, `expiresAt` (índice TTL: se borra sola al caducar el token) | `userId` → `users` | (interna: la lista negra del logout) |
 | `hosts` | `name`, `biography` | `userId` → `users` (uno por usuario) | `user`, `coverImage` |
 | `categories` | `name`, `description` | | |
 | `locations` | `city`, `region`, `country`, `latitude`, `longitude` | | |
@@ -410,6 +412,7 @@ Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#
 | POST | `/api/auth/register` | Alta pública (rider), con la sesión iniciada | 201 |
 | POST | `/api/auth/login` | Iniciar sesión: `{ token, tokenType, expiresIn, user }` | 200 |
 | GET | `/api/auth/me` | El usuario de la sesión, con su rol y su perfil | 200 |
+| POST | `/api/auth/logout` | Cerrar esta sesión: el token va a la lista negra | 204 |
 | POST | `/api/auth/logout-all` | Cerrar todas las sesiones | 204 |
 | GET | `/api/profile/me` | Mi usuario con mi perfil | 200 |
 | PATCH | `/api/profile/me` | Editar `name`, `email` y `profile` | 200 |
@@ -609,7 +612,7 @@ sequenceDiagram
 
 1. `POST /api/auth/login` (o `/register`) devuelve el token y el usuario con su rol y su perfil.
 2. El cliente envía el token en cada petición: `Authorization: Bearer <token>`. No hay cookies.
-3. Al caducar (`JWT_EXPIRES_IN`) se vuelve a iniciar sesión: no hay refresh token. Cerrar sesión en un dispositivo es borrar el token en el cliente; `POST /api/auth/logout-all` cierra todas.
+3. Al caducar (`JWT_EXPIRES_IN`) se vuelve a iniciar sesión: no hay refresh token. `POST /api/auth/logout` cierra esta sesión (lista negra) y `POST /api/auth/logout-all`, todas.
 
 | Pieza | Archivo | Qué hace |
 |---|---|---|
@@ -619,9 +622,21 @@ sequenceDiagram
 | Autenticación | `middlewares/authenticate.js` | Lee el Bearer, verifica el token y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos |
 | RBAC | `middlewares/authorize.js` | `authorizeRoles(...roles)`, `isAdmin`, `adminOnly`, `hostOrAdmin` y `authorizeOwnership(load, check)` |
 | ABAC | `utils/access.js` | Funciones puras: `isOwnerOrAdmin`, `canAccessUserResource`, `canModifyHost`, `canModifyExperience`, `canModifyDeparture` y `canModifyImageOwner`. Los services cargan la cadena de dueños y lanzan `forbidden()` |
+| Lista negra | `models/revokedToken.model.js` | Los tokens cerrados con `logout`: solo su `jti`, de quién eran y cuándo caducan. `authenticate` la consulta en cada petición |
 | Intentos | `middlewares/rateLimit.js` | Login: 10 intentos **fallidos** cada 15 min por IP. Registro: 10 altas cada 15 min. Después, 429 |
 
-**El token** lleva `sub` (id del usuario), `email`, `role` (su `name`) y `tv` (su `tokenVersion`), además de `iat` y `exp`. Nunca la contraseña ni el hash.
+**El token** lleva `sub` (id del usuario), `email`, `role` (su `name`), `tv` (su `tokenVersion`) y `jti` (un UUID propio de cada token), además de `iat` y `exp`. Nunca la contraseña ni el hash.
+
+**Cerrar sesión: dos niveles.**
+
+| | `POST /api/auth/logout` | `POST /api/auth/logout-all` |
+|---|---|---|
+| Qué cierra | Solo esta sesión | Todas las sesiones del usuario |
+| Cómo | El `jti` del token va a la **lista negra** (`revokedtokens`) | Sube su `tokenVersion` |
+| Qué se guarda | `jti`, `userId` y `expiresAt`. Nunca el token, que es un dato sensible | Nada nuevo: un número del usuario |
+| Cuánto dura | Hasta que el token habría caducado: el índice TTL de `expiresAt` borra la entrada sola, así la lista no crece | Siempre |
+
+Desde ese momento, el token responde `401 TOKEN_INVALID` aunque no haya caducado. `authenticate` consulta la lista negra en cada petición, en paralelo con el usuario y sobre un índice único: es una consulta muy barata.
 
 **`tokenVersion`** es un número del usuario (oculto, como `passwordHash`) que va dentro del token. Sube al cambiar la contraseña, al desactivar o eliminar al usuario y con `logout-all`: desde ese momento, todos sus tokens anteriores responden 401 aunque no hayan caducado. Reactivar o restaurar al usuario no les devuelve la vida.
 
@@ -648,7 +663,7 @@ sequenceDiagram
 | Crear, activar, eliminar y restaurar hosts | 401 | 403 | 403 | ✔ |
 | Todo `/api/users` y `/api/roles`, también leer | 401 | 403 | 403 | ✔ |
 | `/api/auth/register` y `/api/auth/login` | ✔ | ✔ | ✔ | ✔ |
-| `/api/auth/me`, `/api/auth/logout-all` y `/api/profile/me*` | 401 | ✔ | ✔ | ✔ |
+| `/api/auth/me`, `/api/auth/logout`, `/api/auth/logout-all` y `/api/profile/me*` | 401 | ✔ | ✔ | ✔ |
 | `/api/profile/:userId` | 401 | solo el suyo | solo el suyo | ✔ |
 
 "Las suyas" sigue la cadena de propiedad: `Host.userId` → `Experience.hostId` → `Departure.experienceId`. Un anfitrión no puede crear una experiencia en el perfil de otro, ni pasarle la suya. Si el recurso no existe, 404; si existe pero no es suyo, 403.

@@ -27,6 +27,15 @@ export const authController = {
     }
   },
 
+  async logout(req, res, next) {
+    try {
+      await authService.logout(req.user, req.auth);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async logoutAll(req, res, next) {
     try {
       await authService.logoutAll(req.user);

@@ -7,6 +7,7 @@ import { Host } from "./models/host.model.js";
 import { Image } from "./models/image.model.js";
 import { Location } from "./models/location.model.js";
 import { Profile } from "./models/profile.model.js";
+import { RevokedToken } from "./models/revokedToken.model.js";
 import { Role } from "./models/role.model.js";
 import { Route } from "./models/route.model.js";
 import { User } from "./models/user.model.js";
@@ -24,7 +25,7 @@ import { SYSTEM_ACTOR } from "./utils/access.js";
 // Contraseña de todos los usuarios del seed. Solo para desarrollo.
 const DEV_PASSWORD = "routly-dev-1234";
 
-const MODELS = [Image, Departure, Experience, Route, Location, Category, Host, Profile, User, Role];
+const MODELS = [Image, Departure, Experience, Route, Location, Category, Host, Profile, RevokedToken, User, Role];
 
 const ROLES = [
   { name: "admin", label: "Administrador", description: "Gestiona todo el panel", isSystem: true },
