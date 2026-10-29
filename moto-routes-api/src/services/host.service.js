@@ -6,6 +6,7 @@ import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { canModifyHost } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
+import { bikeService } from "./bike.service.js";
 import { imageService } from "./image.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
 import {
@@ -23,6 +24,10 @@ import {
 const HOST_ROLE = ROLES.HOST;
 
 const userReference = (id) => ({ repository: userRepository, id, field: "userId", resource: "user" });
+
+// El perfil de un anfitrión trae su garaje (en público, sus motos públicas): así se sabe con qué
+// moto guía
+const withBikes = async (host, scope) => ({ ...host, bikes: await bikeService.listByUser(host.userId, scope) });
 
 export const hostService = {
   // scope (services/visibility.js): en PUBLIC, sin los anfitriones de un usuario inactivo
@@ -42,14 +47,14 @@ export const hostService = {
   async getById(id, scope) {
     const host = await findExisting(hostRepository, id, "Host");
     await assertVisible(hostRepository, "host", host, scope, "Host");
-    return imageService.attachCover("host", host);
+    return withBikes(await imageService.attachCover("host", host), scope);
   },
 
   async getBySlug(slug, scope) {
     const host = await hostRepository.findBySlug(slug);
     if (!host) throw notFound("Host");
     await assertVisible(hostRepository, "host", host, scope, "Host");
-    return imageService.attachCover("host", host);
+    return withBikes(await imageService.attachCover("host", host), scope);
   },
 
   async create(data) {

@@ -219,3 +219,118 @@ test("profile.bikeModel ya no existe: lo sustituye el garaje", async () => {
   const response = await marta.patch("/profile/me", { profile: { bikeModel: "MT-07" } });
   assert.equal(fieldMessage(response, "profile.bikeModel"), "profile.bikeModel is not allowed");
 });
+
+// ---------- la moto del guía ----------
+
+// Ana (seedBasics) es anfitriona de data.experience, que tiene data.departure
+let ana;
+async function anaBike(extra = {}) {
+  ana ??= await api.loginAs("ana@example.com");
+  return (await ana.post("/bikes", { brand: "BMW", model: "R 1250 GS", type: "adventure", cc: 1254, hp: 136, ...extra })).body;
+}
+
+test("la experiencia guía con una moto del anfitrión: sale en la ficha con su foto", async () => {
+  const gs = await anaBike();
+  await ana.post("/images", { ownerType: "bike", ownerId: gs._id, url: "https://x.dev/gs.jpg" });
+
+  const updated = await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: gs._id });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.body.guideBike.brand, "BMW");
+  assert.equal(updated.body.guideBike.license, "A");
+  assert.equal(updated.body.guideBike.coverImage.url, "https://x.dev/gs.jpg");
+  // En público también, y la salida la hereda
+  assert.equal((await api.anonymous.get(`/experiences/${data.experience._id}`)).body.guideBike._id, gs._id);
+  assert.equal((await api.anonymous.get(`/departures/${data.departure._id}`)).body.guideBike._id, gs._id);
+  // Y el perfil de la anfitriona enseña su garaje
+  assert.ok(ids({ body: (await api.anonymous.get(`/hosts/${data.host._id}`)).body.bikes }).includes(gs._id));
+});
+
+test("la moto del guía tiene que ser una moto activa y pública del anfitrión", async () => {
+  const foreign = (await marta.post("/bikes", MT07)).body;
+  const hidden = await anaBike({ isPublic: false });
+  const inactive = await anaBike();
+  await ana.patch(`/bikes/${inactive._id}/active`, { isActive: false });
+
+  for (const bike of [foreign, hidden, inactive]) {
+    const response = await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: bike._id });
+    assert.equal(fieldMessage(response, "guideBikeId"), "guideBikeId must reference an active, public bike of the host");
+  }
+  assert.equal(fieldMessage(await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: "6710a1b2c3d4e5f6a7b8c999" }), "guideBikeId"),
+    "guideBikeId must reference an active, public bike of the host");
+});
+
+test("una salida puede llevar otra moto del guía; con null vuelve a la de su experiencia", async () => {
+  const gs = await anaBike();
+  const tenere = await anaBike({ brand: "Yamaha", model: "Ténéré 700", cc: 689, hp: 73 });
+  await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: gs._id });
+
+  const own = await ana.patch(`/departures/${data.departure._id}`, { guideBikeId: tenere._id });
+  assert.equal(own.body.guideBike._id, tenere._id);
+  const foreign = (await marta.post("/bikes", MT07)).body;
+  assert.equal((await ana.patch(`/departures/${data.departure._id}`, { guideBikeId: foreign._id })).status, 400);
+
+  const back = await ana.patch(`/departures/${data.departure._id}`, { guideBikeId: null });
+  assert.equal(back.body.guideBike._id, gs._id);
+});
+
+test("una moto que guía no se elimina, ni se desactiva ni se hace privada (409)", async () => {
+  const gs = await anaBike();
+  await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: gs._id });
+
+  const message = "Bike is the guide bike of an active experience or an upcoming departure";
+  assert.equal((await ana.patch(`/bikes/${gs._id}/delete`)).body.message, message);
+  assert.equal((await ana.patch(`/bikes/${gs._id}/active`, { isActive: false })).body.message, message);
+  assert.equal((await ana.patch(`/bikes/${gs._id}`, { isPublic: false })).body.message, message);
+  // Editar el resto de la ficha, sí
+  assert.equal((await ana.patch(`/bikes/${gs._id}`, { km: 45000 })).status, 200);
+
+  // Libre de nuevo: ya no guía nada
+  await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: null });
+  assert.equal((await ana.patch(`/bikes/${gs._id}/delete`)).status, 204);
+});
+
+test("la salida futura también la bloquea, aunque la experiencia esté inactiva", async () => {
+  const gs = await anaBike();
+  const tenere = await anaBike({ brand: "Yamaha", model: "Ténéré 700" });
+  await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: gs._id });
+  await ana.patch(`/departures/${data.departure._id}`, { guideBikeId: tenere._id });
+  await ana.patch(`/experiences/${data.experience._id}/active`, { isActive: false });
+  try {
+    assert.equal((await ana.patch(`/bikes/${tenere._id}/delete`)).status, 409);
+    // La de la experiencia la hereda su salida futura... que ya lleva otra: esta sí queda libre
+    assert.equal((await ana.patch(`/bikes/${gs._id}/delete`)).status, 204);
+  } finally {
+    await ana.patch(`/experiences/${data.experience._id}/active`, { isActive: true });
+    await ana.patch(`/departures/${data.departure._id}`, { guideBikeId: null });
+    await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: null });
+  }
+});
+
+test("si el admin cambia el anfitrión, la moto del guía tiene que ser del nuevo", async () => {
+  const gs = await anaBike();
+  await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: gs._id });
+  const other = (await api.post("/users", { name: "Otro Host", email: "otrohost@example.com", password: TEST_PASSWORD, roleId: data.hostRole._id })).body;
+  const otherHost = (await api.post("/hosts", { userId: other._id, name: "Otro Host" })).body;
+
+  const response = await api.patch(`/experiences/${data.experience._id}`, { hostId: otherHost._id });
+  assert.equal(fieldMessage(response, "guideBikeId"), "guideBikeId must reference an active, public bike of the host");
+  // Quitando la moto, sí
+  assert.equal((await api.patch(`/experiences/${data.experience._id}`, { hostId: otherHost._id, guideBikeId: null })).status, 200);
+  await api.patch(`/experiences/${data.experience._id}`, { hostId: data.host._id });
+});
+
+test("check:integrity quita la moto del guía si deja de valer, sin tocar la experiencia", async () => {
+  const { checkIntegrity, fixIntegrity } = await import("../services/integrity.service.js");
+  const { Experience } = await import("../models/experience.model.js");
+  const gs = await anaBike();
+  await ana.patch(`/experiences/${data.experience._id}`, { guideBikeId: gs._id });
+  // Eliminada a mano, sin pasar por el service
+  await Bike.updateOne({ _id: gs._id }, { deletedAt: new Date() });
+
+  const problems = (await checkIntegrity()).filter((p) => p.id === data.experience._id);
+  assert.deepEqual(problems.map((p) => p.detail), ["guideBikeId references a deleted Bike"]);
+  await fixIntegrity(problems);
+  const experience = await Experience.findById(data.experience._id).lean();
+  assert.equal(experience.guideBikeId, undefined);
+  assert.equal(experience.isActive, true);
+});

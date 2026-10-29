@@ -1,5 +1,6 @@
 import { restoredStatus, statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
+import { bikeRepository } from "../repositories/bike.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { canModifyDeparture, canModifyExperience, isAdminUser } from "../utils/access.js";
@@ -17,6 +18,7 @@ import {
   findExisting,
   findRestorable,
 } from "./references.js";
+import { bikeService } from "./bike.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
 
 const SKU_TYPE = "DEP";
@@ -93,33 +95,42 @@ const experienceReference = (id) => ({
   resource: "experience",
 });
 
+// guideBike: la moto del guía de ese día, o la de su experiencia (o null)
+const withGuideBikes = (departures, scope) =>
+  bikeService.attachGuideBikes(
+    departures,
+    (departure) => departure.guideBikeId ?? departure.experience?.guideBikeId,
+    scope
+  );
+
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
 
 export const departureService = {
   // scope (services/visibility.js): en PUBLIC, sin las de una experiencia oculta
   async list(scope) {
-    return departureRepository.findAll(await scopeFilter("departure", scope));
+    return withGuideBikes(await departureRepository.findAll(await scopeFilter("departure", scope)), scope);
   },
 
   async listByActive(isActive, scope) {
-    return departureRepository.findAll({ isActive, ...(await scopeFilter("departure", scope)) });
+    const filter = { isActive, ...(await scopeFilter("departure", scope)) };
+    return withGuideBikes(await departureRepository.findAll(filter), scope);
   },
 
   async listDeleted() {
-    return departureRepository.findDeleted();
+    return withGuideBikes(await departureRepository.findDeleted());
   },
 
   async getById(id, scope) {
     const departure = await findExisting(departureRepository, id, "Departure");
     await assertVisible(departureRepository, "departure", departure, scope, "Departure");
-    return departure;
+    return (await withGuideBikes([departure], scope))[0];
   },
 
   async getBySlug(slug, scope) {
     const departure = await departureRepository.findBySlug(slug);
     if (!departure) throw notFound("Departure");
     await assertVisible(departureRepository, "departure", departure, scope, "Departure");
-    return departure;
+    return (await withGuideBikes([departure], scope))[0];
   },
 
   // Llega ya en mayúsculas: lo normaliza skuParamSchema
@@ -127,7 +138,7 @@ export const departureService = {
     const departure = await departureRepository.findBySku(sku);
     if (!departure) throw notFound("Departure");
     await assertVisible(departureRepository, "departure", departure, scope, "Departure");
-    return departure;
+    return (await withGuideBikes([departure], scope))[0];
   },
 
   async create(data, actor) {
@@ -138,6 +149,7 @@ export const departureService = {
       "experience"
     );
     await assertOwnExperience(actor, experience);
+    if (data.guideBikeId) await bikeService.assertGuideBike(data.guideBikeId, experience.hostId);
 
     assertFuture(data.startAt);
     assertCapacity(data.capacity, experience);
@@ -153,9 +165,11 @@ export const departureService = {
       try {
         await departureRepository.create({ ...data, _id, slug, sku: buildSku(SKU_TYPE) });
         // Sin transacciones: la experiencia tiene que seguir viva después de escribir
-        await confirmReferences([experienceReference(data.experienceId)], () =>
-          departureRepository.deleteCreatedById(_id)
-        );
+        const references = [
+          experienceReference(data.experienceId),
+          ...(data.guideBikeId ? [bikeService.guideReference(data.guideBikeId)] : []),
+        ];
+        await confirmReferences(references, () => departureRepository.deleteCreatedById(_id));
         return departureService.getById(_id);
       } catch (error) {
         if (!isSkuClash(error)) throw error;
@@ -184,6 +198,7 @@ export const departureService = {
     if (endAt <= startAt) throw fieldError("endAt", "endAt must be after startAt");
 
     if (data.capacity !== undefined) assertCapacity(data.capacity, experience);
+    if (data.guideBikeId) await bikeService.assertGuideBike(data.guideBikeId, experience.hostId);
     if (data.state !== undefined || data.endAt !== undefined) {
       assertState(data.state ?? departure.state, departure.state, endAt);
     }
@@ -197,6 +212,11 @@ export const departureService = {
       : data;
 
     ensureWritten(await departureRepository.updateById(id, changes), "Departure");
+    if (data.guideBikeId) {
+      await confirmReferences([bikeService.guideReference(data.guideBikeId)], () =>
+        departureRepository.updateById(id, { guideBikeId: departure.guideBikeId ?? null })
+      );
+    }
     return departureService.getById(id);
   },
 
@@ -229,6 +249,9 @@ export const departureService = {
     await assertOwnDeparture(actor, deleted);
 
     await assertRestorable(experienceRepository, deleted.experienceId, "experienceId", "experience");
+    if (deleted.guideBikeId && !(await bikeRepository.findPlainById(deleted.guideBikeId))) {
+      throw conflict("Cannot restore: guideBikeId references a deleted bike");
+    }
 
     await departureRepository.restoreById(id, restoredStatus(isActive));
     await confirmReferences([experienceReference(deleted.experienceId)], () =>

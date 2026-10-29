@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import { Departure } from "../models/departure.model.js";
 import { toUpdate } from "../utils/update.js";
 
-const withExperience = (query) => query.populate("experience", "title slug");
+// guideBikeId de la experiencia: la salida hereda su moto del guía
+const withExperience = (query) => query.populate("experience", "title slug guideBikeId");
 
 export const departureRepository = {
   // Por fecha de salida, de la más próxima a la más lejana

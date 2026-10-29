@@ -1,3 +1,4 @@
+import { Bike } from "../models/bike.model.js";
 import { Category } from "../models/category.model.js";
 import { Departure } from "../models/departure.model.js";
 import { Experience } from "../models/experience.model.js";
@@ -33,6 +34,7 @@ const REFERENCES = [
   { model: Experience, field: "hostId", parent: Host },
   { model: Experience, field: "routeId", parent: Route },
   { model: Departure, field: "experienceId", parent: Experience },
+  { model: Bike, field: "userId", parent: User },
 ];
 
 // Los padres de una lista de ids, también los eliminados, en un Map por id
@@ -63,6 +65,38 @@ export async function checkIntegrity() {
       problems.push(
         problem(model.collection.collectionName, child._id, `${field} references ${state} ${parent.modelName}`,
           () => model.updateOne({ _id: child._id }, { status: STATUS.INACTIVE }))
+      );
+    }
+  }
+
+  // 1b. La moto del guía (opcional) de una experiencia activa o una salida futura programada:
+  //     tiene que existir, estar activa, ser pública y ser del usuario del anfitrión → si no,
+  //     se quita (la salida vuelve a la de su experiencia)
+  const hosts = new Map((await Host.find({}).setOptions(ALL).lean()).map((host) => [String(host._id), host]));
+  const experiences = new Map((await Experience.find({}).setOptions(ALL).lean()).map((exp) => [String(exp._id), exp]));
+  const guided = [
+    { model: Experience, filter: { isActive: true }, hostOf: (doc) => doc.hostId },
+    {
+      model: Departure,
+      filter: { state: "scheduled", startAt: { $gt: new Date() } },
+      hostOf: (doc) => experiences.get(String(doc.experienceId))?.hostId,
+    },
+  ];
+  for (const { model, filter, hostOf } of guided) {
+    const docs = await model.find({ ...filter, guideBikeId: { $ne: null } }).lean();
+    const bikes = await parentsById(Bike, docs.map((doc) => doc.guideBikeId));
+    for (const doc of docs) {
+      const bike = bikes.get(String(doc.guideBikeId));
+      const host = hosts.get(String(hostOf(doc)));
+      let detail = null;
+      if (!bike) detail = "guideBikeId references a missing Bike";
+      else if (bike.deletedAt) detail = "guideBikeId references a deleted Bike";
+      else if (!bike.isActive || !bike.isPublic) detail = "guideBikeId references an inactive or private Bike";
+      else if (String(bike.userId) !== String(host?.userId)) detail = "guideBikeId references a bike of another user";
+      if (!detail) continue;
+      problems.push(
+        problem(model.collection.collectionName, doc._id, detail,
+          () => model.updateOne({ _id: doc._id }, { $unset: { guideBikeId: "" } }))
       );
     }
   }

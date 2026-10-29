@@ -2,9 +2,11 @@ import { restoredStatus, statusFromActive } from "../models/status.js";
 import { departureRepository } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
+import { bikeRepository } from "../repositories/bike.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { canModifyExperience, canModifyHost, isAdminUser } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
+import { bikeService } from "./bike.service.js";
 import { departureService } from "./departure.service.js";
 import { imageService } from "./image.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
@@ -43,6 +45,10 @@ const referencesOf = (data) =>
     resource,
   }));
 
+// guideBike: la moto con la que guía (o null)
+const withGuideBikes = (experiences, scope) =>
+  bikeService.attachGuideBikes(experiences, (experience) => experience.guideBikeId, scope);
+
 // ABAC: el admin, con todas; un anfitrión, solo con las de su perfil de anfitrión
 async function assertOwnHost(actor, hostId) {
   if (isAdminUser(actor)) return;
@@ -58,37 +64,40 @@ async function assertOwnExperience(actor, experience) {
 export const experienceService = {
   // scope (services/visibility.js): en PUBLIC, sin las de un anfitrión o una ruta ocultos
   async list(scope) {
-    return experienceRepository.findAll(await scopeFilter("experience", scope));
+    return withGuideBikes(await experienceRepository.findAll(await scopeFilter("experience", scope)), scope);
   },
 
   async listByActive(isActive, scope) {
-    return experienceRepository.findAll({ isActive, ...(await scopeFilter("experience", scope)) });
+    const filter = { isActive, ...(await scopeFilter("experience", scope)) };
+    return withGuideBikes(await experienceRepository.findAll(filter), scope);
   },
 
   async listDeleted() {
-    return experienceRepository.findDeleted();
+    return withGuideBikes(await experienceRepository.findDeleted());
   },
 
   async getById(id, scope) {
     const experience = await findExisting(experienceRepository, id, "Experience");
     await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
-    return experience;
+    return (await withGuideBikes([experience], scope))[0];
   },
 
   async getBySlug(slug, scope) {
     const experience = await experienceRepository.findBySlug(slug);
     if (!experience) throw notFound("Experience");
     await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
-    return experience;
+    return (await withGuideBikes([experience], scope))[0];
   },
 
   async create(data, actor) {
     await assertReferences(data);
     await assertOwnHost(actor, data.hostId);
+    if (data.guideBikeId) await bikeService.assertGuideBike(data.guideBikeId, data.hostId);
 
     const { _id } = await experienceRepository.create(data);
     // Sin transacciones: las referencias tienen que seguir vivas después de escribir
-    await confirmReferences(referencesOf(data), () => experienceRepository.deleteCreatedById(_id));
+    const references = [...referencesOf(data), ...(data.guideBikeId ? [bikeService.guideReference(data.guideBikeId)] : [])];
+    await confirmReferences(references, () => experienceRepository.deleteCreatedById(_id));
     return experienceService.getById(_id);
   },
 
@@ -100,6 +109,12 @@ export const experienceService = {
     await assertReferences(data, experience);
     // Un anfitrión no puede pasar su experiencia a otro anfitrión
     if (data.hostId !== undefined) await assertOwnHost(actor, data.hostId);
+
+    // La moto del guía tiene que ser del anfitrión que quede, también si cambia el anfitrión
+    const guideBikeId = data.guideBikeId === undefined ? experience.guideBikeId : data.guideBikeId;
+    if ((data.hostId !== undefined || data.guideBikeId) && guideBikeId) {
+      await bikeService.assertGuideBike(guideBikeId, data.hostId ?? experience.hostId);
+    }
 
     // Si solo llega uno de los dos límites, se compara con el guardado
     const minParticipants = data.minParticipants ?? experience.minParticipants;
@@ -131,6 +146,11 @@ export const experienceService = {
     await confirmReferences(changed, () =>
       experienceRepository.updateById(id, Object.fromEntries(changed.map(({ field }) => [field, experience[field]])))
     );
+    if (data.guideBikeId) {
+      await confirmReferences([bikeService.guideReference(data.guideBikeId)], () =>
+        experienceRepository.updateById(id, { guideBikeId: experience.guideBikeId ?? null })
+      );
+    }
     if (data.title !== undefined && data.title !== experience.title) {
       await departureService.renameExperience(id, data.title);
     }
@@ -168,6 +188,9 @@ export const experienceService = {
 
     for (const { field, repository, resource } of REFERENCES) {
       await assertRestorable(repository, deleted[field], field, resource);
+    }
+    if (deleted.guideBikeId && !(await bikeRepository.findPlainById(deleted.guideBikeId))) {
+      throw conflict("Cannot restore: guideBikeId references a deleted bike");
     }
 
     await experienceRepository.restoreById(id, restoredStatus(isActive));

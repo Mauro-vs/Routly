@@ -1,10 +1,13 @@
 import { BIKE_LIMITS, licenseFor } from "../models/bike.model.js";
-import { restoredStatus, statusFromActive } from "../models/status.js";
+import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { bikeRepository } from "../repositories/bike.repository.js";
+import { departureRepository } from "../repositories/departure.repository.js";
+import { experienceRepository } from "../repositories/experience.repository.js";
+import { hostRepository } from "../repositories/host.repository.js";
 import { imageRepository } from "../repositories/image.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { canModifyBike, isAdminUser } from "../utils/access.js";
-import { conflict, forbidden, notFound } from "../utils/errors.js";
+import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
@@ -20,6 +23,35 @@ import {
 import { ALL, assertVisible, scopeFilter, scopeOf } from "./visibility.js";
 
 const userReference = (id) => ({ repository: userRepository, id, field: "userId", resource: "user" });
+
+const IN_USE = "Bike is the guide bike of an active experience or an upcoming departure";
+
+/**
+ * Lo que impide eliminar, desactivar o hacer privada una moto: que sea la moto del guía de una
+ * experiencia activa o de una salida futura programada (la suya o la que hereda de su experiencia).
+ * Con el formato de dependents de softDeleteWithCascades.
+ */
+async function usage(id) {
+  const experienceIds = await experienceRepository.findIds({ guideBikeId: id });
+  return [
+    { repository: experienceRepository, filter: { guideBikeId: id, isActive: true }, message: IN_USE },
+    {
+      repository: departureRepository,
+      filter: {
+        state: "scheduled",
+        startAt: { $gt: new Date() },
+        $or: [{ guideBikeId: id }, { guideBikeId: null, experienceId: { $in: experienceIds } }],
+      },
+      message: IN_USE,
+    },
+  ];
+}
+
+async function assertNotInUse(id) {
+  for (const { repository, filter, message } of await usage(id)) {
+    if (await repository.exists(filter)) throw conflict(message);
+  }
+}
 
 const tooManyBikes = () => conflict(`A user can have at most ${BIKE_LIMITS.perUser} bikes`);
 
@@ -115,6 +147,10 @@ export const bikeService = {
     const bike = await findCurrent(bikeRepository, id, "Bike");
     assertOwnBike(actor, bike);
 
+    // Desactivarla o hacerla privada la quita del público: no si guía algo
+    const hides = (data.status === STATUS.INACTIVE && bike.isActive) || (data.isPublic === false && bike.isPublic);
+    if (hides) await assertNotInUse(id);
+
     let changes = withLicense(data, bike);
     // El slug sale de la marca y el modelo: si cambia uno, se manda también el otro
     if (data.brand !== undefined || data.model !== undefined) {
@@ -143,6 +179,7 @@ export const bikeService = {
       repository: bikeRepository,
       id,
       resource: "Bike",
+      dependents: await usage(id),
       cascades: [imageService.cascade("bike", id)],
     });
 
@@ -171,6 +208,47 @@ export const bikeService = {
       await bikeRepository.updateById(id, { isPrimary: true });
     }
     return bikeService.getById(id);
+  },
+
+  // ---- Para los services de experiencias, salidas y anfitriones ----
+
+  /** 400 si la moto no es una moto activa y pública del usuario del anfitrión. */
+  async assertGuideBike(bikeId, hostId) {
+    const [bike, host] = await Promise.all([
+      bikeRepository.findPlainById(bikeId),
+      hostRepository.findPlainById(hostId),
+    ]);
+    if (!bike || !host || !bike.isActive || !bike.isPublic || String(bike.userId) !== String(host.userId)) {
+      throw fieldError("guideBikeId", "guideBikeId must reference an active, public bike of the host");
+    }
+  },
+
+  // Como referencia para confirmReferences (sin transacciones, ver references.js)
+  guideReference(id) {
+    return { repository: bikeRepository, id, field: "guideBikeId", resource: "bike" };
+  },
+
+  /**
+   * Añade guideBike ({ marca, modelo, tipo, cc, cv, carnet, slug, coverImage } o null) a cada
+   * documento. idOf dice qué moto le toca (una salida hereda la de su experiencia). En PUBLIC,
+   * una moto oculta sale como null.
+   */
+  async attachGuideBikes(documents, idOf, scope) {
+    const ids = [...new Set(documents.map(idOf).filter(Boolean).map(String))];
+    const bikes = ids.length ? await bikeRepository.findSummaries(ids, await scopeFilter("bike", scope)) : [];
+    const byId = new Map((await imageService.attachCovers("bike", bikes)).map((bike) => [String(bike._id), bike]));
+    return documents.map((document) => ({ ...document, guideBike: byId.get(String(idOf(document))) ?? null }));
+  },
+
+  async attachGuideBike(document, idOf, scope) {
+    const [withBike] = await bikeService.attachGuideBikes([document], idOf, scope);
+    return withBike;
+  },
+
+  // Las motos de un usuario que se enseñan con su perfil de anfitrión (en PUBLIC, las públicas)
+  async listByUser(userId, scope) {
+    const filter = { userId, ...(await scopeFilter("bike", scope)) };
+    return imageService.attachCovers("bike", await bikeRepository.findAll(filter));
   },
 
   // ---- Para userService ----

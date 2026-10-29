@@ -33,6 +33,8 @@ const experienceSchema = new mongoose.Schema(
   {
     hostId: { type: mongoose.Schema.Types.ObjectId, ref: "Host", required: true, index: true },
     routeId: { type: mongoose.Schema.Types.ObjectId, ref: "Route", required: true, index: true },
+    // La moto con la que guía (opcional): una moto activa y pública del usuario del anfitrión
+    guideBikeId: { type: mongoose.Schema.Types.ObjectId, ref: "Bike", index: true },
     title: {
       type: String,
       required: true,

@@ -14,6 +14,8 @@ export const DEPARTURE_STATES = Object.freeze(["scheduled", "cancelled", "comple
 const departureSchema = new mongoose.Schema(
   {
     experienceId: { type: mongoose.Schema.Types.ObjectId, ref: "Experience", required: true },
+    // Si ese día el guía lleva otra moto; sin él, la de su experiencia
+    guideBikeId: { type: mongoose.Schema.Types.ObjectId, ref: "Bike", index: true },
     startAt: { type: Date, required: true },
     endAt: { type: Date, required: true },
     capacity: { type: Number, required: true, min: 1, validate: integer },

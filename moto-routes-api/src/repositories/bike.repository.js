@@ -39,6 +39,13 @@ export const bikeRepository = {
     return Bike.distinct("_id", filter);
   },
 
+  // Lo que se enseña de la moto de un guía en una experiencia o una salida
+  findSummaries(ids, filter = {}) {
+    return Bike.find({ _id: { $in: ids }, ...filter })
+      .select("brand model version type cc hp license slug userId")
+      .lean();
+  },
+
   countByUser(userId) {
     return Bike.countDocuments({ userId });
   },

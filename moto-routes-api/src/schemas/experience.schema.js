@@ -5,6 +5,8 @@ import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 const experienceFields = z.strictObject({
   hostId: objectIdSchema,
   routeId: objectIdSchema,
+  // La moto con la que guía: una moto activa y pública del usuario del anfitrión
+  guideBikeId: objectIdSchema.optional(),
   title: z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax),
   description: z.string().trim().max(LIMITS.descriptionMax).optional(),
   meetingPoint: z.string().trim().max(LIMITS.meetingPointMax).optional(),
@@ -30,7 +32,7 @@ export const createExperienceSchema = experienceFields.refine(
 export const updateExperienceSchema = experienceFields
   .partial()
   .extend({
-    ...clearable(experienceFields, "description", "meetingPoint"),
+    ...clearable(experienceFields, "description", "meetingPoint", "guideBikeId"),
     ...cannotChange("_id", "slug"),
   })
   .refine(

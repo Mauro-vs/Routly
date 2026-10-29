@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DEPARTURE_LIMITS as LIMITS, DEPARTURE_STATES } from "../models/departure.model.js";
 import { SKU_PATTERN } from "../utils/sku.js";
-import { cannotChange, objectIdSchema } from "./common.schema.js";
+import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 // sku y slug no están en el esquema: los genera el service
 
@@ -17,6 +17,8 @@ const departureFields = z.strictObject({
   // Euros por persona, con dos decimales como máximo
   price: z.number().min(0).max(LIMITS.priceMax).multipleOf(0.01),
   state: z.enum(DEPARTURE_STATES).optional(),
+  // Si ese día el guía lleva otra moto (null vuelve a la de la experiencia)
+  guideBikeId: objectIdSchema.optional(),
 });
 
 const datesError = { message: "endAt must be after startAt", path: ["endAt"] };
@@ -31,7 +33,7 @@ export const createDepartureSchema = departureFields.refine(
 export const updateDepartureSchema = departureFields
   .omit({ experienceId: true })
   .partial()
-  .extend(cannotChange("_id", "slug", "sku", "experienceId"))
+  .extend({ ...clearable(departureFields, "guideBikeId"), ...cannotChange("_id", "slug", "sku", "experienceId") })
   .refine(
     (data) => data.startAt === undefined || data.endAt === undefined || data.endAt > data.startAt,
     datesError
