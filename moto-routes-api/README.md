@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/OpenAPI-3-1b7a4e?style=flat-square&labelColor=0c2419&logo=swagger&logoColor=c6f04d" alt="OpenAPI 3">
 </p>
 
-API REST de Routly. Gestiona nueve colecciones relacionadas entre sí: roles, usuarios, anfitriones, categorías, ubicaciones, rutas, experiencias, salidas e imágenes. Todas se crean, se consultan (también por slug), se editan, se activan o desactivan, se eliminan con borrado lógico y se restauran.
+API REST de Routly. Gestiona diez colecciones relacionadas entre sí: roles, usuarios, anfitriones, categorías, ubicaciones, rutas, experiencias, salidas, imágenes y motos (el garaje de cada usuario). Todas se crean, se consultan (también por slug), se editan, se activan o desactivan, se eliminan con borrado lógico y se restauran.
 
 Forma parte del monorepo de Routly. La visión general del proyecto está en el [README de la raíz](../README.md), el diseño campo a campo de la base de datos en [`DATABASE.md`](../DATABASE.md) y el panel que consume esta API en [`moto-routes-frontend`](../moto-routes-frontend/README.md).
 
@@ -104,7 +104,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 122 tests con `node:test`:
+`npm test` ejecuta 141 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -115,6 +115,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/auth-errors.test.js` | Formato exacto de los 401 y 403, `WWW-Authenticate`, `authorizeRoles`, `authorizeOwnership` y el límite de intentos (429) |
 | `src/testing/auth.test.js` | `authenticate` (sin token, otro formato, caducado, desactivado, eliminado, `tokenVersion`, rol leído al momento), cada fila de la matriz y ABAC con dos anfitriones |
 | `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout` (lista negra), `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
+| `src/testing/bike.test.js` | El garaje: alta y ficha, carnet calculado, límites, modificaciones, moto principal, 10 por usuario, ABAC, fotos, visibilidad, cascada con el usuario y la moto del guía (herencia, 409 si está en uso, cambio de anfitrión y `check:integrity`) |
 | `src/testing/integrity.test.js` | Integridad referencial: carreras sin transacciones (0 huérfanos), cascadas que fallan, galería de un dueño eliminado, restaurar un host sin rol, rol inactivo, visibilidad pública y `check:integrity` |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
@@ -135,13 +136,14 @@ Con el servidor en marcha, la documentación interactiva está en `http://localh
 | `roles` | `admin` (Administrador), `host` (Anfitrión) y `rider` (Motorista): los tres son roles base protegidos |
 | `users` | Admin Routly (`admin@routly.dev`, admin), Lucía Ferrer (`lucia@routly.dev`, host), Pablo Ortega (`pablo@routly.dev`, host) y Marta Gil (`marta@routly.dev`, rider) |
 | `profiles` | Uno por usuario. Lucía, Pablo y Marta con datos; el del admin, vacío |
+| `bikes` | La BMW R 1250 GS de Lucía y la Honda Africa Twin de Pablo, cada una como moto del guía de su experiencia, con modificaciones y fotos; la CB500X de Pablo (privada) y la Yamaha MT-07 (A2) de Marta |
 | `hosts` | Los perfiles de Lucía y Pablo |
 | `categories` | Costa, Montaña, Puertos y Viñedos |
 | `locations` | Barcelona, Huesca, Lleida, Logroño, Haro, Granada, Palma, Sóller, Panes y Potes, con coordenadas reales |
 | `routes` | Seis rutas. "Ruta del Vino" queda inactiva y "Desfiladero de La Hermida y Potes" en la papelera |
 | `experiences` | "Tramuntana al amanecer" (Lucía, Caminos de Mallorca) y "Travesía de los Pirineos" (Pablo, Pirineos Adventure) |
 | `departures` | Tres salidas futuras, calculadas desde el día en que se ejecuta. Una está cancelada |
-| `images` | Fotos de las rutas, de los usuarios y de los anfitriones. Las de la ruta de la papelera están eliminadas con ella |
+| `images` | Fotos de las rutas, de los usuarios, de los anfitriones y de las motos. Las de la ruta de la papelera están eliminadas con ella |
 
 > [!WARNING]
 > - El seed **borra físicamente** todas las colecciones. Es la única excepción al soft delete y solo debe usarse en desarrollo.
@@ -242,7 +244,7 @@ Si algo falla en cualquier punto (Zod, el service o Mongoose), el error llega a 
 2. `cors`: orígenes permitidos y métodos `GET`, `POST` y `PATCH`.
 3. `morgan`: logs.
 4. `express.json({ limit: "50kb" })`: lee el body (más grande, 413).
-5. `GET /health`, `/api/docs`, `/api/auth`, `/api/profile` y los routers de las nueve colecciones. Dentro de cada router, en cada ruta: `authenticate` y el rol (`adminOnly`, `hostOrAdmin`), después `validate()` y después el controlador. La propiedad la comprueba el service.
+5. `GET /health`, `/api/docs`, `/api/auth`, `/api/profile` y los routers de las diez colecciones. Dentro de cada router, en cada ruta: `authenticate` y el rol (`adminOnly`, `hostOrAdmin`), después `validate()` y después el controlador. La propiedad la comprueba el service.
 6. `notFoundHandler`: 404 para cualquier otra URL.
 7. `errorHandler`: siempre el último.
 
@@ -265,7 +267,7 @@ src/
 ├── models/
 │   ├── revokedToken.model.js      Lista negra del logout (jti, con índice TTL)
 │   ├── <recurso>.model.js         Uno por colección: role, user, profile, host, category,
-│   │                              location, route, experience, departure, image. Exporta sus límites
+│   │                              location, route, experience, departure, image, bike. Exporta sus límites
 │   ├── imageOwners.js             Colecciones que pueden tener imágenes
 │   ├── status.js                  Estados comunes
 │   ├── validators.js              Validadores propios de Mongoose
@@ -321,6 +323,8 @@ Hay además un [`postman.md`](postman.md) con ejemplos de las peticiones para pr
 erDiagram
     roles ||--o{ users : "roleId"
     users ||--|| profiles : "userId"
+    users ||--o{ bikes : "userId"
+    bikes |o--o{ experiences : "guideBikeId"
     users ||--o| hosts : "userId"
     hosts ||--o{ experiences : "hostId"
     categories ||--o{ routes : "categoryId"
@@ -330,21 +334,23 @@ erDiagram
     routes ||--o{ images : "ownerType + ownerId"
     users ||--o{ images : "ownerType + ownerId"
     hosts ||--o{ images : "ownerType + ownerId"
+    bikes ||--o{ images : "ownerType + ownerId"
 ```
 
 | Colección | Campos propios | Relaciones (`ref`) | Al leer trae (`populate`) |
 |---|---|---|---|
 | `roles` | `name` (clave: `admin`, `host`, `rider`), `label`, `description`, `isSystem` | | |
 | `users` | `name`, `email`, `passwordHash` y `tokenVersion` (ocultos) | `roleId` → `roles` | `role`, `profile`, `coverImage` |
-| `profiles` | `bio`, `phone`, `city`, `birthDate`, `bikeModel`, `experienceLevel`, `emergencyContact` | `userId` → `users` (uno por usuario), `updatedBy` → `users` | (se lee dentro del usuario) |
+| `profiles` | `bio`, `phone`, `city`, `birthDate`, `experienceLevel`, `emergencyContact` | `userId` → `users` (uno por usuario), `updatedBy` → `users` | (se lee dentro del usuario) |
 | `revokedtokens` | `jti`, `expiresAt` (índice TTL: se borra sola al caducar el token) | `userId` → `users` | (interna: la lista negra del logout) |
 | `hosts` | `name`, `biography` | `userId` → `users` (uno por usuario) | `user`, `coverImage` |
 | `categories` | `name`, `description` | | |
 | `locations` | `city`, `region`, `country`, `latitude`, `longitude` | | |
 | `routes` | `title`, `description`, `difficulty`, `distance`, `duration` | `categoryId` → `categories`, `startLocationId` y `endLocationId` → `locations` | `category`, `startLocation`, `endLocation`, `coverImage` |
-| `experiences` | `title`, `description`, `meetingPoint`, `language`, `duration`, `minParticipants`, `maxParticipants` | `hostId` → `hosts`, `routeId` → `routes` | `host`, `route` |
-| `departures` | `startAt`, `endAt`, `capacity`, `price`, `state`, `sku` | `experienceId` → `experiences` | `experience` |
+| `experiences` | `title`, `description`, `meetingPoint`, `language`, `duration`, `minParticipants`, `maxParticipants` | `hostId` → `hosts`, `routeId` → `routes`, `guideBikeId` → `bikes` (opcional) | `host`, `route`, `guideBike` |
+| `departures` | `startAt`, `endAt`, `capacity`, `price`, `state`, `sku` | `experienceId` → `experiences`, `guideBikeId` → `bikes` (opcional) | `experience`, `guideBike` (la suya o la de su experiencia) |
 | `images` | `url`, `alt`, `position`, `isCover` | `ownerType` + `ownerId` → cualquiera de `IMAGE_OWNERS` | |
+| `bikes` | `brand`, `model`, `version`, `type`, `year`, `cc`, `hp`, `torque`, `weight`, `seatHeight`, `km`, `color`, `nickname`, `license` (calculado), `modifications`, `isPrimary`, `isPublic` | `userId` → `users` (el garaje de cada usuario) | `user`, `coverImage` |
 
 Además, **todas** (menos `profiles`, que sigue a su usuario) tienen `_id`, `slug` (menos `images`), `status`, `isActive`, `deletedAt`, `createdAt` y `updatedAt`, que gestiona el servidor: si el cliente los envía, la API responde 400 (`<campo> is not allowed` o `<campo> cannot be changed`).
 
@@ -384,7 +390,9 @@ MongoDB no tiene claves foráneas ni borrado en cascada: un `ref` de Mongoose so
 | `experiences.hostId` → `hosts` | activo y propio (ABAC) | 409 si tiene experiencias | tiene que existir |
 | `experiences.routeId` → `routes` | activa | 409 si tiene experiencias | tiene que existir |
 | `departures.experienceId` → `experiences` | activa; no se puede cambiar | 409 si tiene salidas | tiene que existir |
-| `images.ownerType` + `ownerId` → 6 colecciones | el dueño existe; no se puede cambiar | **cascada** | el dueño tiene que existir |
+| `images.ownerType` + `ownerId` → 7 colecciones | el dueño existe; no se puede cambiar | **cascada** | el dueño tiene que existir |
+| `bikes.userId` → `users` (1:N) | usuario activo; no se puede cambiar | **cascada** (con sus fotos) | el usuario tiene que existir |
+| `experiences.guideBikeId` / `departures.guideBikeId` → `bikes` (opcional) | moto activa, pública y del usuario del anfitrión | 409 si guía una experiencia activa o una salida futura | la moto tiene que existir |
 | `revokedtokens.userId` → `users` | la crea el logout | se borra sola (TTL) | — |
 
 Todos los campos de referencia tienen índice.
@@ -406,6 +414,7 @@ En el peor caso fallan las dos peticiones, pero nunca queda una referencia huér
 | un anfitrión | él o su usuario |
 | una experiencia | ella, su anfitrión (o el usuario de este), su ruta o los padres de esta |
 | una salida | ella, su experiencia o cualquiera de los de arriba |
+| una moto | ella, si es privada o si su usuario está inactivo |
 | una imagen | ella o su dueño (o si su dueño está oculto por lo anterior) |
 
 En un listado no aparece; por id, slug o SKU responde 404. Las escrituras no cambian: un host sigue pudiendo editar su experiencia aunque no se vea en público.
@@ -438,7 +447,7 @@ Reglas propias de cada colección:
 
 ## Endpoints
 
-Las nueve colecciones exponen los mismos endpoints. `<colección>` es `roles`, `users`, `hosts`, `categories`, `locations`, `routes`, `experiences`, `departures` o `images`.
+Las diez colecciones exponen los mismos endpoints. `<colección>` es `roles`, `users`, `hosts`, `categories`, `locations`, `routes`, `experiences`, `departures`, `images` o `bikes`.
 
 | Método | Ruta | Descripción | Éxito |
 |--------|------|-------------|-------|
@@ -473,6 +482,7 @@ Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#
 | POST | `/api/auth/logout` | Cerrar esta sesión: el token va a la lista negra | 204 |
 | POST | `/api/auth/logout-all` | Cerrar todas las sesiones | 204 |
 | GET | `/api/profile/me` | Mi usuario con mi perfil | 200 |
+| GET | `/api/profile/me/bikes` | Mi garaje: todas mis motos, también las privadas e inactivas | 200 |
 | PATCH | `/api/profile/me` | Editar `name`, `email` y `profile` | 200 |
 | PATCH | `/api/profile/me/password` | Cambiar la contraseña (devuelve una sesión nueva) | 200 |
 | GET | `/api/profile/:userId` | Usuario con su perfil (el propio usuario o el admin) | 200 |
@@ -717,7 +727,8 @@ Desde ese momento, el token responde `401 TOKEN_INVALID` aunque no haya caducado
 | `/inactives` y `/deleted` de cualquier colección | 401 | 403 | 403 | ✔ |
 | Escrituras de rutas, categorías y ubicaciones | 401 | 403 | 403 | ✔ |
 | Escrituras de experiencias y salidas | 401 | 403 | solo las suyas | ✔ |
-| Escrituras de imágenes | 401 | solo su foto | su foto, su perfil de anfitrión y sus experiencias | ✔ |
+| Escrituras de imágenes | 401 | su foto y las de sus motos | además, las de su perfil de anfitrión y sus experiencias | ✔ |
+| Escrituras de motos (`/api/bikes`) | 401 | solo las suyas | solo las suyas | ✔ |
 | `PATCH /api/hosts/:id` | 401 | 403 | solo el suyo | ✔ |
 | Crear, activar, eliminar y restaurar hosts | 401 | 403 | 403 | ✔ |
 | Todo `/api/users` y `/api/roles`, también leer | 401 | 403 | 403 | ✔ |
@@ -740,7 +751,7 @@ Un 401 lleva la cabecera `WWW-Authenticate: Bearer`. Si había token pero no sir
 
 ### El perfil pertenece al usuario
 
-`users` es el núcleo de la autenticación (nombre, correo, hash, rol y estado) y `profiles` guarda los datos extendidos: `bio`, `phone`, `city`, `birthDate`, `bikeModel`, `experienceLevel`, `emergencyContact` y `updatedBy`. La relación es **User 1 → 1 Profile**: el perfil guarda el `userId` y el usuario no sabe nada del perfil. La foto es la `coverImage` del usuario.
+`users` es el núcleo de la autenticación (nombre, correo, hash, rol y estado) y `profiles` guarda los datos extendidos: `bio`, `phone`, `city`, `birthDate`, `experienceLevel`, `emergencyContact` y `updatedBy`. Sus motos están en su garaje (ver [El garaje](#el-garaje)). La relación es **User 1 → 1 Profile**: el perfil guarda el `userId` y el usuario no sabe nada del perfil. La foto es la `coverImage` del usuario.
 
 El perfil no tiene vida propia: **todo pasa por `userService`**, que es el único que llama a `profileService`.
 
@@ -750,6 +761,28 @@ El perfil no tiene vida propia: **todo pasa por `userService`**, que es el únic
 - **Sale siempre dentro del usuario,** como `profile`.
 
 Si un usuario se quedara sin perfil (por ejemplo, en una base de datos de antes de los perfiles), `npm run check:integrity` lo detecta y `npm run check:integrity -- --fix` le crea uno vacío.
+
+### El garaje
+
+Cada usuario (rider, host o admin) tiene un **garaje** con sus motos: hasta 10, en la colección `bikes` (**User 1 → N Bike**). Las gestiona él en `/api/bikes`; el admin, todas.
+
+| | |
+|---|---|
+| Obligatorio | `brand`, `model` y `type` (`naked`, `sport`, `touring`, `trail`, `adventure`, `custom`, `enduro`, `scooter` o `classic`) |
+| Ficha técnica (opcional) | `version`, `year`, `cc`, `hp` (cv), `torque` (Nm), `weight` (kg), `seatHeight` (mm), `km`, `color` y `nickname` |
+| Carnet | `license` (`A1`, `A2` o `A`) **lo calcula la API**: A1 hasta 15 cv y 125 cc, A2 hasta 47 cv, A el resto. Se recalcula si cambian los cv o la cilindrada, así que nunca contradice la ficha |
+| Modificaciones | Hasta 30: `{ type, title, description, date }`, con `type` en `exhaust`, `suspension`, `brakes`, `ecu`, `luggage`, `tyres`, `ergonomics`, `lighting`, `aesthetics` u `other`. En un PATCH, la lista se envía entera |
+| Fotos | Imágenes con `ownerType: "bike"`; la primera es la portada (`coverImage`) |
+| Principal | `isPrimary`: una por usuario. La primera que se da de alta lo es; al marcar otra, la anterior deja de serlo; al eliminarla, pasa a la siguiente |
+| Pública o privada | `isPublic` (por defecto `true`). En público solo salen las públicas y activas de usuarios activos; su dueño las ve todas en `GET /api/profile/me/bikes` |
+
+No se guardan ni la matrícula ni el bastidor: si llegan, 400 `plate is not allowed`.
+
+**La moto del guía.** Una experiencia puede indicar con qué moto guía su anfitrión (`guideBikeId`), y una salida puede llevar otra ese día; si no, hereda la de su experiencia. Tiene que ser una moto **activa, pública y del usuario de ese anfitrión** (400 si no). Las experiencias y las salidas la devuelven como `guideBike` (marca, modelo, tipo, cc, cv, carnet y portada), y `GET /api/hosts/:id` trae el garaje del anfitrión (`bikes`). Así el rider sabe con qué moto le guía.
+
+Mientras sea la moto del guía de una **experiencia activa** o de una **salida futura programada**, no se puede eliminar, desactivar ni hacer privada: 409 `Bike is the guide bike of an active experience or an upcoming departure`.
+
+El garaje se elimina y se restaura en cascada con su usuario, fotos incluidas.
 
 ### Reglas de los admins
 

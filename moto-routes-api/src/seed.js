@@ -1,5 +1,6 @@
 import "dotenv/config";
 import mongoose from "mongoose";
+import { Bike } from "./models/bike.model.js";
 import { Category } from "./models/category.model.js";
 import { Departure } from "./models/departure.model.js";
 import { Experience } from "./models/experience.model.js";
@@ -11,6 +12,7 @@ import { RevokedToken } from "./models/revokedToken.model.js";
 import { Role } from "./models/role.model.js";
 import { Route } from "./models/route.model.js";
 import { User } from "./models/user.model.js";
+import { bikeService } from "./services/bike.service.js";
 import { categoryService } from "./services/category.service.js";
 import { departureService } from "./services/departure.service.js";
 import { experienceService } from "./services/experience.service.js";
@@ -25,7 +27,7 @@ import { SYSTEM_ACTOR } from "./utils/access.js";
 // Contraseña de todos los usuarios del seed. Solo para desarrollo.
 const DEV_PASSWORD = "routly-dev-1234";
 
-const MODELS = [Image, Departure, Experience, Route, Location, Category, Host, Profile, RevokedToken, User, Role];
+const MODELS = [Image, Departure, Experience, Bike, Route, Location, Category, Host, Profile, RevokedToken, User, Role];
 
 const ROLES = [
   { name: "admin", label: "Administrador", description: "Gestiona todo el panel", isSystem: true },
@@ -170,10 +172,88 @@ const ROUTES = [
   },
 ];
 
+// El garaje: guide marca la moto con la que guía en su experiencia. La primera de cada uno es
+// la principal; la CB500X de Pablo es privada (solo la ven él y el admin)
+const BIKES = [
+  {
+    key: "gs",
+    user: "lucia",
+    brand: "BMW",
+    model: "R 1250 GS",
+    version: "Adventure",
+    type: "adventure",
+    year: 2022,
+    cc: 1254,
+    hp: 136,
+    torque: 143,
+    weight: 268,
+    seatHeight: 890,
+    km: 38500,
+    color: "Triple Black",
+    nickname: "La Tramuntana",
+    modifications: [
+      { type: "exhaust", title: "Akrapovič Slip-On", date: "2023-03-14" },
+      { type: "luggage", title: "Maletas de aluminio", description: "Dos laterales y top case, para las salidas de varios días." },
+      { type: "lighting", title: "Faros auxiliares LED" },
+    ],
+    photos: 2,
+  },
+  {
+    key: "africa",
+    user: "pablo",
+    brand: "Honda",
+    model: "CRF1100L Africa Twin",
+    type: "adventure",
+    year: 2021,
+    cc: 1084,
+    hp: 102,
+    torque: 105,
+    weight: 226,
+    seatHeight: 850,
+    km: 52000,
+    color: "Tricolor",
+    modifications: [
+      { type: "suspension", title: "Suspensión regulable", date: "2022-06-01" },
+      { type: "tyres", title: "Neumáticos mixtos", description: "Para los tramos de pista del Pirineo." },
+      { type: "ergonomics", title: "Manillar elevado" },
+    ],
+    photos: 2,
+  },
+  {
+    key: "cb500x",
+    user: "pablo",
+    brand: "Honda",
+    model: "CB500X",
+    type: "trail",
+    year: 2019,
+    cc: 471,
+    hp: 47,
+    km: 31000,
+    isPublic: false,
+    photos: 1,
+  },
+  {
+    key: "mt07",
+    user: "marta",
+    brand: "Yamaha",
+    model: "MT-07",
+    version: "35 kW",
+    type: "naked",
+    year: 2021,
+    cc: 689,
+    hp: 47,
+    weight: 184,
+    km: 14200,
+    modifications: [{ type: "ergonomics", title: "Cúpula alta" }],
+    photos: 1,
+  },
+];
+
 const EXPERIENCES = [
   {
     key: "tramuntana",
     host: "lucia",
+    guide: "gs",
     route: "Caminos de Mallorca",
     title: "Tramuntana al amanecer",
     description: "Salida temprana por la Serra de Tramuntana, con desayuno en Sóller.",
@@ -185,6 +265,7 @@ const EXPERIENCES = [
   {
     key: "pirineos",
     host: "pablo",
+    guide: "africa",
     route: "Pirineos Adventure",
     title: "Travesía de los Pirineos",
     description: "Un día entero de puertos de montaña con paradas para comer y fotos.",
@@ -290,12 +371,26 @@ try {
     }, SYSTEM_ACTOR);
   }
 
+  const bikes = {};
+  for (const { key, user, photos, ...bike } of BIKES) {
+    bikes[key] = await bikeService.create({ ...bike, userId: String(users[user]._id) }, SYSTEM_ACTOR);
+    for (let index = 0; index < photos; index++) {
+      await imageService.create({
+        ownerType: "bike",
+        ownerId: String(bikes[key]._id),
+        url: photo(index === 0 ? bikes[key].slug : `${bikes[key].slug}-${index + 1}`, "1200/800"),
+        alt: `${bike.brand} ${bike.model}, foto ${index + 1}`,
+      }, SYSTEM_ACTOR);
+    }
+  }
+
   const experiences = {};
-  for (const { key, host, route, ...experience } of EXPERIENCES) {
+  for (const { key, host, route, guide, ...experience } of EXPERIENCES) {
     experiences[key] = await experienceService.create({
       ...experience,
       hostId: String(hosts[host]._id),
       routeId: String(routes[route]._id),
+      ...(guide && { guideBikeId: String(bikes[guide]._id) }),
     }, SYSTEM_ACTOR);
   }
 

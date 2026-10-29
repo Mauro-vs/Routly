@@ -27,7 +27,7 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve. La API tiene las nueve colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas e imágenes) y el panel las gestiona todas.
+Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve. La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas, imágenes y el garaje de motos de cada usuario), y el panel gestiona las nueve primeras.
 
 <table>
   <tr>
@@ -181,7 +181,7 @@ npm run dev
 ```
 
 > [!WARNING]
-> `npm run seed` vacía las nueve colecciones y carga datos de ejemplo en todas. Úsalo solo en desarrollo.
+> `npm run seed` vacía todas las colecciones y carga datos de ejemplo en todas. Úsalo solo en desarrollo.
 
 **3. Arranca el panel** en `http://localhost:4200`, en otra terminal
 
@@ -193,7 +193,7 @@ npm start
 
 ## Hoja de ruta
 
-Las nueve colecciones están hechas de punta a punta: API, panel y tests. El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md), y las mejoras propuestas para la API, en [`NOTES.md`](NOTES.md).
+Las nueve colecciones del panel están hechas de punta a punta: API, panel y tests. El garaje de motos ya está en la API, con sus tests; falta su pantalla en el panel. El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md), y las mejoras propuestas para la API, en [`NOTES.md`](NOTES.md).
 
 | Estado | Bloque | Colecciones | Para qué |
 |:---:|---|---|---|
@@ -202,6 +202,7 @@ Las nueve colecciones están hechas de punta a punta: API, panel y tests. El dis
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
+| ![en la API](https://img.shields.io/badge/en_la_API-3f7a5c?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Acceso | - | Inicio de sesión: el panel ya tiene preparados el servicio, el interceptor y el guard |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `bookings`, `reviews` | Reservas y valoraciones |
 

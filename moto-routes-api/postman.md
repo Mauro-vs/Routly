@@ -125,7 +125,8 @@ Para probar el logout: haz login dos veces (dos tokens), llama a `/api/auth/logo
 | `/inactives` y `/deleted` | 401 | 403 | 403 | ✔ |
 | Escrituras de rutas, categorías y ubicaciones | 401 | 403 | 403 | ✔ |
 | Escrituras de experiencias y salidas | 401 | 403 | solo las suyas | ✔ |
-| Escrituras de imágenes | 401 | solo su foto | su foto, su perfil de anfitrión y sus experiencias | ✔ |
+| Escrituras de imágenes | 401 | su foto y las de sus motos | además, las de su perfil de anfitrión y sus experiencias | ✔ |
+| Escrituras de motos (`/api/bikes`) | 401 | solo las suyas | solo las suyas | ✔ |
 | `PATCH /api/hosts/:id` | 401 | 403 | solo el suyo | ✔ |
 | Todo `/api/users` y `/api/roles` | 401 | 403 | 403 | ✔ |
 | `/api/profile/me` | 401 | ✔ | ✔ | ✔ |
@@ -150,7 +151,6 @@ El perfil pertenece al usuario: se crea con él, se elimina y se restaura con é
     "city": "Logroño",
     "phone": "+34600111222",
     "birthDate": "1994-03-12",
-    "bikeModel": "Yamaha MT-07",
     "experienceLevel": "intermediate",
     "emergencyContact": { "name": "Jorge Gil", "phone": "+34600333444" }
   }
@@ -181,7 +181,7 @@ Response `200`: una sesión nueva (`token`, `user`...). Los tokens anteriores de
 
 ## Endpoints comunes
 
-Las nueve colecciones tienen los mismos endpoints. Cambia `<colección>` por `roles`, `users`, `hosts`, `categories`, `locations`, `routes`, `experiences`, `departures` o `images`.
+Las diez colecciones tienen los mismos endpoints. Cambia `<colección>` por `roles`, `users`, `hosts`, `categories`, `locations`, `routes`, `experiences`, `departures` o `images`.
 
 | Petición | Qué hace | Éxito |
 |---|---|---|
@@ -341,7 +341,6 @@ Response `201`:
     "_id": "6ad647681b0b769e10cbcc86",
     "userId": "6ad647681b0b769e10cbcc85",
     "city": "Logroño",
-    "bikeModel": "Yamaha MT-07",
     "experienceLevel": "intermediate",
     "updatedBy": "6ad647681b0b769e10cbcc85"
   },
@@ -586,7 +585,7 @@ Response `201`:
 }
 ```
 
-- `ownerType` es `route`, `user`, `host`, `experience`, `category` o `location`.
+- `ownerType` es `route`, `user`, `host`, `experience`, `category`, `location` o `bike`.
 - La primera imagen de un dueño es la principal (`isCover: true`). `position` va al final si no se envía.
 - Para cambiar la principal: **PATCH** `/api/images/:id` con `{ "isCover": true }`. La anterior se desmarca.
 - Las imágenes no tienen slug: no hay `GET /slug/:slug`.
@@ -602,6 +601,78 @@ Response `201`:
 | Marcar como principal una imagen inactiva | 409 `Inactive images cannot be the cover` |
 
 Al eliminar el dueño, sus imágenes van a la papelera con él, y vuelven al restaurarlo.
+
+---
+
+## Bikes (el garaje)
+
+Cada usuario tiene su garaje: hasta 10 motos. Las gestiona él (con su token); el admin, todas.
+
+**POST** `/api/bikes` (con el token de Marta)
+
+```json
+{
+  "brand": "Yamaha",
+  "model": "MT-07",
+  "version": "35 kW",
+  "type": "naked",
+  "year": 2021,
+  "cc": 689,
+  "hp": 47,
+  "weight": 184,
+  "km": 14200,
+  "modifications": [
+    { "type": "ergonomics", "title": "Cúpula alta" },
+    { "type": "exhaust", "title": "Escape homologado", "date": "2024-05-10" }
+  ]
+}
+```
+
+Response `201`:
+```json
+{
+  "_id": "6ae24f0b6eb82462da49a8c1",
+  "userId": "6ae2230b6eb82462da49a8b9",
+  "user": { "_id": "6ae2230b6eb82462da49a8b9", "name": "Marta Gil", "slug": "marta-gil-49a8b9" },
+  "brand": "Yamaha",
+  "model": "MT-07",
+  "type": "naked",
+  "cc": 689,
+  "hp": 47,
+  "license": "A2",
+  "modifications": [ { "_id": "…", "type": "ergonomics", "title": "Cúpula alta" }, { "_id": "…", "type": "exhaust", "title": "Escape homologado", "date": "2024-05-10T00:00:00.000Z" } ],
+  "isPrimary": true,
+  "isPublic": true,
+  "coverImage": null,
+  "slug": "yamaha-mt-07-49a8c1"
+}
+```
+
+- Obligatorios: `brand`, `model` y `type` (`naked`, `sport`, `touring`, `trail`, `adventure`, `custom`, `enduro`, `scooter` o `classic`). El resto, opcional.
+- **`license` lo calcula la API** con los cv y la cilindrada: A1 (hasta 15 cv y 125 cc), A2 (hasta 47 cv) o A. Si se envía, 400.
+- La moto es **de quien la crea**. Solo el admin puede crearla para otro usuario, con `"userId"`.
+- La primera es la principal. Para cambiarla: **PATCH** `/api/bikes/:id` con `{ "isPrimary": true }`.
+- `modifications` se envía entera: sustituye a la lista anterior. Hasta 30.
+- `{ "isPublic": false }` la hace privada: solo la ven su dueño y el admin.
+- No hay matrícula ni bastidor: `plate is not allowed`.
+- **Fotos:** **POST** `/api/images` con `{ "ownerType": "bike", "ownerId": "<id de la moto>", "url": "https://…" }`. La primera es la portada.
+
+**GET** `/api/profile/me/bikes` → mi garaje entero, también las privadas y las inactivas.
+
+**La moto del guía.** Con el token de Lucía, **PATCH** `/api/experiences/<id de "Tramuntana al amanecer">`:
+
+```json
+{ "guideBikeId": "<id de su BMW>" }
+```
+
+La experiencia, y sus salidas, la devuelven como `guideBike`. Una salida puede llevar otra ese día (`"guideBikeId"` en la salida) y con `null` vuelve a la de su experiencia.
+
+| Caso | Respuesta |
+|---|---|
+| Más de 10 motos | 409 `A user can have at most 10 bikes` |
+| Editar o eliminar la moto de otro | 403 |
+| La moto del guía no es una moto activa y pública del anfitrión | 400 en `guideBikeId`: `guideBikeId must reference an active, public bike of the host` |
+| Eliminar, desactivar o hacer privada la moto del guía de una experiencia activa o de una salida futura | 409 `Bike is the guide bike of an active experience or an upcoming departure` |
 
 ---
 

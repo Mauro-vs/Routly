@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
+import { createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
 import { createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
 import { createDepartureSchema, updateDepartureSchema } from "../schemas/departure.schema.js";
 import { createExperienceSchema, updateExperienceSchema } from "../schemas/experience.schema.js";
@@ -18,7 +19,7 @@ import {
 /*
  * Documentación OpenAPI de todos los recursos.
  *
- * Los nueve recursos tienen los mismos endpoints, así que las rutas se generan con
+ * Los diez recursos tienen los mismos endpoints, así que las rutas se generan con
  * crudPaths(). Los cuerpos de las peticiones salen de los propios esquemas de Zod
  * (z.toJSONSchema), así la documentación nunca se desincroniza de la validación.
  * Cada recurso solo aporta un ejemplo de respuesta, sus conflictos (409) y quién puede
@@ -140,6 +141,8 @@ const RESOURCES = [
       biography: "Guía en Mallorca desde 2015.",
       coverImage: null,
       slug: "lucia-ferrer-b8c915",
+      // Solo en GET /hosts/:id y /hosts/slug/:slug: su garaje (en público, las públicas)
+      bikes: [],
     },
     conflicts: {
       create: "El usuario ya tiene un perfil de anfitrión",
@@ -242,7 +245,8 @@ const RESOURCES = [
     female: true,
     create: createExperienceSchema,
     update: updateExperienceSchema,
-    description: "Salida guiada que un anfitrión organiza sobre una ruta.",
+    description:
+      "Salida guiada que un anfitrión organiza sobre una ruta. guideBikeId (opcional) es la moto con la que guía: una moto activa y pública del usuario del anfitrión; sale como guideBike.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c940",
       hostId: "6710a1b2c3d4e5f6a7b8c915",
@@ -256,6 +260,20 @@ const RESOURCES = [
       duration: 5,
       minParticipants: 2,
       maxParticipants: 8,
+      guideBikeId: "6710a1b2c3d4e5f6a7b8c960",
+      guideBike: {
+        _id: "6710a1b2c3d4e5f6a7b8c960",
+        brand: "BMW",
+        model: "R 1250 GS",
+        version: "Adventure",
+        type: "adventure",
+        cc: 1254,
+        hp: 136,
+        license: "A",
+        slug: "bmw-r-1250-gs-b8c960",
+        userId: "6710a1b2c3d4e5f6a7b8c910",
+        coverImage: { _id: "6710a1b2c3d4e5f6a7b8c995", url: "https://picsum.photos/seed/gs/1200/800", alt: "BMW R 1250 GS, foto 1" },
+      },
       slug: "tramuntana-al-amanecer-b8c940",
     },
     conflicts: {
@@ -276,7 +294,8 @@ const RESOURCES = [
     create: createDepartureSchema,
     update: updateDepartureSchema,
     description:
-      "Fecha concreta de una experiencia. sku (RTL-DEP-AAMMDD-XXXXX) lo genera el servidor y no cambia nunca; el slug sí sigue a la fecha.",
+      "Fecha concreta de una experiencia. sku (RTL-DEP-AAMMDD-XXXXX) lo genera el servidor y no cambia nunca; el slug sí sigue a la fecha. " +
+      "guideBike es la moto del guía de ese día: la suya (guideBikeId) o, si no tiene, la de su experiencia.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c950",
       experienceId: "6710a1b2c3d4e5f6a7b8c940",
@@ -287,6 +306,20 @@ const RESOURCES = [
       price: 89,
       state: "scheduled",
       sku: "RTL-DEP-261108-7QX2M",
+      // Sin guideBikeId propio: hereda la de su experiencia
+      guideBike: {
+        _id: "6710a1b2c3d4e5f6a7b8c960",
+        brand: "BMW",
+        model: "R 1250 GS",
+        version: "Adventure",
+        type: "adventure",
+        cc: 1254,
+        hp: 136,
+        license: "A",
+        slug: "bmw-r-1250-gs-b8c960",
+        userId: "6710a1b2c3d4e5f6a7b8c910",
+        coverImage: { _id: "6710a1b2c3d4e5f6a7b8c995", url: "https://picsum.photos/seed/gs/1200/800", alt: "BMW R 1250 GS, foto 1" },
+      },
       slug: "tramuntana-al-amanecer-2026-11-08-b8c950",
     },
     conflicts: {},
@@ -316,6 +349,59 @@ const RESOURCES = [
     }),
   },
   {
+    path: "bikes",
+    tag: "Bikes",
+    // Lo que ve el público (services/visibility.js)
+    publicView:
+      "solo salen las públicas y activas de usuarios activos (su dueño ve también las suyas por id, y todas en GET /api/profile/me/bikes)",
+    access: { write: "owner", owner: "su dueño (cualquier usuario gestiona su garaje)" },
+    schema: "Bike",
+    singular: "moto",
+    plural: "motos",
+    female: true,
+    create: createBikeSchema,
+    update: updateBikeSchema,
+    description:
+      "El garaje: las motos de cada usuario (rider, host o admin), hasta 10. Obligatorios brand, model y type; el resto de la ficha, opcional. " +
+      "license (A1, A2 o A) lo calcula la API con hp y cc. La primera es la principal (isPrimary). " +
+      "Al crear, la moto es de quien la crea; solo el admin envía userId para otro usuario. " +
+      "modifications se envía entera y sustituye a la anterior. Las fotos son imágenes con ownerType bike. " +
+      "Una moto puede ser la moto del guía (guideBikeId) de experiencias y salidas de su anfitrión.",
+    example: {
+      _id: "6710a1b2c3d4e5f6a7b8c960",
+      userId: "6710a1b2c3d4e5f6a7b8c910",
+      user: { _id: "6710a1b2c3d4e5f6a7b8c910", name: "Lucía Ferrer", slug: "lucia-ferrer-b8c910" },
+      brand: "BMW",
+      model: "R 1250 GS",
+      version: "Adventure",
+      type: "adventure",
+      year: 2022,
+      cc: 1254,
+      hp: 136,
+      torque: 143,
+      weight: 268,
+      seatHeight: 890,
+      km: 38500,
+      color: "Triple Black",
+      nickname: "La Tramuntana",
+      license: "A",
+      modifications: [
+        { _id: "6710a1b2c3d4e5f6a7b8c961", type: "exhaust", title: "Akrapovič Slip-On", date: "2023-03-14T00:00:00.000Z" },
+        { _id: "6710a1b2c3d4e5f6a7b8c962", type: "luggage", title: "Maletas de aluminio" },
+      ],
+      isPrimary: true,
+      isPublic: true,
+      coverImage: { _id: "6710a1b2c3d4e5f6a7b8c995", url: "https://picsum.photos/seed/gs/1200/800", alt: "BMW R 1250 GS, foto 1" },
+      slug: "bmw-r-1250-gs-b8c960",
+    },
+    conflicts: {
+      create: "El usuario ya tiene 10 motos",
+      update: "Desactivarla o hacerla privada mientras es la moto del guía de una experiencia activa o una salida futura",
+      remove: "Es la moto del guía de una experiencia activa o una salida futura",
+      restore: "No está eliminada, su usuario está eliminado o el garaje ya tiene 10 motos",
+    },
+  },
+  {
     path: "images",
     tag: "Images",
     // Lo que ve el público (services/visibility.js)
@@ -323,7 +409,7 @@ const RESOURCES = [
     access: {
       write: "owner",
       owner:
-        "su dueño: cada usuario, su foto (ownerType user); un anfitrión, además, las de su perfil de anfitrión y sus experiencias. Las de rutas, categorías y ubicaciones, solo el admin",
+        "su dueño: cada usuario, su foto (ownerType user) y las de sus motos (bike); un anfitrión, además, las de su perfil de anfitrión y sus experiencias. Las de rutas, categorías y ubicaciones, solo el admin",
     },
     schema: "Image",
     singular: "imagen",
@@ -676,6 +762,17 @@ const PROFILE_PATHS = {
       "user"
     ),
     patch: secured(profileUpdate("mi usuario y mi perfil"), "user"),
+  },
+  "/api/profile/me/bikes": {
+    get: secured(
+      {
+        summary: "Mi garaje",
+        description: "Todas mis motos, también las privadas y las inactivas. La principal, primero.",
+        tags: ["Profile"],
+        responses: { 200: list("Mis motos", { $ref: "#/components/schemas/Bike" }) },
+      },
+      "user"
+    ),
   },
   "/api/profile/me/password": {
     patch: secured(
