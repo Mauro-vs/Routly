@@ -274,14 +274,14 @@ test("eliminar y restaurar el usuario arrastra a su perfil; desactivar no lo toc
 
 test("editar solo el perfil desde /api/users actualiza el updatedAt del usuario", async () => {
   const user = (await api.post("/users", { name: "Traza", email: "traza@example.com", password: TEST_PASSWORD })).body;
-  const updated = await api.patch(`/users/${user._id}`, { profile: { bikeModel: "Vespa" } });
+  const updated = await api.patch(`/users/${user._id}`, { profile: { city: "Albarracín" } });
 
   assert.equal(updated.status, 200);
-  assert.equal(updated.body.profile.bikeModel, "Vespa");
+  assert.equal(updated.body.profile.city, "Albarracín");
   assert.ok(new Date(updated.body.updatedAt) > new Date(user.updatedAt));
   // El listado de usuarios también lleva el perfil
   const listed = (await api.get("/users")).body.find((item) => item._id === user._id);
-  assert.equal(listed.profile.bikeModel, "Vespa");
+  assert.equal(listed.profile.city, "Albarracín");
 });
 
 // ---------- el último admin ----------

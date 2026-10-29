@@ -89,6 +89,15 @@ export const imageRepository = {
     return Image.updateMany({ ownerType, ownerId }, { deletedAt });
   },
 
+  // Lo mismo para varios dueños a la vez: las fotos de las motos de un usuario
+  softDeleteByOwners(ownerType, ownerIds, deletedAt) {
+    return Image.updateMany({ ownerType, ownerId: { $in: ownerIds } }, { deletedAt });
+  },
+
+  restoreByOwners(ownerType, ownerIds, deletedAt) {
+    return Image.updateMany({ ownerType, ownerId: { $in: ownerIds }, deletedAt }, { deletedAt: null });
+  },
+
   // ...y al restaurarlo vuelven solo esas, no las que se habían eliminado antes a mano.
   // Conservan su estado y su isCover: vuelven tal como estaban.
   restoreByOwner(ownerType, ownerId, deletedAt) {

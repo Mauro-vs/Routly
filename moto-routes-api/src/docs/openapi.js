@@ -105,7 +105,6 @@ const RESOURCES = [
         _id: "6710a1b2c3d4e5f6a7b8c911",
         userId: "6710a1b2c3d4e5f6a7b8c910",
         city: "Palma",
-        bikeModel: "BMW R 1250 GS",
         experienceLevel: "expert",
         phone: "+34600111222",
         updatedBy: "6710a1b2c3d4e5f6a7b8c910",

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { bikeController } from "../controllers/bike.controller.js";
 import { profileController } from "../controllers/profile.controller.js";
 import { authenticate } from "../middlewares/authenticate.js";
 import { authorizeOwnership } from "../middlewares/authorize.js";
@@ -28,6 +29,8 @@ router.use(authenticate);
 router.get("/me", profileController.getMe);
 router.patch("/me", validate({ body: updateOwnUserSchema }), profileController.updateMe);
 router.patch("/me/password", validate({ body: changePasswordSchema }), profileController.changePassword);
+// Mi garaje: todas mis motos, también las privadas y las inactivas
+router.get("/me/bikes", bikeController.listMine);
 router.get("/:userId", validate({ params: userIdParamSchema }), ownerOrAdmin, profileController.getByUserId);
 router.patch(
   "/:userId",

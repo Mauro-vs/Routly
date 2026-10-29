@@ -32,7 +32,6 @@ const profileFields = z.strictObject({
   phone: phone.optional(),
   city: z.string().trim().max(LIMITS.cityMax).optional(),
   birthDate: birthDate.optional(),
-  bikeModel: z.string().trim().max(LIMITS.bikeModelMax).optional(),
   experienceLevel: z.enum(EXPERIENCE_LEVELS).optional(),
   // Se envía entero: nombre y teléfono
   emergencyContact: z

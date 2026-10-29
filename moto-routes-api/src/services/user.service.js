@@ -6,6 +6,7 @@ import { profileRepository } from "../repositories/profile.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
 import { hashPassword, verifyPassword } from "../utils/passwd.js";
+import { bikeService } from "./bike.service.js";
 import { imageService } from "./image.service.js";
 import { profileService } from "./profile.service.js";
 import {
@@ -203,10 +204,11 @@ export const userService = {
       dependents: [
         { repository: hostRepository, filter: { userId: id }, message: "Cannot delete a user that has a host profile" },
       ],
-      // El perfil y las imágenes van con él
+      // El perfil, las imágenes y el garaje (con sus fotos) van con él
       cascades: [
         { remove: (deletedAt) => profileService.removeFor(id, deletedAt), restore: () => profileService.restoreFor(id) },
         imageService.cascade("user", id),
+        bikeService.cascadeForUser(id),
       ],
     });
     await userRepository.revokeTokens(id);
@@ -220,7 +222,9 @@ export const userService = {
     await userRepository.restoreById(id, restoredStatus(isActive));
     await profileService.restoreFor(id);
     await imageService.restoreByOwner("user", id, deleted.deletedAt);
+    await bikeService.cascadeForUser(id).restore(deleted.deletedAt);
     await confirmReferences([roleReference(deleted.roleId)], async () => {
+      await bikeService.cascadeForUser(id).remove(deleted.deletedAt);
       await imageService.removeByOwner("user", id, deleted.deletedAt);
       await profileService.removeFor(id, deleted.deletedAt);
       await userRepository.softDeleteById(id, deleted.deletedAt);

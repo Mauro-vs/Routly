@@ -7,6 +7,16 @@ import { verifyToken } from "../utils/jwt.js";
 const BEARER = /^Bearer ([A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*)$/i;
 
 /**
+ * Para los GET públicos que enseñan más a un admin (services/visibility.js). Sin cabecera
+ * Authorization sigue como anónimo; con ella, igual que authenticate: un token que no sirve es
+ * un 401, no un anónimo.
+ */
+export function optionalAuth(req, res, next) {
+  if (!req.headers.authorization) return next();
+  return authenticate(req, res, next);
+}
+
+/**
  * Exige sesión. Lee Authorization: Bearer <token>, comprueba la firma y la caducidad
  * (verifyToken), que el token no se haya cerrado con un logout (lista negra) y que el
  * usuario siga existiendo: no eliminado, activo, con un rol activo y el mismo tokenVersion.
@@ -17,16 +27,6 @@ const BEARER = /^Bearer ([A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*)$/i;
  *
  * Cualquier fallo es el mismo 401 "Authentication required" (utils/errors.js).
  */
-/**
- * Para los GET públicos que enseñan más a un admin (services/visibility.js). Sin cabecera
- * Authorization sigue como anónimo; con ella, igual que authenticate: un token que no sirve es
- * un 401, no un anónimo.
- */
-export function optionalAuth(req, res, next) {
-  if (!req.headers.authorization) return next();
-  return authenticate(req, res, next);
-}
-
 export async function authenticate(req, res, next) {
   try {
     const header = req.headers.authorization;

@@ -9,6 +9,7 @@ import { morganMiddleware } from "./config/morgan.js";
 import { swaggerSpec } from "./config/swagger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
+import bikeRoutes from "./routes/bike.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import departureRoutes from "./routes/departure.routes.js";
 import experienceRoutes from "./routes/experience.routes.js";
@@ -54,6 +55,7 @@ app.use("/api/routes", routeRoutes);
 app.use("/api/experiences", experienceRoutes);
 app.use("/api/departures", departureRoutes);
 app.use("/api/images", imageRoutes);
+app.use("/api/bikes", bikeRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

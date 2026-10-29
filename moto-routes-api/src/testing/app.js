@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { errorHandler, notFoundHandler } from "../middlewares/errorHandler.js";
 import authRoutes from "../routes/auth.routes.js";
+import bikeRoutes from "../routes/bike.routes.js";
 import categoryRoutes from "../routes/category.routes.js";
 import departureRoutes from "../routes/departure.routes.js";
 import experienceRoutes from "../routes/experience.routes.js";
@@ -52,9 +53,16 @@ export async function startApi(name) {
   } catch (error) {
     throw new Error(`Los tests necesitan MongoDB en ${uri} (${error.message})`);
   }
-  await mongoose.connection.dropDatabase();
-  // Los índices únicos (slug, email, nombre...) tienen que existir antes de la primera prueba
-  await Promise.all(mongoose.modelNames().map((model) => mongoose.model(model).syncIndexes()));
+  // Si algo falla a partir de aquí hay que cerrar la conexión: si no, el proceso de test se queda
+  // esperando para siempre en lugar de enseñar el error
+  try {
+    await mongoose.connection.dropDatabase();
+    // Los índices únicos (slug, email, nombre...) tienen que existir antes de la primera prueba
+    await Promise.all(mongoose.modelNames().map((model) => mongoose.model(model).syncIndexes()));
+  } catch (error) {
+    await mongoose.disconnect();
+    throw error;
+  }
 
   // Los mismos routers y el mismo límite de body que server.js
   const app = express();
@@ -71,6 +79,7 @@ export async function startApi(name) {
     experiences: experienceRoutes,
     departures: departureRoutes,
     images: imageRoutes,
+    bikes: bikeRoutes,
   };
   for (const [path, router] of Object.entries(routers)) app.use(`/api/${path}`, router);
   app.use(notFoundHandler);

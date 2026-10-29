@@ -1,3 +1,4 @@
+import { bikeRepository } from "../repositories/bike.repository.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
@@ -17,6 +18,7 @@ import { notFound } from "../utils/errors.js";
  *   anfitrión   → inactivo, o su usuario está inactivo
  *   experiencia → inactiva, o su anfitrión o su ruta están ocultos
  *   salida      → inactiva, o su experiencia está oculta
+ *   moto        → inactiva, privada (isPublic false) o su usuario está inactivo
  *   imagen      → inactiva, o su dueño está oculto (o es un usuario inactivo)
  *
  * No se escribe nada en cascada: es un filtro de lectura. Al reactivar el padre, todo vuelve tal
@@ -53,6 +55,11 @@ async function hiddenExperiences() {
   });
 }
 
+async function hiddenBikes() {
+  const users = await hiddenUsers();
+  return bikeRepository.findIds({ $or: [inactive, { isPublic: false }, { userId: { $in: users } }] });
+}
+
 const routeParents = (categories, locations) => [
   { categoryId: { $in: categories } },
   { startLocationId: { $in: locations } },
@@ -67,6 +74,7 @@ const HIDDEN_OWNERS = {
   experience: hiddenExperiences,
   category: hiddenCategories,
   location: hiddenLocations,
+  bike: hiddenBikes,
 };
 
 const active = { isActive: true };
@@ -92,6 +100,9 @@ const PUBLIC_FILTERS = {
   },
   async departure() {
     return { ...active, experienceId: { $nin: await hiddenExperiences() } };
+  },
+  async bike() {
+    return { ...active, isPublic: true, userId: { $nin: await hiddenUsers() } };
   },
   async image() {
     const types = Object.keys(HIDDEN_OWNERS);

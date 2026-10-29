@@ -1,4 +1,5 @@
 import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
+import { bikeRepository } from "../repositories/bike.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { imageRepository } from "../repositories/image.repository.js";
@@ -39,6 +40,7 @@ const ownerReference = ({ ownerType, ownerId }) => ({
 // anfitrión, o una experiencia con su anfitrión. El resto solo los gestiona el admin.
 async function findOwnerChain(ownerType, ownerId) {
   if (ownerType === "user") return userRepository.findPlainById(ownerId);
+  if (ownerType === "bike") return bikeRepository.findPlainById(ownerId);
   if (ownerType === "host") return hostRepository.findPlainById(ownerId);
   if (ownerType === "experience") {
     const experience = await experienceRepository.findPlainById(ownerId);

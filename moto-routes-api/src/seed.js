@@ -41,14 +41,14 @@ const USERS = [
     name: "Lucía Ferrer",
     email: "lucia@routly.dev",
     role: "host",
-    profile: { city: "Palma", bikeModel: "BMW R 1250 GS", experienceLevel: "expert", phone: "+34600111222" },
+    profile: { city: "Palma", experienceLevel: "expert", phone: "+34600111222" },
   },
   {
     key: "pablo",
     name: "Pablo Ortega",
     email: "pablo@routly.dev",
     role: "host",
-    profile: { city: "Huesca", bikeModel: "Honda Africa Twin", experienceLevel: "advanced" },
+    profile: { city: "Huesca", experienceLevel: "advanced" },
   },
   // Sin rol: el service le asigna rider
   {
@@ -59,7 +59,6 @@ const USERS = [
       bio: "Empecé hace dos años y ya no paro de buscar puertos.",
       city: "Logroño",
       birthDate: new Date("1994-03-12T00:00:00.000Z"),
-      bikeModel: "Yamaha MT-07",
       experienceLevel: "intermediate",
       emergencyContact: { name: "Jorge Gil", phone: "+34600333444" },
     },

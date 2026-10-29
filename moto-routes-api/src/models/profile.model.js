@@ -6,7 +6,6 @@ export const PROFILE_LIMITS = Object.freeze({
   bioMax: 500,
   phoneMax: 16,
   cityMax: 100,
-  bikeModelMax: 100,
   contactNameMax: 100,
   minAge: 14,
 });
@@ -28,7 +27,8 @@ const emergencyContactSchema = new mongoose.Schema(
  * Datos extendidos de un usuario (User 1 → 1 Profile). El perfil depende del usuario y
  * el usuario no sabe nada del perfil. No tiene vida propia: lo crea, lo cambia, lo
  * elimina y lo restaura siempre userService, y por eso no lleva los plugins de estado
- * ni de soft delete. Su deletedAt es el del usuario. La foto es la coverImage del usuario.
+ * ni de soft delete. Su deletedAt es el del usuario. La foto es la coverImage del usuario, y
+ * sus motos están en su garaje (bikes).
  *
  * Todos los campos son opcionales: el perfil se crea vacío con el usuario.
  */
@@ -39,7 +39,6 @@ const profileSchema = new mongoose.Schema(
     phone: { type: String, trim: true, match: PHONE_PATTERN },
     city: { type: String, trim: true, maxlength: PROFILE_LIMITS.cityMax },
     birthDate: { type: Date },
-    bikeModel: { type: String, trim: true, maxlength: PROFILE_LIMITS.bikeModelMax },
     experienceLevel: { type: String, enum: EXPERIENCE_LEVELS },
     emergencyContact: { type: emergencyContactSchema },
     // Quién hizo el último cambio: el propio usuario o un admin

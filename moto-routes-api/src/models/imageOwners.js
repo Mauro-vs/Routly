@@ -1,3 +1,4 @@
+import { Bike } from "./bike.model.js";
 import { Category } from "./category.model.js";
 import { Experience } from "./experience.model.js";
 import { Host } from "./host.model.js";
@@ -14,6 +15,7 @@ export const IMAGE_OWNERS = Object.freeze({
   experience: Experience,
   category: Category,
   location: Location,
+  bike: Bike,
 });
 
 export const IMAGE_OWNER_TYPES = Object.freeze(Object.keys(IMAGE_OWNERS));

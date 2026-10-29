@@ -40,14 +40,20 @@ export function canModifyDeparture(user, departure) {
   return isAdminUser(user) || canModifyExperience(user, departure?.experience);
 }
 
+/** Una moto del garaje: solo su dueño (userId) o el admin. */
+export function canModifyBike(user, bike) {
+  return isOwnerOrAdmin(user, bike);
+}
+
 /**
  * Las imágenes son de su dueño (ownerType + ownerId). Fuera del admin, cada usuario
- * gestiona su propia foto (ownerType user) y un anfitrión, además, las de su perfil de
+ * gestiona su propia foto (ownerType user) y las de sus motos (bike); un anfitrión, además, las de su perfil de
  * anfitrión y sus experiencias. Las de rutas, categorías y ubicaciones, solo el admin.
  */
 export function canModifyImageOwner(user, ownerType, owner) {
   if (isAdminUser(user)) return true;
   if (ownerType === "user") return canAccessUserResource(user, owner);
+  if (ownerType === "bike") return canModifyBike(user, owner);
   if (ownerType === "host") return canModifyHost(user, owner);
   if (ownerType === "experience") return canModifyExperience(user, owner);
   return false;
