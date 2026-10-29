@@ -18,6 +18,11 @@ interface HandleErrorOptions {
   notFoundMessage?: string;
   /** Texto del aviso de 409 cuando no significa "duplicado". */
   conflictMessage?: string;
+  /**
+   * Es la carga de una página, que pinta su propio recuadro de error: un 401 o un 403 ya lo
+   * explica ese recuadro, así que no se repite en un aviso. Las acciones sí lo llevan.
+   */
+  pageLoad?: boolean;
 }
 
 const GLOBAL_TITLES: Partial<Record<ApiErrorType, string>> = {
@@ -33,6 +38,7 @@ const GLOBAL_TITLES: Partial<Record<ApiErrorType, string>> = {
  * - Red, tiempo de espera y 5xx: diálogo de SweetAlert2.
  * - 404: aviso breve y vuelta al listado.
  * - 400, 422 y 409: en línea si el llamante lo pide; si no, aviso breve.
+ * - 401 y 403: aviso breve, salvo en la carga de una página (lo explica su recuadro).
  */
 @Injectable({ providedIn: 'root' })
 export class ErrorHandlerService {
@@ -69,7 +75,7 @@ export class ErrorHandlerService {
           if (!options.inline) {
             void this.notifications.errorToast(options.conflictMessage ?? apiError.message);
           }
-        } else {
+        } else if (!(options.pageLoad && apiError.isAccessDenied)) {
           void this.notifications.errorToast(apiError.message);
         }
         break;

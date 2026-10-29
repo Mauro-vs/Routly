@@ -8,6 +8,8 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { LoadFailure, failureError } from '../../../core/models/api-error.model';
+
 import { ENTITY_FORM_ID } from '../../forms/entity-form';
 import { CollectionLabels, agree, capitalize, statusWord } from '../../utils/labels';
 import { RouterPath } from '../../utils/router';
@@ -48,7 +50,7 @@ import { ToggleComponent } from '../toggle/toggle.component';
         type="submit"
         class="btn btn--primary"
         [attr.form]="formId"
-        [disabled]="saving() || loading() || failed()"
+        [disabled]="saving() || loading() || !!failed()"
       >
         @if (saving()) {
           <span class="spinner" aria-hidden="true"></span>Guardando…
@@ -60,7 +62,7 @@ import { ToggleComponent } from '../toggle/toggle.component';
 
     @if (failed()) {
       <div class="card">
-        <ui-error-state [title]="errorTitle()" (retry)="retry.emit()" />
+        <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
       </div>
     } @else if (loading()) {
       <div class="layout" aria-busy="true" [attr.aria-label]="'Cargando ' + ofThe()">
@@ -77,7 +79,7 @@ import { ToggleComponent } from '../toggle/toggle.component';
     }
 
     <!-- El formulario se queda creado mientras carga: así no pierde su estado. -->
-    <div class="layout" [hidden]="loading() || failed()">
+    <div class="layout" [hidden]="loading() || !!failed()">
       <div class="layout__main"><ng-content /></div>
 
       <div class="stack">
@@ -182,7 +184,9 @@ export class FormPageComponent {
   /** Al editar, el registro aún no ha llegado. */
   readonly loading = input(false);
   /** La carga del registro ha fallado (un 404 ya vuelve solo al listado). */
-  readonly failed = input(false);
+  /** El error de la carga (o solo si ha fallado): el recuadro de error cuenta el motivo. */
+  readonly failed = input<LoadFailure>(false);
+  protected readonly loadError = computed(() => failureError(this.failed()));
   readonly saving = input(false);
   readonly cancelPath = input.required<RouterPath>();
   /** Estado del interruptor: el del registro, o el que tendrá al crearlo. */

@@ -29,8 +29,9 @@ export abstract class EntityDetailPage<T extends BaseEntity> {
     return selected?.slug === this.slug() ? selected : null;
   });
   /** La carga ha fallado por algo que no es un 404 (ese caso vuelve solo al listado). */
+  /** El error de la carga (o null): las páginas compartidas cuentan con él el motivo. */
   protected readonly loadFailed = computed(
-    () => !this.record() && !this.store.loading() && this.store.error() !== null,
+    () => (!this.record() && !this.store.loading() && this.store.error()) || null,
   );
   protected readonly busy = computed(() => {
     const record = this.record();

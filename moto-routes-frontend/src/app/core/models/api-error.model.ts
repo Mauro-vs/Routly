@@ -8,6 +8,17 @@
  */
 export type ApiErrorType = 'network' | 'timeout' | 'validation' | 'client' | 'server';
 
+/**
+ * Lo que reciben las páginas compartidas en `[failed]`: el error de la carga (para contar el
+ * motivo) o, si la página no lo tiene a mano, solo si ha fallado.
+ */
+export type LoadFailure = ApiError | boolean | null;
+
+/** El error de una LoadFailure, si lo trae. */
+export function failureError(failure: LoadFailure): ApiError | null {
+  return failure instanceof ApiError ? failure : null;
+}
+
 /** Mensaje de error por nombre de campo, listo para mostrar junto al control. */
 export type FieldErrors = Record<string, string>;
 
@@ -43,6 +54,21 @@ export class ApiError extends Error {
 
   get isConflict(): boolean {
     return this.status === 409;
+  }
+
+  /** 401: no hay sesión, o el token ya no sirve. */
+  get isUnauthorized(): boolean {
+    return this.status === 401;
+  }
+
+  /** 403: hay sesión, pero sin permiso para eso. */
+  get isForbidden(): boolean {
+    return this.status === 403;
+  }
+
+  /** Un fallo de sesión o de permisos: reintentar sin más no lo arregla. */
+  get isAccessDenied(): boolean {
+    return this.isUnauthorized || this.isForbidden;
   }
 
   /**

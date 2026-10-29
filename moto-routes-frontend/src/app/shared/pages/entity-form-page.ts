@@ -43,8 +43,9 @@ export abstract class EntityFormPage<T extends BaseEntity, TPayload>
   /** Al editar, el registro aún no ha llegado. */
   protected readonly loading = computed(() => this.isEdit() && !this.record());
   /** La carga ha fallado por algo que no es un 404 (ese caso vuelve solo al listado). */
+  /** El error de la carga (o null): las páginas compartidas cuentan con él el motivo. */
   protected readonly loadFailed = computed(
-    () => this.loading() && !this.store.loading() && this.store.error() !== null,
+    () => (this.loading() && !this.store.loading() && this.store.error()) || null,
   );
   /** Al crear, el estado se decide aquí y se aplica al guardar. */
   private readonly activeOnCreate = signal(true);

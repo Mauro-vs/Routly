@@ -41,8 +41,9 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
   }));
   /** Primera carga en curso: se pintan los skeletons. Las recargas no los muestran. */
   protected readonly showSkeleton = computed(() => this.store.loading() && !this.store.loaded());
+  /** El error de la carga (o null): las páginas compartidas cuentan con él el motivo. */
   protected readonly loadFailed = computed(
-    () => !this.store.loaded() && !this.store.loading() && this.store.error() !== null,
+    () => (!this.store.loaded() && !this.store.loading() && this.store.error()) || null,
   );
 
   protected readonly rowKey = (row: T): string => row._id;

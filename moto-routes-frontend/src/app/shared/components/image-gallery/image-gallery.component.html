@@ -4,8 +4,8 @@
     <p>{{ summary() }}</p>
   </header>
 
-  @if (failed()) {
-    <ui-error-state title="No se han podido cargar las imágenes" (retry)="load()" />
+  @if (failed(); as error) {
+    <ui-error-state title="No se han podido cargar las imágenes" [error]="error" (retry)="load()" />
   } @else if (!loaded()) {
     <div class="grid" aria-hidden="true">
       @for (placeholder of [0, 1, 2]; track placeholder) {
@@ -111,7 +111,7 @@
         <input uiInput type="text" name="alt" formControlName="alt" autocomplete="off" />
       </ui-form-field>
     </div>
-    <button type="submit" class="btn btn--secondary" [disabled]="adding() || failed()">
+    <button type="submit" class="btn btn--secondary" [disabled]="adding() || !!failed()">
       @if (adding()) {
         <span class="spinner" aria-hidden="true"></span>Añadiendo…
       } @else {

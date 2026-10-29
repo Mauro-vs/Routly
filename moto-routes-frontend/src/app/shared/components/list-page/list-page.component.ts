@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { LoadFailure, failureError } from '../../../core/models/api-error.model';
 import { StatusFilter } from '../../../core/services/entity.store';
 import {
   CollectionLabels,
@@ -74,7 +75,7 @@ export interface StatusCounts {
 
     @if (failed()) {
       <div class="card">
-        <ui-error-state [title]="errorTitle()" (retry)="retry.emit()" />
+        <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
       </div>
     } @else if (loaded() && counts().all === 0) {
       <div class="card">
@@ -145,7 +146,9 @@ export class ListPageComponent {
   /** La primera carga ha terminado. Hasta entonces no se juzga si está vacío. */
   readonly loaded = input.required<boolean>();
   /** La primera carga ha fallado: se muestra el error con "Reintentar". */
-  readonly failed = input(false);
+  /** El error de la carga (o solo si ha fallado): el recuadro de error cuenta el motivo. */
+  readonly failed = input<LoadFailure>(false);
+  protected readonly loadError = computed(() => failureError(this.failed()));
   /** Cuántos hay en total y de cada estado, para el filtro. */
   readonly counts = input.required<StatusCounts>();
   /** Cuántos quedan después del filtro, para la paginación. */
@@ -174,6 +177,8 @@ export class ListPageComponent {
 
   protected readonly subtitleText = computed(() => {
     if (this.subtitle()) return this.subtitle();
+    // Si la carga ha fallado ya no se está cargando: el recuadro de error cuenta el motivo
+    if (this.failed()) return '';
     if (!this.loaded()) return 'Cargando…';
     return `${countLabel(this.counts().all, this.labels())}.`;
   });

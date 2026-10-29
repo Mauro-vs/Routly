@@ -79,7 +79,7 @@ export class ImageDetailComponent {
     return selected?._id === this.id() ? selected : null;
   });
   protected readonly loadFailed = computed(
-    () => !this.record() && !this.store.loading() && this.store.error() !== null,
+    () => (!this.record() && !this.store.loading() && this.store.error()) || null,
   );
   protected readonly busy = computed(() => this.store.isBusy(this.id()));
   protected readonly editPath = computed(() => ['/images', this.id(), 'edit']);

@@ -10,6 +10,8 @@ import {
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+
+import { ApiError } from '../../../core/models/api-error.model';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -84,7 +86,8 @@ export class ImageGalleryComponent {
 
   protected readonly images = signal<Image[]>([]);
   protected readonly loaded = signal(false);
-  protected readonly failed = signal(false);
+  // El error de la carga (o null): el recuadro de error cuenta el motivo
+  protected readonly failed = signal<ApiError | null>(null);
   /** Hay un cambio en curso: los demás controles esperan a que termine. */
   protected readonly busy = signal(false);
   /** La imagen que se acaba de mover, que se resalta un momento. */
@@ -140,15 +143,14 @@ export class ImageGalleryComponent {
   }
 
   protected async load(): Promise<void> {
-    this.failed.set(false);
+    this.failed.set(null);
     try {
       this.images.set(
         await this.imagesApi.getByOwner(this.ownerType(), this.ownerId()),
       );
       this.loaded.set(true);
     } catch (error) {
-      this.errors.handle(error);
-      this.failed.set(true);
+      this.failed.set(this.errors.handle(error, { pageLoad: true }));
     }
   }
 

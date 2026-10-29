@@ -154,7 +154,7 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       this._items.set(await this.api.getAll());
       this._loaded.set(true);
     } catch (error) {
-      this._error.set(this.errors.handle(error));
+      this._error.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
       this._loading.set(false);
     }
@@ -358,7 +358,7 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       this._deleted.set(await this.api.getDeleted());
       this._deletedLoaded.set(true);
     } catch (error) {
-      this._deletedError.set(this.errors.handle(error));
+      this._deletedError.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
       this._deletedLoading.set(false);
     }

@@ -57,8 +57,9 @@ export class DashboardComponent {
   protected readonly departureSeries = DEPARTURE_SERIES;
 
   protected readonly showSkeleton = computed(() => this.store.loading() && !this.store.loaded());
+  /** El error de la carga (o null): el recuadro de error cuenta el motivo. */
   protected readonly loadFailed = computed(
-    () => !this.store.loaded() && !this.store.loading() && this.store.error() !== null,
+    () => (!this.store.loaded() && !this.store.loading() && this.store.error()) || null,
   );
 
   protected readonly subtitle = computed(() =>

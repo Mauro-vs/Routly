@@ -40,6 +40,25 @@ describe('ErrorHandlerService', () => {
     service = TestBed.inject(ErrorHandlerService);
   });
 
+  it('un 401 o un 403 al cargar una página no lleva aviso: ya lo explica su recuadro', () => {
+    for (const status of [401, 403]) {
+      const result = service.handle(apiError('client', status), { pageLoad: true });
+      expect(result.status).toBe(status);
+    }
+    expect(notifications.errorToast).not.toHaveBeenCalled();
+  });
+
+  it('en una acción (guardar, eliminar...) un 401 o un 403 sí lleva aviso', () => {
+    service.handle(apiError('client', 401));
+    service.handle(apiError('client', 403));
+    expect(notifications.errorToast).toHaveBeenCalledTimes(2);
+  });
+
+  it('pageLoad no silencia otros errores de cliente', () => {
+    service.handle(apiError('client', 418), { pageLoad: true });
+    expect(notifications.errorToast).toHaveBeenCalledOnceWith('mensaje client');
+  });
+
   const globalCases: Array<[ApiErrorType, number, string]> = [
     ['network', 0, 'Sin conexión con la API'],
     ['timeout', 0, 'La API no responde'],

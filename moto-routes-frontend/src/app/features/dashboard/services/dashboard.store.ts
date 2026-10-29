@@ -153,7 +153,7 @@ export class DashboardStore {
       this.badges.set('routes', routes.length);
       this.badges.set('departures', departures.length);
     } catch (error) {
-      this._error.set(this.errors.handle(error));
+      this._error.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
       this._loading.set(false);
     }

@@ -4,9 +4,9 @@
   </button>
 </ui-page-header>
 
-@if (loadFailed()) {
+@if (loadFailed(); as error) {
   <div class="card">
-    <ui-error-state title="No se han podido cargar los datos del Dashboard" (retry)="reload()" />
+    <ui-error-state title="No se han podido cargar los datos del Dashboard" [error]="error" (retry)="reload()" />
   </div>
 } @else if (showSkeleton()) {
   <!-- misma forma que el contenido final -->

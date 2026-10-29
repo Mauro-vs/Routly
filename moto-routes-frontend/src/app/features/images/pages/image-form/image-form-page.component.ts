@@ -59,7 +59,7 @@ export class ImageFormPageComponent implements HasUnsavedChanges {
     return selected?._id === this.id() ? selected : null;
   });
   protected readonly loadFailed = computed(
-    () => !this.record() && !this.store.loading() && this.store.error() !== null,
+    () => (!this.record() && !this.store.loading() && this.store.error()) || null,
   );
   protected readonly heading = computed(() => {
     const image = this.record();

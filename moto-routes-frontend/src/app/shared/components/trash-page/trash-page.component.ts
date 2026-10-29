@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
+
+import { LoadFailure, failureError } from '../../../core/models/api-error.model';
 import { RouterLink } from '@angular/router';
 
 import { CollectionLabels, agree, capitalize, countLabel, statusWord } from '../../utils/labels';
@@ -41,7 +43,7 @@ export type RestoreAs = 'previous' | 'inactive' | 'active';
 
     @if (failed()) {
       <div class="card">
-        <ui-error-state title="No se ha podido cargar la papelera" (retry)="retry.emit()" />
+        <ui-error-state title="No se ha podido cargar la papelera" [error]="loadError()" (retry)="retry.emit()" />
       </div>
     } @else if (loaded() && total() === 0) {
       <div class="card">
@@ -103,7 +105,9 @@ export class TrashPageComponent {
   readonly backPath = input.required<RouterPath>();
   /** La primera carga ha terminado. Hasta entonces no se juzga si está vacía. */
   readonly loaded = input.required<boolean>();
-  readonly failed = input(false);
+  /** El error de la carga (o solo si ha fallado): el recuadro de error cuenta el motivo. */
+  readonly failed = input<LoadFailure>(false);
+  protected readonly loadError = computed(() => failureError(this.failed()));
   /** Cuántos registros hay en la papelera. */
   readonly total = input.required<number>();
 
@@ -112,6 +116,8 @@ export class TrashPageComponent {
   readonly retry = output<void>();
 
   protected readonly subtitle = computed(() => {
+    // Si la carga ha fallado ya no se está cargando: el recuadro de error cuenta el motivo
+    if (this.failed()) return '';
     if (!this.loaded()) return 'Cargando la papelera…';
     const { plural, gender } = this.labels();
     const total = this.total();

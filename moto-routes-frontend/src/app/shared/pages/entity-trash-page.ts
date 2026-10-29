@@ -20,11 +20,9 @@ export abstract class EntityTrashPage<T extends BaseRecord> implements OnInit {
   protected readonly showSkeleton = computed(
     () => this.store.deletedLoading() && !this.store.deletedLoaded(),
   );
+  /** El error de la carga (o null): las páginas compartidas cuentan con él el motivo. */
   protected readonly loadFailed = computed(
-    () =>
-      !this.store.deletedLoaded() &&
-      !this.store.deletedLoading() &&
-      this.store.deletedError() !== null,
+    () => (!this.store.deletedLoaded() && !this.store.deletedLoading() && this.store.deletedError()) || null,
   );
 
   protected readonly rowKey = (row: T): string => row._id;

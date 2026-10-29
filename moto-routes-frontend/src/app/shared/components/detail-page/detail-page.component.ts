@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+import { LoadFailure, failureError } from '../../../core/models/api-error.model';
 import { BaseRecord } from '../../../core/models/entity.model';
 import { CollectionLabels, agree, capitalize } from '../../utils/labels';
 import { RouterPath } from '../../utils/router';
@@ -45,7 +46,7 @@ export interface DetailIdentifier {
   template: `
     @if (failed()) {
       <div class="card">
-        <ui-error-state [title]="errorTitle()" (retry)="retry.emit()" />
+        <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
       </div>
     } @else if (record(); as record) {
       <header class="head">
@@ -284,7 +285,9 @@ export class DetailPageComponent {
   /** null mientras carga: se pinta el esqueleto. */
   readonly record = input.required<BaseRecord | null>();
   /** La carga ha fallado: se muestra el error con "Reintentar". */
-  readonly failed = input(false);
+  /** El error de la carga (o solo si ha fallado): el recuadro de error cuenta el motivo. */
+  readonly failed = input<LoadFailure>(false);
+  protected readonly loadError = computed(() => failureError(this.failed()));
   readonly identifier = input<DetailIdentifier | null>(null);
   /** Imagen principal, si el registro tiene. */
   readonly thumbnail = input<string | null>(null);
