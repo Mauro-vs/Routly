@@ -132,7 +132,7 @@ describe('Fin de la sesión', () => {
     expect(notifications.warning).not.toHaveBeenCalled();
   });
 
-  it('un 403 relee el usuario: si le han cambiado el rol, se pone al día sin salir', async () => {
+  it('un 403 relee el usuario: si ya no es admin, sale del panel sin cerrar la sesión', async () => {
     loggedIn('admin');
 
     const promise = api.get('/users').catch(() => null);
@@ -144,7 +144,44 @@ describe('Fin de la sesión', () => {
 
     expect(store.isAdmin()).toBeFalse();
     expect(store.isAuthenticated()).toBeTrue();
+    expect(navigate).toHaveBeenCalledOnceWith(['/forbidden'], { info: FORCED_NAVIGATION });
+  });
+
+  it('un 403 de un admin que sigue siéndolo no lo mueve de sitio', async () => {
+    loggedIn('admin');
+
+    const promise = api.get('/users').catch(() => null);
+    http.expectOne(`${BASE}/users`).flush({}, { status: 403, statusText: 'Forbidden' });
+    await promise;
+
+    http.expectOne(`${BASE}/auth/me`).flush(fakeUser('admin'));
+    await new Promise((resolve) => setTimeout(resolve));
+
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('logout cierra la sesión en la API y va al login con navegación forzada', async () => {
+    loggedIn();
+    const navigateByUrl = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+    const promise = TestBed.inject(SessionService).logout();
+    http.expectOne(`${BASE}/auth/logout`).flush(null, { status: 204, statusText: 'No Content' });
+    await promise;
+
+    expect(store.isAuthenticated()).toBeFalse();
+    expect(navigateByUrl).toHaveBeenCalledOnceWith('/login', { info: FORCED_NAVIGATION });
+    expect(notifications.warning).not.toHaveBeenCalled();
+  });
+
+  it('logout en todos los dispositivos llama a logout-all', async () => {
+    loggedIn();
+    spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+    const promise = TestBed.inject(SessionService).logout(true);
+    http.expectOne(`${BASE}/auth/logout-all`).flush(null, { status: 204, statusText: 'No Content' });
+    await promise;
+
+    expect(store.isAuthenticated()).toBeFalse();
   });
 
   it('un 403 con la sesión ya rechazada termina en el login', async () => {

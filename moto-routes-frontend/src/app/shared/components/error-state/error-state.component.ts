@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 
+import { LOGIN_PATH, returnUrlParams } from '../../../auth/return-url';
 import { ApiError } from '../../../core/models/api-error.model';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { IconComponent } from '../icon/icon.component';
@@ -10,6 +12,8 @@ interface ErrorView {
   description: string;
   /** Reintentar solo tiene sentido si el fallo puede arreglarse solo (la red, el servidor). */
   canRetry: boolean;
+  /** Lo que falta es la sesión: en vez de reintentar, se ofrece iniciarla. */
+  canSignIn?: boolean;
 }
 
 // Lo que se cuenta según qué ha fallado. Sin error conocido, se supone la conexión.
@@ -18,6 +22,7 @@ const VIEWS = {
     icon: 'lock-simple',
     description: 'Inicia sesión para ver esta sección. Es una sección solo para administradores.',
     canRetry: false,
+    canSignIn: true,
   },
   forbidden: {
     icon: 'prohibit',
@@ -51,17 +56,20 @@ function viewFor(error: ApiError | null): ErrorView {
 
 /**
  * Lo que se ve cuando una carga falla: qué ha pasado y, si sirve de algo, un botón para
- * reintentarlo. Con `error` cuenta el motivo real: sin sesión (401), sin permiso (403),
- * la API no responde o ha fallado. Sin él, supone que no hay conexión.
+ * reintentarlo o un enlace para iniciar sesión. Con `error` cuenta el motivo real: sin sesión
+ * (401), sin permiso (403), la API no responde o ha fallado. Sin él, supone que no hay conexión.
  *
  *   <ui-error-state title="No se han podido cargar las rutas" [error]="store.error()" (retry)="reload()" />
  */
 @Component({
   selector: 'ui-error-state',
-  imports: [EmptyStateComponent, IconComponent],
+  imports: [RouterLink, EmptyStateComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-empty-state tone="danger" [icon]="view().icon" [title]="title()" [description]="view().description">
+      @if (view().canSignIn) {
+        <a class="btn btn--primary" [routerLink]="loginPath" [queryParams]="loginParams()">Iniciar sesión</a>
+      }
       @if (view().canRetry) {
         <button type="button" class="btn btn--secondary" (click)="retry.emit()">
           <ui-icon name="arrows-clockwise" />Reintentar
@@ -76,5 +84,9 @@ export class ErrorStateComponent {
   readonly error = input<ApiError | null>(null);
   readonly retry = output<void>();
 
+  private readonly router = inject(Router);
+
   protected readonly view = computed(() => viewFor(this.error()));
+  protected readonly loginPath = LOGIN_PATH;
+  protected readonly loginParams = computed(() => returnUrlParams(this.router.url));
 }

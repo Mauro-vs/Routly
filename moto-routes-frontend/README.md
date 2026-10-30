@@ -313,7 +313,8 @@ Todo está en `src/app/auth/`:
 - `auth.service.ts`: login, registro, logout y validación del token. No toca la interfaz.
 - `session.service.ts`: lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
 - `auth.interceptor.ts`: añade `Authorization: Bearer <token>` solo a la API y no envía un token caducado.
-- `auth.guard.ts`: conectado a las rutas del panel. Sigue dejando pasar hasta que exista la página de login.
+- `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`: sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.
+- `return-url.ts`: la vuelta tras el login, que solo acepta rutas internas.
 
 ### Rendimiento
 

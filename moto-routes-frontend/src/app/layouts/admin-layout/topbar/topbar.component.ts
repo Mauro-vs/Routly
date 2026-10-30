@@ -12,6 +12,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 
+import { SessionService } from '../../../auth/session.service';
 import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { NavAction, findSection } from '../navigation';
@@ -43,6 +44,7 @@ export class TopbarComponent {
 
   private readonly router = inject(Router);
   private readonly breadcrumbs = inject(BreadcrumbService);
+  private readonly session = inject(SessionService);
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
 
   private readonly page = toSignal(
@@ -72,6 +74,10 @@ export class TopbarComponent {
     const action = findSection(url)?.create ?? null;
     return action && action.path !== url ? action : null;
   });
+
+  protected logout(): void {
+    void this.session.logout();
+  }
 
   focusMenuButton(): void {
     this.menuButton()?.nativeElement.focus();

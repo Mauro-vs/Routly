@@ -52,6 +52,7 @@ const ICONS = [
   'clock',
   'wifi-slash',
   'prohibit',
+  'sign-out',
 ];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

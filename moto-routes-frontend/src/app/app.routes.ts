@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
+import { guestGuard } from './auth/guest.guard';
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout.component';
 
 const messagePage = () =>
@@ -8,16 +10,93 @@ const messagePage = () =>
     (m) => m.MessagePageComponent,
   );
 
+const accountLayout = () =>
+  import('./layouts/account-layout/account-layout.component').then(
+    (m) => m.AccountLayoutComponent,
+  );
+
 /**
+ * Quién entra dónde:
+ *
+ *   /login, /register    solo sin sesión
+ *   /profile, /forbidden con sesión, en la zona de cada usuario
+ *   el resto             solo ADMIN, con el panel. Un rider o un host van a su zona
+ *
  * Cada feature se carga aparte (lazy loading). Para añadir una entidad: crea su
  * carpeta en features/, registra aquí su ruta y quita su `pending` en
  * layouts/admin-layout/navigation.ts.
  */
 export const routes: Routes = [
   {
+    path: 'login',
+    title: 'Iniciar sesión',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/pages/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'register',
+    title: 'Crear cuenta',
+    canActivate: [guestGuard],
+    loadComponent: messagePage,
+    data: {
+      heading: 'Crear cuenta',
+      description: 'El registro todavía no está disponible.',
+      icon: 'user-circle',
+      actionPath: '/login',
+      actionLabel: 'Ir a iniciar sesión',
+    },
+  },
+  {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: accountLayout,
+    children: [
+      {
+        path: '',
+        title: 'Mi perfil',
+        loadComponent: messagePage,
+        data: {
+          heading: 'Mi perfil',
+          description: 'Aquí podrás ver y editar tus datos.',
+          icon: 'user-circle',
+        },
+      },
+      {
+        path: 'garage',
+        title: 'Mi garaje',
+        loadComponent: messagePage,
+        data: {
+          heading: 'Mi garaje',
+          description: 'Aquí podrás añadir tus motos.',
+          icon: 'compass',
+        },
+      },
+    ],
+  },
+  {
+    path: 'forbidden',
+    canActivate: [authGuard],
+    loadComponent: accountLayout,
+    children: [
+      {
+        path: '',
+        title: 'Acceso denegado',
+        loadComponent: messagePage,
+        data: {
+          heading: 'Acceso denegado',
+          description: 'Tu cuenta no tiene permiso para ver esta página.',
+          icon: 'prohibit',
+          actionPath: '/',
+          actionLabel: 'Volver al inicio',
+        },
+      },
+    ],
+  },
+  {
     path: '',
     component: AdminLayoutComponent,
-    canActivate: [authGuard],
+    canActivate: [authGuard, adminGuard],
     children: [
       {
         path: '',

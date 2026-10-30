@@ -8,6 +8,7 @@ import { NotificationService } from '../core/services/notification.service';
 import { SessionResetService } from '../core/services/session-reset.service';
 import { AuthService } from './auth.service';
 import { AuthStore } from './auth.store';
+import { LOGIN_PATH, returnUrlParams } from './return-url';
 
 const EXPIRED_MESSAGE = 'Tu sesión ha caducado. Inicia sesión de nuevo.';
 const REJECTED_MESSAGE = 'Tu sesión ya no es válida. Inicia sesión de nuevo.';
@@ -71,9 +72,26 @@ export class SessionService {
    */
   async recheck(): Promise<void> {
     if (!this.store.token()) return;
+
+    const couldEnterPanel = this.store.isAdmin() || this.store.unverified();
     await this.auth.loadSession();
+
     // loadSession ya ha limpiado la sesión si la API la ha rechazado: falta decirlo.
     if (!this.store.token()) this.notifyAndLeave(REJECTED_MESSAGE);
+    else if (couldEnterPanel && this.store.user() && !this.store.isAdmin()) void this.leavePanel();
+  }
+
+  /** Cierra la sesión desde un botón: a diferencia de cuando caduca, no hay nada que avisar. */
+  async logout(everywhere = false): Promise<void> {
+    await (everywhere ? this.auth.logoutAll() : this.auth.logout());
+    await this.router.navigateByUrl(LOGIN_PATH, { info: FORCED_NAVIGATION });
+  }
+
+  /** Ya no es administrador, o nunca lo fue: fuera del panel, salvo si está en su zona. */
+  private leavePanel(): Promise<boolean> {
+    const url = this.router.url;
+    if (url.startsWith('/profile') || url === '/forbidden') return Promise.resolve(true);
+    return this.router.navigate(['/forbidden'], { info: FORCED_NAVIGATION });
   }
 
   private leave(message: string): void {
@@ -90,10 +108,10 @@ export class SessionService {
   /** Forzada: un formulario a medias no puede retener a una sesión que ya no sirve. */
   private toLogin(): Promise<boolean> {
     const url = this.router.url;
-    if (url === '/login' || url.startsWith('/login?')) return Promise.resolve(true);
+    if (url.startsWith(LOGIN_PATH)) return Promise.resolve(true);
 
-    return this.router.navigate(['/login'], {
-      queryParams: url === '/' ? {} : { returnUrl: url },
+    return this.router.navigate([LOGIN_PATH], {
+      queryParams: returnUrlParams(url),
       info: FORCED_NAVIGATION,
     });
   }

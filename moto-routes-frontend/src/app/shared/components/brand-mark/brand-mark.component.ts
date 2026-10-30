@@ -8,7 +8,7 @@ let nextId = 0;
  * Es decorativo: el enlace que lo contiene lleva el nombre accesible.
  */
 @Component({
-  selector: 'app-brand-mark',
+  selector: 'ui-brand-mark',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <svg viewBox="0 4 271 92" focusable="false">

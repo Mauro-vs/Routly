@@ -23,7 +23,7 @@ import { ApiStatus, ApiStatusService } from '../../../core/services/api-status.s
 import { CollectionCountsService } from '../../../core/services/collection-counts.service';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
-import { BrandMarkComponent } from '../brand-mark.component';
+import { BrandMarkComponent } from '../../../shared/components/brand-mark/brand-mark.component';
 import { COLLECTION_IDS, NAV_GROUPS, NAV_HOME, findSection } from '../navigation';
 
 /** Alto de la marca de la sección activa (como en el CSS). */
