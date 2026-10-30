@@ -104,7 +104,8 @@ export class HostFormComponent extends EntityForm<Host, HostPayload, HostControl
 
   protected readonly currentUser = computed(() => {
     const user = this.record()?.user;
-    return user ? `${user.name} · ${user.email}` : 'Usuario eliminado';
+    if (!user) return 'Usuario eliminado';
+    return user.email ? `${user.name} · ${user.email}` : user.name;
   });
 
   constructor() {

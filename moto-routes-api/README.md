@@ -104,7 +104,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 141 tests con `node:test`:
+`npm test` ejecuta 142 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -418,6 +418,8 @@ En el peor caso fallan las dos peticiones, pero nunca queda una referencia huér
 | una imagen | ella o su dueño (o si su dueño está oculto por lo anterior) |
 
 En un listado no aparece; por id, slug o SKU responde 404. Las escrituras no cambian: un host sigue pudiendo editar su experiencia aunque no se vea en público.
+
+Tampoco salen en público los datos privados: de un anfitrión, `user` trae solo `_id` y `name`. Su `email` únicamente lo ve el admin.
 
 **4. La galería de un dueño eliminado** (`GET /api/images?ownerType&ownerId`) responde 404 (`Category not found`). En público, también la de un dueño oculto; el admin la sigue viendo.
 

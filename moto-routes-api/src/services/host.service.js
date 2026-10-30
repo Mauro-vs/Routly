@@ -8,7 +8,7 @@ import { canModifyHost } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { bikeService } from "./bike.service.js";
 import { imageService } from "./image.service.js";
-import { assertVisible, scopeFilter } from "./visibility.js";
+import { PUBLIC, assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
   assertNotTaken,
@@ -25,6 +25,10 @@ const HOST_ROLE = ROLES.HOST;
 
 const userReference = (id) => ({ repository: userRepository, id, field: "userId", resource: "user" });
 
+// El email del usuario es un dato privado: en público, su usuario solo trae el nombre
+const forScope = (host, scope) =>
+  scope === PUBLIC && host.user ? { ...host, user: { _id: host.user._id, name: host.user.name } } : host;
+
 // El perfil de un anfitrión trae su garaje (en público, sus motos públicas): así se sabe con qué
 // moto guía
 const withBikes = async (host, scope) => ({ ...host, bikes: await bikeService.listByUser(host.userId, scope) });
@@ -32,12 +36,14 @@ const withBikes = async (host, scope) => ({ ...host, bikes: await bikeService.li
 export const hostService = {
   // scope (services/visibility.js): en PUBLIC, sin los anfitriones de un usuario inactivo
   async list(scope) {
-    return imageService.attachCovers("host", await hostRepository.findAll(await scopeFilter("host", scope)));
+    const hosts = await hostRepository.findAll(await scopeFilter("host", scope));
+    return (await imageService.attachCovers("host", hosts)).map((host) => forScope(host, scope));
   },
 
   async listByActive(isActive, scope) {
     const filter = { isActive, ...(await scopeFilter("host", scope)) };
-    return imageService.attachCovers("host", await hostRepository.findAll(filter));
+    const hosts = await hostRepository.findAll(filter);
+    return (await imageService.attachCovers("host", hosts)).map((host) => forScope(host, scope));
   },
 
   async listDeleted() {
@@ -47,14 +53,14 @@ export const hostService = {
   async getById(id, scope) {
     const host = await findExisting(hostRepository, id, "Host");
     await assertVisible(hostRepository, "host", host, scope, "Host");
-    return withBikes(await imageService.attachCover("host", host), scope);
+    return forScope(await withBikes(await imageService.attachCover("host", host), scope), scope);
   },
 
   async getBySlug(slug, scope) {
     const host = await hostRepository.findBySlug(slug);
     if (!host) throw notFound("Host");
     await assertVisible(hostRepository, "host", host, scope, "Host");
-    return withBikes(await imageService.attachCover("host", host), scope);
+    return forScope(await withBikes(await imageService.attachCover("host", host), scope), scope);
   },
 
   async create(data) {

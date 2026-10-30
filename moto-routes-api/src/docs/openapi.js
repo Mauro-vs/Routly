@@ -125,7 +125,7 @@ const RESOURCES = [
     path: "hosts",
     tag: "Hosts",
     // Lo que ve el público (services/visibility.js)
-    publicView: "solo salen los activos cuyo usuario también lo esté",
+    publicView: "solo salen los activos cuyo usuario también lo esté, y user.email solo lo ve el admin",
     access: { edit: "owner", owner: "el propio anfitrión (su perfil de anfitrión)" },
     schema: "Host",
     singular: "anfitrión",

@@ -277,6 +277,33 @@ test("un rider o un anfitrión ven lo mismo que un anónimo; un token que no sir
   assert.equal((await api.as("token-que-no-sirve.x.y").get("/routes")).status, 401);
 });
 
+test("el email de un anfitrión no sale en público, por ninguna lectura; el admin sí lo ve", async () => {
+  await api.post("/users", { name: "Rider Mail", email: "mail@example.com", password: TEST_PASSWORD, roleId: data.rider._id });
+  const readers = [api.anonymous, await api.loginAs("mail@example.com"), await api.loginAs("ana@example.com")];
+  const paths = [
+    "/hosts",
+    "/hosts/actives",
+    `/hosts/${data.host._id}`,
+    `/hosts/slug/${data.host.slug}`,
+    `/experiences/${data.experience._id}`,
+    `/departures/${data.departure._id}`,
+  ];
+  for (const reader of readers) {
+    for (const path of paths) {
+      const response = await reader.get(path);
+      assert.equal(response.status, 200, path);
+      assert.doesNotMatch(JSON.stringify(response.body), /"email"/, path);
+    }
+  }
+
+  const listed = (await api.get("/hosts")).body.find((host) => host._id === data.host._id);
+  assert.equal(listed.user.email, "ana@example.com");
+  assert.equal((await api.get(`/hosts/${data.host._id}`)).body.user.email, "ana@example.com");
+  assert.equal((await api.get(`/hosts/slug/${data.host.slug}`)).body.user.email, "ana@example.com");
+  // El nombre sigue saliendo: es lo que el público necesita
+  assert.ok((await api.anonymous.get(`/hosts/${data.host._id}`)).body.user.name);
+});
+
 test("en público tampoco se ven los inactivos, en ninguna colección del catálogo", async () => {
   const cases = [
     [`/categories/${data.category._id}`, "/categories"],

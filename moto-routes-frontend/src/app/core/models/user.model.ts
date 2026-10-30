@@ -12,8 +12,8 @@ export interface User extends BaseEntity {
   coverImage?: ImageSummary | null;
 }
 
-/** Lo que trae un anfitrión de su usuario (`populate`). */
-export type UserSummary = Pick<User, '_id' | 'name' | 'email'>;
+/** Lo que trae un anfitrión de su usuario (`populate`). El email solo llega con token de admin. */
+export type UserSummary = Pick<User, '_id' | 'name'> & Partial<Pick<User, 'email'>>;
 
 /**
  * Cuerpo de `POST /api/users`. Sin `roleId`, la API asigna el rol rider.

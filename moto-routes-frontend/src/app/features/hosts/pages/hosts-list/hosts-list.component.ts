@@ -80,8 +80,8 @@ const COLUMNS: readonly TableColumn[] = [
             [label]="host.user?.name ?? null"
             [path]="host.user ? ['/users', 'id', host.user._id] : null"
           />
-          @if (host.user; as user) {
-            <span class="cell-sub" translate="no" [title]="user.email">{{ user.email }}</span>
+          @if (host.user?.email; as email) {
+            <span class="cell-sub" translate="no" [title]="email">{{ email }}</span>
           }
         </ng-template>
         <ng-template uiCell="biography" [uiCellOf]="pager.items()" let-host>
