@@ -6,6 +6,7 @@ import { DIFFICULTIES, DIFFICULTY_LABELS, Route } from '../../../core/models/rou
 import { ApiService } from '../../../core/services/api.service';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
+import { SessionResetService } from '../../../core/services/session-reset.service';
 
 const RECENT_COUNT = 4;
 const UPCOMING_COUNT = 5;
@@ -41,6 +42,8 @@ export class DashboardStore {
   private readonly _error = signal<ApiError | null>(null);
   /** Momento de la última carga: las "próximas" salidas se cuentan desde aquí. */
   private readonly _loadedAt = signal(new Date());
+  /** Sube al vaciar el store: lo que aún estuviera en camino ya no se guarda. */
+  private generation = 0;
 
   readonly loading = this._loading.asReadonly();
   readonly loaded = this._loaded.asReadonly();
@@ -136,9 +139,24 @@ export class DashboardStore {
     return buckets.map(({ label, fullLabel, values }) => ({ label, fullLabel, values }));
   });
 
+  constructor() {
+    inject(SessionResetService).register(() => this.reset());
+  }
+
+  /** Vuelve al estado inicial, al cerrar sesión. */
+  private reset(): void {
+    this.generation++;
+    this._routes.set([]);
+    this._departures.set([]);
+    this._loading.set(false);
+    this._loaded.set(false);
+    this._error.set(null);
+  }
+
   async load(): Promise<void> {
     if (this._loading()) return;
 
+    const generation = this.generation;
     this._loading.set(true);
     this._error.set(null);
     try {
@@ -146,6 +164,7 @@ export class DashboardStore {
         this.api.get<Route[]>('/routes'),
         this.api.get<Departure[]>('/departures'),
       ]);
+      if (generation !== this.generation) return;
       this._routes.set(routes);
       this._departures.set(departures);
       this._loadedAt.set(new Date());
@@ -153,9 +172,10 @@ export class DashboardStore {
       this.badges.set('routes', routes.length);
       this.badges.set('departures', departures.length);
     } catch (error) {
+      if (generation !== this.generation) return;
       this._error.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
-      this._loading.set(false);
+      if (generation === this.generation) this._loading.set(false);
     }
   }
 }

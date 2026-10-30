@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+
+import { SessionResetService } from './session-reset.service';
 
 /**
  * Última miga de la barra superior cuando depende de los datos, por ejemplo el
@@ -12,6 +14,10 @@ export class BreadcrumbService {
   private readonly _current = signal<string | null>(null);
 
   readonly current = this._current.asReadonly();
+
+  constructor() {
+    inject(SessionResetService).register(() => this.clear());
+  }
 
   set(label: string): void {
     this._current.set(label);

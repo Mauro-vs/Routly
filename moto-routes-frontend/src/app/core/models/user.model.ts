@@ -30,5 +30,5 @@ export const USER_LIMITS = {
   name: 100,
   email: 254,
   passwordMin: 8,
-  passwordMax: 72,
+  passwordMax: 128,
 } as const;

@@ -54,6 +54,11 @@ describe('ErrorHandlerService', () => {
     expect(notifications.errorToast).toHaveBeenCalledTimes(2);
   });
 
+  it('un token rechazado no lleva aviso aquí: ya lo da quien cierra la sesión', () => {
+    service.handle(new ApiError({ status: 401, type: 'client', message: 'x', code: 'TOKEN_INVALID' }));
+    expect(notifications.errorToast).not.toHaveBeenCalled();
+  });
+
   it('pageLoad no silencia otros errores de cliente', () => {
     service.handle(apiError('client', 418), { pageLoad: true });
     expect(notifications.errorToast).toHaveBeenCalledOnceWith('mensaje client');

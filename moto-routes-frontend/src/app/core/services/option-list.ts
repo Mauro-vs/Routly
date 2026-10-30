@@ -1,6 +1,7 @@
-import { signal } from '@angular/core';
+import { inject, signal } from '@angular/core';
 
 import { ErrorHandlerService } from './error-handler.service';
+import { SessionResetService } from './session-reset.service';
 
 /**
  * Opciones de un select de formulario que vienen de la API, por ejemplo los roles
@@ -22,7 +23,15 @@ export class OptionList<T> {
   constructor(
     private readonly fetch: () => Promise<T[]>,
     private readonly errors: ErrorHandlerService,
-  ) {}
+  ) {
+    inject(SessionResetService).register(() => this.reset());
+  }
+
+  private reset(): void {
+    this._items.set([]);
+    this._loading.set(false);
+    this._loaded.set(false);
+  }
 
   async load(): Promise<void> {
     if (this._loading()) return;

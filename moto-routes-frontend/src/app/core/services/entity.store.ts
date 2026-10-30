@@ -6,6 +6,7 @@ import { BaseRecord, EntityStatus } from '../models/entity.model';
 import { ErrorHandlerService } from './error-handler.service';
 import { NavBadgeService } from './nav-badge.service';
 import { NotificationService } from './notification.service';
+import { SessionResetService } from './session-reset.service';
 
 /** El filtro por estado de los listados. Es el único que ofrece la API. */
 export type StatusFilter = 'all' | 'active' | 'inactive';
@@ -89,6 +90,8 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   private readonly _deletedLoaded = signal(false);
   private readonly _deletedError = signal<ApiError | null>(null);
   private lookups = 0;
+  /** Sube al vaciar el store: lo que aún estuviera en camino ya no se guarda. */
+  private generation = 0;
 
   readonly items = this._items.asReadonly();
   /** Registro abierto en el formulario. Lo rellena `getBySlug`. */
@@ -127,6 +130,25 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     effect(() => {
       if (this._loaded()) this.badges.set(this.navId(), this.total());
     });
+    inject(SessionResetService).register(() => this.reset());
+  }
+
+  /** Vuelve al estado inicial, al cerrar sesión: el siguiente usuario empieza de cero. */
+  reset(): void {
+    this.generation++;
+    this.lookups++;
+    this._items.set([]);
+    this._selected.set(null);
+    this._loading.set(false);
+    this._loaded.set(false);
+    this._saving.set(false);
+    this._error.set(null);
+    this._busyIds.set(new Set());
+    this._deleted.set([]);
+    this._deletedLoading.set(false);
+    this._deletedLoaded.set(false);
+    this._deletedError.set(null);
+    this.status.set('all');
   }
 
   /**
@@ -148,15 +170,19 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   async load(): Promise<void> {
     if (this._loading()) return;
 
+    const generation = this.generation;
     this._loading.set(true);
     this._error.set(null);
     try {
-      this._items.set(await this.api.getAll());
+      const items = await this.api.getAll();
+      if (generation !== this.generation) return;
+      this._items.set(items);
       this._loaded.set(true);
     } catch (error) {
+      if (generation !== this.generation) return;
       this._error.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
-      this._loading.set(false);
+      if (generation === this.generation) this._loading.set(false);
     }
   }
 
@@ -352,15 +378,19 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   async loadDeleted(): Promise<void> {
     if (this._deletedLoading()) return;
 
+    const generation = this.generation;
     this._deletedLoading.set(true);
     this._deletedError.set(null);
     try {
-      this._deleted.set(await this.api.getDeleted());
+      const deleted = await this.api.getDeleted();
+      if (generation !== this.generation) return;
+      this._deleted.set(deleted);
       this._deletedLoaded.set(true);
     } catch (error) {
+      if (generation !== this.generation) return;
       this._deletedError.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
-      this._deletedLoading.set(false);
+      if (generation === this.generation) this._deletedLoading.set(false);
     }
   }
 

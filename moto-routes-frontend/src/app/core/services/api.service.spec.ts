@@ -4,7 +4,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { environment } from '../../../environments/environment';
-import { authInterceptor } from '../interceptors/auth.interceptor';
+import { authInterceptor } from '../../auth/auth.interceptor';
 import { errorInterceptor } from '../interceptors/error.interceptor';
 import { REQUEST_TIMEOUT, timeoutInterceptor } from '../interceptors/timeout.interceptor';
 import { ApiError } from '../models/api-error.model';

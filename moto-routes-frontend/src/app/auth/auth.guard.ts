@@ -1,9 +1,7 @@
 import { CanActivateFn } from '@angular/router';
 
 /**
- * Protege las rutas del panel. Mientras la API no tenga autenticación deja pasar
- * siempre. Cuando exista, bastará con cambiar el cuerpo por:
- *
- *   return inject(AuthService).isAuthenticated() || inject(Router).createUrlTree(['/login']);
+ * Protege las rutas del panel. Sigue dejando pasar hasta la fase de rutas: sin la página de
+ * login, activarlo dejaría el panel sin entrada.
  */
 export const authGuard: CanActivateFn = () => true;

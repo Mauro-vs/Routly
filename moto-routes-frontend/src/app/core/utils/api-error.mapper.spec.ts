@@ -99,6 +99,55 @@ describe('toApiError', () => {
     expect(restored.isMissingReference).toBeFalse();
   });
 
+  it('un 401 distingue credenciales, token caducado, token rechazado y falta de sesión', () => {
+    const invalid = { message: 'Invalid email or password' };
+    expect(toApiError(httpError(401, invalid)).message).toBe('El correo o la contraseña no son correctos.');
+    expect(toApiError(httpError(401, invalid)).isSessionRejected).toBeFalse();
+
+    const expired = toApiError(httpError(401, { code: 'TOKEN_EXPIRED' }));
+    expect(expired.code).toBe('TOKEN_EXPIRED');
+    expect(expired.isSessionRejected).toBeTrue();
+    expect(expired.message).toBe('Tu sesión ha caducado. Inicia sesión de nuevo.');
+
+    const rejected = toApiError(httpError(401, { code: 'TOKEN_INVALID' }));
+    expect(rejected.message).toBe('Tu sesión ya no es válida. Inicia sesión de nuevo.');
+
+    const anonymous = toApiError(httpError(401, { message: 'Authentication required' }));
+    expect(anonymous.isSessionRejected).toBeFalse();
+    expect(anonymous.message).toBe('Necesitas iniciar sesión para hacer esto.');
+  });
+
+  it('un 429 dice que se espere', () => {
+    expect(toApiError(httpError(429)).message).toBe(
+      'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+    );
+  });
+
+  it('un 200 que no se ha podido leer es un fallo del servidor', () => {
+    const error = toApiError(httpError(200, { text: '<html>' }));
+    expect(error.type).toBe('server');
+    expect(error.message).toContain('no entiende');
+  });
+
+  it('traduce los 409 de la sesión, el garaje y los administradores', () => {
+    const cases: Record<string, string> = {
+      'You cannot change your own role': 'No puedes cambiar tu propio rol.',
+      'You cannot deactivate your own account': 'No puedes desactivar tu propia cuenta.',
+      'You cannot delete your own account': 'No puedes eliminar tu propia cuenta.',
+      'There must be at least one active admin': 'Tiene que quedar al menos un administrador activo.',
+      'Bike is the guide bike of an active experience or an upcoming departure':
+        'Esta moto guía una experiencia activa o una salida próxima. Cámbiala allí primero.',
+      'A user can have at most 10 bikes': 'Cada usuario puede tener 10 motos como mucho.',
+      'Cannot restore: guideBikeId references a deleted bike':
+        'No se puede restaurar mientras su moto siga en la papelera.',
+      'Cannot restore: userId references a user without the host role':
+        'No se puede restaurar: su usuario ya no tiene el rol de anfitrión.',
+    };
+    for (const [message, expected] of Object.entries(cases)) {
+      expect(toApiError(httpError(409, { message })).message).withContext(message).toBe(expected);
+    }
+  });
+
   it('convierte un error que no es HTTP en uno genérico', () => {
     const error = toApiError(new TypeError('boom'));
     expect(error.type).toBe('client');
@@ -129,6 +178,21 @@ describe('translateFieldMessage', () => {
     ['sku', 'sku cannot be changed', 'Este dato no se puede cambiar.'],
     ['title', 'title is weird', 'El valor no es válido.'],
   ];
+
+  it('traduce las reglas del perfil, la contraseña y las motos', () => {
+    const cases: [string, string, string][] = [
+      ['currentPassword', 'currentPassword is incorrect', 'La contraseña actual no es correcta.'],
+      ['birthDate', 'birthDate must be at least 14 years ago', 'Hay que tener al menos 14 años.'],
+      ['birthDate', 'birthDate must be after 1900-01-01', 'La fecha no es válida.'],
+      ['guideBikeId', 'guideBikeId must reference an active, public bike of the host', 'Elige una moto activa y pública del anfitrión.'],
+      ['guideBikeId', 'guideBikeId must reference an active bike', 'Elige una moto activa.'],
+      ['date', 'date cannot be in the future', 'No puede ser una fecha futura.'],
+      ['year', 'year cannot be later than 2027', 'No puede ser posterior a 2027.'],
+    ];
+    for (const [field, message, expected] of cases) {
+      expect(translateFieldMessage(field, message)).withContext(message).toBe(expected);
+    }
+  });
 
   it('un 409 por duplicado dice qué dato está repetido', () => {
     const message = (detail: string): string =>

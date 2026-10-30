@@ -28,6 +28,7 @@ interface ApiErrorInit {
   message: string;
   fieldErrors?: FieldErrors;
   detail?: string;
+  code?: string;
 }
 
 /** Forma única de error que sale de la capa de API. La construye el errorInterceptor. */
@@ -38,6 +39,8 @@ export class ApiError extends Error {
   readonly fieldErrors?: FieldErrors;
   /** Mensaje original de la API, sin traducir. Sirve para depurar, no para mostrarlo. */
   readonly detail?: string;
+  /** Por qué la API rechaza el token: `TOKEN_EXPIRED` o `TOKEN_INVALID`. */
+  readonly code?: string;
 
   constructor(init: ApiErrorInit) {
     super(init.message);
@@ -46,6 +49,7 @@ export class ApiError extends Error {
     this.type = init.type;
     this.fieldErrors = init.fieldErrors;
     this.detail = init.detail;
+    this.code = init.code;
   }
 
   get isNotFound(): boolean {
@@ -59,6 +63,11 @@ export class ApiError extends Error {
   /** 401: no hay sesión, o el token ya no sirve. */
   get isUnauthorized(): boolean {
     return this.status === 401;
+  }
+
+  /** 401 con un token que ya no sirve. Sin `code`, es que no se envió ninguno. */
+  get isSessionRejected(): boolean {
+    return this.isUnauthorized && this.code !== undefined;
   }
 
   /** 403: hay sesión, pero sin permiso para eso. */

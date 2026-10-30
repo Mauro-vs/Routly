@@ -9,6 +9,7 @@ import { EntityApi, EntityStore } from './entity.store';
 import { ErrorHandlerService } from './error-handler.service';
 import { NavBadgeService } from './nav-badge.service';
 import { NotificationService } from './notification.service';
+import { SessionResetService } from './session-reset.service';
 
 interface Item extends BaseEntity {
   name: string;
@@ -94,6 +95,41 @@ describe('EntityStore', () => {
       ],
     });
     store = TestBed.inject(TestStore);
+  });
+
+  describe('al cerrar sesión', () => {
+    it('se apunta a SessionResetService y vuelve al estado inicial', async () => {
+      api.getAll.and.resolveTo([item('1')]);
+      api.getDeleted.and.resolveTo([item('2')]);
+      await store.load();
+      await store.loadDeleted();
+      store.status.set('inactive');
+
+      TestBed.inject(SessionResetService).resetAll();
+
+      expect(store.items()).toEqual([]);
+      expect(store.loaded()).toBeFalse();
+      expect(store.deleted()).toEqual([]);
+      expect(store.deletedLoaded()).toBeFalse();
+      expect(store.status()).toBe('all');
+    });
+
+    it('una carga que estaba en camino no vuelve a llenarlo', async () => {
+      const list = deferred<Item[]>();
+      const trash = deferred<Item[]>();
+      api.getAll.and.returnValue(list.promise);
+      api.getDeleted.and.returnValue(trash.promise);
+
+      const loading = Promise.all([store.load(), store.loadDeleted()]);
+      store.reset();
+      list.resolve([item('1')]);
+      trash.resolve([item('2')]);
+      await loading;
+
+      expect(store.items()).toEqual([]);
+      expect(store.loaded()).toBeFalse();
+      expect(store.deleted()).toEqual([]);
+    });
   });
 
   async function loadWith(items: Item[]): Promise<void> {

@@ -11,7 +11,12 @@ const MESSAGES = {
   validationFields: 'Hay campos con errores. Revísalos y vuelve a guardar.',
   validation: 'La API ha rechazado los datos enviados.',
   noChanges: 'No has cambiado ningún dato: no hay nada que guardar.',
+  invalidResponse: 'La API ha enviado una respuesta que el panel no entiende. Vuelve a intentarlo.',
   unauthorized: 'Necesitas iniciar sesión para hacer esto.',
+  badCredentials: 'El correo o la contraseña no son correctos.',
+  sessionExpired: 'Tu sesión ha caducado. Inicia sesión de nuevo.',
+  sessionRejected: 'Tu sesión ya no es válida. Inicia sesión de nuevo.',
+  tooManyAttempts: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
   forbidden: 'No tienes permiso para hacer esto.',
   notFound: 'No se ha encontrado lo que buscabas. Puede que se haya eliminado.',
   // Un 409 que no se reconoce: no todos son duplicados (dependientes, roles base...)
@@ -27,11 +32,28 @@ const CLIENT_MESSAGES: Record<number, string> = {
   404: MESSAGES.notFound,
   409: MESSAGES.conflict,
   413: MESSAGES.tooLarge,
+  429: MESSAGES.tooManyAttempts,
 };
+
+/** La API ha respondido bien, pero lo que ha llegado no tiene la forma esperada. */
+export function invalidResponseError(): ApiError {
+  return new ApiError({ status: 0, type: 'server', message: MESSAGES.invalidResponse });
+}
+
+/** El token ya ha caducado en el panel: la petición ni siquiera llega a salir. */
+export function tokenExpiredError(): ApiError {
+  return new ApiError({
+    status: 401,
+    type: 'client',
+    message: MESSAGES.sessionExpired,
+    code: 'TOKEN_EXPIRED',
+  });
+}
 
 /**
  * Convierte cualquier fallo de una petición en un ApiError.
- * La API responde `{ statusCode, error, message, details?: [{ field, message }] }`.
+ * La API responde `{ statusCode, error, message, details?: [{ field, message }] }` y, si
+ * rechaza el token, también `code`.
  */
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
@@ -49,6 +71,11 @@ export function toApiError(error: unknown): ApiError {
 
   if (status === 0) {
     return new ApiError({ status, type: 'network', message: MESSAGES.network });
+  }
+
+  // Un 200 con un cuerpo que no es JSON también llega aquí como error de HttpClient.
+  if (status < 400) {
+    return invalidResponseError();
   }
 
   if (status >= 500) {
@@ -72,6 +99,17 @@ export function toApiError(error: unknown): ApiError {
     });
   }
 
+  if (status === 401) {
+    const code = readCode(error.error);
+    return new ApiError({
+      status,
+      type: 'client',
+      message: unauthorizedMessage(detail, code),
+      detail,
+      code,
+    });
+  }
+
   return new ApiError({
     status,
     type: 'client',
@@ -80,12 +118,22 @@ export function toApiError(error: unknown): ApiError {
   });
 }
 
+function unauthorizedMessage(detail: string | undefined, code: string | undefined): string {
+  if (detail === 'Invalid email or password') return MESSAGES.badCredentials;
+  if (code === 'TOKEN_EXPIRED') return MESSAGES.sessionExpired;
+  return code ? MESSAGES.sessionRejected : MESSAGES.unauthorized;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 function readServerMessage(body: unknown): string | undefined {
   return isRecord(body) && typeof body['message'] === 'string' ? body['message'] : undefined;
+}
+
+function readCode(body: unknown): string | undefined {
+  return isRecord(body) && typeof body['code'] === 'string' ? body['code'] : undefined;
 }
 
 function readFieldErrors(body: unknown): FieldErrors | undefined {
@@ -113,6 +161,7 @@ const RESOURCES: Record<string, { a: string; own: string; active: string }> = {
   route: { a: 'una ruta', own: 'su ruta', active: 'activa' },
   experience: { a: 'una experiencia', own: 'su experiencia', active: 'activa' },
   departure: { a: 'una salida', own: 'su salida', active: 'activa' },
+  bike: { a: 'una moto', own: 'su moto', active: 'activa' },
 };
 
 /** Lo que impide eliminar un registro ("Cannot delete a route that has experiences"). */
@@ -175,6 +224,16 @@ const CONFLICT_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string
   [/^maxParticipants is lower than/, () => 'Hay salidas con más plazas que ese máximo.'],
   [/^minParticipants is higher than/, () => 'Hay salidas con menos plazas que ese mínimo.'],
   [/^Inactive images cannot be the cover$/, () => 'Una imagen inactiva no puede ser la principal.'],
+  [/^You cannot change your own role$/, () => 'No puedes cambiar tu propio rol.'],
+  [/^You cannot deactivate your own account$/, () => 'No puedes desactivar tu propia cuenta.'],
+  [/^You cannot delete your own account$/, () => 'No puedes eliminar tu propia cuenta.'],
+  [/^There must be at least one active admin$/, () => 'Tiene que quedar al menos un administrador activo.'],
+  [
+    /^Bike is the guide bike of an active experience or an upcoming departure$/,
+    () => 'Esta moto guía una experiencia activa o una salida próxima. Cámbiala allí primero.',
+  ],
+  [/^A user can have at most (\d+) bikes$/, (m) => `Cada usuario puede tener ${m[1]} motos como mucho.`],
+  [/references a user without the host role$/, () => 'No se puede restaurar: su usuario ya no tiene el rol de anfitrión.'],
 ];
 
 function translateConflict(message: string | undefined): string | undefined {
@@ -195,6 +254,12 @@ const FIELD_RULES: ReadonlyArray<[RegExp, (match: RegExpMatchArray) => string]> 
   ],
   [/^must reference an existing \w+$/, () => 'El elemento al que pertenece ya no existe.'],
   [/^must reference a user with the host role$/, () => 'El usuario tiene que tener el rol de anfitrión.'],
+  [/^must reference an active, public bike of the host$/, () => 'Elige una moto activa y pública del anfitrión.'],
+  [/^is incorrect$/, () => 'La contraseña actual no es correcta.'],
+  [/^must be at least (\d+) years ago$/, (m) => `Hay que tener al menos ${m[1]} años.`],
+  [/^must be after 1900-01-01$/, () => 'La fecha no es válida.'],
+  [/^cannot be in the future$/, () => 'No puede ser una fecha futura.'],
+  [/^cannot be later than (.+)$/, (m) => `No puede ser posterior a ${m[1]}.`],
   // Un campo que no se puede editar (el SKU de una salida, el usuario de un anfitrión...)
   [/^cannot be changed$/, () => 'Este dato no se puede cambiar.'],
   // Reglas entre campos (van antes que las genéricas de mínimo y máximo)

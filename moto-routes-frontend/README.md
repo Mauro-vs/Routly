@@ -122,11 +122,12 @@ Organización por features. Cada carpeta tiene una responsabilidad y unas reglas
 
 ```
 src/app/
+├── auth/                  Sesión: store, service, interceptor, guards y modelos
 ├── core/                  Lo que existe una sola vez en la aplicación
 │   ├── services/          ApiService, NotificationService, ErrorHandlerService, EntityStore,
 │   │                      EntityApiService, OptionList, CollectionCountsService...
-│   ├── interceptors/      timeout, errores y auth
-│   ├── guards/            authGuard y aviso de cambios sin guardar
+│   ├── interceptors/      timeout y errores
+│   ├── guards/            Aviso de cambios sin guardar
 │   ├── models/            Interfaces de las 9 entidades, con sus relaciones, y ApiError
 │   └── utils/             Traducción de los errores de la API
 ├── shared/                Piezas reutilizables, sin lógica de negocio
@@ -193,7 +194,7 @@ La página nunca llama a la API: pide al store, y el store expone el resultado c
 - **Interceptores**, en este orden:
   1. `errorInterceptor` convierte cualquier fallo en un `ApiError` con `status`, `type` (`network`, `timeout`, `validation`, `client` o `server`), `message` y, si los hay, `fieldErrors`.
   2. `timeoutInterceptor` corta la petición a los `apiTimeout` milisegundos.
-  3. `authInterceptor` añade el token de sesión si existe. Hoy no hay ninguno.
+  3. `authInterceptor` añade el token de sesión a las peticiones a la API, y a ninguna más.
 - **`EntityApiService`** (`core/services/entity-api.service.ts`) tiene los 11 endpoints comunes a todas las colecciones. El servicio de cada entidad hereda de él y solo declara su ruta (`path`). Las imágenes, que no tienen slug, heredan de `RecordApiService`, que es lo mismo sin `getBySlug`.
 - **`EntityStore`** guarda el estado de una entidad con signals y hace las operaciones comunes: cargar, crear, editar, eliminar, deshacer, cambiar el estado activo y la papelera.
 
@@ -306,12 +307,13 @@ Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar
 
 ### Autenticación
 
-> [!IMPORTANT]
-> No está implementada. Está preparado lo necesario para añadirla sin tocar el resto:
+Todo está en `src/app/auth/`:
 
-- `core/services/auth.service.ts`: `currentUser`, `token` e `isAuthenticated` como signals, sin métodos.
-- `core/interceptors/auth.interceptor.ts`: añade `Authorization: Bearer <token>` cuando haya token.
-- `core/guards/auth.guard.ts`: conectado a las rutas del panel. Hoy deja pasar siempre.
+- `auth.store.ts`: el estado con signals y su copia en `localStorage` (`routly.session`). No llama a la API ni navega.
+- `auth.service.ts`: login, registro, logout y validación del token. No toca la interfaz.
+- `session.service.ts`: lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
+- `auth.interceptor.ts`: añade `Authorization: Bearer <token>` solo a la API y no envía un token caducado.
+- `auth.guard.ts`: conectado a las rutas del panel. Sigue dejando pasar hasta que exista la página de login.
 
 ### Rendimiento
 

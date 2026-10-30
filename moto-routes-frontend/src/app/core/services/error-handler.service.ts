@@ -38,7 +38,8 @@ const GLOBAL_TITLES: Partial<Record<ApiErrorType, string>> = {
  * - Red, tiempo de espera y 5xx: diálogo de SweetAlert2.
  * - 404: aviso breve y vuelta al listado.
  * - 400, 422 y 409: en línea si el llamante lo pide; si no, aviso breve.
- * - 401 y 403: aviso breve, salvo en la carga de una página (lo explica su recuadro).
+ * - 401 y 403: aviso breve, salvo en la carga de una página (lo explica su recuadro) o si
+ *   la API ha rechazado el token (ya avisa SessionService al cerrar la sesión).
  */
 @Injectable({ providedIn: 'root' })
 export class ErrorHandlerService {
@@ -75,7 +76,7 @@ export class ErrorHandlerService {
           if (!options.inline) {
             void this.notifications.errorToast(options.conflictMessage ?? apiError.message);
           }
-        } else if (!(options.pageLoad && apiError.isAccessDenied)) {
+        } else if (!(options.pageLoad && apiError.isAccessDenied) && !apiError.isSessionRejected) {
           void this.notifications.errorToast(apiError.message);
         }
         break;

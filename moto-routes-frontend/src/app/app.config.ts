@@ -1,6 +1,8 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
@@ -12,7 +14,9 @@ import {
 } from '@angular/router';
 
 import { routes } from './app.routes';
-import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { authInterceptor } from './auth/auth.interceptor';
+import { AuthService } from './auth/auth.service';
+import { SessionService } from './auth/session.service';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { timeoutInterceptor } from './core/interceptors/timeout.interceptor';
 import { PageTitleStrategy } from './core/services/page-title.strategy';
@@ -34,5 +38,10 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([errorInterceptor, timeoutInterceptor, authInterceptor]),
     ),
     { provide: TitleStrategy, useExisting: PageTitleStrategy },
+    // La sesión se valida antes de la primera navegación: así los guards ya conocen el rol.
+    provideAppInitializer(() => {
+      inject(SessionService);
+      return inject(AuthService).loadSession();
+    }),
   ],
 };

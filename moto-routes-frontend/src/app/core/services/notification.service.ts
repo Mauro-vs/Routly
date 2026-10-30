@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import type Swal from 'sweetalert2';
 import type { SweetAlertIcon, SweetAlertOptions } from 'sweetalert2';
+
+import { SessionResetService } from './session-reset.service';
 
 interface ConfirmOptions {
   title: string;
@@ -33,6 +35,12 @@ const UNDO_TIME = 7000;
 export class NotificationService {
   // SweetAlert2 se descarga la primera vez que hace falta, no con el arranque.
   private library: Promise<typeof Swal> | null = null;
+  private swal: typeof Swal | null = null;
+
+  constructor() {
+    // Al cerrar sesión no puede quedar abierto nada que actúe con ella, como "Deshacer".
+    inject(SessionResetService).register(() => this.swal?.close());
+  }
 
   /** Aviso breve de que algo ha salido bien. */
   success(message: string): Promise<void> {
@@ -134,9 +142,10 @@ export class NotificationService {
   }
 
   private load(): Promise<typeof Swal> {
-    this.library ??= import('sweetalert2/dist/sweetalert2.esm.all.js').then(
-      (module) => module.default,
-    );
+    this.library ??= import('sweetalert2/dist/sweetalert2.esm.all.js').then((module) => {
+      this.swal = module.default;
+      return module.default;
+    });
     return this.library;
   }
 }

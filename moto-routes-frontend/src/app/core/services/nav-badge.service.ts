@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+
+import { SessionResetService } from './session-reset.service';
 
 /**
  * Contadores que se muestran junto a cada sección del menú.
@@ -8,6 +10,10 @@ import { Injectable, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class NavBadgeService {
   private readonly counts = signal<Readonly<Record<string, number>>>({});
+
+  constructor() {
+    inject(SessionResetService).register(() => this.counts.set({}));
+  }
 
   count(sectionId: string): number | null {
     return this.counts()[sectionId] ?? null;
