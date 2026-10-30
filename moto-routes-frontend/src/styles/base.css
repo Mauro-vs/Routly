@@ -35,6 +35,8 @@ body {
   -webkit-font-smoothing: antialiased;
   caret-color: var(--color-primary);
   accent-color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
 ::selection {
@@ -58,9 +60,9 @@ dd {
 
 h1 {
   font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
   text-wrap: balance;
 }
 
@@ -120,20 +122,6 @@ img.is-broken {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
-}
-
-/* Cada página entra con un leve desplazamiento. El selector apunta al componente
-   que el router coloca justo después de <router-outlet>. */
-main > router-outlet + * {
-  display: block;
-  animation: page-enter var(--motion-slow) var(--motion-ease);
-}
-
-@keyframes page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
 }
 
 @keyframes spin {

@@ -26,8 +26,6 @@ import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { BrandMarkComponent } from '../../../shared/components/brand-mark/brand-mark.component';
 import { COLLECTION_IDS, NAV_GROUPS, NAV_HOME, findSection } from '../navigation';
 
-/** Alto de la marca de la sección activa (como en el CSS). */
-const INDICATOR_HEIGHT = 18;
 const COLLAPSED_KEY = 'routly.nav.collapsed';
 
 /** Los grupos plegados de la última visita. Sin almacenamiento, ninguno. */
@@ -103,6 +101,8 @@ export class SidebarComponent {
   private readonly navContent = viewChild.required<ElementRef<HTMLElement>>('navContent');
   /** Posición vertical de la marca de la sección activa; null si no se ve. */
   protected readonly indicatorY = signal<number | null>(null);
+  /** Su alto: el del enlace activo, que crece en pantallas táctiles. */
+  protected readonly indicatorHeight = signal(38);
   /** La primera colocación no se anima: la marca aparece ya en su sitio. */
   protected readonly indicatorReady = signal(false);
 
@@ -170,7 +170,8 @@ export class SidebarComponent {
       this.indicatorY.set(null);
       return;
     }
-    this.indicatorY.set(active.offsetTop + (active.offsetHeight - INDICATOR_HEIGHT) / 2);
+    this.indicatorY.set(active.offsetTop);
+    this.indicatorHeight.set(active.offsetHeight);
     if (!this.indicatorReady()) requestAnimationFrame(() => this.indicatorReady.set(true));
   }
 

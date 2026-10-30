@@ -26,7 +26,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       justify-content: space-between;
       flex-wrap: wrap;
       gap: var(--space-4);
-      margin-bottom: 20px;
+      margin-block-end: 20px;
     }
 
     .head__text {
@@ -38,7 +38,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     }
 
     p {
-      margin-top: 4px;
+      margin-top: 6px;
+      font-size: var(--text-sm);
       color: var(--color-text-muted);
     }
 
@@ -59,6 +60,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       }
     }
   `,
+  host: { class: 'on-band band' },
 })
 export class PageHeaderComponent {
   readonly title = input.required<string>();

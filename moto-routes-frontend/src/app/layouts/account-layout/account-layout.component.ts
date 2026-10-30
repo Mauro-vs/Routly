@@ -4,14 +4,22 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SessionService } from '../../auth/session.service';
 import { BrandMarkComponent } from '../../shared/components/brand-mark/brand-mark.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
+import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
 
 /** Armazón de la zona de cada usuario, sin el panel: su perfil y su garaje. */
 @Component({
   selector: 'app-account-layout',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, BrandMarkComponent, IconComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    BrandMarkComponent,
+    IconComponent,
+    ThemeToggleComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="bar">
+    <header class="bar on-band">
       <a routerLink="/profile" aria-label="Routly, ir a mi perfil"><ui-brand-mark /></a>
       <nav aria-label="Mi cuenta">
         <a
@@ -23,6 +31,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
         >Mi perfil</a>
         <a class="link" routerLink="/profile/garage" routerLinkActive="is-active" ariaCurrentWhenActive="page">Mi garaje</a>
       </nav>
+      <ui-theme-toggle />
       <button type="button" class="icon-btn" aria-label="Cerrar sesión" title="Cerrar sesión" (click)="logout()">
         <ui-icon name="sign-out" />
       </button>
@@ -43,8 +52,6 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
       gap: var(--space-4);
       min-height: var(--layout-topbar);
       padding: var(--space-2) var(--space-5);
-      background: var(--color-sidebar);
-      color: var(--color-on-sidebar);
     }
 
     nav {
@@ -54,17 +61,9 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
       min-width: 0;
     }
 
-    nav .link {
-      color: var(--color-on-sidebar);
-    }
-
     nav .link.is-active {
-      font-weight: 600;
+      font-weight: 700;
       color: var(--color-accent);
-    }
-
-    .icon-btn {
-      color: var(--color-on-sidebar);
     }
 
     .content {

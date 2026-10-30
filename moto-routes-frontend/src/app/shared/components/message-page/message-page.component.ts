@@ -34,6 +34,12 @@ import { IconName } from '../icon/icons.generated';
       </ui-empty-state>
     </div>
   `,
+  styles: `
+    :host {
+      display: block;
+      padding-top: var(--space-5);
+    }
+  `,
 })
 export class MessagePageComponent {
   readonly heading = input.required<string>();

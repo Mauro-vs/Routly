@@ -23,35 +23,31 @@
     [mutedWhen]="isInactive"
     [loading]="showSkeleton()"
   >
-    <ng-template uiCell="title" [uiCellOf]="pager.items()" let-route>
-      <span class="cell-media">
-        <span class="thumb" aria-hidden="true">
-          @if (route.coverImage; as cover) {
-            <!-- las primeras portadas se ven nada más entrar: sin carga diferida -->
-            <img [src]="cover.url" alt="" decoding="async" width="40" height="40" />
-          } @else {
-            <ui-icon name="path" />
-          }
-        </span>
-        <a class="link cell-title" [routerLink]="['/routes', route.slug]" [title]="route.title">{{ route.title }}</a>
+    <ng-template uiCell="distance" [uiCellOf]="pager.items()" let-route>
+      <span class="mark">
+        <b class="slanted">{{ number(route.distance) }}</b>
+        <span>km · {{ number(route.duration) }} h</span>
       </span>
     </ng-template>
-    <ng-template uiCell="trip" [uiCellOf]="pager.items()" let-route>
-      <span class="trip">
-        <ui-relation-link
-          gender="f"
-          [label]="route.startLocation?.city ?? null"
-          [path]="route.startLocation ? ['/locations', route.startLocation.slug] : null"
-        />
-        <span class="muted">a</span>
-        <ui-relation-link
-          gender="f"
-          [label]="route.endLocation?.city ?? null"
-          [path]="route.endLocation ? ['/locations', route.endLocation.slug] : null"
-        />
-      </span>
-      <span class="cell-sub num">
-        {{ number(route.distance) }}&nbsp;km · {{ number(route.duration) }}&nbsp;h
+    <ng-template uiCell="title" [uiCellOf]="pager.items()" let-route>
+      <span class="cell-media">
+        <ui-route-glyph [difficulty]="route.difficulty" />
+        <span class="route">
+          <a class="link cell-title" [routerLink]="['/routes', route.slug]" [title]="route.title">{{ route.title }}</a>
+          <span class="trip">
+            <ui-relation-link
+              gender="f"
+              [label]="route.startLocation?.city ?? null"
+              [path]="route.startLocation ? ['/locations', route.startLocation.slug] : null"
+            />
+            <ui-icon name="arrow-right" />
+            <ui-relation-link
+              gender="f"
+              [label]="route.endLocation?.city ?? null"
+              [path]="route.endLocation ? ['/locations', route.endLocation.slug] : null"
+            />
+          </span>
+        </span>
       </span>
     </ng-template>
     <ng-template uiCell="category" [uiCellOf]="pager.items()" let-route>
@@ -62,9 +58,7 @@
       />
     </ng-template>
     <ng-template uiCell="difficulty" [uiCellOf]="pager.items()" let-route>
-      <span class="badge" [class]="difficultyBadges[route.difficulty]">
-        {{ difficultyLabels[route.difficulty] }}
-      </span>
+      <ui-level-meter [difficulty]="route.difficulty" />
     </ng-template>
     <ng-template uiCell="status" [uiCellOf]="pager.items()" let-route>
       <ui-status-toggle

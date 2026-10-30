@@ -35,24 +35,15 @@ describe('DataTableComponent', () => {
     return fixture;
   }
 
-  it('cada fila entra con su retraso escalonado, con un tope para listas largas', async () => {
-    const fixture = await render(rows(10));
-    const delays = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('tbody tr.row'),
-    ).map((tr) => tr.style.getPropertyValue('--row'));
-
-    expect(delays).toEqual(['0', '1', '2', '3', '4', '5', '6', '7', '8', '8']);
-  });
-
-  it('al filtrar, las filas que siguen no se vuelven a crear (y no se animan otra vez)', async () => {
+  it('al filtrar, las filas que siguen no se vuelven a crear', async () => {
     const fixture = await render(rows(3));
     const element: HTMLElement = fixture.nativeElement;
-    const before = element.querySelectorAll('tbody tr.row')[1];
+    const before = element.querySelectorAll('tbody tr')[1];
 
     fixture.componentInstance.rows.set(rows(2, 1));
     await fixture.whenStable();
 
-    expect(element.querySelectorAll('tbody tr.row')[0]).toBe(before);
-    expect(element.querySelectorAll('tbody tr.row').length).toBe(2);
+    expect(element.querySelectorAll('tbody tr')[0]).toBe(before);
+    expect(element.querySelectorAll('tbody tr').length).toBe(2);
   });
 });

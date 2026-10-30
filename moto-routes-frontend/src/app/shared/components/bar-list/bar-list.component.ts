@@ -42,18 +42,11 @@ export interface BarItem {
 
     .bar {
       display: grid;
-      grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 2.5rem;
+      grid-template-columns: minmax(0, 6rem) minmax(0, 1fr) 1.5rem;
       align-items: center;
       gap: 12px;
-      min-height: 32px;
-      padding: 0 6px;
-      border-radius: var(--radius-sm);
+      min-height: 30px;
       font-size: var(--text-sm);
-      transition: background var(--motion-fast) var(--motion-ease);
-    }
-
-    .bar:hover {
-      background: var(--color-surface-2);
     }
 
     .name {
@@ -62,19 +55,21 @@ export interface BarItem {
       text-overflow: ellipsis;
     }
 
-    .track {
-      height: 10px;
-    }
-
-    /* barra fina, con el extremo de datos redondeado y recta en la base */
+    /* un medidor por tramos, como los de un cuadro de mandos */
+    .track,
     .fill {
       display: block;
-      height: 100%;
-      min-width: 3px;
-      border-radius: 0 4px 4px 0;
-      background: var(--color-chart-1);
-      transform-origin: left;
-      animation: grow var(--motion-base) var(--motion-ease) both;
+      height: 8px;
+      background: repeating-linear-gradient(90deg, var(--meter-color) 0 11px, transparent 11px 13px);
+    }
+
+    .track {
+      --meter-color: var(--color-meter-track);
+    }
+
+    .fill {
+      --meter-color: var(--color-meter);
+      min-width: 11px;
     }
 
     .value {
@@ -89,17 +84,6 @@ export interface BarItem {
       color: var(--color-text-muted);
     }
 
-    @keyframes grow {
-      from {
-        transform: scaleX(0);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .fill {
-        animation: none;
-      }
-    }
   `,
 })
 export class BarListComponent {

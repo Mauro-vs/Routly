@@ -50,42 +50,35 @@ export interface SegmentOption<T> {
 
     .seg {
       display: inline-flex;
-      gap: 2px;
+      gap: var(--space-1);
       max-width: 100%;
-      padding: 3px;
-      border-radius: var(--radius-md);
-      background: var(--color-surface-2);
     }
 
     button {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      height: 32px;
-      padding: 0 12px;
+      height: 34px;
+      padding: 0 10px;
       border: 0;
-      border-radius: 7px;
       background: transparent;
       color: var(--color-text-muted);
       font-size: var(--text-sm);
       font-weight: 500;
       white-space: nowrap;
       cursor: pointer;
-      transition:
-        background var(--motion-fast) var(--motion-ease),
-        color var(--motion-fast) var(--motion-ease);
+      transition: color var(--motion-fast) ease;
     }
 
     button:hover {
       color: var(--color-text);
     }
 
+    /* la opción elegida se subraya en el color de las barras */
     button[aria-pressed='true'] {
-      background: var(--color-surface);
       color: var(--color-text);
-      box-shadow:
-        var(--shadow-1),
-        inset 0 0 0 1px var(--color-border);
+      font-weight: 650;
+      box-shadow: inset 0 -3px 0 var(--color-primary);
     }
 
     ui-icon {

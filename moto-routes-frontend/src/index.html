@@ -7,8 +7,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Panel de administración de Routly, rutas en moto." />
     <!-- el color de la barra superior, que es lo que queda pegado al borde del navegador -->
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#0c2419" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- antes de pintar: si no, cada carga parpadearía en claro. Ver ThemeService. -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem('routly.theme');
+        } catch (error) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

@@ -3,50 +3,50 @@ import { RouterLink } from '@angular/router';
 
 import { Route, routeTrip } from '../../../../core/models/route.model';
 import { BarListComponent } from '../../../../shared/components/bar-list/bar-list.component';
-import {
-  ChartSeries,
-  ColumnChartComponent,
-} from '../../../../shared/components/column-chart/column-chart.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { LevelMeterComponent } from '../../../../shared/components/level-meter/level-meter.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { RouteGlyphComponent } from '../../../../shared/components/route-glyph/route-glyph.component';
 import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton.component';
 import {
   StatItem,
   StatStripComponent,
 } from '../../../../shared/components/stat-strip/stat-strip.component';
-import { formatMoney, formatNumber, formatRelativeTime } from '../../../../shared/utils/format';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
+import { formatMoney, formatNumber } from '../../../../shared/utils/format';
 import { DashboardStore } from '../../services/dashboard.store';
 
-/** Los estados de una salida, en el orden fijo de los colores de las gráficas. */
-const DEPARTURE_SERIES: readonly ChartSeries[] = [
-  { key: 'scheduled', label: 'Programadas', singular: 'programada', color: '--color-chart-1' },
-  { key: 'completed', label: 'Realizadas', singular: 'realizada', color: '--color-chart-2' },
-  { key: 'cancelled', label: 'Canceladas', singular: 'cancelada', color: '--color-chart-3' },
-];
+const DAY = 24 * 60 * 60 * 1000;
 
-const dayFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric' });
-const monthFormat = new Intl.DateTimeFormat('es-ES', { month: 'short' });
+const shortDateFormat = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 const timeFormat = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
 
 /**
- * Dashboard: las cifras del catálogo y de las salidas, y su reparto. Todo sale de los
- * listados de la API (no hay un endpoint de estadísticas): ni tendencias ni
- * comparativas con periodos anteriores, porque la API no guarda histórico.
+ * Dashboard: lo primero es cuánto falta para la próxima salida; después, la agenda y las
+ * cifras del catálogo. Todo sale de los listados de la API (no hay un endpoint de
+ * estadísticas): ni tendencias ni comparativas, porque la API no guarda histórico.
  */
 @Component({
   selector: 'app-dashboard',
   imports: [
     RouterLink,
     BarListComponent,
-    ColumnChartComponent,
     EmptyStateComponent,
     ErrorStateComponent,
     IconComponent,
+    LevelMeterComponent,
     PageHeaderComponent,
+    RouteGlyphComponent,
     SkeletonComponent,
     StatStripComponent,
+    StatusBadgeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
@@ -54,7 +54,8 @@ const timeFormat = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '
 })
 export class DashboardComponent {
   protected readonly store = inject(DashboardStore);
-  protected readonly departureSeries = DEPARTURE_SERIES;
+  protected readonly number = formatNumber;
+  protected readonly money = formatMoney;
 
   protected readonly showSkeleton = computed(() => this.store.loading() && !this.store.loaded());
   /** El error de la carga (o null): el recuadro de error cuenta el motivo. */
@@ -64,37 +65,33 @@ export class DashboardComponent {
 
   protected readonly subtitle = computed(() =>
     this.store.loaded()
-      ? `Rutas y salidas de un vistazo. Datos de las ${timeFormat.format(this.store.loadedAt())}.`
+      ? `Datos de las ${timeFormat.format(this.store.loadedAt())}.`
       : 'Rutas y salidas de un vistazo.',
+  );
+
+  protected readonly nextDeparture = computed(() => this.store.nextDepartures()[0] ?? null);
+
+  protected readonly months = computed(() =>
+    this.store.byMonth().map(({ label, fullLabel, values }) => ({
+      label,
+      fullLabel,
+      total: values.scheduled + values.completed + values.cancelled,
+    })),
   );
 
   protected readonly stats = computed<StatItem[]>(() => {
     const price = this.store.averagePrice();
-    const upcoming = this.store.upcoming().length;
+    const total = this.store.total();
     return [
+      { label: `en ${total} rutas`, value: formatNumber(this.store.totalDistance()), unit: 'km' },
       {
-        label: 'Kilómetros en catálogo',
-        value: formatNumber(this.store.totalDistance()),
-        unit: 'km',
-        note: `En ${this.store.total()} rutas`,
-      },
-      {
-        label: 'Rutas activas',
+        label: 'rutas activas',
         value: String(this.store.active()),
-        unit: `de ${this.store.total()}`,
-        note: 'Visibles en el catálogo',
+        unit: `de ${total}`,
+        share: total > 0 ? this.store.active() / total : 0,
       },
-      { label: 'Próximas salidas', value: String(upcoming), note: 'Programadas desde hoy' },
-      {
-        label: 'Plazas ofertadas',
-        value: formatNumber(this.store.upcomingSeats()),
-        note: 'En las próximas salidas',
-      },
-      {
-        label: 'Precio medio',
-        value: price === null ? '–' : formatMoney(price),
-        note: 'Por persona, próximas salidas',
-      },
+      { label: 'plazas ofertadas', value: formatNumber(this.store.upcomingSeats()) },
+      { label: 'precio medio', value: price === null ? '–' : formatMoney(price) },
     ];
   });
 
@@ -106,27 +103,24 @@ export class DashboardComponent {
     void this.store.load();
   }
 
-  protected summary(route: Route): string {
-    return `${routeTrip(route).text}, ${formatNumber(route.distance)} km`;
+  protected trip(route: Route): string {
+    return routeTrip(route).text;
   }
 
-  protected updated(route: Route): string {
-    return formatRelativeTime(route.updatedAt);
+  /** Días que faltan, contados desde la última carga, como las cifras de la página. */
+  protected daysUntil(iso: string): number {
+    return Math.max(0, Math.ceil((Date.parse(iso) - this.store.loadedAt().getTime()) / DAY));
   }
 
-  protected day(iso: string): string {
-    return dayFormat.format(new Date(iso));
+  protected shortDate(iso: string): string {
+    return shortDateFormat.format(new Date(iso)).replace('.', '');
   }
 
-  protected month(iso: string): string {
-    return monthFormat.format(new Date(iso)).replace('.', '');
+  protected dateTime(iso: string): string {
+    return this.shortDate(iso);
   }
 
-  protected time(iso: string): string {
-    return timeFormat.format(new Date(iso));
-  }
-
-  protected money(value: number): string {
-    return formatMoney(value);
+  protected seats(capacity: number): string {
+    return `${capacity} ${capacity === 1 ? 'plaza' : 'plazas'}`;
   }
 }

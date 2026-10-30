@@ -49,7 +49,7 @@ export interface DetailIdentifier {
         <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
       </div>
     } @else if (record(); as record) {
-      <header class="head">
+      <header class="head on-band band">
         @if (thumbnail(); as thumbnail) {
           <img class="head__thumb" [src]="thumbnail" alt="" width="56" height="56" />
         }

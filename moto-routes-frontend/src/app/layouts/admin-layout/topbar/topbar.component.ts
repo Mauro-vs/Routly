@@ -15,6 +15,7 @@ import { filter, map } from 'rxjs';
 import { SessionService } from '../../../auth/session.service';
 import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
+import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
 import { NavAction, findSection } from '../navigation';
 
 interface Crumb {
@@ -31,10 +32,11 @@ interface CurrentPage {
 /** Barra superior: botón del menú en móvil, migas y la acción de crear de la sección. */
 @Component({
   selector: 'app-topbar',
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, ThemeToggleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './topbar.component.html',
   styleUrl: './topbar.component.css',
+  host: { class: 'on-band' },
 })
 export class TopbarComponent {
   /** En pantallas estrechas se muestra el botón que abre el sidebar. */
@@ -68,11 +70,11 @@ export class TopbarComponent {
       : [{ label: section.label }];
   });
 
-  /** Crear en la sección actual. Las que no crean nada (el resumen) no lo muestran. */
+  /** Crear desde el listado de la sección: dentro de un registro competiría con sus acciones. */
   protected readonly createAction = computed<NavAction | null>(() => {
     const { url } = this.page();
-    const action = findSection(url)?.create ?? null;
-    return action && action.path !== url ? action : null;
+    const section = findSection(url);
+    return section && section.path === url ? (section.create ?? null) : null;
   });
 
   protected logout(): void {

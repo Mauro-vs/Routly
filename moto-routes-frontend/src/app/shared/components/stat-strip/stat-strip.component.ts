@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export interface StatItem {
   label: string;
+  /** Parte del total, de 0 a 1: añade un medidor por tramos. */
+  share?: number;
   /** Ya formateado: "860", "4". */
   value: string;
   /** Unidad o contexto pegado a la cifra: "km", "de 5". */
@@ -34,6 +36,9 @@ export interface StatItem {
           @if (item.note) {
             <dd class="note">{{ item.note }}</dd>
           }
+          @if (item.share !== undefined) {
+            <dd class="meter" aria-hidden="true"><i [style.width.%]="item.share * 100"></i></dd>
+          }
         </div>
       }
     </dl>
@@ -41,31 +46,24 @@ export interface StatItem {
   styles: `
     .strip {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       margin: 0;
-      border-radius: var(--radius-lg);
-      background: var(--color-surface);
-      box-shadow:
-        inset 0 0 0 1px var(--color-border),
-        var(--shadow-1);
-      overflow: hidden;
     }
 
     .stat {
       display: grid;
-      align-content: start;
-      gap: 6px;
-      padding: 16px 20px 18px;
-      /* línea fina entre cifras, también cuando la rejilla salta de fila */
-      box-shadow:
-        -1px 0 0 var(--color-border),
-        0 -1px 0 var(--color-border);
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 2px var(--space-3);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--color-border);
     }
 
     dt {
+      grid-column: 2;
+      grid-row: 1;
       font-size: var(--text-xs);
-      font-weight: 500;
       color: var(--color-text-muted);
+      text-align: right;
     }
 
     dd {
@@ -76,8 +74,8 @@ export interface StatItem {
     }
 
     .value {
-      font-size: 1.75rem;
-      font-weight: 650;
+      font-size: 1.625rem;
+      font-weight: 800;
       line-height: 1.1;
       letter-spacing: -0.02em;
     }
@@ -88,19 +86,23 @@ export interface StatItem {
     }
 
     .note {
+      grid-column: 1 / -1;
       font-size: var(--text-xs);
       color: var(--color-text-muted);
     }
 
-    /* En dos columnas, una cifra suelta al final ocupa la fila entera: sin huecos. */
-    @media (max-width: 560px) {
-      .strip {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+    .meter {
+      grid-column: 1 / -1;
+      display: block;
+      height: 8px;
+      margin-top: 4px;
+      background: repeating-linear-gradient(90deg, var(--color-meter-track) 0 11px, transparent 11px 13px);
+    }
 
-      .stat:last-child:nth-child(odd) {
-        grid-column: 1 / -1;
-      }
+    .meter i {
+      display: block;
+      height: 100%;
+      background: repeating-linear-gradient(90deg, var(--color-meter) 0 11px, transparent 11px 13px);
     }
   `,
 })

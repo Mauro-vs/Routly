@@ -58,7 +58,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       border-radius: var(--radius-pill);
       background: var(--color-border-strong);
       cursor: pointer;
-      transition: background var(--motion-base) var(--motion-ease);
+      transition: background var(--motion-base) ease;
     }
 
     /* amplía la zona pulsable sin cambiar el tamaño visible */
@@ -75,8 +75,8 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+      background: var(--color-on-primary);
+      box-shadow: var(--shadow-1);
       transition:
         transform var(--motion-base) var(--motion-ease),
         width var(--motion-fast) var(--motion-ease);

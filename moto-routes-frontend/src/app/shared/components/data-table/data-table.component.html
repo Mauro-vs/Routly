@@ -25,8 +25,8 @@
         </tr>
       }
     } @else {
-      @for (row of rows(); track rowKey()(row); let index = $index) {
-        <tr class="row" [class.is-muted]="mutedWhen()(row)" [style.--row]="index < 8 ? index : 8">
+      @for (row of rows(); track rowKey()(row)) {
+        <tr [class.is-muted]="mutedWhen()(row)">
           @for (column of columns(); track column.key; let first = $first) {
             <td
               [class.is-end]="column.align === 'end'"

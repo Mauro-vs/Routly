@@ -45,7 +45,7 @@ let nextId = 0;
     svg {
       display: block;
       width: auto;
-      height: 32px;
+      height: var(--brand-height, 32px);
     }
   `,
   host: { 'aria-hidden': 'true' },

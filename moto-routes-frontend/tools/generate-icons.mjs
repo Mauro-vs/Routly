@@ -25,6 +25,7 @@ const ICONS = [
   'caret-left',
   'caret-right',
   'arrow-left',
+  'arrow-right',
   'arrow-up-right',
   'book-open',
   // acciones
@@ -53,6 +54,8 @@ const ICONS = [
   'wifi-slash',
   'prohibit',
   'sign-out',
+  'sun',
+  'moon',
 ];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

@@ -21,11 +21,12 @@
     class="nav__indicator"
     aria-hidden="true"
     [style.opacity]="indicatorY() === null ? 0 : 1"
+    [style.height.px]="indicatorHeight()"
     [class.is-ready]="indicatorReady()"
     [style.transform]="'translateY(' + (indicatorY() ?? 0) + 'px)'"
   ></span>
 
-  <div #navContent>
+  <div class="nav__content" #navContent>
     <ul>
       <ng-container *ngTemplateOutlet="entry; context: { $implicit: home }" />
     </ul>

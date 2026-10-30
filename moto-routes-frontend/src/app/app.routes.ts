@@ -38,14 +38,8 @@ export const routes: Routes = [
     path: 'register',
     title: 'Crear cuenta',
     canActivate: [guestGuard],
-    loadComponent: messagePage,
-    data: {
-      heading: 'Crear cuenta',
-      description: 'El registro todavía no está disponible.',
-      icon: 'user-circle',
-      actionPath: '/login',
-      actionLabel: 'Ir a iniciar sesión',
-    },
+    loadComponent: () =>
+      import('./features/auth/pages/register/register.component').then((m) => m.RegisterComponent),
   },
   {
     path: 'profile',

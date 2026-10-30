@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { AuthService } from '../../../../auth/auth.service';
 import { ApiError } from '../../../../core/models/api-error.model';
@@ -9,7 +9,7 @@ import { LoginComponent } from './login.component';
 describe('LoginComponent', () => {
   let fixture: ComponentFixture<LoginComponent>;
   let auth: jasmine.SpyObj<AuthService>;
-  let router: jasmine.SpyObj<Router>;
+  let navigateByUrl: jasmine.Spy;
   let element: HTMLElement;
 
   const input = (name: string): HTMLInputElement =>
@@ -29,17 +29,16 @@ describe('LoginComponent', () => {
   beforeEach(async () => {
     auth = jasmine.createSpyObj<AuthService>('auth', ['login']);
     auth.login.and.resolveTo();
-    router = jasmine.createSpyObj<Router>('router', ['navigateByUrl']);
-    router.navigateByUrl.and.resolveTo(true);
 
     TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
         { provide: AuthService, useValue: auth },
-        { provide: Router, useValue: router },
       ],
     });
+    navigateByUrl = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
     fixture = TestBed.createComponent(LoginComponent);
     element = fixture.nativeElement;
     await fixture.whenStable();
@@ -62,7 +61,7 @@ describe('LoginComponent', () => {
     await submit();
 
     expect(auth.login).toHaveBeenCalledOnceWith({ email: 'ana@routly.dev', password: 'clave-1234' });
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/');
+    expect(navigateByUrl).toHaveBeenCalledOnceWith('/');
   });
 
   it('vuelve a returnUrl si es interna, y nunca a otra web', async () => {
@@ -70,12 +69,12 @@ describe('LoginComponent', () => {
     type('email', 'ana@routly.dev');
     type('password', 'clave-1234');
     await submit();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/routes?pagina=2');
+    expect(navigateByUrl).toHaveBeenCalledOnceWith('/routes?pagina=2');
 
-    router.navigateByUrl.calls.reset();
+    navigateByUrl.calls.reset();
     fixture.componentRef.setInput('returnUrl', '//otra.com');
     await submit();
-    expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/');
+    expect(navigateByUrl).toHaveBeenCalledOnceWith('/');
   });
 
   it('un error de la API se cuenta en una zona role="alert", y se puede reintentar', async () => {
@@ -88,8 +87,21 @@ describe('LoginComponent', () => {
     await submit();
 
     expect(element.querySelector('[role="alert"]')?.textContent).toContain('no son correctos');
-    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(navigateByUrl).not.toHaveBeenCalled();
     expect(element.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBeFalse();
+  });
+
+  it('deja ver la contraseña y volver a ocultarla', async () => {
+    const reveal = element.querySelector<HTMLButtonElement>('button[aria-pressed]');
+
+    expect(input('password').type).toBe('password');
+    reveal?.click();
+    await fixture.whenStable();
+    expect(input('password').type).toBe('text');
+    expect(reveal?.getAttribute('aria-label')).toBe('Ocultar la contraseña');
+    reveal?.click();
+    await fixture.whenStable();
+    expect(input('password').type).toBe('password');
   });
 
   it('sin dobles envíos mientras espera la respuesta', async () => {

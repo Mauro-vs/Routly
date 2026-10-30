@@ -36,14 +36,14 @@
   display: none;
 }
 
+/* El margen lateral del contenido: las bandas lo rompen para llegar de lado a lado. */
 .app__content {
+  --gutter: max(24px, calc((100vw - var(--layout-sidebar) - var(--layout-content)) / 2));
   min-width: 0;
 }
 
 main {
-  max-width: var(--layout-content);
-  margin: 0 auto;
-  padding: 28px 24px 56px;
+  padding: 0 var(--gutter) 56px;
   outline: none;
 }
 
@@ -93,13 +93,16 @@ main {
     height: 100%;
     padding: 0;
     border: 0;
-    background: rgb(12 36 25 / 0.55);
+    background: rgb(7 16 11 / 0.6);
     animation: scrim-in var(--motion-base) var(--motion-ease);
   }
 
+  .app__content {
+    --gutter: 14px;
+  }
+
   main {
-    padding: 20px max(14px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom))
-      max(14px, env(safe-area-inset-left));
+    padding-bottom: max(48px, env(safe-area-inset-bottom));
   }
 }
 

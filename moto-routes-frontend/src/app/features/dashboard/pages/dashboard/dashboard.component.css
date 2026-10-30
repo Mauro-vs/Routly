@@ -1,198 +1,217 @@
-/* ---------- rejilla: cifras arriba, salidas en el centro y el catálogo debajo ---------- */
-.layout {
+.skeleton-hero {
+  margin-bottom: var(--space-5);
+}
+
+/* ---------- lo primero: cuánto falta para la próxima salida ---------- */
+.hero {
+  --glyph-size: 52px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: auto 52px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-2) 0 var(--space-4);
+  border-bottom: 2px solid var(--color-text);
 }
 
-.area-stats {
-  grid-column: 1 / -1;
-}
-
-.area-months {
-  grid-column: span 2;
-}
-
-.panel {
-  display: grid;
-  align-content: start;
-  gap: var(--space-4);
-  padding: 18px 20px 20px;
-  min-width: 0;
-}
-
-.panel__head {
+.hero__count {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
+  align-items: flex-end;
+  gap: 12px;
 }
 
-.panel__head h2 {
-  font-size: var(--text-base);
-  font-weight: 600;
+.hero__number {
+  font-size: 5.5rem;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--color-primary);
 }
 
-.panel__head span,
-.panel__head a {
-  font-size: var(--text-xs);
+.hero__count span:last-child {
+  max-width: 8.5em;
+  padding-bottom: 4px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.25;
   color: var(--color-text-muted);
 }
 
-.panel__head a {
-  font-weight: 500;
-  color: var(--color-primary);
-  text-decoration: none;
+.hero__text {
+  min-width: 0;
 }
 
-.panel__head a:hover {
-  text-decoration: underline;
+.hero h2 {
+  font-size: var(--text-xl);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.hero h2 a {
+  font-weight: inherit;
+}
+
+.hero p:not(.hero__count) {
+  margin-top: 2px;
+  color: var(--color-text-muted);
 }
 
 .quiet {
+  padding-block: var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
-.others {
-  margin: 12px 0 0;
+/* ---------- la hoja: dos columnas, sin tarjetas ---------- */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
 }
 
-.others a {
-  white-space: nowrap;
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-text);
 }
 
-/* ---------- próximas salidas: agenda ---------- */
-.agenda {
+.sheet-head h2 {
+  font-size: var(--text-sm);
+  font-weight: 750;
+}
+
+.sheet-head a {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.sheet-head a:hover {
+  color: var(--color-text);
+}
+
+/* ---------- filas de hoja de ruta: la marca delante, como un roadbook ---------- */
+.road {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.road li {
+  display: grid;
+  grid-template-columns: 88px 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 60px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.road__mark {
   display: grid;
   gap: 2px;
-  margin: 0;
+}
+
+.road__mark b {
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+.road__mark time,
+.road__mark span {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.road__text {
+  display: grid;
+  min-width: 0;
+}
+
+.road__text a {
+  overflow: hidden;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.road__text small {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.road li.is-off {
+  color: var(--color-text-muted);
+}
+
+/* ---------- salidas por mes ---------- */
+.months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  margin: var(--space-3) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.agenda li {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  margin: 0 -8px;
-  border-radius: var(--radius-md);
-  transition: background var(--motion-fast) var(--motion-ease);
-}
-
-.agenda li:hover {
-  background: var(--color-surface-2);
-}
-
-.agenda__date {
+.months li {
   display: grid;
   justify-items: center;
-  padding: 6px 0 5px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-hover);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.1;
-  text-transform: uppercase;
+  padding: 8px 2px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 11.5px;
 }
 
-.agenda__date b {
+.months b {
   font-size: var(--text-lg);
-  font-weight: 650;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
-.agenda__text {
-  min-width: 0;
+.months li.has-departures {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
-.agenda__text a,
-.recent a {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.agenda__text a:hover,
-.recent a:hover {
-  text-decoration: underline;
-}
-
-.agenda__text small,
-.recent small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-/* ---------- últimas rutas modificadas ---------- */
-.recent {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.recent li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.recent li:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.recent li:last-child {
-  padding-bottom: 0;
-}
-
-.recent__text {
-  min-width: 0;
-}
-
-.is-inactive a {
-  color: var(--color-text-muted);
-}
-
-.recent time {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-/* ---------- pantallas más estrechas ---------- */
 @media (max-width: 1080px) {
-  .layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .area-months {
-    grid-column: 1 / -1;
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 }
 
-@media (max-width: 720px) {
-  .layout {
+@media (max-width: 560px) {
+  .hero {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
   }
 
-  .area-months {
-    grid-column: auto;
+  .hero ui-route-glyph {
+    display: none;
   }
 
-  .panel {
-    padding: 16px;
+  .hero__number {
+    font-size: 4.5rem;
+  }
+
+  .road li {
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+  }
+
+  .road ui-route-glyph {
+    display: none;
+  }
+
+  /* en móvil el nombre baja de línea: cortado, dos salidas distintas se parecerían */
+  .road__text a {
+    white-space: normal;
   }
 }

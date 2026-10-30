@@ -1,17 +1,27 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, inject, input, signal, Injector } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../../auth/auth.service';
-import { safeReturnUrl } from '../../../../auth/return-url';
+import { returnUrlParams, safeReturnUrl } from '../../../../auth/return-url';
 import { toApiError } from '../../../../core/utils/api-error.mapper';
-import { BrandMarkComponent } from '../../../../shared/components/brand-mark/brand-mark.component';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
+import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { controlErrorMessage } from '../../../../shared/utils/form-errors';
 import { email, notBlank } from '../../../../shared/utils/validators';
+import { AuthShellComponent } from '../../components/auth-shell/auth-shell.component';
 
 function createLoginForm() {
   return new FormGroup({
@@ -28,53 +38,62 @@ type LoginControl = keyof ReturnType<typeof createLoginForm>['controls'];
  */
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, BrandMarkComponent, FormFieldComponent, IconComponent, InputDirective],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthShellComponent,
+    FormFieldComponent,
+    IconComponent,
+    InputDirective,
+    PasswordRevealComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="login">
-      <div class="card panel login__panel">
-        <ui-brand-mark class="login__brand" />
-        <h1>Inicia sesión</h1>
+    <app-auth-shell>
+      <h1 class="slanted">Entra en Routly</h1>
 
-        @if (error(); as message) {
-          <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-        }
+      @if (error(); as message) {
+        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
+      }
 
-        <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
-            <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
-          </ui-form-field>
-          <ui-form-field label="Contraseña" [error]="errorOf('password')">
-            <input uiInput type="password" name="password" formControlName="password" autocomplete="current-password" />
-          </ui-form-field>
-          <button type="submit" class="btn btn--primary" [disabled]="submitting()">
-            {{ submitting() ? 'Entrando…' : 'Entrar' }}
-          </button>
-        </form>
-      </div>
-    </main>
+      <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
+          <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
+        </ui-form-field>
+        <ui-form-field label="Contraseña" [error]="errorOf('password')">
+          <ui-password-reveal>
+            <input #field uiInput type="password" name="password" formControlName="password" autocomplete="current-password" />
+          </ui-password-reveal>
+        </ui-form-field>
+        <button type="submit" class="btn btn--primary" [disabled]="submitting()">
+          @if (submitting()) {
+            <span class="spinner" aria-hidden="true"></span>Entrando…
+          } @else {
+            Entrar
+          }
+        </button>
+      </form>
+
+      <p class="switch">
+        ¿Aún no tienes cuenta?
+        <a routerLink="/register" [queryParams]="registerParams()">Crea una</a>
+      </p>
+    </app-auth-shell>
   `,
   styles: `
-    .login {
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      padding: var(--space-4);
+    .btn {
+      width: 100%;
+      height: 44px;
     }
 
-    .login__panel {
-      display: grid;
-      gap: var(--space-4);
-      width: min(100%, 400px);
+    .switch {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
     }
 
-    .login__brand {
+    .switch a {
+      font-weight: 650;
       color: var(--color-primary);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: var(--text-xl);
     }
   `,
 })
@@ -93,6 +112,11 @@ export class LoginComponent {
   private readonly submitted = signal(false);
   // Los formularios reactivos no son signals: este pulso avisa de cada cambio.
   private readonly changes = toSignal(this.form.events);
+
+  /** Quien se registra desde aquí vuelve también adonde quería ir. */
+  protected registerParams() {
+    return returnUrlParams(safeReturnUrl(this.returnUrl()));
+  }
 
   protected errorOf(name: LoginControl): string | null {
     this.changes();
