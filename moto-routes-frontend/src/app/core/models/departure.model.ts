@@ -1,3 +1,4 @@
+import { BikeSummary } from './bike.model';
 import { BaseEntity } from './entity.model';
 import { ExperienceSummary } from './experience.model';
 
@@ -20,6 +21,10 @@ export interface Departure extends BaseEntity {
    * cambia nunca, aunque cambie la fecha. El slug, en cambio, sí sigue a la fecha.
    */
   sku: string;
+  /** La moto propia de esta salida. Sin ella, hereda la de la experiencia. */
+  guideBikeId?: string | null;
+  /** La que lleva de verdad: la propia o la heredada. */
+  guideBike?: BikeSummary | null;
 }
 
 /** Cuerpo de `POST /api/departures`. En el PATCH no se puede cambiar `experienceId`. */
@@ -30,6 +35,7 @@ export interface DeparturePayload {
   capacity: number;
   price: number;
   state?: DepartureState;
+  guideBikeId?: string | null;
 }
 
 /** Los mismos límites que la API (DEPARTURE_LIMITS en departure.model.js). Euros por persona. */

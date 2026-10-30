@@ -113,7 +113,12 @@ export abstract class EntityFormPage<T extends BaseEntity, TPayload>
     );
     // El slug puede cambiar al editar (sale del nombre): se usa el que devuelve la API.
     this.leaving = true;
-    void this.router.navigate([this.listPath, result.data.slug]);
+    void this.router.navigate(this.pathAfterSaving(result.data.slug, !current));
+  }
+
+  /** Adónde ir tras guardar. Por defecto, al detalle del registro. */
+  protected pathAfterSaving(slug: string, _created: boolean): unknown[] {
+    return [this.listPath, slug];
   }
 
   /** La galería ha cambiado la imagen principal: se pone al día el registro. */

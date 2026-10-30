@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 
 import { EXPERIENCE_LEVEL_LABELS } from '../../../../core/models/profile.model';
 import { User } from '../../../../core/models/user.model';
+import { BikeCardComponent } from '../../../../shared/components/bike-card/bike-card.component';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
@@ -12,7 +13,13 @@ import { UsersStore } from '../../services/users.store';
 /** Detalle de un usuario (`/users/:slug`). La contraseña nunca llega de la API. */
 @Component({
   selector: 'app-user-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
+  imports: [
+    BikeCardComponent,
+    DetailPageComponent,
+    DetailSectionComponent,
+    FieldListComponent,
+    ImageGalleryComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -40,6 +47,13 @@ import { UsersStore } from '../../services/users.store';
       <ui-detail-section heading="Acceso" description="El rol decide lo que puede hacer en la plataforma.">
         <ui-field-list [columns]="2" [items]="access()" />
       </ui-detail-section>
+      <ui-detail-section heading="Garaje">
+        @for (bike of store.bikes.items(); track bike._id) {
+          <ui-bike-card class="bike" [bike]="bike" [link]="['/bikes', bike.slug]" />
+        } @empty {
+          <p class="muted">{{ store.bikes.loading() ? 'Cargando sus motos…' : 'No tiene motos en su garaje.' }}</p>
+        }
+      </ui-detail-section>
       @if (record(); as owner) {
         <app-image-gallery
           ownerType="user"
@@ -49,6 +63,11 @@ import { UsersStore } from '../../services/users.store';
         />
       }
     </ui-detail-page>
+  `,
+  styles: `
+    .bike + .bike {
+      margin-top: var(--space-3);
+    }
   `,
 })
 export class UserDetailComponent extends EntityDetailPage<User> {
@@ -101,4 +120,14 @@ export class UserDetailComponent extends EntityDetailPage<User> {
       { label: 'Contraseña', value: 'Guardada cifrada. No se puede ver, solo cambiar.' },
     ];
   });
+
+  constructor() {
+    super();
+    const userId = computed(() => this.record()?._id ?? '');
+    effect(() => {
+      const id = userId();
+      // Sin seguir sus signals: si no, cada carga volvería a lanzar este efecto.
+      if (id) untracked(() => this.store.loadBikes(id));
+    });
+  }
 }

@@ -56,6 +56,7 @@ const ICONS = [
   'sign-out',
   'sun',
   'moon',
+  'motorcycle',
 ];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

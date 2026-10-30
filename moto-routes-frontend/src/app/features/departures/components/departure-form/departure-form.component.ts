@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   input,
+  output,
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,6 +17,7 @@ import {
   Validators,
 } from '@angular/forms';
 
+import { Bike, bikeName } from '../../../../core/models/bike.model';
 import {
   DEPARTURE_LIMITS,
   DEPARTURE_STATE_LABELS,
@@ -29,7 +31,7 @@ import { InputDirective } from '../../../../shared/components/form-field/input.d
 import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm } from '../../../../shared/forms/entity-form';
-import { SelectOption } from '../../../../shared/forms/select-options';
+import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
 import { fromLocalInput, toLocalInput } from '../../../../shared/utils/dates';
 import {
   endAfterStart,
@@ -53,6 +55,7 @@ function createDepartureForm() {
   return new FormGroup(
     {
       experienceId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+      guideBikeId: new FormControl('', { nonNullable: true }),
       startAt: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       endAt: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       capacity: new FormControl<number | null>(null, [Validators.required, Validators.min(1), integer]),
@@ -109,7 +112,7 @@ type DepartureControls = ReturnType<typeof createDepartureForm>['controls'];
           [hint]="experiencesLoading() ? 'Cargando experiencias…' : ''"
           [error]="errorOf('experienceId')"
         >
-          <select uiInput class="select" name="experienceId" formControlName="experienceId">
+          <select uiInput class="select" name="experienceId" formControlName="experienceId" (change)="experienceChanged($event)">
             <option value="" disabled>Elige una experiencia</option>
             @for (option of experienceOptions(); track option.value) {
               <option [value]="option.value">{{ option.label }}</option>
@@ -117,6 +120,15 @@ type DepartureControls = ReturnType<typeof createDepartureForm>['controls'];
           </select>
         </ui-form-field>
       }
+
+      <ui-form-field label="Moto del guía" [optional]="true" [hint]="guideHint()" [error]="errorOf('guideBikeId')">
+        <select uiInput class="select" name="guideBikeId" formControlName="guideBikeId">
+          <option value="">La de la experiencia</option>
+          @for (option of guideOptions(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </ui-form-field>
 
       <div class="form-row">
         <ui-form-field
@@ -173,6 +185,11 @@ export class DepartureFormComponent extends EntityForm<
 > {
   readonly experiences = input<readonly Experience[]>([]);
   readonly experiencesLoading = input(false);
+  /** Las motos activas y públicas del anfitrión de la experiencia elegida. */
+  readonly guideBikes = input<readonly Bike[]>([]);
+  readonly guideBikesLoading = input(false);
+  /** Se ha elegido otra experiencia: hay que pedir las motos de su anfitrión. */
+  readonly experienceChange = output<string>();
 
   protected readonly states = STATES;
   protected readonly stateLabels = DEPARTURE_STATE_LABELS;
@@ -223,6 +240,24 @@ export class DepartureFormComponent extends EntityForm<
       : 'Lo que va a pasar con ella. «Realizada» se puede marcar cuando haya terminado.',
   );
 
+  protected readonly guideOptions = computed<SelectOption[]>(() => {
+    const options = this.guideBikes().map((bike) => ({ value: bike._id, label: bikeName(bike) }));
+    const record = this.record();
+    const current = record?.guideBikeId ? record.guideBike : null;
+    return withCurrent(
+      options,
+      current && { value: current._id, label: bikeName(current) },
+      !this.guideBikesLoading(),
+      'f',
+    );
+  });
+
+  protected readonly guideHint = computed(() => {
+    this.changes();
+    if (!this.form.controls.experienceId.value) return 'Elige antes una experiencia.';
+    return this.guideBikesLoading() ? 'Cargando las motos del anfitrión…' : '';
+  });
+
   protected readonly datesError = computed(() => {
     this.changes();
     const end = this.form.controls.endAt;
@@ -270,9 +305,17 @@ export class DepartureFormComponent extends EntityForm<
     });
   }
 
+  /** La moto es del anfitrión de la experiencia: al cambiarla, la elegida ya no vale. */
+  protected experienceChanged(event: Event): void {
+    this.form.controls.guideBikeId.setValue('');
+    // Del propio select: el formulario puede no haberse enterado aún del cambio.
+    this.experienceChange.emit((event.target as HTMLSelectElement).value);
+  }
+
   protected fill(departure: Departure | null): void {
     this.form.reset({
       experienceId: departure?.experienceId ?? '',
+      guideBikeId: departure?.guideBikeId ?? '',
       startAt: departure ? toLocalInput(departure.startAt) : '',
       endAt: departure ? toLocalInput(departure.endAt) : '',
       capacity: departure?.capacity ?? null,
@@ -294,6 +337,7 @@ export class DepartureFormComponent extends EntityForm<
       capacity,
       price,
       state: value.state,
+      ...(value.guideBikeId ? { guideBikeId: value.guideBikeId } : {}),
     };
   }
 
@@ -304,7 +348,7 @@ export class DepartureFormComponent extends EntityForm<
   protected override toUpdatePayload(): Partial<DeparturePayload> | null {
     const payload = this.toPayload();
     if (!payload) return null;
-    const { startAt, endAt, capacity, price, state } = payload;
+    const { startAt, endAt, capacity, price, state, guideBikeId } = payload;
     const value = this.form.getRawValue();
     const record = this.record();
     const unchanged = (input: string, saved: string | undefined): boolean =>
@@ -315,6 +359,7 @@ export class DepartureFormComponent extends EntityForm<
       capacity,
       price,
       state,
+      ...(guideBikeId ? { guideBikeId } : record?.guideBikeId ? { guideBikeId: null } : {}),
     };
   }
 }

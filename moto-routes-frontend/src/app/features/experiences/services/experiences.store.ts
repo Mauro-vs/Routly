@@ -31,6 +31,17 @@ export class ExperiencesStore extends EntityStore<Experience, ExperiencePayload>
   readonly hostOptions = new OptionList(() => this.api.getHostOptions(), this.errorHandler);
   /** Rutas activas: la API no deja asignar una inactiva. */
   readonly routeOptions = new OptionList(() => this.api.getRouteOptions(), this.errorHandler);
+  /** Las motos del anfitrión elegido, para la moto del guía. */
+  readonly guideBikes = new OptionList(
+    () => (this.guideHostId ? this.api.getGuideBikes(this.guideHostId) : Promise.resolve([])),
+    this.errorHandler,
+  );
+  private guideHostId = '';
+
+  loadGuideBikes(hostId: string): void {
+    this.guideHostId = hostId;
+    void this.guideBikes.load();
+  }
 
   displayName(experience: Experience): string {
     return experience.title;

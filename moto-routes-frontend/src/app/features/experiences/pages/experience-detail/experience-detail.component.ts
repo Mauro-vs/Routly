@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { Experience, languageName } from '../../../../core/models/experience.model';
+import { BikeCardComponent } from '../../../../shared/components/bike-card/bike-card.component';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
@@ -14,7 +15,13 @@ import { ExperiencesStore } from '../../services/experiences.store';
  */
 @Component({
   selector: 'app-experience-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
+  imports: [
+    BikeCardComponent,
+    DetailPageComponent,
+    DetailSectionComponent,
+    FieldListComponent,
+    ImageGalleryComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -32,6 +39,13 @@ import { ExperiencesStore } from '../../services/experiences.store';
     >
       <ui-detail-section heading="Ruta y anfitrión">
         <ui-field-list [columns]="2" [items]="relations()" />
+      </ui-detail-section>
+      <ui-detail-section heading="Moto del guía">
+        @if (record()?.guideBike; as bike) {
+          <ui-bike-card [bike]="bike" [link]="['/bikes', bike.slug]" />
+        } @else {
+          <p class="muted">Sin moto asignada.</p>
+        }
       </ui-detail-section>
       <ui-detail-section heading="Grupo">
         <ui-field-list [columns]="2" [items]="group()" />

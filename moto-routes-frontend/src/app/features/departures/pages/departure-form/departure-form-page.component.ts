@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+  viewChild,
+} from '@angular/core';
 
 import { Departure, DeparturePayload } from '../../../../core/models/departure.model';
 import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
@@ -28,6 +36,9 @@ import { DeparturesStore } from '../../services/departures.store';
         [record]="record()"
         [experiences]="store.experienceOptions.items()"
         [experiencesLoading]="store.experienceOptions.loading()"
+        [guideBikes]="store.guideBikes.items()"
+        [guideBikesLoading]="store.guideBikes.loading()"
+        (experienceChange)="store.loadGuideBikes($event)"
         (save)="save($event)"
       />
     </ui-form-page>
@@ -42,5 +53,12 @@ export class DepartureFormPageComponent extends EntityFormPage<Departure, Depart
     super();
     // También al editar: dicen cuántas plazas puede tener como mucho.
     void this.store.experienceOptions.load();
+
+    const experienceId = computed(() => this.record()?.experienceId ?? '');
+    effect(() => {
+      const id = experienceId();
+      // Sin seguir sus signals: si no, cada carga volvería a lanzar este efecto.
+      if (id) untracked(() => this.store.loadGuideBikes(id));
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -9,6 +9,7 @@ import {
 } from '@angular/forms';
 
 import { ApiError } from '../../../../core/models/api-error.model';
+import { Bike, bikeName } from '../../../../core/models/bike.model';
 import {
   EXPERIENCE_LANGUAGES,
   EXPERIENCE_LIMITS,
@@ -39,6 +40,7 @@ function createExperienceForm() {
   return new FormGroup(
     {
       hostId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+      guideBikeId: new FormControl('', { nonNullable: true }),
       routeId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       title: new FormControl('', {
         nonNullable: true,
@@ -122,7 +124,7 @@ type ExperienceControls = ReturnType<typeof createExperienceForm>['controls'];
           [hint]="optionsLoading() ? 'Cargando anfitriones…' : ''"
           [error]="errorOf('hostId')"
         >
-          <select uiInput class="select" name="hostId" formControlName="hostId">
+          <select uiInput class="select" name="hostId" formControlName="hostId" (change)="hostChanged($event)">
             <option value="" disabled>Elige un anfitrión</option>
             @for (option of hostOptions(); track option.value) {
               <option [value]="option.value">{{ option.label }}</option>
@@ -130,6 +132,15 @@ type ExperienceControls = ReturnType<typeof createExperienceForm>['controls'];
           </select>
         </ui-form-field>
       </div>
+
+      <ui-form-field label="Moto del guía" [optional]="true" [hint]="guideHint()" [error]="errorOf('guideBikeId')">
+        <select uiInput class="select" name="guideBikeId" formControlName="guideBikeId">
+          <option value="">Sin moto</option>
+          @for (option of guideOptions(); track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </ui-form-field>
 
       <ui-form-field
         label="Descripción"
@@ -194,6 +205,11 @@ export class ExperienceFormComponent extends EntityForm<
   readonly routes = input<readonly Route[]>([]);
   /** Las opciones de los selects aún no han llegado. */
   readonly optionsLoading = input(false);
+  /** Las motos activas y públicas del anfitrión elegido. */
+  readonly guideBikes = input<readonly Bike[]>([]);
+  readonly guideBikesLoading = input(false);
+  /** Se ha elegido otro anfitrión: hay que pedir sus motos. */
+  readonly hostChange = output<string>();
 
   protected readonly limits = EXPERIENCE_LIMITS;
 
@@ -219,6 +235,28 @@ export class ExperienceFormComponent extends EntityForm<
     );
   });
 
+  protected readonly guideOptions = computed<SelectOption[]>(() => {
+    this.changes();
+    const options = this.guideBikes().map((bike) => ({ value: bike._id, label: bikeName(bike) }));
+    // La moto guardada solo vale con su anfitrión: con otro, ya no es una opción.
+    const record = this.record();
+    const sameHost = record?.hostId === this.form.controls.hostId.value;
+    const current = sameHost ? record?.guideBike : null;
+    return withCurrent(
+      options,
+      current && { value: current._id, label: bikeName(current) },
+      !this.guideBikesLoading(),
+      'f',
+    );
+  });
+
+  protected readonly guideHint = computed(() => {
+    this.changes();
+    if (!this.form.controls.hostId.value) return 'Elige antes un anfitrión.';
+    if (this.guideBikesLoading()) return 'Cargando sus motos…';
+    return this.guideOptions().length === 0 ? 'Este anfitrión no tiene motos activas y públicas.' : '';
+  });
+
   /** Los idiomas de la lista y, si la experiencia tiene otro, también ese. */
   protected readonly languageOptions = computed<SelectOption[]>(() => {
     const options = Object.entries(EXPERIENCE_LANGUAGES).map(([value, label]) => ({ value, label }));
@@ -240,9 +278,17 @@ export class ExperienceFormComponent extends EntityForm<
     super(createExperienceForm());
   }
 
+  /** La moto es del anfitrión: al cambiarlo, la elegida ya no vale. */
+  protected hostChanged(event: Event): void {
+    this.form.controls.guideBikeId.setValue('');
+    // Del propio select: el formulario puede no haberse enterado aún del cambio.
+    this.hostChange.emit((event.target as HTMLSelectElement).value);
+  }
+
   protected fill(experience: Experience | null): void {
     this.form.reset({
       hostId: experience?.hostId ?? '',
+      guideBikeId: experience?.guideBikeId ?? '',
       routeId: experience?.routeId ?? '',
       title: experience?.title ?? '',
       description: experience?.description ?? '',
@@ -270,6 +316,7 @@ export class ExperienceFormComponent extends EntityForm<
       duration,
       minParticipants,
       maxParticipants,
+      ...(value.guideBikeId ? { guideBikeId: value.guideBikeId } : {}),
     };
   }
 
@@ -283,6 +330,7 @@ export class ExperienceFormComponent extends EntityForm<
       ...payload,
       description: editedText(value.description, experience.description),
       meetingPoint: editedText(value.meetingPoint, experience.meetingPoint),
+      ...(!value.guideBikeId && experience.guideBikeId ? { guideBikeId: null } : {}),
     };
   }
 

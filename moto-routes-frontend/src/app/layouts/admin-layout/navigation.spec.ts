@@ -21,10 +21,11 @@ describe('navigation', () => {
     if (pending) expect(findSection(pending.path)).toBeNull();
   });
 
-  it('las nueve colecciones llevan contador con el nombre de su ruta en la API', () => {
+  it('las diez colecciones llevan contador con el nombre de su ruta en la API', () => {
     expect([...COLLECTION_IDS].sort()).toEqual(
       [
-        'categories',
+        'bikes',
+      'categories',
         'departures',
         'experiences',
         'hosts',

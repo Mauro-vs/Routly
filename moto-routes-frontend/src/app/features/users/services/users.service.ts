@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 
+import { Bike } from '../../../core/models/bike.model';
 import { Role } from '../../../core/models/role.model';
 import { User, UserPayload } from '../../../core/models/user.model';
 import { EntityApiService } from '../../../core/services/entity-api.service';
@@ -17,5 +18,11 @@ export class UsersService extends EntityApiService<User, UserPayload> {
   /** Roles activos, para el select del formulario. */
   getRoleOptions(): Promise<Role[]> {
     return this.api.get<Role[]>('/roles/actives');
+  }
+
+  /** El garaje de un usuario. La API no filtra por dueño: se filtra aquí. */
+  async getBikes(userId: string): Promise<Bike[]> {
+    const bikes = await this.api.get<Bike[]>('/bikes');
+    return bikes.filter((bike) => bike.userId === userId);
   }
 }

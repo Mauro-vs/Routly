@@ -11,6 +11,11 @@ const messagePage = () =>
     (m) => m.MessagePageComponent,
   );
 
+const garageForm = () =>
+  import('./features/bikes/pages/garage-form/garage-form-page.component').then(
+    (m) => m.GarageFormPageComponent,
+  );
+
 const accountLayout = () =>
   import('./layouts/account-layout/account-layout.component').then(
     (m) => m.AccountLayoutComponent,
@@ -59,12 +64,22 @@ export const routes: Routes = [
       {
         path: 'garage',
         title: 'Mi garaje',
-        loadComponent: messagePage,
-        data: {
-          heading: 'Mi garaje',
-          description: 'Aquí podrás añadir tus motos.',
-          icon: 'compass',
-        },
+        loadComponent: () =>
+          import('./features/bikes/pages/my-garage/my-garage.component').then(
+            (m) => m.MyGarageComponent,
+          ),
+      },
+      {
+        path: 'garage/new',
+        title: 'Añadir moto',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: garageForm,
+      },
+      {
+        path: 'garage/:slug',
+        title: 'Editar moto',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: garageForm,
       },
     ],
   },
@@ -132,6 +147,10 @@ export const routes: Routes = [
       {
         path: 'hosts',
         loadChildren: () => import('./features/hosts/hosts.routes').then((m) => m.HOSTS_ROUTES),
+      },
+      {
+        path: 'bikes',
+        loadChildren: () => import('./features/bikes/bikes.routes').then((m) => m.BIKES_ROUTES),
       },
       {
         path: 'roles',

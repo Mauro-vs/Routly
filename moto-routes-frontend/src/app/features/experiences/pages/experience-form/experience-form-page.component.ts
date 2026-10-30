@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  untracked,
+  viewChild,
+} from '@angular/core';
 
 import { Experience, ExperiencePayload } from '../../../../core/models/experience.model';
 import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
@@ -31,6 +39,9 @@ import { ExperiencesStore } from '../../services/experiences.store';
         [hosts]="store.hostOptions.items()"
         [routes]="store.routeOptions.items()"
         [optionsLoading]="optionsLoading()"
+        [guideBikes]="store.guideBikes.items()"
+        [guideBikesLoading]="store.guideBikes.loading()"
+        (hostChange)="store.loadGuideBikes($event)"
         (save)="save($event)"
       />
       @if (record(); as owner) {
@@ -57,5 +68,12 @@ export class ExperienceFormPageComponent extends EntityFormPage<Experience, Expe
     super();
     void this.store.hostOptions.load();
     void this.store.routeOptions.load();
+
+    const hostId = computed(() => this.record()?.hostId ?? '');
+    effect(() => {
+      const id = hostId();
+      // Sin seguir sus signals: si no, cada carga volvería a lanzar este efecto.
+      if (id) untracked(() => this.store.loadGuideBikes(id));
+    });
   }
 }

@@ -103,6 +103,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         create: { label: 'Nuevo anfitrión', path: '/hosts/new' },
       },
       {
+        id: 'bikes',
+        label: 'Motos',
+        icon: 'motorcycle',
+        path: '/bikes',
+        create: { label: 'Nueva moto', path: '/bikes/new' },
+      },
+      {
         id: 'roles',
         label: 'Roles',
         icon: 'shield-check',

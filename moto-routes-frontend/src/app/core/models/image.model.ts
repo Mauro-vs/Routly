@@ -1,7 +1,7 @@
 import { BaseRecord } from './entity.model';
 
 /** Colecciones que pueden tener imágenes (IMAGE_OWNERS en la API). */
-export type ImageOwnerType = 'route' | 'user' | 'host' | 'experience' | 'category' | 'location';
+export type ImageOwnerType = 'route' | 'user' | 'host' | 'experience' | 'category' | 'location' | 'bike';
 
 /** Imagen de cualquier colección. No tiene slug: se identifica por su `_id`. */
 export interface Image extends BaseRecord {
@@ -38,6 +38,7 @@ export const IMAGE_OWNERS: Readonly<
   experience: { label: 'Experiencia', path: '/experiences', gender: 'f' },
   category: { label: 'Categoría', path: '/categories', gender: 'f' },
   location: { label: 'Ubicación', path: '/locations', gender: 'f' },
+  bike: { label: 'Moto', path: '/bikes', gender: 'f' },
 };
 
 /** El detalle del dueño de una imagen. Solo se sabe su `_id`: lo resuelve `/<colección>/id/:id`. */

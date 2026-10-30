@@ -32,6 +32,17 @@ export class DeparturesStore extends EntityStore<Departure, DeparturePayload> {
     () => this.api.getExperienceOptions(),
     inject(ErrorHandlerService),
   );
+  /** Las motos del anfitrión de la experiencia elegida, para la moto del guía. */
+  readonly guideBikes = new OptionList(
+    () => (this.guideExperienceId ? this.api.getGuideBikes(this.guideExperienceId) : Promise.resolve([])),
+    inject(ErrorHandlerService),
+  );
+  private guideExperienceId = '';
+
+  loadGuideBikes(experienceId: string): void {
+    this.guideExperienceId = experienceId;
+    void this.guideBikes.load();
+  }
 
   /** "Costa Brava en moto, 8 nov 2026": la experiencia y el día. */
   displayName(departure: Departure): string {

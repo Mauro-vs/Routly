@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 
+import { Bike } from '../../../core/models/bike.model';
 import { Experience, ExperiencePayload } from '../../../core/models/experience.model';
 import { Host } from '../../../core/models/host.model';
 import { Route } from '../../../core/models/route.model';
@@ -18,6 +19,12 @@ export class ExperiencesService extends EntityApiService<Experience, ExperienceP
   /** Anfitriones activos, para el select del formulario. */
   getHostOptions(): Promise<Host[]> {
     return this.api.get<Host[]>('/hosts/actives');
+  }
+
+  /** Las motos que pueden guiar: las activas y públicas de ese anfitrión. */
+  async getGuideBikes(hostId: string): Promise<Bike[]> {
+    const host = await this.api.get<Host>(`/hosts/${hostId}`);
+    return (host.bikes ?? []).filter((bike) => bike.isActive && bike.isPublic);
   }
 
   /** Rutas activas, para el select del formulario. */

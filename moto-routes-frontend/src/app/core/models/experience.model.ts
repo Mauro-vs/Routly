@@ -1,3 +1,4 @@
+import { BikeSummary } from './bike.model';
 import { BaseEntity } from './entity.model';
 import { HostSummary } from './host.model';
 
@@ -16,6 +17,9 @@ export interface Experience extends BaseEntity {
   duration: number;
   minParticipants: number;
   maxParticipants: number;
+  /** Con qué moto guía el anfitrión. */
+  guideBikeId?: string | null;
+  guideBike?: BikeSummary | null;
 }
 
 /** Lo que trae una experiencia de su ruta (`populate`). */
@@ -38,6 +42,7 @@ export interface ExperiencePayload {
   duration: number;
   minParticipants?: number;
   maxParticipants: number;
+  guideBikeId?: string | null;
 }
 
 /** Los mismos límites que la API (EXPERIENCE_LIMITS en experience.model.js). Duración en horas. */

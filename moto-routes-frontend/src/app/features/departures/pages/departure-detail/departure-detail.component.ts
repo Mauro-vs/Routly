@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { Departure } from '../../../../core/models/departure.model';
+import { BikeCardComponent } from '../../../../shared/components/bike-card/bike-card.component';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
@@ -10,7 +11,7 @@ import { DeparturesStore } from '../../services/departures.store';
 /** Detalle de una salida (`/departures/:slug`). Su SKU va bajo el título. */
 @Component({
   selector: 'app-departure-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
+  imports: [BikeCardComponent, DetailPageComponent, DetailSectionComponent, FieldListComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -28,6 +29,17 @@ import { DeparturesStore } from '../../services/departures.store';
     >
       <ui-detail-section heading="Experiencia">
         <ui-field-list [columns]="2" [items]="experience()" />
+      </ui-detail-section>
+      <ui-detail-section heading="Moto del guía">
+        @if (record()?.guideBike; as bike) {
+          <ui-bike-card
+            [bike]="bike"
+            [link]="['/bikes', bike.slug]"
+            [note]="record()?.guideBikeId ? '' : 'Moto de la experiencia'"
+          />
+        } @else {
+          <p class="muted">Sin moto asignada.</p>
+        }
       </ui-detail-section>
       <ui-detail-section heading="Fechas" description="En tu hora local.">
         <ui-field-list [columns]="2" [items]="dates()" />

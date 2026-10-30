@@ -316,6 +316,16 @@ Todo está en `src/app/auth/`:
 - `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`: sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.
 - `return-url.ts`: la vuelta tras el login, que solo acepta rutas internas.
 
+### El garaje
+
+Las motos de cada usuario y la moto con la que guía cada anfitrión. Todo sale de `features/bikes/`:
+
+- **Mi garaje** (`/profile/garage`): las motos del usuario de la sesión, en su propia zona. `GarageStore` lee `/profile/me/bikes`, también las privadas y las inactivas.
+- **Motos** (`/bikes`): todas, solo para el admin, con el listado, detalle, formulario y papelera de cualquier colección.
+- **La moto del guía:** se elige en experiencias y salidas entre las motos activas y públicas del anfitrión. La salida sin moto propia hereda la de su experiencia.
+- **El carnet** lo calcula la API. El front lo muestra, nunca lo envía ni lo recalcula.
+- `ui-bike-card` es la ficha compartida, y el modelo está en `core/models/bike.model.ts`, porque lo usan varias features.
+
 ### Rendimiento
 
 - Cada página se descarga cuando se visita (`loadChildren` y `loadComponent`).

@@ -34,6 +34,18 @@ export class UsersStore extends EntityStore<User, UserPayload> {
     inject(ErrorHandlerService),
   );
 
+  /** El garaje del usuario que se está viendo. */
+  readonly bikes = new OptionList(
+    () => (this.bikesUserId ? this.api.getBikes(this.bikesUserId) : Promise.resolve([])),
+    inject(ErrorHandlerService),
+  );
+  private bikesUserId = '';
+
+  loadBikes(userId: string): void {
+    this.bikesUserId = userId;
+    void this.bikes.load();
+  }
+
   displayName(user: User): string {
     return user.name;
   }

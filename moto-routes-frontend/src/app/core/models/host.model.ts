@@ -1,3 +1,4 @@
+import { Bike } from './bike.model';
 import { BaseEntity } from './entity.model';
 import { ImageSummary } from './image.model';
 import { UserSummary } from './user.model';
@@ -9,6 +10,8 @@ export interface Host extends BaseEntity {
   name: string;
   biography?: string;
   coverImage?: ImageSummary | null;
+  /** Su garaje. Solo llega al pedir un anfitrión, no en los listados. */
+  bikes?: Bike[];
 }
 
 /** Lo que trae una experiencia de su anfitrión (`populate`). */
