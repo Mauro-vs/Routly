@@ -1,12 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { ApiError } from '../../../../core/models/api-error.model';
+import { ProfilePayload } from '../../../../core/models/profile.model';
 import { Role } from '../../../../core/models/role.model';
 import { USER_LIMITS, User, UserPayload } from '../../../../core/models/user.model';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import {
+  ProfileFieldsComponent,
+  createProfileGroup,
+  fillProfileGroup,
+  profilePayload,
+} from '../../../../shared/components/profile-fields/profile-fields.component';
 import { EntityForm } from '../../../../shared/forms/entity-form';
 import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
 import { email, letterAndNumber, minTrimmed, notBlank } from '../../../../shared/utils/validators';
@@ -32,6 +40,7 @@ function createUserForm() {
     // Vacío: la API le pone el rol rider.
     roleId: new FormControl('', { nonNullable: true }),
     password: new FormControl('', { nonNullable: true, validators: PASSWORD_VALIDATORS }),
+    profile: createProfileGroup(),
   });
 }
 
@@ -44,7 +53,14 @@ type UserControls = ReturnType<typeof createUserForm>['controls'];
  */
 @Component({
   selector: 'app-user-form',
-  imports: [ReactiveFormsModule, FormFieldComponent, InputDirective, IconComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    FormFieldComponent,
+    InputDirective,
+    IconComponent,
+    ProfileFieldsComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -63,7 +79,7 @@ type UserControls = ReturnType<typeof createUserForm>['controls'];
 
       <ui-form-field
         label="Rol"
-        [hint]="rolesLoading() ? 'Cargando roles…' : 'Sin elegir, la API le asigna el rol rider.'"
+        [hint]="roleHint()"
         [error]="errorOf('roleId')"
       >
         <select uiInput class="select" name="roleId" formControlName="roleId">
@@ -76,14 +92,18 @@ type UserControls = ReturnType<typeof createUserForm>['controls'];
         </select>
       </ui-form-field>
 
-      @if (isEdit()) {
+      @if (self()) {
+        <p class="own-password">
+          Tu contraseña se cambia en <a routerLink="/profile">Mi perfil</a>: cambiarla aquí cerraría tu sesión.
+        </p>
+      } @else if (isEdit()) {
         <label class="check">
           <input type="checkbox" name="changePassword" [checked]="changePassword()" (change)="toggleChangePassword()" />
           Cambiar la contraseña
         </label>
       }
 
-      @if (!isEdit() || changePassword()) {
+      @if (!self() && (!isEdit() || changePassword())) {
         <ui-form-field
           [label]="isEdit() ? 'Contraseña nueva' : 'Contraseña'"
           [hint]="'Entre ' + limits.passwordMin + ' y ' + limits.passwordMax + ' caracteres, con al menos una letra y un número. No se vuelve a mostrar.'"
@@ -92,6 +112,9 @@ type UserControls = ReturnType<typeof createUserForm>['controls'];
           <input uiInput type="password" name="password" formControlName="password" autocomplete="new-password" />
         </ui-form-field>
       }
+
+      <h2 class="section">Perfil</h2>
+      <ui-profile-fields [group]="form.controls.profile" [submitted]="submitted()" />
     </form>
   `,
   styles: `
@@ -110,13 +133,31 @@ type UserControls = ReturnType<typeof createUserForm>['controls'];
       height: 18px;
       margin: 0;
     }
+
+    .own-password {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
+    .section {
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+      font-size: var(--text-base);
+      font-weight: 750;
+    }
   `,
 })
 export class UserFormComponent extends EntityForm<User, UserPayload, UserControls> {
   readonly roles = input<readonly Role[]>([]);
   readonly rolesLoading = input(false);
+  /** Es la cuenta de la sesión: ni su rol ni su contraseña se cambian desde aquí. */
+  readonly self = input(false);
 
   protected readonly limits = USER_LIMITS;
+  protected readonly roleHint = computed(() => {
+    if (this.self()) return 'No puedes cambiar tu propio rol.';
+    return this.rolesLoading() ? 'Cargando roles…' : 'Sin elegir, la API le asigna el rol rider.';
+  });
   /** Al editar, si se va a cambiar la contraseña. */
   protected readonly changePassword = signal(false);
 
@@ -140,6 +181,12 @@ export class UserFormComponent extends EntityForm<User, UserPayload, UserControl
       if (!this.isEdit() || this.changePassword()) control.enable({ emitEvent: false });
       else control.disable({ emitEvent: false });
     });
+
+    effect(() => {
+      const control = this.form.controls.roleId;
+      if (this.self()) control.disable({ emitEvent: false });
+      else control.enable({ emitEvent: false });
+    });
   }
 
   protected toggleChangePassword(): void {
@@ -156,11 +203,18 @@ export class UserFormComponent extends EntityForm<User, UserPayload, UserControl
       roleId: user?.roleId ?? '',
       password: '',
     });
+    fillProfileGroup(this.form.controls.profile, user?.profile);
   }
 
   protected toPayload(): UserPayload {
     const { name, email, roleId, password } = this.form.getRawValue();
-    return { name: name.trim(), email: email.trim(), password, ...(roleId ? { roleId } : {}) };
+    return {
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      ...(roleId ? { roleId } : {}),
+      ...this.profileChanges(),
+    };
   }
 
   protected override toUpdatePayload(): Partial<UserPayload> {
@@ -170,7 +224,14 @@ export class UserFormComponent extends EntityForm<User, UserPayload, UserControl
       email: email.trim(),
       roleId,
       ...(this.changePassword() ? { password } : {}),
+      ...this.profileChanges(),
     };
+  }
+
+  /** El perfil solo se envía si hay algo que guardar. */
+  private profileChanges(): { profile?: ProfilePayload } {
+    const profile = profilePayload(this.form.controls.profile, this.record()?.profile);
+    return Object.keys(profile).length > 0 ? { profile } : {};
   }
 
   // 409: un email repetido, o cambiar de rol a alguien con perfil de anfitrión.

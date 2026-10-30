@@ -90,6 +90,7 @@ const COLUMNS: readonly TableColumn[] = [
             [label]="user.name"
             [labels]="store.labels"
             [busy]="store.isBusy(user._id)"
+            [lockedReason]="store.toggleLockedReason(user)"
             (activeChange)="setActive(user, $event)"
           />
         </ng-template>
@@ -99,6 +100,7 @@ const COLUMNS: readonly TableColumn[] = [
             [detailPath]="['/users', user.slug]"
             [editPath]="['/users', user.slug, 'edit']"
             [busy]="store.isBusy(user._id)"
+            [deleteLockedReason]="store.deleteLockedReason(user)"
             (remove)="remove(user)"
           />
         </ng-template>

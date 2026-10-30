@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './auth/admin.guard';
 import { authGuard } from './auth/auth.guard';
 import { guestGuard } from './auth/guest.guard';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout.component';
 
 const messagePage = () =>
@@ -49,12 +50,11 @@ export const routes: Routes = [
       {
         path: '',
         title: 'Mi perfil',
-        loadComponent: messagePage,
-        data: {
-          heading: 'Mi perfil',
-          description: 'Aquí podrás ver y editar tus datos.',
-          icon: 'user-circle',
-        },
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/profile/pages/profile/profile.component').then(
+            (m) => m.ProfileComponent,
+          ),
       },
       {
         path: 'garage',

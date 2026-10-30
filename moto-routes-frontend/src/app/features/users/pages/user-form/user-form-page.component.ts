@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 
 import { User, UserPayload } from '../../../../core/models/user.model';
 import { FormPageComponent } from '../../../../shared/components/form-page/form-page.component';
@@ -30,6 +30,7 @@ import { UsersStore } from '../../services/users.store';
         [record]="record()"
         [roles]="store.roleOptions.items()"
         [rolesLoading]="store.roleOptions.loading()"
+        [self]="isSelf()"
         (save)="save($event)"
       />
       @if (record(); as owner) {
@@ -47,6 +48,10 @@ export class UserFormPageComponent extends EntityFormPage<User, UserPayload> {
   protected readonly store = inject(UsersStore);
   protected readonly listPath = '/users';
   protected readonly form = viewChild(UserFormComponent);
+  protected readonly isSelf = computed(() => {
+    const user = this.record();
+    return user ? this.store.isSelf(user) : false;
+  });
 
   constructor() {
     super();

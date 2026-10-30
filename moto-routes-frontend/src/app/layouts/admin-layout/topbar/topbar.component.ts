@@ -12,10 +12,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, map } from 'rxjs';
 
-import { SessionService } from '../../../auth/session.service';
 import { BreadcrumbService } from '../../../core/services/breadcrumb.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
-import { ThemeToggleComponent } from '../../../shared/components/theme-toggle/theme-toggle.component';
+import { UserMenuComponent } from '../../user-menu/user-menu.component';
 import { NavAction, findSection } from '../navigation';
 
 interface Crumb {
@@ -29,10 +28,10 @@ interface CurrentPage {
   crumb: string | null;
 }
 
-/** Barra superior: botón del menú en móvil, migas y la acción de crear de la sección. */
+/** Barra superior: botón del menú en móvil, migas, la acción de crear y el menú del usuario. */
 @Component({
   selector: 'app-topbar',
-  imports: [RouterLink, IconComponent, ThemeToggleComponent],
+  imports: [RouterLink, IconComponent, UserMenuComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './topbar.component.html',
   styleUrl: './topbar.component.css',
@@ -46,7 +45,6 @@ export class TopbarComponent {
 
   private readonly router = inject(Router);
   private readonly breadcrumbs = inject(BreadcrumbService);
-  private readonly session = inject(SessionService);
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
 
   private readonly page = toSignal(
@@ -76,10 +74,6 @@ export class TopbarComponent {
     const section = findSection(url);
     return section && section.path === url ? (section.create ?? null) : null;
   });
-
-  protected logout(): void {
-    void this.session.logout();
-  }
 
   focusMenuButton(): void {
     this.menuButton()?.nativeElement.focus();

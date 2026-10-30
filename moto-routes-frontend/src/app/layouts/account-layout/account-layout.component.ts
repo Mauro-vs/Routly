@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
-import { SessionService } from '../../auth/session.service';
+import { AuthStore } from '../../auth/auth.store';
 import { BrandMarkComponent } from '../../shared/components/brand-mark/brand-mark.component';
-import { IconComponent } from '../../shared/components/icon/icon.component';
-import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
+import { UserMenuComponent } from '../user-menu/user-menu.component';
 
 /** Armazón de la zona de cada usuario, sin el panel: su perfil y su garaje. */
 @Component({
@@ -14,8 +13,7 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
     RouterLinkActive,
     RouterOutlet,
     BrandMarkComponent,
-    IconComponent,
-    ThemeToggleComponent,
+    UserMenuComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -30,11 +28,11 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
           ariaCurrentWhenActive="page"
         >Mi perfil</a>
         <a class="link" routerLink="/profile/garage" routerLinkActive="is-active" ariaCurrentWhenActive="page">Mi garaje</a>
+        @if (store.isAdmin()) {
+          <a class="link" routerLink="/">Panel</a>
+        }
       </nav>
-      <ui-theme-toggle />
-      <button type="button" class="icon-btn" aria-label="Cerrar sesión" title="Cerrar sesión" (click)="logout()">
-        <ui-icon name="sign-out" />
-      </button>
+      <app-user-menu />
     </header>
     <main class="content">
       <router-outlet />
@@ -66,10 +64,10 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
       color: var(--color-accent);
     }
 
+    /* El margen lateral: las bandas lo rompen para llegar de lado a lado. */
     .content {
-      width: min(100%, var(--layout-content));
-      margin: 0 auto;
-      padding: var(--space-5);
+      --gutter: max(24px, calc((100vw - var(--layout-content)) / 2));
+      padding: 0 var(--gutter) var(--space-7);
     }
 
     @media (max-width: 560px) {
@@ -78,15 +76,11 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
       }
 
       .content {
-        padding: var(--space-4);
+        --gutter: 14px;
       }
     }
   `,
 })
 export class AccountLayoutComponent {
-  private readonly session = inject(SessionService);
-
-  protected logout(): void {
-    void this.session.logout();
-  }
+  protected readonly store = inject(AuthStore);
 }

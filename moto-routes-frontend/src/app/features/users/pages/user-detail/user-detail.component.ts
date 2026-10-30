@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
+import { EXPERIENCE_LEVEL_LABELS } from '../../../../core/models/profile.model';
 import { User } from '../../../../core/models/user.model';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
@@ -24,12 +25,17 @@ import { UsersStore } from '../../services/users.store';
       [identifier]="identifier()"
       [editPath]="editPath()"
       [busy]="busy()"
+      [toggleLockedReason]="lockedToggle()"
+      [deleteLockedReason]="lockedDelete()"
       (activeChange)="setActive($event)"
       (remove)="remove()"
       (retry)="retry()"
     >
       <ui-detail-section heading="Perfil">
         <ui-field-list [columns]="2" [items]="profile()" />
+      </ui-detail-section>
+      <ui-detail-section heading="Contacto de emergencia">
+        <ui-field-list [columns]="2" [items]="emergency()" />
       </ui-detail-section>
       <ui-detail-section heading="Acceso" description="El rol decide lo que puede hacer en la plataforma.">
         <ui-field-list [columns]="2" [items]="access()" />
@@ -52,10 +58,34 @@ export class UserDetailComponent extends EntityDetailPage<User> {
   protected readonly profile = computed<FieldItem[]>(() => {
     const user = this.record();
     if (!user) return [];
+    const level = user.profile?.experienceLevel;
     return [
       { label: 'Nombre', value: user.name },
       { label: 'Email', value: user.email },
+      { label: 'Ciudad', value: user.profile?.city },
+      { label: 'Teléfono', value: user.profile?.phone },
+      { label: 'Fecha de nacimiento', value: user.profile?.birthDate, format: 'date' },
+      { label: 'Experiencia en moto', value: level && EXPERIENCE_LEVEL_LABELS[level] },
+      { label: 'Sobre mí', value: user.profile?.bio, wide: true, format: 'multiline' },
     ];
+  });
+
+  protected readonly emergency = computed<FieldItem[]>(() => {
+    const contact = this.record()?.profile?.emergencyContact;
+    return [
+      { label: 'Nombre', value: contact?.name },
+      { label: 'Teléfono', value: contact?.phone },
+    ];
+  });
+
+  protected readonly lockedToggle = computed(() => {
+    const user = this.record();
+    return user ? this.store.toggleLockedReason(user) : null;
+  });
+
+  protected readonly lockedDelete = computed(() => {
+    const user = this.record();
+    return user ? this.store.deleteLockedReason(user) : null;
   });
 
   protected readonly access = computed<FieldItem[]>(() => {

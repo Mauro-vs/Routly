@@ -1,5 +1,6 @@
 import { BaseEntity } from './entity.model';
 import { ImageSummary } from './image.model';
+import { Profile, ProfilePayload } from './profile.model';
 import { RoleSummary } from './role.model';
 
 /** Cuenta de la plataforma. La API nunca devuelve la contraseña ni su hash. */
@@ -10,6 +11,8 @@ export interface User extends BaseEntity {
   role: RoleSummary | null;
   /** Foto de perfil. */
   coverImage?: ImageSummary | null;
+  /** Sus datos extendidos: pertenecen al usuario y llegan siempre con él. */
+  profile?: Profile | null;
 }
 
 /** Lo que trae un anfitrión de su usuario (`populate`). El email solo llega con token de admin. */
@@ -24,6 +27,7 @@ export interface UserPayload {
   email: string;
   password: string;
   roleId?: string;
+  profile?: ProfilePayload;
 }
 
 export const USER_LIMITS = {
