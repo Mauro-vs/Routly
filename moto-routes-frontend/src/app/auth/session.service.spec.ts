@@ -14,7 +14,7 @@ import { NotificationService } from '../core/services/notification.service';
 import { SessionResetService } from '../core/services/session-reset.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthStore } from './auth.store';
-import { fakeToken, fakeUser } from './auth.testing';
+import { fakeToken, fakeUser } from './testing/auth.testing';
 import { SessionService } from './session.service';
 
 const BASE = environment.apiUrl;

@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
 
-import { adminGuard } from './auth/admin.guard';
-import { authGuard } from './auth/auth.guard';
-import { guestGuard } from './auth/guest.guard';
+import { adminGuard } from './auth/guards/admin.guard';
+import { authGuard } from './auth/guards/auth.guard';
+import { guestGuard } from './auth/guards/guest.guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { AdminLayoutComponent } from './layouts/admin-layout/admin-layout.component';
 

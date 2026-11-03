@@ -11,7 +11,7 @@ import { ApiError } from '../core/models/api-error.model';
 import { ApiService } from '../core/services/api.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthStore } from './auth.store';
-import { fakeToken, fakeUser } from './auth.testing';
+import { fakeToken, fakeUser } from './testing/auth.testing';
 
 const BASE = environment.apiUrl;
 const KEY = 'routly.session';

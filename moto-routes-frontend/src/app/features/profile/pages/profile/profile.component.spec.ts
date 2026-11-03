@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../../../environments/environment';
 import { AuthStore } from '../../../../auth/auth.store';
-import { fakeToken, fakeUser } from '../../../../auth/auth.testing';
+import { fakeToken, fakeUser } from '../../../../auth/testing/auth.testing';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ProfileComponent } from './profile.component';
 

@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
-import { AuthStore } from './auth.store';
+import { AuthStore } from '../auth.store';
 
 /**
  * Deja pasar solo a ADMIN. En la portada, quien no lo es va a su zona; en cualquier otra

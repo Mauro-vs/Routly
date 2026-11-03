@@ -123,6 +123,8 @@ Organización por features. Cada carpeta tiene una responsabilidad y unas reglas
 ```
 src/app/
 ├── auth/                  Sesión: store, service, interceptor, guards y modelos
+│   ├── guards/            auth, admin y guest
+│   └── testing/           Token y usuario falsos para los specs
 ├── core/                  Lo que existe una sola vez en la aplicación
 │   ├── services/          ApiService, NotificationService, ErrorHandlerService, EntityStore,
 │   │                      EntityApiService, OptionList, CollectionCountsService...
@@ -313,8 +315,11 @@ Todo está en `src/app/auth/`:
 - `auth.service.ts`: login, registro, logout y validación del token. No toca la interfaz.
 - `session.service.ts`: lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
 - `auth.interceptor.ts`: añade `Authorization: Bearer <token>` solo a la API y no envía un token caducado.
-- `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`: sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.
+- `guards/`: `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`. Sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.
 - `return-url.ts`: la vuelta tras el login, que solo acepta rutas internas.
+- `testing/auth.testing.ts`: un token y un usuario falsos para los specs.
+
+Cada spec va junto a su archivo, como en el resto del proyecto.
 
 ### El garaje
 

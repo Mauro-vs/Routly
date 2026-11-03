@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { AuthStore } from '../../../auth/auth.store';
-import { fakeUser } from '../../../auth/auth.testing';
+import { fakeUser } from '../../../auth/testing/auth.testing';
 import { User } from '../../../core/models/user.model';
 import { UsersStore } from './users.store';
 

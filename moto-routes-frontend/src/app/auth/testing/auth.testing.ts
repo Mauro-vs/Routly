@@ -1,4 +1,4 @@
-import { AuthUser } from './auth.models';
+import { AuthUser } from '../auth.models';
 
 /** Un token con la forma de los de la API. Por defecto, caduca dentro de una hora. */
 export function fakeToken(expiresInSeconds = 3600, role = 'admin'): string {

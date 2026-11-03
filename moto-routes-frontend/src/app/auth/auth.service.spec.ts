@@ -12,7 +12,7 @@ import { SessionResetService } from '../core/services/session-reset.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthService } from './auth.service';
 import { AuthStore } from './auth.store';
-import { fakeToken, fakeUser } from './auth.testing';
+import { fakeToken, fakeUser } from './testing/auth.testing';
 
 const BASE = environment.apiUrl;
 const KEY = 'routly.session';

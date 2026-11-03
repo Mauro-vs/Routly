@@ -6,7 +6,7 @@ import { Router, provideRouter, withComponentInputBinding } from '@angular/route
 
 import { routes } from './app.routes';
 import { AuthStore } from './auth/auth.store';
-import { fakeToken, fakeUser } from './auth/auth.testing';
+import { fakeToken, fakeUser } from './auth/testing/auth.testing';
 import { safeReturnUrl } from './auth/return-url';
 
 const KEY = 'routly.session';

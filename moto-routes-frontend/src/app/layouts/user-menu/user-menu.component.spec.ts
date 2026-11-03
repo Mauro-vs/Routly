@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { AuthStore } from '../../auth/auth.store';
-import { fakeToken, fakeUser } from '../../auth/auth.testing';
+import { fakeToken, fakeUser } from '../../auth/testing/auth.testing';
 import { SessionService } from '../../auth/session.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { initials } from '../../shared/utils/initials';

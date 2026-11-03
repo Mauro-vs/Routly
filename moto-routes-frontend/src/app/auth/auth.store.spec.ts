@@ -1,7 +1,7 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { fakeToken, fakeUser } from './auth.testing';
+import { fakeToken, fakeUser } from './testing/auth.testing';
 import { AuthStore, tokenExpiry } from './auth.store';
 
 const KEY = 'routly.session';
