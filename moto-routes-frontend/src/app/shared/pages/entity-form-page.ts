@@ -1,7 +1,7 @@
 import { Directive, Signal, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
+import { HasUnsavedChanges, warnBeforeUnload } from '../../core/guards/unsaved-changes.guard';
 import { BaseEntity } from '../../core/models/entity.model';
 import { BreadcrumbService } from '../../core/services/breadcrumb.service';
 import { EntityStore, StoreResult } from '../../core/services/entity.store';
@@ -67,6 +67,7 @@ export abstract class EntityFormPage<T extends BaseEntity, TPayload>
   private leaving = false;
 
   constructor() {
+    warnBeforeUnload(this);
     effect(() => {
       const slug = this.slug();
       untracked(() => void this.open(slug));

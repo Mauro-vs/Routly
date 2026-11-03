@@ -300,6 +300,7 @@ Cada colección tiene su formulario en `components/<x>-form/`, que hereda de `sh
 - La contraseña de un usuario es de solo escritura: al editar, solo se envía si se marca "Cambiar la contraseña".
 - Al editar, un texto opcional que se vacía se envía como `null` y la API lo borra. Vaciar las dos coordenadas de una ubicación las quita.
 - Las fechas de una salida solo se envían si cambian: así una salida que ya pasó se puede editar y marcar como "Realizada".
+- Salir con cambios sin guardar pide confirmación (`unsaved-changes.guard.ts`). También al recargar, cerrar la pestaña o escribir otra dirección: ahí sale el aviso genérico del navegador, que no deja cambiar el texto.
 
 Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar como principal una imagen inactiva) se desactivan con una explicación visible al pasar el ratón o al llegar con el teclado.
 

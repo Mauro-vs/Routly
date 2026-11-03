@@ -21,7 +21,7 @@ import {
 } from '@angular/forms';
 
 import { AuthStore } from '../../../../auth/auth.store';
-import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
+import { HasUnsavedChanges, warnBeforeUnload } from '../../../../core/guards/unsaved-changes.guard';
 import { USER_LIMITS } from '../../../../core/models/user.model';
 import { ErrorHandlerService } from '../../../../core/services/error-handler.service';
 import { NotificationService } from '../../../../core/services/notification.service';
@@ -238,6 +238,7 @@ export class ProfileComponent implements HasUnsavedChanges {
   });
 
   constructor() {
+    warnBeforeUnload(this);
     // Se rellena al llegar el usuario, y no en cada cambio: lo que se escribe no se pierde.
     const userId = computed(() => this.user()?._id ?? null);
     effect(() => {

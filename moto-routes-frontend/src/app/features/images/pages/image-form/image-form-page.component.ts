@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
+import { HasUnsavedChanges, warnBeforeUnload } from '../../../../core/guards/unsaved-changes.guard';
 import { ImagePayload } from '../../../../core/models/image.model';
 import { BreadcrumbService } from '../../../../core/services/breadcrumb.service';
 import { NotificationService } from '../../../../core/services/notification.service';
@@ -70,6 +70,7 @@ export class ImageFormPageComponent implements HasUnsavedChanges {
   private leaving = false;
 
   constructor() {
+    warnBeforeUnload(this);
     effect(() => {
       this.id();
       untracked(() => void this.open());

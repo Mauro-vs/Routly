@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { DOCUMENT, DestroyRef, inject } from '@angular/core';
 import { CanDeactivateFn, Router } from '@angular/router';
 
 import { NotificationService } from '../services/notification.service';
@@ -29,3 +29,19 @@ export const unsavedChangesGuard: CanDeactivateFn<HasUnsavedChanges> = (componen
     danger: true,
   });
 };
+
+/**
+ * Lo mismo al recargar, cerrar la pestaña o escribir otra dirección, que no pasan por el
+ * router: el navegador enseña su propio aviso (no deja cambiar el texto). Se llama en el
+ * constructor de la página y deja de escuchar cuando la página se destruye.
+ */
+export function warnBeforeUnload(page: HasUnsavedChanges): void {
+  const window = inject(DOCUMENT).defaultView;
+  if (!window) return;
+
+  const listener = (event: BeforeUnloadEvent): void => {
+    if (page.hasUnsavedChanges()) event.preventDefault();
+  };
+  window.addEventListener('beforeunload', listener);
+  inject(DestroyRef).onDestroy(() => window.removeEventListener('beforeunload', listener));
+}
