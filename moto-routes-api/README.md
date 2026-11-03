@@ -77,7 +77,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 `JWT_EXPIRES_IN` es la caducidad de los tokens: un texto como `1h` o `7d`, o un número de segundos. Si no se define, `1h`. En producción se recomienda `1h`.
 
-`CORS_ORIGIN` solo se usa con `NODE_ENV=production`: es la lista de orígenes (separados por comas) que pueden llamar a la API. En desarrollo se acepta cualquier origen; en producción, si no se define, no se acepta ninguno.
+`CORS_ORIGIN` es la lista de orígenes (separados por comas) que pueden llamar a la API. CORS solo la usa con `NODE_ENV=production` (con credenciales, para la cookie de sesión): en desarrollo se acepta cualquier origen y, en producción, si no se define, no se acepta ninguno. La comprobación CSRF de la cookie la usa siempre, y fuera de producción acepta además cualquier `localhost`.
 
 `NODE_ENV` puede ser `development` o `production` y cambia el comportamiento de Helmet y Morgan (ver abajo).
 
@@ -104,7 +104,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 142 tests con `node:test`:
+`npm test` ejecuta 154 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -117,6 +117,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout` (lista negra), `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
 | `src/testing/bike.test.js` | El garaje: alta y ficha, carnet calculado, límites, modificaciones, moto principal, 10 por usuario, ABAC, fotos, visibilidad, cascada con el usuario y la moto del guía (herencia, 409 si está en uso, cambio de anfitrión y `check:integrity`) |
 | `src/testing/integrity.test.js` | Integridad referencial: carreras sin transacciones (0 huérfanos), cascadas que fallan, galería de un dueño eliminado, restaurar un host sin rol, rol inactivo, visibilidad pública y `check:integrity` |
+| `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
@@ -673,16 +674,18 @@ sequenceDiagram
     participant A as API
     C->>A: POST /api/auth/login { email, password }
     A->>A: verifyPassword (Argon2id) y createToken (HS256)
-    A-->>C: { token, tokenType: "Bearer", expiresIn, user }
-    C->>A: PATCH /api/experiences/:id<br/>Authorization: Bearer <token>
+    A-->>C: { token, tokenType: "Bearer", expiresIn, user }<br/>Set-Cookie: routly_session=<token>; HttpOnly
+    C->>A: PATCH /api/experiences/:id<br/>Cookie: routly_session=<token> (o Authorization: Bearer <token>)
     A->>A: authenticate: firma, caducidad, usuario activo, tokenVersion
     A->>A: authorizeRoles: ¿host o admin?
     A->>A: service: ¿la experiencia es suya? (ABAC)
     A-->>C: 200, o 401 / 403
 ```
 
-1. `POST /api/auth/login` (o `/register`) devuelve el token y el usuario con su rol y su perfil.
-2. El cliente envía el token en cada petición: `Authorization: Bearer <token>`. No hay cookies.
+1. `POST /api/auth/login` (o `/register`) devuelve el token y el usuario con su rol y su perfil, y deja el mismo token en la cookie `routly_session`.
+2. En cada petición, el token llega de una de dos formas:
+   - **la cookie**, que el navegador manda sola: es lo que usa el panel (ver "La cookie de sesión");
+   - **la cabecera** `Authorization: Bearer <token>`: Swagger, Postman y los tests. Si llegan las dos, manda la cabecera.
 3. Al caducar (`JWT_EXPIRES_IN`) se vuelve a iniciar sesión: no hay refresh token. `POST /api/auth/logout` cierra esta sesión (lista negra) y `POST /api/auth/logout-all`, todas.
 
 | Pieza | Archivo | Qué hace |
@@ -690,11 +693,32 @@ sequenceDiagram
 | Contraseñas | `utils/passwd.js` | `hashPassword`, `verifyPassword` y `needsRehash` con Argon2id |
 | Token | `utils/jwt.js` | `createToken({ sub, email, role, tv })` y `verifyToken` (solo HS256) |
 | Configuración | `config/auth.js` | `JWT_SECRET` y `JWT_EXPIRES_IN`: sin secreto, el servidor no arranca |
-| Autenticación | `middlewares/authenticate.js` | Lee el Bearer, verifica el token y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos |
+| Cookie de sesión | `utils/session-cookie.js` | `setSessionCookie`, `clearSessionCookie`, `readCookie` (sin `cookie-parser`) y `sendSession`, que responde con la sesión y deja la cookie |
+| Autenticación | `middlewares/authenticate.js` | Lee el token de la cabecera o, si no viene, de la cookie, verifica el token y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos |
 | RBAC | `middlewares/authorize.js` | `authorizeRoles(...roles)`, `isAdmin`, `adminOnly`, `hostOrAdmin` y `authorizeOwnership(load, check)` |
 | ABAC | `utils/access.js` | Funciones puras: `isOwnerOrAdmin`, `canAccessUserResource`, `canModifyHost`, `canModifyExperience`, `canModifyDeparture` y `canModifyImageOwner`. Los services cargan la cadena de dueños y lanzan `forbidden()` |
 | Lista negra | `models/revokedToken.model.js` | Los tokens cerrados con `logout`: solo su `jti`, de quién eran y cuándo caducan. `authenticate` la consulta en cada petición |
 | Intentos | `middlewares/rateLimit.js` | Login: 10 intentos **fallidos** cada 15 min por IP. Registro: 10 altas cada 15 min. Después, 429 |
+
+### La cookie de sesión
+
+El panel no guarda el token: vive en una cookie que el JavaScript de la página no puede leer, así que un XSS no se lo puede llevar.
+
+| Opción | Valor | Por qué |
+|---|---|---|
+| Nombre | `routly_session` | |
+| `HttpOnly` | Sí | El JavaScript no la lee |
+| `SameSite` | `Strict` | El navegador no la manda en peticiones que vienen de otra web (CSRF) |
+| `Path` | `/api` | Solo viaja a la API |
+| `Max-Age` | El `expiresIn` del token | Caduca a la vez que el token |
+| `Secure` | Solo en producción | En `http://localhost` algunos navegadores no guardan una cookie `Secure` |
+
+- **La ponen** el login, el registro y el cambio de contraseña. **La borran** `logout` y `logout-all`, y cualquier 401 de una cookie que ya no sirve.
+- **En los GET públicos** (`optionalAuth`), una cookie que ya no sirve no da 401: la petición sigue como anónima y la cookie se borra. Con la cabecera, un token que no sirve sigue siendo un 401.
+- **CSRF.** Además de `SameSite=Strict`, con la cookie un POST o PATCH cuya cabecera `Origin` no sea la propia API, uno de `CORS_ORIGIN` o (fuera de producción) un `localhost` responde `403 Request origin not allowed`. Sin `Origin` (Postman, curl) no se puede saber de dónde viene y se deja pasar. Con la cabecera `Authorization` no se comprueba: no viaja sola, como la cookie.
+- **CORS.** En desarrollo el panel llama a `/api` a través del proxy de Angular, desde su propio origen, así que no hacen falta credenciales cruzadas. En producción la API responde con `credentials: true` para los orígenes de `CORS_ORIGIN`.
+
+**Por qué cookie y no `localStorage`.** Los prompts del proyecto pedían guardar el token en `localStorage`. Se cambió porque ahí cualquier script de la página lo puede leer: con la cookie `httpOnly`, un XSS ya no se lleva la sesión, y `SameSite=Strict` más la comprobación del `Origin` cubren el CSRF que trae la cookie. El token sigue saliendo en el body para no romper Swagger, Postman ni los tests.
 
 **El token** lleva `sub` (id del usuario), `email`, `role` (su `name`), `tv` (su `tokenVersion`) y `jti` (un UUID propio de cada token), además de `iat` y `exp`. Nunca la contraseña ni el hash.
 

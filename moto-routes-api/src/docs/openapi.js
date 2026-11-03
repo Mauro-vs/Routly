@@ -483,13 +483,14 @@ const activeBody = (required) => ({
 
 // ---------- Seguridad: quién puede usar cada endpoint ----------
 
-const bearer = [{ bearerAuth: [] }];
+// Cualquiera de los dos: la cabecera Authorization o la cookie de sesión del panel
+const bearer = [{ bearerAuth: [] }, { cookieAuth: [] }];
 const unauthorized = { $ref: "#/components/responses/Unauthorized" };
 const forbidden = { $ref: "#/components/responses/Forbidden" };
 const tooManyRequests = { $ref: "#/components/responses/TooManyRequests" };
 
 /**
- * Añade a una operación el candado (bearerAuth), quién puede usarla y sus 401 y 403.
+ * Añade a una operación el candado (bearerAuth o cookieAuth), quién puede usarla y sus 401 y 403.
  *   public: sin token · user: cualquier sesión · admin: solo admin · owner: admin o el dueño
  */
 function secured(operation, level, owner) {
@@ -676,7 +677,7 @@ const AUTH_PATHS = {
     post: {
       summary: "Registrarse",
       description:
-        "Alta pública: siempre con el rol rider (roleId no se acepta) y con su perfil vacío. Devuelve la sesión, como el login. Como mucho 10 altas cada 15 minutos por IP.",
+        "Alta pública: siempre con el rol rider (roleId no se acepta) y con su perfil vacío. Devuelve la sesión y deja la cookie, como el login. Como mucho 10 altas cada 15 minutos por IP.",
       tags: ["Auth"],
       requestBody: body("RegisterInput"),
       responses: {
@@ -691,11 +692,19 @@ const AUTH_PATHS = {
     post: {
       summary: "Iniciar sesión",
       description:
-        "Devuelve el JWT y el usuario con su rol y su perfil. El mismo 401 si el correo no existe, la contraseña no coincide o la cuenta está inactiva. Como mucho 10 intentos fallidos cada 15 minutos por IP.",
+        "Devuelve el JWT y el usuario con su rol y su perfil, y deja el mismo token en la cookie httpOnly routly_session (la que usa el panel). El mismo 401 si el correo no existe, la contraseña no coincide o la cuenta está inactiva. Como mucho 10 intentos fallidos cada 15 minutos por IP.",
       tags: ["Auth"],
       requestBody: body("LoginInput"),
       responses: {
-        200: ok("Sesión iniciada", sessionRef),
+        200: {
+          ...ok("Sesión iniciada", sessionRef),
+          headers: {
+            "Set-Cookie": {
+              description: "routly_session=<token>; Max-Age=<expiresIn>; Path=/api; HttpOnly; SameSite=Strict (y Secure en producción)",
+              schema: { type: "string" },
+            },
+          },
+        },
         400: error("Falta el email o la contraseña"),
         401: {
           description: "Credenciales no válidas",
@@ -721,7 +730,7 @@ const AUTH_PATHS = {
       {
         summary: "Cerrar sesión",
         description:
-          "Cierra esta sesión: el token pasa a la lista negra y deja de servir al momento, aunque no haya caducado. Las sesiones de otros dispositivos siguen abiertas. El cliente, además, borra el token.",
+          "Cierra esta sesión: el token pasa a la lista negra y deja de servir al momento, aunque no haya caducado. Las sesiones de otros dispositivos siguen abiertas. Borra la cookie de sesión; si se usa la cabecera, el cliente borra el token.",
         tags: ["Auth"],
         responses: { 204: { description: "Sesión cerrada" } },
       },
@@ -733,7 +742,7 @@ const AUTH_PATHS = {
       {
         summary: "Cerrar todas las sesiones",
         description:
-          "Invalida todos los tokens del usuario (sube su tokenVersion), también el de esta petición, en todos los dispositivos. Para cerrar solo esta sesión: POST /api/auth/logout.",
+          "Invalida todos los tokens del usuario (sube su tokenVersion), también el de esta petición, en todos los dispositivos, y borra la cookie de sesión. Para cerrar solo esta sesión: POST /api/auth/logout.",
         tags: ["Auth"],
         responses: { 204: { description: "Sesiones cerradas" } },
       },
@@ -779,7 +788,7 @@ const PROFILE_PATHS = {
       {
         summary: "Cambiar mi contraseña",
         description:
-          "Pide la actual. Cierra todas las sesiones y devuelve una nueva para seguir en esta. Una contraseña actual incorrecta es un 400 en currentPassword, no un 401: la sesión sigue siendo válida.",
+          "Pide la actual. Cierra todas las sesiones y devuelve una nueva (y su cookie) para seguir en esta. Una contraseña actual incorrecta es un 400 en currentPassword, no un 401: la sesión sigue siendo válida.",
         tags: ["Profile"],
         requestBody: body("ChangePasswordInput"),
         responses: {
@@ -832,7 +841,14 @@ export const apiComponents = {
       scheme: "bearer",
       bearerFormat: "JWT",
       description:
-        "El token de POST /api/auth/login (o /register). En Swagger UI: botón Authorize y pegar solo el token, sin \"Bearer\".",
+        "El token de POST /api/auth/login (o /register). En Swagger UI: botón Authorize y pegar solo el token, sin \"Bearer\". Si llegan la cabecera y la cookie, manda la cabecera.",
+    },
+    cookieAuth: {
+      type: "apiKey",
+      in: "cookie",
+      name: "routly_session",
+      description:
+        "La sesión del panel: el login la deja puesta (httpOnly, SameSite=Strict, Path=/api) y el navegador la manda sola. En Swagger UI basta con ejecutar POST /api/auth/login. Con la cookie, un POST o PATCH con cabecera Origin de otra web es un 403 (Request origin not allowed).",
     },
   },
   responses: {

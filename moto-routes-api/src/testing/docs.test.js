@@ -47,4 +47,6 @@ test("los 401, 403 y 429 documentados usan los mensajes exactos de la API", () =
     scheme: "bearer",
     bearerFormat: "JWT",
   });
+  assert.equal(swaggerSpec.components.securitySchemes.cookieAuth.name, "routly_session");
+  assert.equal(swaggerSpec.components.securitySchemes.cookieAuth.in, "cookie");
 });

@@ -1,5 +1,6 @@
 import { authService } from "../services/auth.service.js";
 import { userService } from "../services/user.service.js";
+import { sendSession } from "../utils/session-cookie.js";
 
 // El perfil es del usuario: todo pasa por userService, nunca por profileService.
 // "me" sale siempre de req.user (el token), nunca del body ni de la URL.
@@ -20,11 +21,11 @@ export const profileController = {
     }
   },
 
-  // Las demás sesiones se cierran: se devuelve un token nuevo para seguir en esta
+  // Las demás sesiones se cierran: se devuelve un token nuevo (y su cookie) para seguir en esta
   async changePassword(req, res, next) {
     try {
       await userService.changePassword(req.user.id, req.body);
-      res.json(await authService.session(req.user.id));
+      sendSession(res, await authService.session(req.user.id));
     } catch (error) {
       next(error);
     }
