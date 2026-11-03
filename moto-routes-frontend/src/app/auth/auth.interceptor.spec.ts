@@ -1,8 +1,9 @@
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { errorInterceptor } from '../core/interceptors/error.interceptor';
@@ -55,8 +56,10 @@ describe('authInterceptor', () => {
   it('a otros dominios, o a una URL que solo empiece igual, no van credenciales', async () => {
     store.login({ expiresIn: 3600, user: fakeUser() });
 
+    // Directo con HttpClient: ApiService le pondría delante la URL de la API
+    const client = TestBed.inject(HttpClient);
     for (const url of ['https://otro.example.com/api/routes', `${BASE}-falsa/routes`]) {
-      const promise = api.get(url);
+      const promise = firstValueFrom(client.get(url));
       const request = http.expectOne(url);
       expect(request.request.withCredentials).withContext(url).toBeFalse();
       request.flush([]);

@@ -104,16 +104,16 @@ El panel se configura en `src/environments/`:
 
 | Variable | Valor por defecto | Para qué |
 |---|---|---|
-| `apiUrl` | `/api` en desarrollo, `http://localhost:3000/api` en producción | URL base de la API, sin barra final |
+| `apiUrl` | `/api` | URL base de la API, sin barra final. En desarrollo la sirve el proxy de `ng serve`; en producción, el proxy de la web (ver abajo) |
 | `apiTimeout` | `10000` | Milisegundos que se espera una respuesta antes de cortar la petición |
 
-**El proxy de desarrollo.** `npm start` sirve el panel con `proxy.conf.json`: las peticiones a `/api` y `/health` pasan a `http://localhost:3000`. Así el panel llama a la API desde su propio origen y la cookie de sesión viaja sin credenciales cruzadas entre puertos. La documentación de la API también se abre por el proxy (`http://localhost:4200/api/docs`). En producción, si el panel se sirve desde otro origen, ese origen tiene que estar en el `CORS_ORIGIN` de la API.
+**El proxy de desarrollo.** `npm start` sirve el panel con `proxy.conf.json`: las peticiones a `/api` y `/health` pasan a `http://localhost:3000`. Así el panel llama a la API desde su propio origen y la cookie de sesión viaja sin credenciales cruzadas entre puertos. La documentación de la API también se abre por el proxy (`http://localhost:4200/api/docs`). En producción se hace lo mismo con el servidor web: sirve el panel y reenvía `/api` a la API, con HTTPS. Cómo montarlo, con un ejemplo de Nginx, está en "Producción con HTTPS" del README de la API. Si la API va en otro origen, `apiUrl` lleva su URL completa y el origen del panel tiene que estar en el `CORS_ORIGIN` de la API.
 
 La API se configura con su propio `.env` (ver `moto-routes-api/README.md`):
 
 | Variable | Ejemplo | Para qué |
 |---|---|---|
-| `PORT` | `3000` | Puerto de la API. Si lo cambias, cambia también el `target` de `proxy.conf.json` y el `apiUrl` de producción |
+| `PORT` | `3000` | Puerto de la API. Si lo cambias, cambia también el `target` de `proxy.conf.json` |
 | `MONGODB_URI` | `mongodb://localhost:27017/moto_routes` | Base de datos |
 | `NODE_ENV` | `development` | En `production` la API solo acepta los orígenes de `CORS_ORIGIN` |
 | `CORS_ORIGIN` | `http://localhost:4200` | Origen del panel: en producción, para CORS con credenciales; siempre, para la comprobación CSRF de la cookie |

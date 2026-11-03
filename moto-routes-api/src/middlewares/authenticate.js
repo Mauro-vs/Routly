@@ -3,7 +3,7 @@ import { revokedTokenRepository } from "../repositories/revokedToken.repository.
 import { userRepository } from "../repositories/user.repository.js";
 import { createError, unauthorized } from "../utils/errors.js";
 import { verifyToken } from "../utils/jwt.js";
-import { SESSION_COOKIE, clearSessionCookie, readCookie } from "../utils/session-cookie.js";
+import { clearSessionCookie, readCookie, sessionCookieName } from "../utils/session-cookie.js";
 
 // Las tres partes de un JWT en base64url, separadas por puntos
 const JWT = String.raw`[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*`;
@@ -15,7 +15,7 @@ const COOKIE_TOKEN = new RegExp(`^${JWT}$`);
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // La sesión llega por la cookie: no hay cabecera Authorization y sí cookie de sesión
-const usesCookie = (req) => !req.headers.authorization && readCookie(req, SESSION_COOKIE) !== undefined;
+const usesCookie = (req) => !req.headers.authorization && readCookie(req, sessionCookieName()) !== undefined;
 
 /**
  * De dónde sale el token. Manda la cabecera Authorization si viene (Swagger, Postman, los
@@ -29,7 +29,7 @@ function readCredentials(req) {
     return { token: match[1], fromCookie: false };
   }
 
-  const cookie = readCookie(req, SESSION_COOKIE);
+  const cookie = readCookie(req, sessionCookieName());
   if (cookie === undefined) return null;
   if (!COOKIE_TOKEN.test(cookie)) throw unauthorized("TOKEN_INVALID");
   return { token: cookie, fromCookie: true };

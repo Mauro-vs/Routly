@@ -30,7 +30,8 @@ const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 export function isAllowedOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
-  if (origin === `${req.protocol}://${req.headers.host}`) return true;
+  // Con TRUST_PROXY, protocolo y host son los que vio el proxy (X-Forwarded-Proto y -Host)
+  if (origin === `${req.protocol}://${req.host}`) return true;
   if (allowedOrigins.includes(origin)) return true;
   return !isProduction && LOCAL_ORIGIN.test(origin);
 }

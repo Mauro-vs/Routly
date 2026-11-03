@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cookieConfigFrom } from "../config/cookies.js";
 import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 import { createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
 import { createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
@@ -483,6 +484,9 @@ const activeBody = (required) => ({
 
 // ---------- Seguridad: quién puede usar cada endpoint ----------
 
+// El nombre de la cookie de este entorno: __Secure-routly_session con Secure (producción)
+const SESSION_COOKIE = cookieConfigFrom().name;
+
 // Cualquiera de los dos: la cabecera Authorization o la cookie de sesión del panel
 const bearer = [{ bearerAuth: [] }, { cookieAuth: [] }];
 const unauthorized = { $ref: "#/components/responses/Unauthorized" };
@@ -692,7 +696,7 @@ const AUTH_PATHS = {
     post: {
       summary: "Iniciar sesión",
       description:
-        "Devuelve el JWT y el usuario con su rol y su perfil, y deja el mismo token en la cookie httpOnly routly_session (la que usa el panel). El mismo 401 si el correo no existe, la contraseña no coincide o la cuenta está inactiva. Como mucho 10 intentos fallidos cada 15 minutos por IP.",
+        `Devuelve el JWT y el usuario con su rol y su perfil, y deja el mismo token en la cookie httpOnly ${SESSION_COOKIE} (la que usa el panel). El mismo 401 si el correo no existe, la contraseña no coincide o la cuenta está inactiva. Como mucho 10 intentos fallidos cada 15 minutos por IP.`,
       tags: ["Auth"],
       requestBody: body("LoginInput"),
       responses: {
@@ -700,7 +704,7 @@ const AUTH_PATHS = {
           ...ok("Sesión iniciada", sessionRef),
           headers: {
             "Set-Cookie": {
-              description: "routly_session=<token>; Max-Age=<expiresIn>; Path=/api; HttpOnly; SameSite=Strict (y Secure en producción)",
+              description: `${SESSION_COOKIE}=<token>; Max-Age=<expiresIn>; Path=/api; HttpOnly; SameSite=Strict (o Lax, COOKIE_SAMESITE) y, con COOKIE_SECURE, Secure`,
               schema: { type: "string" },
             },
           },
@@ -846,7 +850,7 @@ export const apiComponents = {
     cookieAuth: {
       type: "apiKey",
       in: "cookie",
-      name: "routly_session",
+      name: SESSION_COOKIE,
       description:
         "La sesión del panel: el login la deja puesta (httpOnly, SameSite=Strict, Path=/api) y el navegador la manda sola. En Swagger UI basta con ejecutar POST /api/auth/login. Con la cookie, un POST o PATCH con cabecera Origin de otra web es un 403 (Request origin not allowed).",
     },

@@ -1,29 +1,30 @@
+import { loadCookieConfig } from "../config/cookies.js";
+
 /*
  * La sesión del panel viaja en una cookie httpOnly: el JavaScript de la página no la puede
  * leer, así que un XSS no se lleva el token. El token sigue saliendo también en el body del
  * login para Swagger, Postman y los tests, que mandan Authorization: Bearer.
  *
- * SameSite=Strict: el navegador no la manda en peticiones que vienen de otra web (CSRF).
- * Path=/api: solo viaja a la API. Secure solo en producción: en http://localhost algunos
- * navegadores no guardan una cookie Secure.
+ * Path=/api: solo viaja a la API. SameSite (strict por defecto) y Secure (en producción, con
+ * el nombre __Secure-routly_session) salen de config/cookies.js.
  */
-export const SESSION_COOKIE = "routly_session";
 
-const cookieOptions = () => ({
-  httpOnly: true,
-  sameSite: "strict",
-  path: "/api",
-  secure: process.env.NODE_ENV === "production",
-});
+/** El nombre de la cookie: routly_session, o __Secure-routly_session con Secure. */
+export const sessionCookieName = () => loadCookieConfig().name;
+
+const cookieOptions = () => {
+  const { secure, sameSite } = loadCookieConfig();
+  return { httpOnly: true, sameSite, path: "/api", secure };
+};
 
 /** Pone la cookie con el token de la sesión. maxAge en segundos, como el expiresIn del login. */
 export function setSessionCookie(res, token, maxAge) {
-  res.cookie(SESSION_COOKIE, token, { ...cookieOptions(), maxAge: maxAge * 1000 });
+  res.cookie(sessionCookieName(), token, { ...cookieOptions(), maxAge: maxAge * 1000 });
 }
 
 /** La borra: el navegador la descarta al recibirla caducada, con las mismas opciones. */
 export function clearSessionCookie(res) {
-  res.clearCookie(SESSION_COOKIE, cookieOptions());
+  res.clearCookie(sessionCookieName(), cookieOptions());
 }
 
 /** Lee una cookie de la cabecera Cookie ("a=1; b=2"). Sin cookie-parser: no hace falta más. */

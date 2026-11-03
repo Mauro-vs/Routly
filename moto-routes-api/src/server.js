@@ -2,10 +2,12 @@ import "dotenv/config";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { loadAuthConfig } from "./config/auth.js";
+import { loadCookieConfig } from "./config/cookies.js";
 import { corsMiddleware } from "./config/cors.js";
 import { connectDB } from "./config/db.js";
 import { helmetMiddleware } from "./config/helmet.js";
 import { morganMiddleware } from "./config/morgan.js";
+import { applyTrustProxy } from "./config/proxy.js";
 import { swaggerSpec } from "./config/swagger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
@@ -21,11 +23,16 @@ import roleRoutes from "./routes/role.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import userRoutes from "./routes/user.routes.js";
 
-// Sin un JWT_SECRET válido no se arranca: mejor fallar aquí que en el primer login
+// Sin un JWT_SECRET válido, o con la cookie mal configurada, no se arranca: mejor fallar
+// aquí que en el primer login
 loadAuthConfig();
+loadCookieConfig();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Detrás de un proxy (TRUST_PROXY): la IP, el protocolo y el host del cliente, no los suyos
+applyTrustProxy(app);
 
 app.use(helmetMiddleware);
 app.use(corsMiddleware);

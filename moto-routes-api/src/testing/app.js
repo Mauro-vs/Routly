@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import { applyTrustProxy } from "../config/proxy.js";
 import { errorHandler, notFoundHandler } from "../middlewares/errorHandler.js";
 import authRoutes from "../routes/auth.routes.js";
 import bikeRoutes from "../routes/bike.routes.js";
@@ -64,8 +65,9 @@ export async function startApi(name) {
     throw error;
   }
 
-  // Los mismos routers y el mismo límite de body que server.js
+  // Los mismos routers, el mismo límite de body y el mismo TRUST_PROXY que server.js
   const app = express();
+  applyTrustProxy(app);
   app.use(express.json({ limit: "50kb" }));
   const routers = {
     auth: authRoutes,

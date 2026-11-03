@@ -23,7 +23,7 @@ Forma parte del monorepo de Routly. La visión general del proyecto está en el 
 - [Activo / inactivo frente a eliminado](#activo--inactivo-frente-a-eliminado) · [Soft delete y papelera](#soft-delete-y-papelera) · [Integridad referencial](#integridad-referencial)
 - [Imágenes](#imágenes) · [SKU de las salidas](#sku-de-las-salidas)
 - [Validación (Zod)](#validación-zod) · [Manejo de errores](#manejo-de-errores)
-- [Autenticación y autorización](#autenticación-y-autorización) · [Seguridad (Helmet)](#seguridad-helmet) · [Logs (Morgan)](#logs-morgan)
+- [Autenticación y autorización](#autenticación-y-autorización) · [Seguridad (Helmet)](#seguridad-helmet) · [Producción con HTTPS](#producción-con-https) · [Logs (Morgan)](#logs-morgan)
 - [Cómo añadir un recurso](#cómo-añadir-un-recurso)
 
 ## Lenguaje y librerías
@@ -67,6 +67,9 @@ MONGODB_URI=mongodb://localhost:27017/moto_routes
 CORS_ORIGIN=http://localhost:4200
 JWT_SECRET=<secreto largo y aleatorio>
 JWT_EXPIRES_IN=7d
+TRUST_PROXY=0
+# COOKIE_SECURE=true
+# COOKIE_SAMESITE=strict
 ```
 
 `JWT_SECRET` es obligatorio: sin él el servidor no arranca. Firma los tokens (HS256) y en producción tiene que tener al menos 32 caracteres. Para generar uno:
@@ -79,7 +82,15 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 `CORS_ORIGIN` es la lista de orígenes (separados por comas) que pueden llamar a la API. CORS solo la usa con `NODE_ENV=production` (con credenciales, para la cookie de sesión): en desarrollo se acepta cualquier origen y, en producción, si no se define, no se acepta ninguno. La comprobación CSRF de la cookie la usa siempre, y fuera de producción acepta además cualquier `localhost`.
 
-`NODE_ENV` puede ser `development` o `production` y cambia el comportamiento de Helmet y Morgan (ver abajo).
+`TRUST_PROXY` es el número de proxies que hay delante de la API (Nginx, Caddy, el de un PaaS). Por defecto `0`, también en producción. Con uno delante, `1`: así Express ve la IP, el protocolo y el host del cliente (`X-Forwarded-*`), y no los del proxy. Ponerlo sin que haya proxy dejaría a cualquiera inventarse su IP y saltarse el límite de intentos del login.
+
+`COOKIE_SECURE` (`true` o `false`) decide si la cookie de sesión lleva `Secure`. Sin definir, `true` en producción y `false` fuera. Con `Secure`, la cookie pasa a llamarse `__Secure-routly_session`.
+
+`COOKIE_SAMESITE` es `strict` (por defecto) o `lax`. `none` no se admite: haría falta un token CSRF.
+
+Un valor no válido en cualquiera de estas tres variables para el servidor al arrancar, con el nombre de la variable en el error.
+
+`NODE_ENV` puede ser `development` o `production` y cambia el comportamiento de Helmet y Morgan (ver abajo), y el valor por defecto de `COOKIE_SECURE`.
 
 ## Ejecución
 
@@ -104,7 +115,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 154 tests con `node:test`:
+`npm test` ejecuta 169 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -117,6 +128,9 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout` (lista negra), `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
 | `src/testing/bike.test.js` | El garaje: alta y ficha, carnet calculado, límites, modificaciones, moto principal, 10 por usuario, ABAC, fotos, visibilidad, cascada con el usuario y la moto del guía (herencia, 409 si está en uso, cambio de anfitrión y `check:integrity`) |
 | `src/testing/integrity.test.js` | Integridad referencial: carreras sin transacciones (0 huérfanos), cascadas que fallan, galería de un dueño eliminado, restaurar un host sin rol, rol inactivo, visibilidad pública y `check:integrity` |
+| `src/config/cookies.test.js` | La configuración de la cookie: valores por defecto, producción, `COOKIE_SECURE` y `COOKIE_SAMESITE`, el prefijo `__Secure-` y los valores que paran el arranque |
+| `src/config/proxy.test.js` | `TRUST_PROXY`: por defecto, valores no válidos y el límite de intentos real con y sin proxy de confianza (una IP inventada no lo salta) |
+| `src/testing/https.test.js` | Como en producción detrás de un proxy HTTPS: la cookie `__Secure-` con `Secure`, el nombre sin prefijo ya no cuenta y la comprobación del `Origin` con `X-Forwarded-Proto` y `-Host` |
 | `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
@@ -706,12 +720,12 @@ El panel no guarda el token: vive en una cookie que el JavaScript de la página 
 
 | Opción | Valor | Por qué |
 |---|---|---|
-| Nombre | `routly_session` | |
+| Nombre | `routly_session`, o `__Secure-routly_session` con `Secure` | El prefijo `__Secure-` hace que el navegador solo la acepte por HTTPS, así nadie la puede colar por HTTP. `__Host-` obligaría a `Path=/` |
 | `HttpOnly` | Sí | El JavaScript no la lee |
-| `SameSite` | `Strict` | El navegador no la manda en peticiones que vienen de otra web (CSRF) |
+| `SameSite` | `Strict` (o `Lax` con `COOKIE_SAMESITE`) | El navegador no la manda en peticiones que vienen de otra web (CSRF) |
 | `Path` | `/api` | Solo viaja a la API |
 | `Max-Age` | El `expiresIn` del token | Caduca a la vez que el token |
-| `Secure` | Solo en producción | En `http://localhost` algunos navegadores no guardan una cookie `Secure` |
+| `Secure` | `COOKIE_SECURE`; sin definir, solo en producción | En `http://localhost` algunos navegadores no guardan una cookie `Secure` |
 
 - **La ponen** el login, el registro y el cambio de contraseña. **La borran** `logout` y `logout-all`, y cualquier 401 de una cookie que ya no sirve.
 - **En los GET públicos** (`optionalAuth`), una cookie que ya no sirve no da 401: la petición sigue como anónima y la cookie se borra. Con la cabecera, un token que no sirve sigue siendo un 401.
@@ -836,6 +850,61 @@ Solo en `production`: se activan `Strict-Transport-Security` (HSTS) y `upgrade-i
 Las contraseñas se guardan con Argon2id (19 MiB, 2 pasadas, 1 hilo: los mínimos de OWASP). `passwordHash` y `tokenVersion` están marcados con `select: false` en el modelo: no salen en ninguna consulta. Ver [Autenticación y autorización](#autenticación-y-autorización).
 
 </details>
+
+## Producción con HTTPS
+
+La API no sirve HTTPS ella misma: lo termina un proxy delante (Nginx, Caddy o el de tu hosting), que le pasa la petición por HTTP con los datos originales en las cabeceras `X-Forwarded-*`.
+
+**Dónde viven el panel y la API.** Es la decisión que más pesa, por la cookie de sesión:
+
+| Montaje | Ejemplo | Qué implica |
+|---|---|---|
+| **Mismo origen (recomendado)** | `https://routly.com` sirve el panel y reenvía `/api` a la API | Igual que el proxy de desarrollo del panel. Sin CORS, `SameSite=Strict` funciona y el panel usa `apiUrl: '/api'` |
+| Subdominios | `https://app.routly.com` y `https://api.routly.com` | Mismo sitio: `SameSite=Strict` sigue funcionando. Son orígenes distintos: CORS con credenciales y `CORS_ORIGIN=https://app.routly.com`, y en el panel la URL completa en `apiUrl` |
+| Dominios distintos | `routly.vercel.app` y `routly-api.onrender.com` | **No soportado**: haría falta `SameSite=None` y un token CSRF, y los navegadores bloquean cada vez más las cookies de terceros |
+
+**Ejemplo con Nginx** (mismo origen; el panel compilado en `/var/www/routly`):
+
+```nginx
+server {
+  listen 80;
+  server_name routly.com;
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name routly.com;
+  ssl_certificate     /etc/letsencrypt/live/routly.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/routly.com/privkey.pem;
+
+  root /var/www/routly;
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+  }
+}
+```
+
+Con Caddy basta con `reverse_proxy /api/* 127.0.0.1:3000`: pide el certificado y pone las cabeceras solo.
+
+**Antes de publicar:**
+
+- `NODE_ENV=production` y `TRUST_PROXY=1` (uno por cada proxy delante).
+- `JWT_SECRET` nuevo, de 32 caracteres o más, y `JWT_EXPIRES_IN=1h`.
+- `COOKIE_SECURE` sin definir o en `true`: la cookie pasa a `__Secure-routly_session`.
+- `CORS_ORIGIN` con el origen `https://` del panel, si no está en el mismo origen.
+- El proxy redirige HTTP a HTTPS. HSTS lo pone Helmet en producción.
+- `MONGODB_URI` de la base de datos de producción, con usuario y contraseña.
+
+**Si crece.** Con varias instancias de la API, el JWT no depende de ninguna y la lista negra ya está en Mongo, compartida. El contador del límite de intentos, en cambio, vive en la memoria de cada instancia: habría que llevarlo a Redis. Y con tokens de 1 h, para no volver a entrar cada hora, haría falta un refresh token en otra cookie `httpOnly`.
 
 ## Logs (Morgan)
 

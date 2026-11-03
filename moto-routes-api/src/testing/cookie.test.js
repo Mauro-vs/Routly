@@ -171,3 +171,14 @@ test("con la cabecera Authorization no se mira el Origin: no viaja sola como la 
   });
   assert.equal(response.status, 201);
 });
+
+test("sin TRUST_PROXY, las cabeceras X-Forwarded-* no cuentan para el Origin", async () => {
+  const { cookie } = await login();
+
+  // Un cliente cualquiera puede mandarlas: sin un proxy de confianza, no se cree que sea https
+  const response = await send("POST", "/categories", {
+    headers: { cookie, origin: "https://routly.example", "x-forwarded-proto": "https", "x-forwarded-host": "routly.example" },
+    body: { name: "Origen inventado" },
+  });
+  assert.equal(response.status, 403);
+});
