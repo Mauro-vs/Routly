@@ -52,6 +52,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -114,4 +117,9 @@ export class ExperiencesListComponent extends EntityListPage<Experience> {
   protected readonly columns = COLUMNS;
   protected readonly language = languageName;
   protected readonly number = formatNumber;
+
+  protected override searchText(experience: Experience): string {
+    return [experience.title, experience.host?.name, experience.route?.title].filter(Boolean).join(' ');
+  }
+
 }

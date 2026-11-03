@@ -12,6 +12,7 @@ import {
   statusWord,
 } from '../../utils/labels';
 import { RouterPath } from '../../utils/router';
+import { ListSort } from '../../utils/search';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { ErrorStateComponent } from '../error-state/error-state.component';
 import { IconComponent } from '../icon/icon.component';
@@ -71,6 +72,31 @@ export interface StatusCounts {
         (valueChange)="status.set($event)"
       />
       <ng-content select="[listToolbar]" />
+      <div class="toolbar__end">
+        <label class="search">
+          <span class="sr-only">Buscar {{ labels().plural }}</span>
+          <ui-icon name="magnifying-glass" />
+          <input
+            class="input"
+            type="search"
+            name="q"
+            autocomplete="off"
+            [placeholder]="'Buscar ' + labels().plural"
+            [value]="query()"
+            (input)="query.set($any($event.target).value)"
+          />
+        </label>
+        @if (sorts().length > 1) {
+          <label class="sort">
+            <span>Ordenar</span>
+            <select class="select" name="orden" [value]="sort()" (change)="sort.set($any($event.target).value)">
+              @for (option of sorts(); track option.value) {
+                <option [value]="option.value" [selected]="option.value === sort()">{{ option.label }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
     </div>
 
     @if (failed()) {
@@ -85,6 +111,12 @@ export interface StatusCounts {
               <ui-icon name="plus" />{{ createLabel() }}
             </a>
           }
+        </ui-empty-state>
+      </div>
+    } @else if (loaded() && total() === 0 && query().trim()) {
+      <div class="card">
+        <ui-empty-state icon="magnifying-glass" [title]="'Nada para «' + query().trim() + '»'" description="Prueba con otra palabra o quita la búsqueda.">
+          <button type="button" class="btn btn--secondary" (click)="query.set('')">Quitar la búsqueda</button>
         </ui-empty-state>
       </div>
     } @else if (loaded() && total() === 0) {
@@ -115,6 +147,43 @@ export interface StatusCounts {
       margin-bottom: var(--space-4);
     }
 
+    .toolbar__end {
+      display: flex;
+      flex: 1;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search {
+      position: relative;
+      flex: 0 1 280px;
+      min-width: 180px;
+    }
+
+    .search ui-icon {
+      position: absolute;
+      top: 50%;
+      left: 11px;
+      font-size: 16px;
+      color: var(--color-text-muted);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .search .input {
+      padding-left: 34px;
+    }
+
+    .sort {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
     .trash-count {
       min-width: 20px;
       padding: 0 6px;
@@ -130,8 +199,18 @@ export interface StatusCounts {
     }
 
     @media (max-width: 560px) {
-      .toolbar > ui-segmented {
+      .toolbar > ui-segmented,
+      .toolbar__end,
+      .search {
         flex-basis: 100%;
+      }
+
+      .sort {
+        flex: 1;
+      }
+
+      .sort .select {
+        flex: 1;
       }
     }
   `,
@@ -162,6 +241,10 @@ export class ListPageComponent {
 
   readonly status = model.required<StatusFilter>();
   readonly page = model.required<number>();
+  /** El texto del buscador. */
+  readonly query = model('');
+  readonly sorts = input<readonly ListSort<never>[]>([]);
+  readonly sort = model('');
   readonly retry = output<void>();
 
   protected readonly statusLabels = computed(() => statusFilterLabels(this.labels().gender));

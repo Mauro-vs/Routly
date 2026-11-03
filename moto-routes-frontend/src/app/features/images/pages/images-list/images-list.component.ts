@@ -54,6 +54,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -80,7 +83,7 @@ const COLUMNS: readonly TableColumn[] = [
         </ng-template>
         <ng-template uiCell="cover" [uiCellOf]="pager.items()" let-image>
           @if (image.isCover) {
-            <span class="badge badge--icon badge--info"><ui-icon name="star" />Principal</span>
+            <span class="badge badge--icon badge--neutral"><ui-icon name="star" />Principal</span>
           } @else {
             <span class="muted">No</span>
           }
@@ -120,4 +123,9 @@ export class ImagesListComponent extends EntityListPage<Image> {
   protected readonly columns = COLUMNS;
   protected readonly owners = IMAGE_OWNERS;
   protected readonly ownerPath = imageOwnerPath;
+
+  protected override searchText(image: Image): string {
+    return [this.store.displayName(image), image.ownerType].join(' ');
+  }
+
 }

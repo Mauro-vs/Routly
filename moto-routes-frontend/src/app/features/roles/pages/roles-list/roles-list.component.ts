@@ -52,6 +52,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -110,4 +113,9 @@ const COLUMNS: readonly TableColumn[] = [
 export class RolesListComponent extends EntityListPage<Role> {
   protected readonly store = inject(RolesStore);
   protected readonly columns = COLUMNS;
+
+  protected override searchText(role: Role): string {
+    return [role.label, role.name, role.description].filter(Boolean).join(' ');
+  }
+
 }

@@ -47,6 +47,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -99,4 +102,9 @@ export class LocationsListComponent extends EntityListPage<Location> {
   protected readonly store = inject(LocationsStore);
   protected readonly columns = COLUMNS;
   protected readonly coordinates = locationCoordinates;
+
+  protected override searchText(location: Location): string {
+    return [location.city, location.region, location.country].filter(Boolean).join(' ');
+  }
+
 }

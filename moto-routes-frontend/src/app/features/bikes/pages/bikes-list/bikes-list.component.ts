@@ -12,6 +12,7 @@ import { ListPageComponent } from '../../../../shared/components/list-page/list-
 import { RelationLinkComponent } from '../../../../shared/components/relation-link/relation-link.component';
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
+import { ListSort, byText } from '../../../../shared/utils/search';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
 import { BikesStore } from '../../services/bikes.store';
 
@@ -52,6 +53,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -121,4 +125,14 @@ export class BikesListComponent extends EntityListPage<Bike> {
   protected specs(bike: Bike): string {
     return [bike.cc && `${bike.cc} cc`, bike.hp && `${bike.hp} cv`].filter(Boolean).join(' · ') || 'Sin ficha';
   }
+  protected override readonly sorts: readonly ListSort<Bike>[] = [
+    { value: 'recientes', label: 'Más recientes' },
+    { value: 'nombre', label: 'Nombre (A-Z)', compare: byText((bike: Bike) => this.store.displayName(bike)) },
+    { value: 'potencia', label: 'Más potencia', compare: (a: Bike, b: Bike) => (b.hp ?? 0) - (a.hp ?? 0) },
+  ];
+
+  protected override searchText(bike: Bike): string {
+    return [bike.brand, bike.model, bike.nickname, bike.version, bike.user?.name, bike.license].filter(Boolean).join(' ');
+  }
+
 }

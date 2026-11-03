@@ -12,6 +12,7 @@ import { RelationLinkComponent } from '../../../../shared/components/relation-li
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
+import { ListSort } from '../../../../shared/utils/search';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
 import { formatDateTime, formatMoney } from '../../../../shared/utils/format';
 import { DeparturesStore } from '../../services/departures.store';
@@ -21,8 +22,8 @@ const COLUMNS: readonly TableColumn[] = [
   { key: 'experience', header: 'Experiencia' },
   { key: 'capacity', header: 'Plazas', align: 'end' },
   { key: 'price', header: 'Precio', align: 'end' },
-  { key: 'state', header: 'Estado de la salida' },
-  { key: 'status', header: 'Estado', plain: true },
+  { key: 'state', header: 'Estado' },
+  { key: 'status', header: 'En el catálogo' },
   { key: 'actions', header: 'Acciones', headerHidden: true, align: 'end' },
 ];
 
@@ -57,6 +58,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -118,4 +122,14 @@ export class DeparturesListComponent extends EntityListPage<Departure> {
   protected readonly columns = COLUMNS;
   protected readonly dateTime = formatDateTime;
   protected readonly money = formatMoney;
+  protected override readonly sorts: readonly ListSort<Departure>[] = [
+    { value: 'fecha', label: 'Fecha de salida' },
+    { value: 'precio', label: 'Precio (menor)', compare: (a: Departure, b: Departure) => a.price - b.price },
+    { value: 'plazas', label: 'Más plazas', compare: (a: Departure, b: Departure) => b.capacity - a.capacity },
+  ];
+
+  protected override searchText(departure: Departure): string {
+    return [departure.experience?.title, departure.sku].filter(Boolean).join(' ');
+  }
+
 }

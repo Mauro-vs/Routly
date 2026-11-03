@@ -51,6 +51,9 @@ const COLUMNS: readonly TableColumn[] = [
       [pageSize]="pager.pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
+      [(query)]="query"
+      [sorts]="sorts"
+      [(sort)]="sort"
       (statusChange)="setStatus($event)"
       [(page)]="pager.page"
       (retry)="reload()"
@@ -117,4 +120,9 @@ const COLUMNS: readonly TableColumn[] = [
 export class UsersListComponent extends EntityListPage<User> {
   protected readonly store = inject(UsersStore);
   protected readonly columns = COLUMNS;
+
+  protected override searchText(user: User): string {
+    return [user.name, user.email, user.role?.label].filter(Boolean).join(' ');
+  }
+
 }
