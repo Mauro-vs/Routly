@@ -13,20 +13,18 @@ import { AuthStore } from './auth.store';
 export const SKIP_SESSION_HANDLING = new HttpContextToken<boolean>(() => false);
 
 /**
- * Añade `Authorization: Bearer <token>` a las peticiones a la API, y a ninguna más: el
- * token no debe salir nunca hacia otro dominio.
+ * Las peticiones a la API van con credenciales (`withCredentials`), para que el navegador
+ * mande la cookie httpOnly de la sesión, y ninguna otra: la cookie no debe salir nunca hacia
+ * otro dominio. El panel no ve el token ni pone la cabecera Authorization.
  *
- * Un token ya caducado no se envía: la petición falla aquí mismo y el errorInterceptor
- * cierra la sesión, sin esperar al 401 de la API.
+ * Con la sesión ya caducada no se envía nada: la petición falla aquí mismo y el
+ * errorInterceptor cierra la sesión, sin esperar al 401 de la API.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(`${environment.apiUrl}/`)) return next(req);
 
-  const store = inject(AuthStore);
-  const token = store.token();
-  if (!token) return next(req);
+  const expiresAt = inject(AuthStore).expiresAt();
+  if (expiresAt !== null && expiresAt <= Date.now()) return throwError(() => tokenExpiredError());
 
-  if ((store.expiresAt() ?? 0) <= Date.now()) return throwError(() => tokenExpiredError());
-
-  return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
+  return next(req.clone({ withCredentials: true }));
 };

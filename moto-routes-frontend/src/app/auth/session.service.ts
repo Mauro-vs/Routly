@@ -48,12 +48,12 @@ export class SessionService {
       if (this.store.foreignChanges() === 0) return;
       untracked(() => {
         this.resets.resetAll();
-        if (this.store.token()) void this.recheck();
+        if (this.store.isAuthenticated()) void this.recheck();
         else void this.toLogin();
       });
     });
 
-    // Se arrancó sin conexión: en cuanto vuelve la API, se confirma el token.
+    // Se arrancó sin conexión: en cuanto vuelve la API, se confirma la sesión.
     effect(() => {
       if (this.store.unverified() && this.apiStatus.status() === 'online') {
         untracked(() => void this.recheck());
@@ -61,7 +61,7 @@ export class SessionService {
     });
   }
 
-  /** La API ha rechazado el token, o ya ha caducado. */
+  /** La API ha rechazado la sesión, o ya ha caducado. */
   reject(error: ApiError): void {
     this.leave(error.code === 'TOKEN_EXPIRED' ? EXPIRED_MESSAGE : REJECTED_MESSAGE);
   }
@@ -71,13 +71,13 @@ export class SessionService {
    * con la sesión abierta, el menú y las rutas se ponen al día sin volver a entrar.
    */
   async recheck(): Promise<void> {
-    if (!this.store.token()) return;
+    if (!this.store.isAuthenticated()) return;
 
     const couldEnterPanel = this.store.isAdmin() || this.store.unverified();
     await this.auth.loadSession();
 
     // loadSession ya ha limpiado la sesión si la API la ha rechazado: falta decirlo.
-    if (!this.store.token()) this.notifyAndLeave(REJECTED_MESSAGE);
+    if (!this.store.isAuthenticated()) this.notifyAndLeave(REJECTED_MESSAGE);
     else if (couldEnterPanel && this.store.user() && !this.store.isAdmin()) void this.leavePanel();
   }
 
@@ -95,7 +95,7 @@ export class SessionService {
   }
 
   private leave(message: string): void {
-    if (!this.store.token()) return;
+    if (!this.store.isAuthenticated()) return;
     this.auth.clearSession();
     this.notifyAndLeave(message);
   }

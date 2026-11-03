@@ -6,7 +6,7 @@ import { Router, provideRouter, withComponentInputBinding } from '@angular/route
 
 import { routes } from './app.routes';
 import { AuthStore } from './auth/auth.store';
-import { fakeToken, fakeUser } from './auth/testing/auth.testing';
+import { fakeUser } from './auth/testing/auth.testing';
 import { safeReturnUrl } from './auth/return-url';
 
 const KEY = 'routly.session';
@@ -25,7 +25,7 @@ describe('Rutas y guards', () => {
       ],
     });
     if (who !== 'anónimo') {
-      TestBed.inject(AuthStore).login({ token: fakeToken(), user: fakeUser(who) });
+      TestBed.inject(AuthStore).login({ expiresIn: 3600, user: fakeUser(who) });
     }
 
     const router = TestBed.inject(Router);
@@ -80,8 +80,8 @@ describe('Rutas y guards', () => {
     expect(route.title).toBe('Dashboard');
   });
 
-  it('sin confirmar el token (la API no respondía) se puede entrar: lo revisa SessionService', async () => {
-    localStorage.setItem(KEY, JSON.stringify({ token: fakeToken() }));
+  it('sin confirmar la sesión (la API no respondía) se puede entrar: lo revisa SessionService', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
 
     expect(await visit('anónimo', '/users')).toBe('/users');
   });

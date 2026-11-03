@@ -60,7 +60,7 @@ describe('ProfileComponent', () => {
     });
     store = TestBed.inject(AuthStore);
     store.login({
-      token: fakeToken(),
+      expiresIn: 3600,
       user: { ...fakeUser('rider'), profile: { city: 'Logroño', phone: '+34600111222' } },
     });
     http = TestBed.inject(HttpTestingController);
@@ -126,7 +126,7 @@ describe('ProfileComponent', () => {
     expect(input('email').getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('cambiar la contraseña guarda el token nuevo', async () => {
+  it('cambiar la contraseña renueva la sesión (la cookie la pone la API)', async () => {
     const token = fakeToken(7200);
     type('currentPassword', 'clave-vieja-1');
     type('newPassword', 'clave-nueva-2');
@@ -139,7 +139,9 @@ describe('ProfileComponent', () => {
     request.flush({ token, tokenType: 'Bearer', expiresIn: 7200, user: fakeUser('rider') });
     await settle();
 
-    expect(store.token()).toBe(token);
+    // La sesión nueva dura lo que diga la API, y el token no se guarda en el panel
+    expect(store.expiresAt()).toBeGreaterThan(Date.now() + 7000_000);
+    expect(localStorage.getItem('routly.session')).not.toContain(token);
     expect(input('newPassword').value).toBe('');
   });
 

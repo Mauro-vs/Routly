@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { AuthStore } from '../../auth/auth.store';
-import { fakeToken, fakeUser } from '../../auth/testing/auth.testing';
+import { fakeUser } from '../../auth/testing/auth.testing';
 import { SessionService } from '../../auth/session.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { initials } from '../../shared/utils/initials';
@@ -36,7 +36,7 @@ describe('UserMenuComponent', () => {
         { provide: NotificationService, useValue: notifications },
       ],
     });
-    TestBed.inject(AuthStore).login({ token: fakeToken(), user: fakeUser() });
+    TestBed.inject(AuthStore).login({ expiresIn: 3600, user: fakeUser() });
     logout = spyOn(TestBed.inject(SessionService), 'logout').and.resolveTo();
     fixture = TestBed.createComponent(UserMenuComponent);
     element = fixture.nativeElement;

@@ -2,7 +2,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { fakeToken, fakeUser } from './testing/auth.testing';
-import { AuthStore, tokenExpiry } from './auth.store';
+import { AuthStore } from './auth.store';
 
 const KEY = 'routly.session';
 
@@ -15,36 +15,38 @@ describe('AuthStore', () => {
   beforeEach(() => localStorage.removeItem(KEY));
   afterEach(() => localStorage.removeItem(KEY));
 
-  it('login guarda en localStorage solo el token y su caducidad, sin el usuario', () => {
+  it('login guarda en localStorage solo cuándo caduca: ni el token ni el usuario', () => {
     const store = create();
-    const token = fakeToken();
+    const before = Date.now();
 
-    expect(store.login({ token, user: fakeUser() })).toBeTrue();
+    expect(store.login({ expiresIn: 3600, user: fakeUser() })).toBeTrue();
 
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Record<string, unknown>;
-    expect(Object.keys(saved).sort()).toEqual(['expiresAt', 'token']);
-    expect(saved['token']).toBe(token);
+    const raw = localStorage.getItem(KEY) ?? '';
+    const saved = JSON.parse(raw) as Record<string, unknown>;
+    expect(Object.keys(saved)).toEqual(['expiresAt']);
+    expect(saved['expiresAt']).toBeGreaterThanOrEqual(before + 3600_000);
+    expect(raw).not.toContain('token');
     expect(store.isAuthenticated()).toBeTrue();
-    expect(store.token()).toBe(token);
+    expect(store.expiresAt()).toBe(saved['expiresAt'] as number);
   });
 
   it('restaura la sesión al recargar, aún sin confirmar por la API', () => {
-    const token = fakeToken();
-    localStorage.setItem(KEY, JSON.stringify({ token, expiresAt: 1 }));
+    const expiresAt = Date.now() + 3600_000;
+    localStorage.setItem(KEY, JSON.stringify({ expiresAt }));
 
     const store = create();
 
-    expect(store.token()).toBe(token);
-    expect(store.expiresAt()).toBe(tokenExpiry(token));
+    expect(store.isAuthenticated()).toBeTrue();
+    expect(store.expiresAt()).toBe(expiresAt);
     expect(store.user()).toBeNull();
     expect(store.unverified()).toBeTrue();
   });
 
-  it('descarta un token caducado o mal formado', () => {
+  it('descarta una sesión caducada o mal guardada', () => {
     for (const saved of [
-      JSON.stringify({ token: fakeToken(-10) }),
-      JSON.stringify({ token: 'no-es-un-token' }),
-      JSON.stringify({ token: 42 }),
+      JSON.stringify({ expiresAt: Date.now() - 10 }),
+      JSON.stringify({ expiresAt: 'mañana' }),
+      JSON.stringify({ token: fakeToken() }),
       'esto no es JSON',
     ]) {
       TestBed.resetTestingModule();
@@ -54,11 +56,21 @@ describe('AuthStore', () => {
     }
   });
 
-  it('login rechaza un token que no sirve y no guarda nada', () => {
+  it('una sesión guardada por la versión anterior (con el token) se reescribe sin él', () => {
+    const expiresAt = Date.now() + 3600_000;
+    localStorage.setItem(KEY, JSON.stringify({ token: fakeToken(), expiresAt }));
+
     const store = create();
 
-    expect(store.login({ token: 'malo', user: fakeUser() })).toBeFalse();
-    expect(store.login({ token: fakeToken(-10), user: fakeUser() })).toBeFalse();
+    expect(store.isAuthenticated()).toBeTrue();
+    expect(JSON.parse(localStorage.getItem(KEY) ?? '{}')).toEqual({ expiresAt });
+  });
+
+  it('login rechaza un plazo que no sirve y no guarda nada', () => {
+    const store = create();
+
+    expect(store.login({ expiresIn: -10, user: fakeUser() })).toBeFalse();
+    expect(store.login({ expiresIn: Number.NaN, user: fakeUser() })).toBeFalse();
 
     expect(store.isAuthenticated()).toBeFalse();
     expect(localStorage.getItem(KEY)).toBeNull();
@@ -71,7 +83,7 @@ describe('AuthStore', () => {
 
     const store = create();
     expect(store.isAuthenticated()).toBeFalse();
-    expect(store.login({ token: fakeToken(), user: fakeUser() })).toBeTrue();
+    expect(store.login({ expiresIn: 3600, user: fakeUser() })).toBeTrue();
     expect(store.isAuthenticated()).toBeTrue();
     store.logout();
     expect(store.isAuthenticated()).toBeFalse();
@@ -81,18 +93,18 @@ describe('AuthStore', () => {
 
   it('logout borra el estado y lo guardado', () => {
     const store = create();
-    store.login({ token: fakeToken(), user: fakeUser() });
+    store.login({ expiresIn: 3600, user: fakeUser() });
 
     store.logout();
 
     expect(store.user()).toBeNull();
-    expect(store.token()).toBeNull();
+    expect(store.isAuthenticated()).toBeFalse();
     expect(localStorage.getItem(KEY)).toBeNull();
   });
 
   it('roles e isAdmin: admin es ADMIN', () => {
     const store = create();
-    store.login({ token: fakeToken(), user: fakeUser('admin') });
+    store.login({ expiresIn: 3600, user: fakeUser('admin') });
 
     expect(store.roles()).toEqual(['admin', 'ADMIN']);
     expect(store.isAdmin()).toBeTrue();
@@ -104,7 +116,7 @@ describe('AuthStore', () => {
   it('roles: rider, host y cualquier rol propio son USER', () => {
     const store = create();
     for (const role of ['rider', 'host', 'guia']) {
-      store.login({ token: fakeToken(), user: fakeUser(role) });
+      store.login({ expiresIn: 3600, user: fakeUser(role) });
       expect(store.roles()).toEqual([role, 'USER']);
       expect(store.isAdmin()).toBeFalse();
       expect(store.hasRole('USER')).toBeTrue();
@@ -112,9 +124,9 @@ describe('AuthStore', () => {
     }
   });
 
-  it('el rol sale del usuario de la API, no del token', () => {
+  it('el rol sale del usuario de la API', () => {
     const store = create();
-    store.login({ token: fakeToken(3600, 'admin'), user: fakeUser('rider') });
+    store.login({ expiresIn: 3600, user: fakeUser('rider') });
 
     expect(store.isAdmin()).toBeFalse();
   });
@@ -128,7 +140,7 @@ describe('AuthStore', () => {
 
   it('otra pestaña cierra la sesión: esta también', () => {
     const store = create();
-    store.login({ token: fakeToken(), user: fakeUser() });
+    store.login({ expiresIn: 3600, user: fakeUser() });
 
     window.dispatchEvent(new StorageEvent('storage', { key: KEY, newValue: null }));
 
@@ -137,21 +149,21 @@ describe('AuthStore', () => {
     expect(store.foreignChanges()).toBe(1);
   });
 
-  it('otra pestaña inicia otra sesión: se adopta su token, sin confirmar', () => {
+  it('otra pestaña inicia otra sesión: se adopta, sin confirmar', () => {
     const store = create();
-    const token = fakeToken(7200);
+    const expiresAt = Date.now() + 7200_000;
 
     window.dispatchEvent(
-      new StorageEvent('storage', { key: KEY, newValue: JSON.stringify({ token }) }),
+      new StorageEvent('storage', { key: KEY, newValue: JSON.stringify({ expiresAt }) }),
     );
 
-    expect(store.token()).toBe(token);
+    expect(store.expiresAt()).toBe(expiresAt);
     expect(store.unverified()).toBeTrue();
   });
 
   it('ignora los cambios de otras claves del almacenamiento', () => {
     const store = create();
-    store.login({ token: fakeToken(), user: fakeUser() });
+    store.login({ expiresIn: 3600, user: fakeUser() });
 
     window.dispatchEvent(new StorageEvent('storage', { key: 'routly.nav.collapsed', newValue: '[]' }));
 

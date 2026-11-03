@@ -11,7 +11,7 @@ import { ApiError } from '../core/models/api-error.model';
 import { ApiService } from '../core/services/api.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthStore } from './auth.store';
-import { fakeToken, fakeUser } from './testing/auth.testing';
+import { fakeUser } from './testing/auth.testing';
 
 const BASE = environment.apiUrl;
 const KEY = 'routly.session';
@@ -41,47 +41,48 @@ describe('authInterceptor', () => {
     localStorage.removeItem(KEY);
   });
 
-  it('añade el token a las peticiones a la API', async () => {
-    const token = fakeToken();
-    store.login({ token, user: fakeUser() });
+  it('las peticiones a la API van con credenciales (la cookie) y sin cabecera Authorization', async () => {
+    store.login({ expiresIn: 3600, user: fakeUser() });
 
     const promise = api.get('/routes');
     const request = http.expectOne(`${BASE}/routes`);
-    expect(request.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
-    request.flush([]);
-    await promise;
-  });
-
-  it('no lo envía a otros dominios, ni a una URL que solo empiece igual', async () => {
-    store.login({ token: fakeToken(), user: fakeUser() });
-
-    for (const url of ['https://otro.example.com/api/routes', `${BASE}-falsa/routes`]) {
-      const promise = api.get(url);
-      const request = http.expectOne(url);
-      expect(request.request.headers.has('Authorization')).withContext(url).toBeFalse();
-      request.flush([]);
-      await promise;
-    }
-  });
-
-  it('sin sesión, la petición sale tal cual', async () => {
-    const promise = api.get('/routes');
-    const request = http.expectOne(`${BASE}/routes`);
+    expect(request.request.withCredentials).toBeTrue();
     expect(request.request.headers.has('Authorization')).toBeFalse();
     request.flush([]);
     await promise;
   });
 
-  it('un token caducado no se envía: falla aquí y cierra la sesión', async () => {
+  it('a otros dominios, o a una URL que solo empiece igual, no van credenciales', async () => {
+    store.login({ expiresIn: 3600, user: fakeUser() });
+
+    for (const url of ['https://otro.example.com/api/routes', `${BASE}-falsa/routes`]) {
+      const promise = api.get(url);
+      const request = http.expectOne(url);
+      expect(request.request.withCredentials).withContext(url).toBeFalse();
+      request.flush([]);
+      await promise;
+    }
+  });
+
+  it('sin sesión, también con credenciales: la cookie la decide la API', async () => {
+    const promise = api.get('/routes');
+    const request = http.expectOne(`${BASE}/routes`);
+    expect(request.request.withCredentials).toBeTrue();
+    expect(request.request.headers.has('Authorization')).toBeFalse();
+    request.flush([]);
+    await promise;
+  });
+
+  it('con la sesión caducada no se envía nada: falla aquí y la cierra', async () => {
     const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
-    store.login({ token: fakeToken(), user: fakeUser() });
+    store.login({ expiresIn: 3600, user: fakeUser() });
     spyOn(store, 'expiresAt').and.returnValue(Date.now() - 1000);
 
     const error = (await api.get('/routes').catch((failure: unknown) => failure)) as ApiError;
 
     http.expectNone(`${BASE}/routes`);
     expect(error.code).toBe('TOKEN_EXPIRED');
-    expect(store.token()).toBeNull();
+    expect(store.isAuthenticated()).toBeFalse();
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 });

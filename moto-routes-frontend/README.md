@@ -104,17 +104,19 @@ El panel se configura en `src/environments/`:
 
 | Variable | Valor por defecto | Para qué |
 |---|---|---|
-| `apiUrl` | `http://localhost:3000/api` | URL base de la API, sin barra final |
+| `apiUrl` | `/api` en desarrollo, `http://localhost:3000/api` en producción | URL base de la API, sin barra final |
 | `apiTimeout` | `10000` | Milisegundos que se espera una respuesta antes de cortar la petición |
+
+**El proxy de desarrollo.** `npm start` sirve el panel con `proxy.conf.json`: las peticiones a `/api` y `/health` pasan a `http://localhost:3000`. Así el panel llama a la API desde su propio origen y la cookie de sesión viaja sin credenciales cruzadas entre puertos. La documentación de la API también se abre por el proxy (`http://localhost:4200/api/docs`). En producción, si el panel se sirve desde otro origen, ese origen tiene que estar en el `CORS_ORIGIN` de la API.
 
 La API se configura con su propio `.env` (ver `moto-routes-api/README.md`):
 
 | Variable | Ejemplo | Para qué |
 |---|---|---|
-| `PORT` | `3000` | Puerto de la API. Si lo cambias, cambia también `apiUrl` |
+| `PORT` | `3000` | Puerto de la API. Si lo cambias, cambia también el `target` de `proxy.conf.json` y el `apiUrl` de producción |
 | `MONGODB_URI` | `mongodb://localhost:27017/moto_routes` | Base de datos |
 | `NODE_ENV` | `development` | En `production` la API solo acepta los orígenes de `CORS_ORIGIN` |
-| `CORS_ORIGIN` | `http://localhost:4200` | Origen del panel, necesario en producción |
+| `CORS_ORIGIN` | `http://localhost:4200` | Origen del panel: en producción, para CORS con credenciales; siempre, para la comprobación CSRF de la cookie |
 
 ## Arquitectura
 
@@ -310,15 +312,17 @@ Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar
 
 ### Autenticación
 
+**La sesión es una cookie `httpOnly`** (`routly_session`) que pone la API en el login. El JavaScript del panel no la puede leer, así que un XSS no se lleva el token; el navegador la manda sola en cada petición a la API. El panel solo guarda en `localStorage` cuándo caduca (`routly.session` = `{ expiresAt }`), para avisar a tiempo y enterarse de los cambios de otras pestañas. El `token` que sigue llegando en el body del login (para Swagger y Postman) se ignora. Las opciones de la cookie y la protección CSRF están en la sección "La cookie de sesión" del README de la API.
+
 Todo está en `src/app/auth/`:
 
-- `auth.store.ts`: el estado con signals y su copia en `localStorage` (`routly.session`). No llama a la API ni navega.
-- `auth.service.ts`: login, registro, logout y validación del token. No toca la interfaz.
+- `auth.store.ts`: el estado con signals y su copia en `localStorage` (`routly.session`, solo `{ expiresAt }`). No llama a la API ni navega.
+- `auth.service.ts`: login, registro, logout y comprobación de la sesión con `/auth/me`. Al arrancar solo pregunta si hay un `expiresAt` vigente; si no, se entra como anónimo. No toca la interfaz.
 - `session.service.ts`: lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
-- `auth.interceptor.ts`: añade `Authorization: Bearer <token>` solo a la API y no envía un token caducado.
+- `auth.interceptor.ts`: manda las peticiones a la API con `withCredentials` (la cookie), y a ninguna otra. Con la sesión ya caducada no envía nada.
 - `guards/`: `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`. Sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.
 - `return-url.ts`: la vuelta tras el login, que solo acepta rutas internas.
-- `testing/auth.testing.ts`: un token y un usuario falsos para los specs.
+- `testing/auth.testing.ts`: un token y un usuario falsos para los specs. El token solo sirve para simular el body del login.
 
 Cada spec va junto a su archivo, como en el resto del proyecto.
 
@@ -464,7 +468,7 @@ La dirección visual ("D Mixta") y sus reglas están en [`DESIGN.md`](DESIGN.md)
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-441 tests. Cubren la lógica y los formularios:
+445 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
@@ -475,7 +479,7 @@ npx ng test --watch=false --browsers=ChromeHeadless
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
 | `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos, paginación y validadores |
-| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión, interceptor (token caducado, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
+| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión (el token nunca llega a `localStorage`), interceptor (`withCredentials`, sesión caducada, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
 | `users.store.spec.ts`, `user-form.component.spec.ts` | Tu propia cuenta no se desactiva, ni se elimina, ni cambia de rol |
 | `experience-form-page.component.spec.ts` | La página pide las motos del anfitrión una sola vez (sin bucle de peticiones) |
 | `bikes/**/*.spec.ts`, `profile.component.spec.ts` | El garaje: límites, moto principal, pública y el perfil propio |

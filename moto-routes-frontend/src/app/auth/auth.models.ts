@@ -23,7 +23,11 @@ export interface RegisterRequest {
   password: string;
 }
 
-/** Respuesta del login, del registro y del cambio de contraseña. */
+/**
+ * Respuesta del login, del registro y del cambio de contraseña. La API deja además el token
+ * en la cookie httpOnly `routly_session`, que es la que usa el panel: el `token` del body
+ * (para Swagger y Postman) se ignora y no se guarda.
+ */
 export interface AuthResponse {
   token: string;
   tokenType: string;
@@ -32,9 +36,12 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
-/** Lo que se guarda en `localStorage`. El usuario no: se pide a la API al arrancar. */
+/**
+ * Lo que se guarda en `localStorage`: solo cuándo caduca la sesión, para avisar a tiempo y
+ * enterarse de los cambios de otras pestañas. Ni el token, que vive en la cookie, ni el
+ * usuario, que se pide a la API al arrancar.
+ */
 export interface Session {
-  token: string;
   /** Cuándo caduca el token, en milisegundos desde 1970. */
   expiresAt: number;
 }

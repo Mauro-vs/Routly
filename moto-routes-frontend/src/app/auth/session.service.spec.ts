@@ -14,7 +14,7 @@ import { NotificationService } from '../core/services/notification.service';
 import { SessionResetService } from '../core/services/session-reset.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthStore } from './auth.store';
-import { fakeToken, fakeUser } from './testing/auth.testing';
+import { fakeUser } from './testing/auth.testing';
 import { SessionService } from './session.service';
 
 const BASE = environment.apiUrl;
@@ -52,7 +52,7 @@ describe('Fin de la sesión', () => {
 
   function loggedIn(role = 'admin', expiresIn = 3600): void {
     setup();
-    store.login({ token: fakeToken(expiresIn), user: fakeUser(role) });
+    store.login({ expiresIn: expiresIn, user: fakeUser(role) });
   }
 
   const unauthorized = (code?: string) => ({
@@ -120,7 +120,7 @@ describe('Fin de la sesión', () => {
     });
   });
 
-  it('un 401 sin token enviado no toca nada: no había sesión', async () => {
+  it('un 401 sin sesión no toca nada: no había nada que cerrar', async () => {
     setup();
 
     const promise = api.get('/users').catch(() => null);
@@ -227,8 +227,8 @@ describe('Fin de la sesión', () => {
     expect(notifications.warning).not.toHaveBeenCalled();
   });
 
-  it('sin conexión al arrancar: al volver la API se confirma el token', async () => {
-    localStorage.setItem(KEY, JSON.stringify({ token: fakeToken() }));
+  it('sin conexión al arrancar: al volver la API se confirma la sesión', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
     setup();
     await TestBed.tick();
     http.expectNone(`${BASE}/auth/me`);

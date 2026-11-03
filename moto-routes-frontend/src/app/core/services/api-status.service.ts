@@ -15,14 +15,17 @@ export class ApiStatusService {
   private readonly _status = signal<ApiStatus>('checking');
 
   readonly status = this._status.asReadonly();
-  /** Servidor al que apunta el panel, por ejemplo "localhost:3000". */
-  readonly host = new URL(environment.apiUrl).host;
+  // En desarrollo apiUrl es relativa (/api, por el proxy): cuelga del origen del panel.
+  private readonly apiBase = new URL(environment.apiUrl, window.location.origin);
+
+  /** Servidor al que llama el panel, por ejemplo "localhost:3000" (o el del panel, con el proxy). */
+  readonly host = this.apiBase.host;
 
   /** Documentación Swagger de la API (`GET /api/docs`). */
   readonly docsUrl = `${environment.apiUrl}/docs`;
 
   // /health cuelga de la raíz del servidor, no de /api.
-  private readonly healthUrl = new URL('/health', environment.apiUrl).href;
+  private readonly healthUrl = new URL('/health', this.apiBase).href;
 
   markOnline(): void {
     this._status.set('online');

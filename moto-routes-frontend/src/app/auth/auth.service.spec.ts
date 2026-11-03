@@ -48,7 +48,7 @@ describe('AuthService', () => {
     localStorage.removeItem(KEY);
   });
 
-  it('login guarda la sesión y devuelve el usuario', async () => {
+  it('login guarda la sesión (sin el token) y devuelve el usuario', async () => {
     setup();
     const token = fakeToken();
 
@@ -58,8 +58,10 @@ describe('AuthService', () => {
     request.flush({ token, tokenType: 'Bearer', expiresIn: 3600, user: fakeUser() });
 
     expect((await promise).name).toBe('Ana');
-    expect(store.token()).toBe(token);
+    expect(store.isAuthenticated()).toBeTrue();
     expect(store.user()?.name).toBe('Ana');
+    // El token vive en la cookie httpOnly: el del body no se guarda en ningún sitio
+    expect(localStorage.getItem(KEY)).not.toContain(token);
   });
 
   it('register inicia sesión con lo que devuelve la API', async () => {
@@ -75,13 +77,14 @@ describe('AuthService', () => {
     expect(store.isAdmin()).toBeFalse();
   });
 
-  it('una respuesta de login sin token o sin usuario válido no crea sesión', async () => {
+  it('una respuesta de login sin caducidad o sin usuario válido no crea sesión', async () => {
     setup();
     for (const body of [
       { user: fakeUser() },
-      { token: 'malo', user: fakeUser() },
-      { token: fakeToken() },
-      { token: fakeToken(), user: { name: 'Sin rol' } },
+      { expiresIn: 'mañana', user: fakeUser() },
+      { expiresIn: 0, user: fakeUser() },
+      { expiresIn: 3600 },
+      { expiresIn: 3600, user: { name: 'Sin rol' } },
     ]) {
       const promise = service.login({ email: 'a@b.es', password: 'clave1234' });
       http.expectOne(`${BASE}/auth/login`).flush(body);
@@ -108,24 +111,22 @@ describe('AuthService', () => {
   });
 
   describe('loadSession', () => {
-    function withSavedToken(): string {
-      const token = fakeToken();
-      localStorage.setItem(KEY, JSON.stringify({ token }));
+    function withSavedSession(): void {
+      localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
       setup();
-      return token;
     }
 
-    it('sin token no pregunta nada', async () => {
+    it('sin sesión guardada no pregunta nada: se entra como anónimo', async () => {
       setup();
       expect(await service.loadSession()).toBeFalse();
     });
 
-    it('trae el usuario y confirma la sesión', async () => {
-      withSavedToken();
+    it('con una sesión guardada vigente, pregunta a la API (la cookie decide) y trae el usuario', async () => {
+      withSavedSession();
 
       const promise = service.loadSession();
       const request = http.expectOne(`${BASE}/auth/me`);
-      expect(request.request.headers.has('Authorization')).toBeTrue();
+      expect(request.request.withCredentials).toBeTrue();
       request.flush(fakeUser('host'));
 
       expect(await promise).toBeTrue();
@@ -134,7 +135,7 @@ describe('AuthService', () => {
     });
 
     it('un 401 cierra la sesión y vacía los datos', async () => {
-      withSavedToken();
+      withSavedSession();
 
       const promise = service.loadSession();
       http
@@ -146,20 +147,20 @@ describe('AuthService', () => {
       expect(resets).toHaveBeenCalled();
     });
 
-    it('un fallo de red conserva el token: no dice nada de la sesión', async () => {
-      const token = withSavedToken();
+    it('un fallo de red conserva la sesión: no dice nada de la cookie', async () => {
+      withSavedSession();
 
       const promise = service.loadSession();
       http.expectOne(`${BASE}/auth/me`).error(new ProgressEvent('error'));
 
       expect(await promise).toBeFalse();
-      expect(store.token()).toBe(token);
+      expect(store.isAuthenticated()).toBeTrue();
       expect(store.unverified()).toBeTrue();
       expect(resets).not.toHaveBeenCalled();
     });
 
     it('varias llamadas a la vez comparten la misma petición', async () => {
-      withSavedToken();
+      withSavedSession();
 
       const first = service.loadSession();
       const second = service.loadSession();
@@ -172,7 +173,7 @@ describe('AuthService', () => {
   describe('logout', () => {
     function loggedIn(): void {
       setup();
-      store.login({ token: fakeToken(), user: fakeUser() });
+      store.login({ expiresIn: 3600, user: fakeUser() });
     }
 
     it('avisa a la API y limpia la sesión y los datos', async () => {
@@ -180,7 +181,7 @@ describe('AuthService', () => {
 
       const promise = service.logout();
       const request = http.expectOne({ method: 'POST', url: `${BASE}/auth/logout` });
-      expect(request.request.headers.has('Authorization')).toBeTrue();
+      expect(request.request.withCredentials).toBeTrue();
       request.flush(null, { status: 204, statusText: 'No Content' });
       await promise;
 
