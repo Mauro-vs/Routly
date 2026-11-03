@@ -430,19 +430,27 @@ Todo el aspecto sale de variables CSS en `src/styles/`:
 | `primitives.css` | Piezas comunes: botones, badges, tarjetas, paneles y selects |
 | `sweetalert.css` | SweetAlert2 adaptado a la paleta |
 
-**Paleta.** Verdes: principal para las acciones (`--color-primary: #1b7a4e`), verde muy oscuro para el sidebar (`#0c2419`) y un acento lima (`#c6f04d`) para lo destacado. Los neutros están teñidos de verde, y cada estado (éxito, aviso y peligro) tiene su color de texto y su fondo. Todas las parejas de texto y fondo que usa el panel cumplen contraste **WCAG AA**.
+La dirección visual ("D Mixta") y sus reglas están en [`DESIGN.md`](DESIGN.md); el propósito del producto, en [`PRODUCT.md`](PRODUCT.md).
 
-![primary](https://img.shields.io/badge/primary-%231b7a4e-1b7a4e?style=for-the-badge&labelColor=1b7a4e) ![sidebar](https://img.shields.io/badge/sidebar-%230c2419-0c2419?style=for-the-badge&labelColor=0c2419) ![accent](https://img.shields.io/badge/accent-%23c6f04d-c6f04d?style=for-the-badge&labelColor=c6f04d) ![bg](https://img.shields.io/badge/bg-%23f3f6f4-f3f6f4?style=for-the-badge&labelColor=f3f6f4) ![text](https://img.shields.io/badge/text-%2313201a-13201a?style=for-the-badge&labelColor=13201a)
+**Paleta.** Un acento lima (`#c6f04d`, siempre con tinta oscura encima) para la acción principal y lo destacado, un verde principal (`--color-primary: #14663f`) para enlaces y estados, y una banda verde muy oscura (`#0c2419`) en el sidebar y en la cabecera de cada página. Los neutros están teñidos de verde. Todas las parejas de texto y fondo cumplen contraste **WCAG AA** en los dos temas.
 
-**Tipografía.** Onest Variable, en una escala de seis tamaños (de `--text-xs` a `--text-2xl`). Las cifras usan números tabulares (clase `.num`) para que se alineen en columna.
+![accent](https://img.shields.io/badge/accent-%23c6f04d-c6f04d?style=for-the-badge&labelColor=c6f04d) ![primary](https://img.shields.io/badge/primary-%2314663f-14663f?style=for-the-badge&labelColor=14663f) ![band](https://img.shields.io/badge/band-%230c2419-0c2419?style=for-the-badge&labelColor=0c2419) ![canvas](https://img.shields.io/badge/canvas-%23f1f4f0-f1f4f0?style=for-the-badge&labelColor=f1f4f0) ![ink](https://img.shields.io/badge/ink-%230f1a15-0f1a15?style=for-the-badge&labelColor=0f1a15)
 
-**Espacios y formas.** Escala de 4 a 48 px (`--space-1` a `--space-7`) y tres radios: 6, 10 y 14 px.
+**Tema claro y oscuro.** Los tokens se redefinen bajo `data-theme="dark"`. Un script en `index.html` pone el tema antes de pintar (lo guardado en `routly.theme` o, si no hay nada, el del sistema) y `ThemeService` lo cambia desde el botón del menú. En oscuro el principal pasa a ser el lima.
 
-**Movimiento.** Tres duraciones (120, 200 y 300 ms) con una misma curva. Con `prefers-reduced-motion` se desactivan las animaciones.
+**Tipografía.** Onest Variable, en una escala de seis tamaños (de `--text-xs` a `--text-2xl`). Los títulos de banda van en cursiva inclinada (`--slant-text`). Las cifras usan números tabulares para que se alineen en columna.
+
+**El ángulo.** El logo marca un ángulo (`--slant: -16deg`) que se repite en el botón principal, las insignias, la marca del menú activo y los extremos de la cabecera de las tablas. Los kilómetros van primero en cada fila, como en un roadbook, y la dificultad se pinta como un medidor de marcas.
+
+**Espacios y formas.** Escala de 4 a 48 px (`--space-1` a `--space-7`) y radios pequeños (3, 4 y 6 px): las formas son rectas o inclinadas, no redondeadas.
+
+**Movimiento.** Tres duraciones (120, 200 y 300 ms) con una curva de salida fuerte, y otra para lo que se desplaza (la marca del menú). Con `prefers-reduced-motion` se quitan los desplazamientos.
 
 **Estado inactivo.** No depende solo del color: combina fondo gris, borde discontinuo, texto atenuado y una etiqueta con icono.
 
-**Responsive.** Por debajo de 900 px el sidebar pasa a ser un cajón que se abre desde la barra superior. La tabla se desplaza en horizontal si no cabe.
+**Responsive.** Por debajo de 900 px el sidebar pasa a ser un cajón que se abre desde la barra superior y las tablas se convierten en bloques. Mínimo: 375 px sin scroll horizontal.
+
+**Probado con el peor caso.** Nombres de 60 caracteres, emails sin espacios de 90, nombres de una letra, relaciones eliminadas, cifras extremas y cien filas, inyectados interceptando la API en el navegador (sin código de demo en la app): nada desborda, todo texto cortado se puede leer entero al pasar el ratón y no aparece ningún `undefined` ni `NaN`.
 
 ## Tests
 
@@ -450,7 +458,7 @@ Todo el aspecto sale de variables CSS en `src/styles/`:
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-263 tests. Cubren la lógica y los formularios:
+441 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
@@ -461,6 +469,10 @@ npx ng test --watch=false --browsers=ChromeHeadless
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
 | `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos, paginación y validadores |
+| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión, interceptor (token caducado, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
+| `users.store.spec.ts`, `user-form.component.spec.ts` | Tu propia cuenta no se desactiva, ni se elimina, ni cambia de rol |
+| `experience-form-page.component.spec.ts` | La página pide las motos del anfitrión una sola vez (sin bucle de peticiones) |
+| `bikes/**/*.spec.ts`, `profile.component.spec.ts` | El garaje: límites, moto principal, pública y el perfil propio |
 
 ## Limitaciones conocidas
 
@@ -469,6 +481,5 @@ npx ng test --watch=false --browsers=ChromeHeadless
 - Los contadores del menú y el Dashboard piden cada listado completo: la API no tiene un endpoint de totales.
 - El Dashboard no muestra tendencias, ocupación ni comparativas con meses anteriores: la API no guarda histórico ni reservas. Está propuesto en `NOTES.md`.
 - No hay borrado definitivo: la API no tiene borrado físico.
-- No hay modo oscuro: el panel solo tiene tema claro.
 
 <p align="right"><a href="#top">Volver arriba</a></p>

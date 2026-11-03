@@ -38,6 +38,9 @@ import { IconComponent } from '../icon/icon.component';
       gap: 5px;
       font-size: var(--text-sm);
       color: var(--color-text-muted);
+      /* Una palabra corta: no se parte aunque la columna se estreche. */
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
 
     .gone ui-icon {

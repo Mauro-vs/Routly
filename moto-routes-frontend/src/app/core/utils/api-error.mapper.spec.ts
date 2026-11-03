@@ -30,6 +30,16 @@ describe('toApiError', () => {
     expect(error.detail).toBe('Internal server error');
   });
 
+  it('un id mal formado en la URL cuenta como no encontrado', () => {
+    const error = toApiError(
+      httpError(400, {
+        message: 'Validation failed',
+        details: [{ field: 'id', message: 'id has an invalid format' }],
+      }),
+    );
+    expect(error.isNotFound).toBeTrue();
+  });
+
   it('lee los errores por campo de un 400 y los traduce', () => {
     const error = toApiError(
       httpError(400, {

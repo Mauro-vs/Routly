@@ -84,6 +84,10 @@ export function toApiError(error: unknown): ApiError {
 
   if (status === 400 || status === 422) {
     const fieldErrors = readFieldErrors(error.error);
+    // Un id mal formado en la URL (/images/abc): ese registro no existe.
+    if (fieldErrors && Object.keys(fieldErrors).join() === 'id') {
+      return new ApiError({ status: 404, type: 'client', message: MESSAGES.notFound, detail });
+    }
     // Un PATCH sin ningún campo (la API lo rechaza con 400 y sin `details`).
     const noChanges = detail === 'No fields to update';
     return new ApiError({

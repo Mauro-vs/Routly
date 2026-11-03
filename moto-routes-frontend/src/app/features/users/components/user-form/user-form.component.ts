@@ -222,7 +222,8 @@ export class UserFormComponent extends EntityForm<User, UserPayload, UserControl
     return {
       name: name.trim(),
       email: email.trim(),
-      roleId,
+      // Tu propio rol no se toca: ni siquiera se envía.
+      ...(this.self() ? {} : { roleId }),
       ...(this.changePassword() ? { password } : {}),
       ...this.profileChanges(),
     };

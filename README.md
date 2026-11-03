@@ -84,12 +84,12 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard con cifras, salidas por mes y reparto de rutas"></td>
-    <td width="50%"><img src="docs/screenshots/rutas-lista.png" alt="Listado de rutas en tabla"></td>
+    <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard con la cuenta atrás de la próxima salida, la agenda y el catálogo"></td>
+    <td width="50%"><img src="docs/screenshots/rutas-lista.png" alt="Listado de rutas en tema oscuro"></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Dashboard</b>: rutas y salidas de un vistazo</sub></td>
-    <td align="center"><sub><b>Vista en tabla</b>: la ruta inactiva se distingue sin depender del color</sub></td>
+    <td align="center"><sub><b>Dashboard</b>: la próxima salida, la agenda y el catálogo de un vistazo</sub></td>
+    <td align="center"><sub><b>Rutas en oscuro</b>: km primero, como en un roadbook; la inactiva se distingue sin depender del color</sub></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/papelera.png" alt="Papelera con una ruta eliminada"></td>
@@ -98,6 +98,12 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
   <tr>
     <td align="center"><sub><b>Papelera</b>: restaurar con un clic</sub></td>
     <td align="center"><sub><b>Nueva ruta</b>: validación en el momento, con los mismos límites que la API</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/login.png" alt="Pantalla de inicio de sesión con la carretera dibujada"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub><b>Inicio de sesión</b>: la carretera se dibuja al entrar</sub></td>
   </tr>
 </table>
 

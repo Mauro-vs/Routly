@@ -1,3 +1,6 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+
 import { ApiError } from '../../../../core/models/api-error.model';
 import { Role } from '../../../../core/models/role.model';
 import { User } from '../../../../core/models/user.model';
@@ -116,5 +119,22 @@ describe('UserFormComponent', () => {
     form.fixture.componentInstance.showServerError(conflict('User has a host profile'));
     await form.fixture.whenStable();
     expect(form.field('roleId')!.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('en tu propia cuenta no se cambia el rol ni la contraseña', async () => {
+    // Enlaza a Mi perfil para cambiar la contraseña.
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const form = await renderForm(UserFormComponent, { record: ANA, roles: ROLES, self: true });
+
+    expect(form.field('roleId')!.hasAttribute('disabled')).toBeTrue();
+    expect(form.field('changePassword')).toBeNull();
+    expect(form.field('password')).toBeNull();
+    expect(form.element.textContent).toContain('No puedes cambiar tu propio rol.');
+
+    form.type('name', 'Ana María');
+    await form.submit();
+    expect(form.saved).toEqual([
+      { mode: 'update', payload: { name: 'Ana María', email: 'ana@routly.dev' } },
+    ]);
   });
 });
