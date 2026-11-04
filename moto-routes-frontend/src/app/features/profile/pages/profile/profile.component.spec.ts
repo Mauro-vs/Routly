@@ -2,12 +2,14 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../../../environments/environment';
 import { AuthStore } from '../../../../auth/auth.store';
 import { fakeToken, fakeUser } from '../../../../auth/testing/auth.testing';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { ProfileComponent } from './profile.component';
 
 const BASE = environment.apiUrl;
@@ -72,6 +74,17 @@ describe('ProfileComponent', () => {
   });
 
   afterEach(() => localStorage.removeItem('routly.session'));
+
+  it('al cambiar la foto principal, el avatar del menú se pone al día sin recargar', async () => {
+    const gallery = fixture.debugElement.query(By.directive(ImageGalleryComponent));
+    gallery.componentInstance.coverChange.emit();
+
+    const photo = { _id: 'i1', url: 'https://picsum.photos/seed/ana/400', alt: 'Ana' };
+    http.expectOne({ method: 'GET', url: `${BASE}/auth/me` }).flush({ ...fakeUser('rider'), coverImage: photo });
+    await settle();
+
+    expect(store.user()?.coverImage?.url).toBe(photo.url);
+  });
 
   it('muestra los datos del usuario de la sesión', () => {
     expect(element.querySelector('h1')?.textContent).toContain('Ana');

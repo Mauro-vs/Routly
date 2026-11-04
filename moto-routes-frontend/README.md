@@ -317,7 +317,7 @@ Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar
 Todo está en `src/app/auth/`:
 
 - `auth.store.ts`: el estado con signals y su copia en `localStorage` (`routly.session`, solo `{ expiresAt }`). No llama a la API ni navega.
-- `auth.service.ts`: login, registro, logout y comprobación de la sesión con `/auth/me`. Al arrancar solo pregunta si hay un `expiresAt` vigente; si no, se entra como anónimo. No toca la interfaz.
+- `auth.service.ts`: login, registro, logout y comprobación de la sesión con `/auth/me`. Al arrancar solo pregunta si hay un `expiresAt` vigente; si no, se entra como anónimo. No toca la interfaz. `refreshUser()` vuelve a pedir el usuario para que el menú enseñe al momento lo que ha cambiado: lo llaman "Mi perfil" al cambiar la foto principal y `UsersStore` cuando un admin guarda su propia cuenta o le cambia la foto, sin tener que recargar.
 - `session.service.ts`: lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
 - `auth.interceptor.ts`: manda las peticiones a la API con `withCredentials` (la cookie), y a ninguna otra. Con la sesión ya caducada no envía nada.
 - `guards/`: `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`. Sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.

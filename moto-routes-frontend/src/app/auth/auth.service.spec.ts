@@ -170,6 +170,38 @@ describe('AuthService', () => {
     });
   });
 
+  describe('refreshUser', () => {
+    it('pone al día el usuario de la sesión con lo que devuelve la API', async () => {
+      setup();
+      store.login({ expiresIn: 3600, user: fakeUser() });
+
+      const promise = service.refreshUser();
+      const photo = { _id: 'i1', url: 'https://picsum.photos/seed/ana/400', alt: 'Ana' };
+      http.expectOne({ method: 'GET', url: `${BASE}/auth/me` }).flush({ ...fakeUser(), coverImage: photo });
+      await promise;
+
+      expect(store.user()?.coverImage?.url).toBe(photo.url);
+    });
+
+    it('si falla, se queda el usuario que había y no cierra la sesión', async () => {
+      setup();
+      store.login({ expiresIn: 3600, user: fakeUser() });
+
+      const promise = service.refreshUser();
+      http.expectOne(`${BASE}/auth/me`).error(new ProgressEvent('error'));
+      await promise;
+
+      expect(store.user()?.name).toBe('Ana');
+      expect(store.isAuthenticated()).toBeTrue();
+    });
+
+    it('sin sesión no pregunta nada', async () => {
+      setup();
+      await service.refreshUser();
+      http.expectNone(`${BASE}/auth/me`);
+    });
+  });
+
   describe('logout', () => {
     function loggedIn(): void {
       setup();

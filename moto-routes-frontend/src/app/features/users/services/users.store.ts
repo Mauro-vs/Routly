@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 
+import { AuthService } from '../../../auth/auth.service';
 import { AuthStore } from '../../../auth/auth.store';
 import { User, UserPayload } from '../../../core/models/user.model';
-import { EntityStore } from '../../../core/services/entity.store';
+import { EntityStore, StoreResult } from '../../../core/services/entity.store';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { OptionList } from '../../../core/services/option-list';
 import { CollectionLabels } from '../../../shared/utils/labels';
@@ -27,6 +28,7 @@ export class UsersStore extends EntityStore<User, UserPayload> {
   protected override readonly notFoundMessage = 'Ese usuario ya no existe.';
   readonly labels = USER_LABELS;
   private readonly auth = inject(AuthStore);
+  private readonly session = inject(AuthService);
 
   /** Roles activos: la API no deja asignar uno inactivo. */
   readonly roleOptions = new OptionList(
@@ -44,6 +46,20 @@ export class UsersStore extends EntityStore<User, UserPayload> {
   loadBikes(userId: string): void {
     this.bikesUserId = userId;
     void this.bikes.load();
+  }
+
+  /** Si el admin se edita a sí mismo, el menú enseña al momento su nombre nuevo. */
+  override async update(id: string, payload: Partial<UserPayload>): Promise<StoreResult<User>> {
+    const result = await super.update(id, payload);
+    if (result.ok && this.isSelf(result.data)) void this.session.refreshUser();
+    return result;
+  }
+
+  /** Lo llama la galería al cambiar la foto principal: si es la propia cuenta, también el avatar. */
+  override async refreshSelected(): Promise<void> {
+    await super.refreshSelected();
+    const user = this.selected();
+    if (user && this.isSelf(user)) void this.session.refreshUser();
   }
 
   displayName(user: User): string {

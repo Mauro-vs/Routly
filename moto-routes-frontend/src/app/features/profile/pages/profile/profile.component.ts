@@ -20,6 +20,7 @@ import {
   Validators,
 } from '@angular/forms';
 
+import { AuthService } from '../../../../auth/auth.service';
 import { AuthStore } from '../../../../auth/auth.store';
 import { HasUnsavedChanges, warnBeforeUnload } from '../../../../core/guards/unsaved-changes.guard';
 import { USER_LIMITS } from '../../../../core/models/user.model';
@@ -126,7 +127,12 @@ function createPasswordForm() {
             <ui-profile-fields [group]="account.controls.profile" [submitted]="accountSubmitted()" />
           </form>
 
-          <app-image-gallery ownerType="user" [ownerId]="user._id" [ownerLabel]="user.name" />
+          <app-image-gallery
+            ownerType="user"
+            [ownerId]="user._id"
+            [ownerLabel]="user.name"
+            (coverChange)="refreshAvatar()"
+          />
         </div>
 
         <aside class="layout__aside">
@@ -202,6 +208,7 @@ function createPasswordForm() {
 })
 export class ProfileComponent implements HasUnsavedChanges {
   private readonly store = inject(AuthStore);
+  private readonly auth = inject(AuthService);
   private readonly profile = inject(ProfileService);
   private readonly errors = inject(ErrorHandlerService);
   private readonly notifications = inject(NotificationService);
@@ -260,6 +267,11 @@ export class ProfileComponent implements HasUnsavedChanges {
     this.passwordChanges();
     const control = this.password.controls[name];
     return control.touched || this.passwordSubmitted() ? controlErrorMessage(control) : null;
+  }
+
+  /** La foto principal ha cambiado en la galería: el avatar del menú se pone al día sin recargar. */
+  protected refreshAvatar(): void {
+    void this.auth.refreshUser();
   }
 
   protected async save(): Promise<void> {

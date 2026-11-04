@@ -74,6 +74,21 @@ export class AuthService {
     return this.verifying;
   }
 
+  /**
+   * Vuelve a pedir el usuario de la sesión, para que el menú enseñe al momento lo que ha
+   * cambiado (la foto, el nombre) sin recargar. Es una puesta al día de fondo: si falla, se
+   * queda lo que había y no se avisa. Un 401 lo gestiona el errorInterceptor, como siempre.
+   */
+  async refreshUser(): Promise<void> {
+    if (!this.store.isAuthenticated()) return;
+    try {
+      const user = await this.api.get<unknown>('/auth/me');
+      if (isAuthUser(user)) this.store.setUser(user);
+    } catch {
+      // Se mantiene el usuario que había.
+    }
+  }
+
   /** Cierra esta sesión en la API (que borra la cookie) y, pase lo que pase, en el panel. */
   logout(): Promise<void> {
     return this.signOut('/auth/logout');
