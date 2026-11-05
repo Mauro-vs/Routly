@@ -3,10 +3,10 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { ApiError } from '../../../core/models/api-error.model';
 import { Departure, DepartureState } from '../../../core/models/departure.model';
 import { DIFFICULTIES, DIFFICULTY_LABELS, Route } from '../../../core/models/route.model';
-import { ApiService } from '../../../core/services/api.service';
 import { ErrorHandlerService } from '../../../core/services/error-handler.service';
 import { NavBadgeService } from '../../../core/services/nav-badge.service';
 import { SessionResetService } from '../../../core/services/session-reset.service';
+import { DashboardService } from './dashboard.service';
 
 const RECENT_COUNT = 4;
 const UPCOMING_COUNT = 5;
@@ -25,13 +25,13 @@ export interface MonthBucket {
 }
 
 /**
- * Datos del Dashboard. Pide las rutas y las salidas por su cuenta (sin depender de sus
- * features) y calcula las cifras con signals. La API no tiene un endpoint de
- * estadísticas: todo sale de agregar los listados aquí.
+ * Estado del Dashboard: guarda las rutas y las salidas que trae DashboardService y
+ * calcula las cifras con signals. La API no tiene un endpoint de estadísticas: todo sale
+ * de agregar los listados aquí.
  */
 @Injectable({ providedIn: 'root' })
 export class DashboardStore {
-  private readonly api = inject(ApiService);
+  private readonly api = inject(DashboardService);
   private readonly errors = inject(ErrorHandlerService);
   private readonly badges = inject(NavBadgeService);
 
@@ -161,8 +161,8 @@ export class DashboardStore {
     this._error.set(null);
     try {
       const [routes, departures] = await Promise.all([
-        this.api.get<Route[]>('/routes'),
-        this.api.get<Departure[]>('/departures'),
+        this.api.getRoutes(),
+        this.api.getDepartures(),
       ]);
       if (generation !== this.generation) return;
       this._routes.set(routes);

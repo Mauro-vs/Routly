@@ -1,0 +1,66 @@
+.hero {
+  --glyph-size: 52px;
+  display: grid;
+  grid-template-columns: auto 52px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-2) 0 var(--space-4);
+  border-bottom: 2px solid var(--color-text);
+}
+
+.hero__count {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.hero__number {
+  font-size: 5.5rem;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: var(--color-primary);
+}
+
+.hero__count span:last-child {
+  max-width: 8.5em;
+  padding-bottom: 4px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-text-muted);
+}
+
+.hero__text {
+  min-width: 0;
+}
+
+.hero h2 {
+  font-size: var(--text-xl);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.hero h2 a {
+  font-weight: inherit;
+}
+
+.hero p:not(.hero__count) {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 560px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  .hero ui-route-glyph {
+    display: none;
+  }
+
+  .hero__number {
+    font-size: 4.5rem;
+  }
+}

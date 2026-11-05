@@ -1,0 +1,29 @@
+/* ---------- salidas por mes ---------- */
+.months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.months li {
+  display: grid;
+  justify-items: center;
+  padding: 8px 2px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 11.5px;
+}
+
+.months b {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.months li.has-departures {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}

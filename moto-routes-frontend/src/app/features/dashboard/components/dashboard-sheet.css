@@ -1,0 +1,37 @@
+/*
+ * La "hoja" del Dashboard: títulos de sección con su raya y el texto apagado. Lo comparten
+ * la cabecera, la agenda y el catálogo (cada uno lo incluye en su styleUrl).
+ */
+:host {
+  display: block;
+}
+
+.quiet {
+  padding-block: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-text);
+}
+
+.sheet-head h2 {
+  font-size: var(--text-sm);
+  font-weight: 750;
+}
+
+.sheet-head a {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.sheet-head a:hover {
+  color: var(--color-text);
+}

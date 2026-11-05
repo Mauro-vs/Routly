@@ -29,124 +29,20 @@
     </ui-empty-state>
   </div>
 } @else {
-  <section class="hero" aria-labelledby="next-departure">
-    @if (nextDeparture(); as departure) {
-      <p class="hero__count">
-        <span class="hero__number slanted">{{ daysUntil(departure.startAt) }}</span>
-        <span>{{ daysUntil(departure.startAt) === 1 ? 'día' : 'días' }} para la próxima salida</span>
-      </p>
-      <ui-route-glyph />
-      <div class="hero__text">
-        <h2 id="next-departure">
-          <a class="link" [routerLink]="['/departures', departure.slug]">
-            {{ departure.experience?.title ?? 'Salida' }}
-          </a>
-        </h2>
-        <p>{{ dateTime(departure.startAt) }} · {{ seats(departure.capacity) }} · {{ money(departure.price) }}</p>
-      </div>
-    } @else {
-      <h2 id="next-departure">No hay salidas programadas</h2>
-      <p class="quiet">Cuando programes una, aquí verás cuánto falta.</p>
-    }
-  </section>
+  <app-dashboard-hero [departure]="nextDeparture()" [loadedAt]="store.loadedAt()" />
 
   <div class="cols">
-    <div>
-      <section aria-labelledby="agenda">
-        <header class="sheet-head">
-          <h2 id="agenda">Agenda</h2>
-          <a routerLink="/departures">Ver todas</a>
-        </header>
-        @if (store.nextDepartures().length === 0) {
-          <p class="quiet">No hay salidas programadas a partir de hoy.</p>
-        } @else {
-          <ol class="road">
-            @for (departure of store.nextDepartures(); track departure._id) {
-              <li>
-                <span class="road__mark">
-                  <b class="slanted">+{{ daysUntil(departure.startAt) }} d</b>
-                  <time [attr.datetime]="departure.startAt">{{ shortDate(departure.startAt) }}</time>
-                </span>
-                <ui-route-glyph />
-                <div class="road__text">
-                  <a class="link" [routerLink]="['/departures', departure.slug]">
-                    {{ departure.experience?.title ?? 'Salida' }}
-                  </a>
-                  <small>{{ seats(departure.capacity) }} · {{ money(departure.price) }}</small>
-                </div>
-                <ui-status-badge status="scheduled" gender="f" />
-              </li>
-            }
-          </ol>
-        }
-      </section>
-
-      <section aria-labelledby="recent">
-        <header class="sheet-head">
-          <h2 id="recent">Últimas rutas modificadas</h2>
-          <a routerLink="/routes">Ver todas</a>
-        </header>
-        <ul class="road">
-          @for (route of store.recent(); track route._id) {
-            <li [class.is-off]="!route.isActive">
-              <span class="road__mark">
-                <b class="slanted">{{ number(route.distance) }}</b>
-                <span>km · {{ number(route.duration) }} h</span>
-              </span>
-              <ui-route-glyph [difficulty]="route.difficulty" />
-              <div class="road__text">
-                <a class="link" [routerLink]="['/routes', route.slug]">{{ route.title }}</a>
-                <small>{{ trip(route) }}</small>
-              </div>
-              <ui-level-meter [difficulty]="route.difficulty" />
-            </li>
-          }
-        </ul>
-      </section>
-    </div>
-
-    <div>
-      <section aria-labelledby="catalog">
-        <header class="sheet-head">
-          <h2 id="catalog">Catálogo</h2>
-        </header>
-        <ui-stat-strip [items]="stats()" />
-      </section>
-
-      <section aria-labelledby="by-difficulty">
-        <header class="sheet-head">
-          <h2 id="by-difficulty">Dificultad</h2>
-        </header>
-        <ui-bar-list label="Rutas por dificultad" unit="rutas" [items]="store.byDifficulty()" />
-      </section>
-
-      <section aria-labelledby="by-category">
-        <header class="sheet-head">
-          <h2 id="by-category">Categorías</h2>
-        </header>
-        <ui-bar-list label="Rutas por categoría" unit="rutas" [items]="store.byCategory()" />
-        @if (store.otherCategories(); as other) {
-          <p class="quiet">
-            Y {{ other.count }} categorías más, con {{ other.routes }}
-            {{ other.routes === 1 ? 'ruta' : 'rutas' }} en total.
-            <a routerLink="/categories">Ver todas</a>
-          </p>
-        }
-      </section>
-
-      <section aria-labelledby="by-month">
-        <header class="sheet-head">
-          <h2 id="by-month">Salidas por mes</h2>
-        </header>
-        <ol class="months">
-          @for (month of months(); track month.label) {
-            <li [class.has-departures]="month.total > 0" [attr.aria-label]="month.fullLabel + ': ' + month.total">
-              <b aria-hidden="true">{{ month.total }}</b>
-              <span aria-hidden="true">{{ month.label }}</span>
-            </li>
-          }
-        </ol>
-      </section>
-    </div>
+    <app-dashboard-agenda
+      [departures]="store.nextDepartures()"
+      [routes]="store.recent()"
+      [loadedAt]="store.loadedAt()"
+    />
+    <app-dashboard-catalog
+      [stats]="stats()"
+      [byDifficulty]="store.byDifficulty()"
+      [byCategory]="store.byCategory()"
+      [otherCategories]="store.otherCategories()"
+      [months]="months()"
+    />
   </div>
 }

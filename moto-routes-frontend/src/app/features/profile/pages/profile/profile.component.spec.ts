@@ -119,6 +119,12 @@ describe('ProfileComponent', () => {
     expect(fixture.componentInstance.hasUnsavedChanges()).toBeTrue();
   });
 
+  it('también avisa con una contraseña a medio escribir', () => {
+    expect(fixture.componentInstance.hasUnsavedChanges()).toBeFalse();
+    type('currentPassword', 'clave-vieja-1');
+    expect(fixture.componentInstance.hasUnsavedChanges()).toBeTrue();
+  });
+
   it('un teléfono sin prefijo no se envía', async () => {
     type('phone', '600111222');
 

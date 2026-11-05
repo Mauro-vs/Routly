@@ -143,7 +143,16 @@ src/app/
 ├── layouts/
 │   └── admin-layout/      Sidebar con grupos y contadores, barra superior y navigation.ts
 ├── features/
-│   ├── dashboard/         Dashboard: cifras y gráficas de rutas y salidas
+│   ├── dashboard/         Dashboard: la próxima salida, la agenda y las cifras del catálogo
+│   │   ├── components/    dashboard-hero, dashboard-agenda y dashboard-catalog (reciben los
+│   │   │                  datos por input) y dashboard-sheet.css, la hoja que comparten
+│   │   ├── pages/         La página: carga y elige qué se ve (error, esqueleto, vacío o datos)
+│   │   ├── services/      dashboard.service.ts (rutas y salidas) y dashboard.store.ts (cifras)
+│   │   └── dashboard-format.ts  Días que faltan, fecha corta y plazas
+│   ├── profile/           Mi perfil
+│   │   ├── components/    account-form (tus datos) y password-form (la contraseña)
+│   │   ├── pages/         La página: cabecera, galería de la foto y aviso de cambios sin guardar
+│   │   └── services/      profile.service.ts
 │   └── routes/, categories/, locations/, experiences/, departures/,
 │       users/, hosts/, roles/, images/
 │       ├── components/    El formulario de la colección (<x>-form)
@@ -174,7 +183,7 @@ Cada colección tiene las mismas cinco páginas:
 | `/<colección>/trash` | Papelera: restaurar activo o inactivo |
 | `/<colección>/id/:id` | Lleva al detalle de un registro del que solo se sabe el `_id` (relaciones sin slug) |
 
-Las imágenes no tienen slug ni página de crear: su detalle es `/images/:id` y se añaden desde la galería de su dueño. El Dashboard (`/`) muestra las cifras del catálogo y de las salidas (km, rutas activas, próximas salidas, plazas y precio medio), las salidas por mes y estado, las rutas por categoría y por dificultad, y las últimas modificadas. Las gráficas son componentes propios en SVG/CSS (`ui-stat-strip`, `ui-bar-list`, `ui-column-chart`), sin librerías, con su versión en texto y en tabla.
+Las imágenes no tienen slug ni página de crear: su detalle es `/images/:id` y se añaden desde la galería de su dueño. El Dashboard (`/`) abre con los días que faltan para la próxima salida. Debajo, la agenda (las próximas salidas y las últimas rutas modificadas) y el catálogo: km, rutas activas, plazas ofertadas y precio medio, las rutas por dificultad y por categoría, y las salidas de los próximos seis meses. Las gráficas son componentes propios en CSS (`ui-stat-strip`, `ui-bar-list`, `ui-level-meter`), sin librerías y con su texto para el lector de pantalla.
 
 ### Cómo viajan los datos
 
@@ -468,7 +477,7 @@ La dirección visual ("D Mixta") y sus reglas están en [`DESIGN.md`](DESIGN.md)
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-445 tests. Cubren la lógica y los formularios:
+467 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|

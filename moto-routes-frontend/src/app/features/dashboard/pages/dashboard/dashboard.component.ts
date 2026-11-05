@@ -1,52 +1,43 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Route, routeTrip } from '../../../../core/models/route.model';
-import { BarListComponent } from '../../../../shared/components/bar-list/bar-list.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { ErrorStateComponent } from '../../../../shared/components/error-state/error-state.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
-import { LevelMeterComponent } from '../../../../shared/components/level-meter/level-meter.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
-import { RouteGlyphComponent } from '../../../../shared/components/route-glyph/route-glyph.component';
 import { SkeletonComponent } from '../../../../shared/components/skeleton/skeleton.component';
-import {
-  StatItem,
-  StatStripComponent,
-} from '../../../../shared/components/stat-strip/stat-strip.component';
-import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
+import { StatItem } from '../../../../shared/components/stat-strip/stat-strip.component';
 import { formatMoney, formatNumber } from '../../../../shared/utils/format';
+import { DashboardAgendaComponent } from '../../components/dashboard-agenda/dashboard-agenda.component';
+import {
+  DashboardCatalogComponent,
+  MonthTotal,
+} from '../../components/dashboard-catalog/dashboard-catalog.component';
+import { DashboardHeroComponent } from '../../components/dashboard-hero/dashboard-hero.component';
 import { DashboardStore } from '../../services/dashboard.store';
 
-const DAY = 24 * 60 * 60 * 1000;
-
-const shortDateFormat = new Intl.DateTimeFormat('es-ES', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-});
 const timeFormat = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
 
 /**
  * Dashboard: lo primero es cuánto falta para la próxima salida; después, la agenda y las
  * cifras del catálogo. Todo sale de los listados de la API (no hay un endpoint de
  * estadísticas): ni tendencias ni comparativas, porque la API no guarda histórico.
+ *
+ * La página carga y elige qué se ve (error, esqueleto, vacío o el contenido); cada bloque
+ * es un componente de components/ que recibe sus datos ya calculados.
  */
 @Component({
   selector: 'app-dashboard',
   imports: [
     RouterLink,
-    BarListComponent,
+    DashboardAgendaComponent,
+    DashboardCatalogComponent,
+    DashboardHeroComponent,
     EmptyStateComponent,
     ErrorStateComponent,
     IconComponent,
-    LevelMeterComponent,
     PageHeaderComponent,
-    RouteGlyphComponent,
     SkeletonComponent,
-    StatStripComponent,
-    StatusBadgeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
@@ -54,8 +45,6 @@ const timeFormat = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '
 })
 export class DashboardComponent {
   protected readonly store = inject(DashboardStore);
-  protected readonly number = formatNumber;
-  protected readonly money = formatMoney;
 
   protected readonly showSkeleton = computed(() => this.store.loading() && !this.store.loaded());
   /** El error de la carga (o null): el recuadro de error cuenta el motivo. */
@@ -71,7 +60,7 @@ export class DashboardComponent {
 
   protected readonly nextDeparture = computed(() => this.store.nextDepartures()[0] ?? null);
 
-  protected readonly months = computed(() =>
+  protected readonly months = computed<MonthTotal[]>(() =>
     this.store.byMonth().map(({ label, fullLabel, values }) => ({
       label,
       fullLabel,
@@ -101,26 +90,5 @@ export class DashboardComponent {
 
   protected reload(): void {
     void this.store.load();
-  }
-
-  protected trip(route: Route): string {
-    return routeTrip(route).text;
-  }
-
-  /** Días que faltan, contados desde la última carga, como las cifras de la página. */
-  protected daysUntil(iso: string): number {
-    return Math.max(0, Math.ceil((Date.parse(iso) - this.store.loadedAt().getTime()) / DAY));
-  }
-
-  protected shortDate(iso: string): string {
-    return shortDateFormat.format(new Date(iso)).replace('.', '');
-  }
-
-  protected dateTime(iso: string): string {
-    return this.shortDate(iso);
-  }
-
-  protected seats(capacity: number): string {
-    return `${capacity} ${capacity === 1 ? 'plaza' : 'plazas'}`;
   }
 }
