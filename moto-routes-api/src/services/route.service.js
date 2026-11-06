@@ -52,7 +52,7 @@ export const routeService = {
   // scope (services/visibility.js): sin él lo ve todo; en PUBLIC, sin lo que cuelga de un padre inactivo
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    const page = await findList(routeRepository, routeListQuery.build(query, await scopeFilter("route", scope)));
+    const page = await findList(routeRepository, await routeListQuery.build(query, await scopeFilter("route", scope)));
     return { ...page, items: await imageService.attachCovers("route", page.items) };
   },
 

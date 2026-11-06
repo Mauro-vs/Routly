@@ -20,7 +20,7 @@ export const categoryService = {
   // scope (services/visibility.js): en PUBLIC, solo las activas
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    return findList(categoryRepository, categoryListQuery.build(query, await scopeFilter("category", scope)));
+    return findList(categoryRepository, await categoryListQuery.build(query, await scopeFilter("category", scope)));
   },
 
   // /actives e /inactives: lo mismo que ?status=

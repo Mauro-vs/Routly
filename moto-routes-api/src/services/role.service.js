@@ -19,7 +19,7 @@ import {
 export const roleService = {
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}) {
-    return findList(roleRepository, roleListQuery.build(query));
+    return findList(roleRepository, await roleListQuery.build(query));
   },
 
   // /actives e /inactives: lo mismo que ?status=

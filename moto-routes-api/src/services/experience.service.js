@@ -24,6 +24,20 @@ import {
   softDeleteWithCascades,
 } from "./references.js";
 
+// Los filtros de experiencias que miran otra colección (schemas/experience.schema.js): una
+// consulta por colección, con todas sus condiciones juntas, y el resultado como un $in
+const LIST_RESOLVERS = {
+  // Por la categoría, la ubicación o la dificultad de su ruta
+  async route(clauses) {
+    return { routeId: { $in: await routeRepository.findIds({ $and: clauses }) } };
+  },
+  // Por sus salidas reservables: activas, programadas y futuras, y que cumplen el resto
+  async departure(clauses) {
+    const reservable = { isActive: true, state: "scheduled", startAt: { $gte: new Date() } };
+    return { _id: { $in: await departureRepository.findExperienceIds({ $and: [reservable, ...clauses] }) } };
+  },
+};
+
 const REFERENCES = [
   { field: "hostId", repository: hostRepository, resource: "host" },
   { field: "routeId", repository: routeRepository, resource: "route" },
@@ -67,7 +81,8 @@ export const experienceService = {
   // scope (services/visibility.js): en PUBLIC, sin las de un anfitrión o una ruta ocultos
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    const page = await findList(experienceRepository, experienceListQuery.build(query, await scopeFilter("experience", scope)));
+    const base = await scopeFilter("experience", scope);
+    const page = await findList(experienceRepository, await experienceListQuery.build(query, base, LIST_RESOLVERS));
     return { ...page, items: await withGuideBikes(page.items, scope) };
   },
 

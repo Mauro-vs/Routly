@@ -40,7 +40,7 @@ export const locationService = {
   // scope (services/visibility.js): en PUBLIC, solo las activas
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    const page = await findList(locationRepository, locationListQuery.build(query, await scopeFilter("location", scope)));
+    const page = await findList(locationRepository, await locationListQuery.build(query, await scopeFilter("location", scope)));
     return { ...page, items: page.items.map(toResponse) };
   },
 

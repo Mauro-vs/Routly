@@ -536,9 +536,9 @@ function secured(operation, level, owner) {
 
 // Lo que significa cada filtro. Su tipo y sus valores salen del esquema de Zod.
 const FILTER_DOCS = {
-  difficulty: "Dificultad",
-  categoryId: "Id de la categoría",
-  locationId: "Id de una ubicación, de origen o de destino",
+  difficulty: "Dificultad (en experiencias, la de su ruta)",
+  categoryId: "Id de la categoría (en experiencias, la de su ruta)",
+  locationId: "Id de una ubicación, de origen o de destino (en experiencias, de su ruta)",
   distanceMin: "Kilómetros, como mínimo",
   distanceMax: "Kilómetros, como máximo",
   durationMin: "Horas, como mínimo",
@@ -549,10 +549,10 @@ const FILTER_DOCS = {
   language: "Idioma (código de dos letras)",
   experienceId: "Id de la experiencia",
   state: "Estado de la salida",
-  from: "Empieza en esta fecha o después (ISO 8601: 2026-11-01 o con hora)",
-  to: "Empieza en esta fecha o antes (ISO 8601)",
-  priceMin: "Precio, como mínimo",
-  priceMax: "Precio, como máximo",
+  from: "Empieza en esta fecha o después (ISO 8601: 2026-11-01 o con hora). En experiencias, alguna de sus salidas reservables",
+  to: "Empieza en esta fecha o antes (ISO 8601). En experiencias, alguna de sus salidas reservables",
+  priceMin: "Precio, como mínimo. En experiencias, el de alguna de sus salidas reservables",
+  priceMax: "Precio, como máximo. En experiencias, el de alguna de sus salidas reservables",
   roleId: "Id del rol",
   userId: "Id del usuario",
   isSystem: "Solo los roles base (true) o solo los creados (false)",
@@ -563,6 +563,7 @@ const FILTER_DOCS = {
   ownerType: "Tipo de dueño (con ownerId)",
   ownerId: "Id del dueño (con ownerType)",
   isCover: "Solo la principal (true) o las demás (false)",
+  hasDepartures: "Solo las que tienen alguna salida reservable: activa, programada y futura (solo admite true)",
 };
 
 // El tipo de un filtro para Swagger, a partir de su esquema de Zod (lo que llega en la URL)

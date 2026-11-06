@@ -63,7 +63,7 @@ async function assertAdminRemains(user) {
 export const userService = {
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}) {
-    const page = await findList(userRepository, userListQuery.build(query));
+    const page = await findList(userRepository, await userListQuery.build(query));
     return { ...page, items: await imageService.attachCovers("user", page.items) };
   },
 

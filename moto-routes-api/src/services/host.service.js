@@ -39,7 +39,7 @@ export const hostService = {
   // scope (services/visibility.js): en PUBLIC, sin los anfitriones de un usuario inactivo
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    const page = await findList(hostRepository, hostListQuery.build(query, await scopeFilter("host", scope)));
+    const page = await findList(hostRepository, await hostListQuery.build(query, await scopeFilter("host", scope)));
     return { ...page, items: (await imageService.attachCovers("host", page.items)).map((host) => forScope(host, scope)) };
   },
 

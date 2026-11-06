@@ -43,6 +43,12 @@ export const departureRepository = {
     return Departure.findOne({ _id: id, deletedAt: { $ne: null } }).lean();
   },
 
+  // Las experiencias con alguna salida que cumple el filtro (sin las eliminadas): para los
+  // filtros de experiencias por precio y fechas (experience.service.js)
+  findExperienceIds(filter) {
+    return Departure.distinct("experienceId", filter);
+  },
+
   exists(filter) {
     return Departure.exists(filter);
   },

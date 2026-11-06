@@ -72,7 +72,7 @@ export const imageService = {
       }
       await assertOwnerVisible(query.ownerType, query.ownerId, scope, ownerName(query.ownerType));
     }
-    return findList(imageRepository, imageListQuery.build(query, await scopeFilter("image", scope)));
+    return findList(imageRepository, await imageListQuery.build(query, await scopeFilter("image", scope)));
   },
 
   // /actives e /inactives: lo mismo que ?status=

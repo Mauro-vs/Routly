@@ -111,7 +111,7 @@ export const departureService = {
   // scope (services/visibility.js): en PUBLIC, sin las de una experiencia oculta
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    const page = await findList(departureRepository, departureListQuery.build(query, await scopeFilter("departure", scope)));
+    const page = await findList(departureRepository, await departureListQuery.build(query, await scopeFilter("departure", scope)));
     return { ...page, items: await withGuideBikes(page.items, scope) };
   },
 

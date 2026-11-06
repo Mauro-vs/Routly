@@ -88,7 +88,7 @@ export const bikeService = {
   // scope (services/visibility.js): en PUBLIC, solo las públicas y activas de usuarios activos
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    const page = await findList(bikeRepository, bikeListQuery.build(query, await scopeFilter("bike", scope)));
+    const page = await findList(bikeRepository, await bikeListQuery.build(query, await scopeFilter("bike", scope)));
     return { ...page, items: await imageService.attachCovers("bike", page.items) };
   },
 

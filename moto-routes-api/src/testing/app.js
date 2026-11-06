@@ -220,3 +220,19 @@ export async function seedBasics(api) {
   ).body;
   return { rider, hostRole, category, location, route, user, host, experience, departure };
 }
+
+// Todas las etapas de un plan de MongoDB: IXSCAN usa un índice, COLLSCAN recorre la colección
+function stagesOf(plan) {
+  if (!plan || typeof plan !== "object") return [];
+  const own = plan.stage ? [plan.stage] : [];
+  return [...own, ...[plan.inputStage, ...(plan.inputStages ?? [])].flatMap(stagesOf)];
+}
+
+/**
+ * Las etapas del plan que elige MongoDB para una consulta de Mongoose, para comprobar con
+ * explain() que usa un índice: assert.ok(stages.includes("IXSCAN") && !stages.includes("COLLSCAN")).
+ */
+export async function planStages(query) {
+  const explained = await query.explain("queryPlanner");
+  return stagesOf((Array.isArray(explained) ? explained[0] : explained).queryPlanner.winningPlan);
+}

@@ -30,8 +30,9 @@ export const queryDate = z.iso.datetime({ offset: true }).or(z.iso.date()).trans
  * Define los query params de un listado.
  *
  * @param options.sort     campos por los que se puede ordenar
- * @param options.filters  { nombre: { schema, to } }: el esquema de Zod del valor (ya
- *                         convertido) y cómo se traduce a un trozo del filtro de MongoDB
+ * @param options.filters  { nombre: { schema, to, via? } }: el esquema de Zod del valor (ya
+ *                         convertido), cómo se traduce a un trozo del filtro de MongoDB y, si es
+ *                         una condición sobre otra colección, cuál (ver build)
  * @param options.ranges   pares [mínimo, máximo] que no pueden cruzarse: 400 en el máximo
  * @param options.checks   otras reglas entre parámetros: [comprobación, { message, path }]
  * @returns { schema, build, sortable, filters, ranges } schema para validate({ query }), build(query,
@@ -67,16 +68,30 @@ export function defineListQuery({ sort: sortable, filters = {}, ranges = [], che
   /**
    * La consulta de MongoDB de unos query params ya validados.
    *
-   * @param base el filtro que siempre se aplica (el alcance público de services/visibility.js)
+   * Un filtro con `via` no filtra la colección directamente: es una condición sobre otra (las
+   * experiencias por la categoría de su ruta, o por el precio de sus salidas). Los de un mismo
+   * `via` se juntan y se resuelven con una sola consulta, que aporta el service en `resolvers`:
+   * recibe las condiciones y devuelve el trozo del filtro (`{ routeId: { $in: [...] } }`).
+   *
+   * @param base      el filtro que siempre se aplica (el alcance público de services/visibility.js)
+   * @param resolvers { route: async (clauses) => filtro, ... } para los filtros con `via`
    * @returns { filter, sort, page, limit } sort es undefined si no se pide: el repositorio usa
    *          su orden de siempre. page también, si no se pide: se devuelve todo.
    */
-  function build(query = {}, base = {}) {
+  async function build(query = {}, base = {}, resolvers = {}) {
     const clauses = [];
     if (Object.keys(base).length > 0) clauses.push(base);
     if (query.status) clauses.push({ isActive: query.status === "active" });
+
+    const viaClauses = {};
     for (const [name, filter] of Object.entries(filters)) {
-      if (query[name] !== undefined) clauses.push(filter.to(query[name]));
+      if (query[name] === undefined) continue;
+      if (filter.via) (viaClauses[filter.via] ??= []).push(filter.to(query[name]));
+      else clauses.push(filter.to(query[name]));
+    }
+    for (const [via, viaFilter] of Object.entries(viaClauses)) {
+      if (!resolvers[via]) throw new Error(`listQuery: no resolver for filters via "${via}"`);
+      clauses.push(await resolvers[via](viaFilter));
     }
 
     const filter = clauses.length === 0 ? {} : clauses.length === 1 ? { ...clauses[0] } : { $and: clauses };

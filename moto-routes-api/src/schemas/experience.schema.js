@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EXPERIENCE_LANGUAGES, EXPERIENCE_LIMITS as LIMITS } from "../models/experience.model.js";
-import { defineListQuery, equals } from "../utils/listQuery.js";
+import { ROUTE_DIFFICULTIES } from "../models/route.model.js";
+import { atLeast, atMost, defineListQuery, equals, queryDate, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 const experienceFields = z.strictObject({
@@ -45,11 +46,33 @@ export const updateExperienceSchema = experienceFields
   );
 
 // Query params de GET /api/experiences (utils/listQuery.js): los comunes y estos filtros
+// La categoría, la ubicación y la dificultad son de la ruta (via "route"), y el precio y las
+// fechas, de las salidas programadas y futuras (via "departure"): el service las resuelve con una
+// consulta por colección (experience.service.js). Los de una misma colección se cumplen a la vez:
+// ?priceMax=100&from=2026-12-01 es "alguna salida de 100 € o menos a partir de diciembre".
 export const experienceListQuery = defineListQuery({
   sort: ["title", "duration", "maxParticipants", "createdAt", "updatedAt"],
   filters: {
     hostId: { schema: objectIdSchema, to: equals("hostId") },
     routeId: { schema: objectIdSchema, to: equals("routeId") },
     language: { schema: z.enum(EXPERIENCE_LANGUAGES), to: equals("language") },
+    categoryId: { schema: objectIdSchema, to: equals("categoryId"), via: "route" },
+    // De origen o de destino de su ruta
+    locationId: {
+      schema: objectIdSchema,
+      to: (id) => ({ $or: [{ startLocationId: id }, { endLocationId: id }] }),
+      via: "route",
+    },
+    difficulty: { schema: z.enum(ROUTE_DIFFICULTIES), to: equals("difficulty"), via: "route" },
+    priceMin: { schema: queryNumber.pipe(z.number().min(0)), to: atLeast("price"), via: "departure" },
+    priceMax: { schema: queryNumber.pipe(z.number().min(0)), to: atMost("price"), via: "departure" },
+    from: { schema: queryDate, to: atLeast("startAt"), via: "departure" },
+    to: { schema: queryDate, to: atMost("startAt"), via: "departure" },
+    // Solo las que tienen alguna salida reservable (no hay "false": sería un filtro distinto)
+    hasDepartures: { schema: z.literal("true").transform(() => true), to: () => ({}), via: "departure" },
   },
+  ranges: [
+    ["priceMin", "priceMax"],
+    ["from", "to"],
+  ],
 });

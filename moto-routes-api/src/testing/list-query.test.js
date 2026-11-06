@@ -4,7 +4,7 @@ import { Departure } from "../models/departure.model.js";
 import { Route } from "../models/route.model.js";
 import { departureListQuery } from "../schemas/departure.schema.js";
 import { routeListQuery } from "../schemas/route.schema.js";
-import { DAY, fieldMessage, fromNow, seedBasics, startApi } from "./app.js";
+import { DAY, fieldMessage, fromNow, planStages, seedBasics, startApi } from "./app.js";
 
 // Query params de los listados (utils/listQuery.js): los comunes, los filtros de cada colección,
 // la paginación con sus cabeceras y que las consultas usan índices.
@@ -249,19 +249,7 @@ describe("filtros de las demás colecciones", () => {
 });
 
 describe("índices", () => {
-  // Todas las etapas del plan ganador de MongoDB: IXSCAN usa un índice, COLLSCAN recorre la colección
-  function stagesOf(plan) {
-    if (!plan || typeof plan !== "object") return [];
-    const own = plan.stage ? [plan.stage] : [];
-    const children = [plan.inputStage, ...(plan.inputStages ?? [])].flatMap(stagesOf);
-    return [...own, ...children];
-  }
-
-  async function planOf(model, { filter, sort }) {
-    const explained = await model.find(filter).sort(sort ?? { createdAt: -1 }).explain("queryPlanner");
-    const result = Array.isArray(explained) ? explained[0] : explained;
-    return stagesOf(result.queryPlanner.winningPlan);
-  }
+  const planOf = (model, { filter, sort }) => planStages(model.find(filter).sort(sort ?? { createdAt: -1 }));
 
   const assertUsesIndex = (stages, expected = "IXSCAN") => {
     assert.ok(stages.includes(expected), `se esperaba ${expected}: ${stages.join(" > ")}`);
@@ -269,21 +257,21 @@ describe("índices", () => {
   };
 
   test("el listado de siempre (sin eliminados, por estado y por fecha) usa un índice", async () => {
-    assertUsesIndex(await planOf(Route, routeListQuery.build({})));
-    assertUsesIndex(await planOf(Route, routeListQuery.build({ status: "active" })));
+    assertUsesIndex(await planOf(Route, await routeListQuery.build({})));
+    assertUsesIndex(await planOf(Route, await routeListQuery.build({ status: "active" })));
   });
 
   test("los filtros de las rutas usan su índice", async () => {
-    assertUsesIndex(await planOf(Route, routeListQuery.build({ difficulty: "hard" })));
-    assertUsesIndex(await planOf(Route, routeListQuery.build({ distanceMin: 100 })));
+    assertUsesIndex(await planOf(Route, await routeListQuery.build({ difficulty: "hard" })));
+    assertUsesIndex(await planOf(Route, await routeListQuery.build({ distanceMin: 100 })));
   });
 
   test("q usa el índice de texto", async () => {
-    assertUsesIndex(await planOf(Route, routeListQuery.build({ q: "pirineo" })), "TEXT_MATCH");
+    assertUsesIndex(await planOf(Route, await routeListQuery.build({ q: "pirineo" })), "TEXT_MATCH");
   });
 
   test("las salidas por estado y fecha usan su índice", async () => {
-    const query = departureListQuery.build({ state: "scheduled", from: new Date() });
+    const query = await departureListQuery.build({ state: "scheduled", from: new Date() });
     assertUsesIndex(await planOf(Departure, { ...query, sort: { startAt: 1 } }));
   });
 });
