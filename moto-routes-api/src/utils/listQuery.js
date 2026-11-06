@@ -34,7 +34,8 @@ export const queryDate = z.iso.datetime({ offset: true }).or(z.iso.date()).trans
  *                         convertido) y cómo se traduce a un trozo del filtro de MongoDB
  * @param options.ranges   pares [mínimo, máximo] que no pueden cruzarse: 400 en el máximo
  * @param options.checks   otras reglas entre parámetros: [comprobación, { message, path }]
- * @returns { schema, build } schema para validate({ query }); build(query, base) para el service
+ * @returns { schema, build, sortable, filters, ranges } schema para validate({ query }), build(query,
+ *          base) para el service, y el resto para la documentación
  */
 export function defineListQuery({ sort: sortable, filters = {}, ranges = [], checks = [] }) {
   const field = `(${sortable.join("|")})`;
@@ -91,7 +92,9 @@ export function defineListQuery({ sort: sortable, filters = {}, ranges = [], che
     };
   }
 
-  return { schema, build };
+  // sortable, filters y ranges: para documentar cada listado en Swagger (docs/openapi.js)
+  const filterSchemas = Object.fromEntries(Object.entries(filters).map(([name, filter]) => [name, filter.schema]));
+  return { schema, build, sortable, filters: filterSchemas, ranges };
 }
 
 /** "-distance,title" → { distance: -1, title: 1 }. */

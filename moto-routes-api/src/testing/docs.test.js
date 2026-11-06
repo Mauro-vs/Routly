@@ -50,3 +50,23 @@ test("los 401, 403 y 429 documentados usan los mensajes exactos de la API", () =
   assert.equal(swaggerSpec.components.securitySchemes.cookieAuth.name, "routly_session");
   assert.equal(swaggerSpec.components.securitySchemes.cookieAuth.in, "cookie");
 });
+
+test("cada listado documenta justo los query params que acepta su esquema", async () => {
+  const schemas = {
+    roles: (await import("../schemas/role.schema.js")).roleListQuery,
+    users: (await import("../schemas/user.schema.js")).userListQuery,
+    hosts: (await import("../schemas/host.schema.js")).hostListQuery,
+    categories: (await import("../schemas/category.schema.js")).categoryListQuery,
+    locations: (await import("../schemas/location.schema.js")).locationListQuery,
+    routes: (await import("../schemas/route.schema.js")).routeListQuery,
+    experiences: (await import("../schemas/experience.schema.js")).experienceListQuery,
+    departures: (await import("../schemas/departure.schema.js")).departureListQuery,
+    images: (await import("../schemas/image.schema.js")).imageListQuery,
+    bikes: (await import("../schemas/bike.schema.js")).bikeListQuery,
+  };
+
+  for (const [path, listQuery] of Object.entries(schemas)) {
+    const documented = swaggerSpec.paths[`/api/${path}`].get.parameters.map((parameter) => parameter.name);
+    assert.deepEqual(documented.sort(), Object.keys(listQuery.schema.shape).sort(), path);
+  }
+});

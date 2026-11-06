@@ -1,20 +1,29 @@
 import { z } from "zod";
 import { cookieConfigFrom } from "../config/cookies.js";
 import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
-import { createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
-import { createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
-import { createDepartureSchema, updateDepartureSchema } from "../schemas/departure.schema.js";
-import { createExperienceSchema, updateExperienceSchema } from "../schemas/experience.schema.js";
-import { createHostSchema, updateHostSchema } from "../schemas/host.schema.js";
-import { createImageSchema, updateImageSchema } from "../schemas/image.schema.js";
-import { createLocationSchema, updateLocationSchema } from "../schemas/location.schema.js";
-import { createRoleSchema, updateRoleSchema } from "../schemas/role.schema.js";
-import { createRouteSchema, updateRouteSchema } from "../schemas/route.schema.js";
+import { bikeListQuery, createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
+import { categoryListQuery, createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
+import {
+  createDepartureSchema,
+  departureListQuery,
+  updateDepartureSchema,
+} from "../schemas/departure.schema.js";
+import {
+  createExperienceSchema,
+  experienceListQuery,
+  updateExperienceSchema,
+} from "../schemas/experience.schema.js";
+import { createHostSchema, hostListQuery, updateHostSchema } from "../schemas/host.schema.js";
+import { createImageSchema, imageListQuery, updateImageSchema } from "../schemas/image.schema.js";
+import { createLocationSchema, locationListQuery, updateLocationSchema } from "../schemas/location.schema.js";
+import { createRoleSchema, roleListQuery, updateRoleSchema } from "../schemas/role.schema.js";
+import { createRouteSchema, routeListQuery, updateRouteSchema } from "../schemas/route.schema.js";
 import {
   changePasswordSchema,
   createUserSchema,
   updateOwnUserSchema,
   updateUserSchema,
+  userListQuery,
 } from "../schemas/user.schema.js";
 
 /*
@@ -63,6 +72,7 @@ const COMMON_FIELDS = {
 const RESOURCES = [
   {
     path: "roles",
+    listQuery: roleListQuery,
     tag: "Roles",
     access: { read: "admin" },
     schema: "Role",
@@ -86,6 +96,7 @@ const RESOURCES = [
   },
   {
     path: "users",
+    listQuery: userListQuery,
     tag: "Users",
     access: { read: "admin" },
     schema: "User",
@@ -124,6 +135,7 @@ const RESOURCES = [
   },
   {
     path: "hosts",
+    listQuery: hostListQuery,
     tag: "Hosts",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen los activos cuyo usuario también lo esté, y user.email solo lo ve el admin",
@@ -153,6 +165,7 @@ const RESOURCES = [
   },
   {
     path: "categories",
+    listQuery: categoryListQuery,
     tag: "Categories",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen las activas",
@@ -177,6 +190,7 @@ const RESOURCES = [
   },
   {
     path: "locations",
+    listQuery: locationListQuery,
     tag: "Locations",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen las activas",
@@ -204,6 +218,7 @@ const RESOURCES = [
   },
   {
     path: "routes",
+    listQuery: routeListQuery,
     tag: "Routes",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen las activas cuya categoría y ubicaciones también lo estén",
@@ -236,6 +251,7 @@ const RESOURCES = [
   },
   {
     path: "experiences",
+    listQuery: experienceListQuery,
     tag: "Experiences",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen las activas cuyo anfitrión y ruta (y los padres de esta) también lo estén",
@@ -284,6 +300,7 @@ const RESOURCES = [
   },
   {
     path: "departures",
+    listQuery: departureListQuery,
     tag: "Departures",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen las activas cuya experiencia, y todo lo que hay por encima, también lo esté",
@@ -351,6 +368,7 @@ const RESOURCES = [
   },
   {
     path: "bikes",
+    listQuery: bikeListQuery,
     tag: "Bikes",
     // Lo que ve el público (services/visibility.js)
     publicView:
@@ -404,6 +422,7 @@ const RESOURCES = [
   },
   {
     path: "images",
+    listQuery: imageListQuery,
     tag: "Images",
     // Lo que ve el público (services/visibility.js)
     publicView: "solo salen las activas de un dueño visible; la galería de un dueño oculto da 404",
@@ -421,10 +440,6 @@ const RESOURCES = [
     hasSlug: false,
     description:
       "Imágenes de cualquier colección (ownerType + ownerId). La primera de cada dueño es la principal (isCover).",
-    listParameters: [
-      { in: "query", name: "ownerType", schema: { type: "string" }, description: "Filtra por dueño (con ownerId)" },
-      { in: "query", name: "ownerId", schema: { type: "string" }, description: "Filtra por dueño (con ownerType)" },
-    ],
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c991",
       ownerType: "route",
@@ -517,6 +532,70 @@ function secured(operation, level, owner) {
   };
 }
 
+// ---------- Query params de los listados (utils/listQuery.js) ----------
+
+// Lo que significa cada filtro. Su tipo y sus valores salen del esquema de Zod.
+const FILTER_DOCS = {
+  difficulty: "Dificultad",
+  categoryId: "Id de la categoría",
+  locationId: "Id de una ubicación, de origen o de destino",
+  distanceMin: "Kilómetros, como mínimo",
+  distanceMax: "Kilómetros, como máximo",
+  durationMin: "Horas, como mínimo",
+  durationMax: "Horas, como máximo",
+  country: "País, entero y sin distinguir mayúsculas",
+  hostId: "Id del anfitrión",
+  routeId: "Id de la ruta",
+  language: "Idioma (código de dos letras)",
+  experienceId: "Id de la experiencia",
+  state: "Estado de la salida",
+  from: "Empieza en esta fecha o después (ISO 8601: 2026-11-01 o con hora)",
+  to: "Empieza en esta fecha o antes (ISO 8601)",
+  priceMin: "Precio, como mínimo",
+  priceMax: "Precio, como máximo",
+  roleId: "Id del rol",
+  userId: "Id del usuario",
+  isSystem: "Solo los roles base (true) o solo los creados (false)",
+  type: "Tipo de moto",
+  license: "Carnet necesario",
+  ccMin: "Cilindrada, como mínimo",
+  ccMax: "Cilindrada, como máximo",
+  ownerType: "Tipo de dueño (con ownerId)",
+  ownerId: "Id del dueño (con ownerType)",
+  isCover: "Solo la principal (true) o las demás (false)",
+};
+
+// El tipo de un filtro para Swagger, a partir de su esquema de Zod (lo que llega en la URL)
+function filterSchema(zodSchema) {
+  const { $schema, ...json } = z.toJSONSchema(zodSchema, { io: "input", unrepresentable: "any" });
+  // Una fecha: el patrón exacto no ayuda a nadie a leer la documentación
+  if (json.anyOf) return { type: "string", format: "date", example: "2026-11-01" };
+  return json;
+}
+
+const PAGE_HEADERS = {
+  "X-Total-Count": { description: "Con page: cuántos hay en total con estos filtros", schema: { type: "integer" } },
+  "X-Page": { description: "Con page: la página devuelta", schema: { type: "integer" } },
+  "X-Limit": { description: "Con page: el tamaño de la página", schema: { type: "integer" } },
+};
+
+/** Los query params de un listado: los comunes y los filtros de su listQuery. */
+function listParameters({ sortable, filters }) {
+  const query = (name, schema, description) => ({ in: "query", name, required: false, schema, description });
+  return [
+    query("q", { type: "string", maxLength: 100 }, "Busca palabras en los campos de texto (índice de texto, en español: el plural encuentra el singular)"),
+    query("status", { type: "string", enum: ["active", "inactive"] }, "Activos o inactivos. Sin sesión de admin solo se ven los activos"),
+    query(
+      "sort",
+      { type: "string", example: `-${sortable[0]}` },
+      `Orden: campos separados por comas, con - delante para descendente. Campos: ${sortable.join(", ")}. Sin sort, el orden de siempre`,
+    ),
+    query("page", { type: "integer", minimum: 1 }, "Página, desde 1. Sin page se devuelve todo"),
+    query("limit", { type: "integer", minimum: 1, maximum: 100, default: 20 }, "Tamaño de la página (con limit y sin page, la primera)"),
+    ...Object.entries(filters).map(([name, schema]) => query(name, filterSchema(schema), FILTER_DOCS[name] ?? name)),
+  ];
+}
+
 // ---------- Los 11 endpoints de cada recurso ----------
 
 function crudPaths(resource) {
@@ -544,15 +623,14 @@ function crudPaths(resource) {
     [base]: {
       get: asRead({
         summary: `Listar ${plural}`,
-        description: "Sin los eliminados (soft delete).",
+        description:
+          "Sin los eliminados (soft delete). Admite query params: todos opcionales y combinables. Sin page devuelve todo; con page, solo esa página y el total en las cabeceras.",
         tags,
-        ...(resource.listParameters && { parameters: resource.listParameters }),
+        parameters: listParameters(resource.listQuery),
         responses: {
-          200: list("Listado", ref),
-          ...(resource.listParameters && {
-            400: error("Filtro incompleto o inválido"),
-            404: error("El dueño del filtro no existe o está eliminado"),
-          }),
+          200: { ...list("Listado (o la página pedida)", ref), headers: PAGE_HEADERS },
+          400: error("Un query param que no existe, con un valor no válido, o un rango cruzado (el mínimo mayor que el máximo)"),
+          ...(resource.listQuery.filters.ownerType && { 404: error("El dueño del filtro no existe o está eliminado") }),
         },
       }),
       post: asWrite({

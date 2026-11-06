@@ -19,7 +19,7 @@ Forma parte del monorepo de Routly. La visión general del proyecto está en el 
 - [Lenguaje y librerías](#lenguaje-y-librerías)
 - [Instalación](#instalación) · [Configuración](#configuración) · [Ejecución](#ejecución) · [Seed](#seed)
 - [Arquitectura](#arquitectura) · [Estructura del proyecto](#estructura-del-proyecto)
-- [Colecciones y relaciones](#colecciones-y-relaciones) · [Endpoints](#endpoints)
+- [Colecciones y relaciones](#colecciones-y-relaciones) · [Endpoints](#endpoints) · [Consultas: filtros, búsqueda, orden y páginas](#consultas-filtros-búsqueda-orden-y-páginas) · [Índices](#índices)
 - [Activo / inactivo frente a eliminado](#activo--inactivo-frente-a-eliminado) · [Soft delete y papelera](#soft-delete-y-papelera) · [Integridad referencial](#integridad-referencial)
 - [Imágenes](#imágenes) · [SKU de las salidas](#sku-de-las-salidas)
 - [Validación (Zod)](#validación-zod) · [Manejo de errores](#manejo-de-errores)
@@ -115,7 +115,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 169 tests con `node:test`:
+`npm test` ejecuta 202 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -131,8 +131,9 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/config/cookies.test.js` | La configuración de la cookie: valores por defecto, producción, `COOKIE_SECURE` y `COOKIE_SAMESITE`, el prefijo `__Secure-` y los valores que paran el arranque |
 | `src/config/proxy.test.js` | `TRUST_PROXY`: por defecto, valores no válidos y el límite de intentos real con y sin proxy de confianza (una IP inventada no lo salta) |
 | `src/testing/https.test.js` | Como en producción detrás de un proxy HTTPS: la cookie `__Secure-` con `Secure`, el nombre sin prefijo ya no cuenta y la comprobación del `Origin` con `X-Forwarded-Proto` y `-Host` |
+| `src/testing/list-query.test.js` | Los query params de los listados: `q` (también en plural y sin sesión), `status`, `sort`, `page` y `limit` con sus cabeceras (páginas sin repetir ni saltarse nada, el total de lo filtrado), los filtros de cada colección combinados, los rangos cruzados, los parámetros que no existen y, con `explain()`, que las consultas usan un índice y no recorren la colección |
 | `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
-| `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, y los mensajes documentados |
+| `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, los mensajes documentados y que cada listado documenta justo los query params que acepta |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
@@ -275,9 +276,11 @@ src/
 ├── config/
 │   ├── auth.js                    JWT_SECRET y JWT_EXPIRES_IN (comprobados al arrancar)
 │   ├── db.js                      Conexión a MongoDB
-│   ├── cors.js                    Orígenes y métodos permitidos
+│   ├── cookies.js                 COOKIE_SECURE y COOKIE_SAMESITE de la cookie de sesión
+│   ├── cors.js                    Orígenes, métodos y cabeceras de la paginación
 │   ├── helmet.js                  Cabeceras de seguridad
 │   ├── morgan.js                  Logs en consola y en logs/
+│   ├── proxy.js                   TRUST_PROXY: cuántos proxies hay delante
 │   └── swagger.js                 Definición OpenAPI
 ├── models/
 │   ├── revokedToken.model.js      Lista negra del logout (jti, con índice TTL)
@@ -285,13 +288,15 @@ src/
 │   │                              location, route, experience, departure, image, bike. Exporta sus límites
 │   ├── imageOwners.js             Colecciones que pueden tener imágenes
 │   ├── status.js                  Estados comunes
+│   ├── textIndex.js               Opciones del índice de texto de cada colección (?q=)
 │   ├── validators.js              Validadores propios de Mongoose
 │   └── plugins/
-│       ├── softDelete.plugin.js   Borrado lógico reutilizable
+│       ├── softDelete.plugin.js   Borrado lógico reutilizable, con el índice de los listados
 │       ├── status.plugin.js       status e isActive
 │       └── slug.plugin.js         slug único
 ├── schemas/
-│   ├── <recurso>.schema.js        Esquemas de Zod de cada colección, y auth.schema.js (registro y login)
+│   ├── <recurso>.schema.js        Esquemas de Zod de cada colección (body y los query params de su
+│   │                              listado), y auth.schema.js (registro y login)
 │   └── common.schema.js           Piezas comunes (:id, :slug, cannotChange, clearable...)
 ├── repositories/<recurso>.repository.js
 ├── services/
@@ -311,6 +316,8 @@ src/
 ├── docs/openapi.js                Documentación de todos los endpoints
 ├── utils/
 │   ├── errors.js                  notFound, conflict, badRequest, fieldError, unauthorized, forbidden
+│   ├── listQuery.js               Query params de los listados: filtro, orden y página (defineListQuery)
+│   ├── session-cookie.js          La cookie de sesión: ponerla, borrarla y leerla
 │   ├── jwt.js                     createToken y verifyToken
 │   ├── passwd.js                  Hash de contraseñas con Argon2id
 │   ├── access.js                  Reglas de ABAC (funciones puras)
@@ -468,8 +475,8 @@ Las diez colecciones exponen los mismos endpoints. `<colección>` es `roles`, `u
 
 | Método | Ruta | Descripción | Éxito |
 |--------|------|-------------|-------|
-| GET | `/api/<colección>` | Listado (sin eliminados) | 200 |
-| GET | `/api/<colección>/actives` | Solo activos | 200 |
+| GET | `/api/<colección>` | Listado (sin eliminados), con [query params](#consultas-filtros-búsqueda-orden-y-páginas) | 200 |
+| GET | `/api/<colección>/actives` | Solo activos (lo mismo que `?status=active`) | 200 |
 | GET | `/api/<colección>/inactives` | Solo inactivos (no eliminados) | 200 |
 | GET | `/api/<colección>/deleted` | Papelera | 200 |
 | GET | `/api/<colección>/slug/:slug` | Por slug (todas menos `images`) | 200 |
@@ -506,6 +513,80 @@ Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#
 | PATCH | `/api/profile/:userId` | Editar un usuario y su perfil (el propio usuario o el admin) | 200 |
 
 El `PATCH /:id` no acepta `status`: activar y desactivar solo se hace con `PATCH /:id/active`. Eliminar no es un estado: lo marca `deletedAt`.
+
+## Consultas: filtros, búsqueda, orden y páginas
+
+`GET /api/<colección>` admite query params. Todos son opcionales y se combinan; sin ninguno, el listado responde como siempre: todo, en su orden de siempre. Los define `utils/listQuery.js` y cada colección declara los suyos en su esquema (`<recurso>ListQuery`), así que llegan validados por Zod y con su tipo, igual que un body.
+
+```
+GET /api/routes?q=pirineo&difficulty=hard&distanceMin=100&sort=-distance&page=1&limit=10
+```
+
+**Comunes a todas las colecciones:**
+
+| Parámetro | Ejemplo | Qué hace |
+|---|---|---|
+| `q` | `?q=pirineo` | Busca palabras en los campos de texto, con el [índice de texto](#índices) en español: "puerto" encuentra "Puertos". Palabras enteras, no trozos |
+| `status` | `?status=inactive` | Activos o inactivos. Sin sesión de admin solo se ven los activos, aunque se pidan los otros |
+| `sort` | `?sort=-distance,title` | Campos separados por comas; un `-` delante es descendente. Solo los que declara cada colección |
+| `page` | `?page=2` | Página, desde 1. Sin `page` se devuelve todo |
+| `limit` | `?limit=10` | Tamaño de la página, de 1 a 100 (20 por defecto). Con `limit` y sin `page`, la primera |
+
+**Los filtros de cada colección:**
+
+| Colección | Filtros | Se puede ordenar por |
+|---|---|---|
+| `routes` | `difficulty`, `categoryId`, `locationId` (de origen o de destino), `distanceMin`/`distanceMax`, `durationMin`/`durationMax` | `title`, `distance`, `duration`, `difficulty` |
+| `experiences` | `hostId`, `routeId`, `language` | `title`, `duration`, `maxParticipants` |
+| `departures` | `experienceId`, `state`, `from`/`to` (fecha de inicio, ISO 8601), `priceMin`/`priceMax` | `startAt`, `price`, `capacity` |
+| `users` | `roleId` | `name`, `email` |
+| `hosts` | `userId` | `name` |
+| `bikes` | `userId`, `type`, `license`, `ccMin`/`ccMax` | `brand`, `model`, `year`, `cc`, `hp` |
+| `locations` | `country` (entero, sin distinguir mayúsculas) | `city`, `country` |
+| `images` | `ownerType` y `ownerId` (juntos), `isCover` | `position` |
+| `roles` | `isSystem` | `name`, `label` |
+| `categories` | (solo los comunes) | `name` |
+
+Todas se pueden ordenar además por `createdAt` y `updatedAt`. `q` busca en el título y la descripción (rutas, experiencias), el nombre (categorías, roles, usuarios, anfitriones, también el email o la biografía), la ciudad, la región y el país (ubicaciones), la marca, el modelo y el apodo (motos), el SKU (salidas) y el texto alternativo (imágenes).
+
+**La respuesta sigue siendo un array.** Con `page`, el total va en las cabeceras, así ningún cliente que ya lea la lista se rompe:
+
+| Cabecera | Ejemplo | Qué es |
+|---|---|---|
+| `X-Total-Count` | `37` | Cuántos hay en total con esos filtros |
+| `X-Page` | `2` | La página devuelta |
+| `X-Limit` | `10` | El tamaño de la página |
+
+CORS las expone (`exposedHeaders`), para que un panel en otro origen también las lea. Con un orden pedido, el `_id` desempata: una página nunca repite ni se salta un documento.
+
+**Errores (400, con el formato de siempre):**
+
+- un parámetro que no existe: `color is not allowed`, igual que un campo de más en el body;
+- un valor no válido: `difficulty must be one of: easy, medium, hard`, `page must be greater than or equal to 1`...;
+- un campo de orden que no vale: `sort must be a comma-separated list of: title, distance...`;
+- un rango cruzado: `distanceMax must be greater than or equal to distanceMin`.
+
+`/actives` e `/inactives` siguen existiendo y hacen la misma consulta que `?status=active` y `?status=inactive`. En Swagger, cada listado documenta sus parámetros con su tipo y sus valores, sacados del mismo esquema de Zod (`docs.test.js` comprueba que coinciden).
+
+## Índices
+
+Cada consulta frecuente tiene su índice, así MongoDB no recorre la colección entera. `list-query.test.js` lo comprueba con `explain()`: el plan tiene que usar un índice (`IXSCAN` o `TEXT_MATCH`) y nunca recorrer la colección (`COLLSCAN`).
+
+| Índice | Dónde | Para qué |
+|---|---|---|
+| `{ deletedAt, isActive, createdAt: -1 }` | Todas las colecciones (`softDelete.plugin.js`) | Los listados: todos filtran por `deletedAt: null`, muchos por `isActive` (`?status`, `/actives`) y casi todos ordenan por fecha |
+| De texto, en español | Una por colección (`textIndex.js`) | `?q=`. Con `language_override`: el campo `language` de las experiencias (`ca`, `eu`, `gl`...) no se toma como el idioma del índice, que MongoDB no admite |
+| `{ difficulty }`, `{ distance }` | `routes` | `?difficulty=`, `?distanceMin=`, `?sort=distance` |
+| `{ state, startAt }` | `departures` | `?state=scheduled&from=...`: las próximas, las de un mes |
+| `{ experienceId, startAt }` | `departures` | Las salidas de una experiencia y la regla de no repetir hora |
+| `{ type, cc }` | `bikes` | `?type=` y `?ccMin=` |
+| `{ ownerType, ownerId, position }` | `images` | La galería de un dueño, en orden |
+| Las claves externas (`categoryId`, `hostId`, `userId`, `roleId`...) | Cada colección | Los filtros por relación, las cascadas y la visibilidad |
+| Únicos: `slug`, `email`, `sku`, el nombre de la categoría, la etiqueta del rol, el lugar | Cada colección | Que no se repitan (409) |
+| `{ coordinates: "2dsphere" }` | `locations` | Consultas geográficas |
+| `expiresAt` con TTL | `revokedtokens` | La lista negra se vacía sola cuando los tokens habrían caducado |
+
+Los índices los crea Mongoose al arrancar (`autoIndex`), y los tests, en su base de datos temporal (`syncIndexes`). Crearlos no cambia ningún documento.
 
 ## Activo / inactivo frente a eliminado
 
