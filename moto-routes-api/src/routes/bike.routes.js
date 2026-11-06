@@ -3,7 +3,7 @@ import { bikeController } from "../controllers/bike.controller.js";
 import { authenticate, optionalAuth } from "../middlewares/authenticate.js";
 import { adminOnly } from "../middlewares/authorize.js";
 import { validate } from "../middlewares/validate.js";
-import { createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
+import { bikeListQuery, createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
 
 // La documentación Swagger de estos endpoints se genera en src/docs/
@@ -11,7 +11,7 @@ import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "
 // "Mi garaje" está en GET /api/profile/me/bikes.
 const router = Router();
 
-router.get("/", optionalAuth, bikeController.list);
+router.get("/", optionalAuth, validate({ query: bikeListQuery.schema }), bikeController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
 router.get("/actives", optionalAuth, bikeController.listActives);
 router.get("/inactives", adminOnly, bikeController.listInactives);

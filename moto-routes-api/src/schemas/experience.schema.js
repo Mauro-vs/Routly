@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EXPERIENCE_LANGUAGES, EXPERIENCE_LIMITS as LIMITS } from "../models/experience.model.js";
+import { defineListQuery, equals } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 const experienceFields = z.strictObject({
@@ -42,3 +43,13 @@ export const updateExperienceSchema = experienceFields
       data.maxParticipants >= data.minParticipants,
     participantsError
   );
+
+// Query params de GET /api/experiences (utils/listQuery.js): los comunes y estos filtros
+export const experienceListQuery = defineListQuery({
+  sort: ["title", "duration", "maxParticipants", "createdAt", "updatedAt"],
+  filters: {
+    hostId: { schema: objectIdSchema, to: equals("hostId") },
+    routeId: { schema: objectIdSchema, to: equals("routeId") },
+    language: { schema: z.enum(EXPERIENCE_LANGUAGES), to: equals("language") },
+  },
+});

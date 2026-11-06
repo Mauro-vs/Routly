@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/location.schema.js).
 export const LOCATION_LIMITS = Object.freeze({
@@ -65,5 +66,8 @@ locationSchema.plugin(softDeletePlugin);
 locationSchema.index({ city: 1, region: 1, country: 1 }, { unique: true, collation: LOCATION_COLLATION });
 // Preparado para búsquedas por cercanía
 locationSchema.index({ coordinates: "2dsphere" });
+
+// ?q= busca en la ciudad, la región y el país
+locationSchema.index({ city: "text", region: "text", country: "text" }, TEXT_INDEX);
 
 export const Location = mongoose.model("Location", locationSchema);

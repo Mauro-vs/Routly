@@ -2,6 +2,8 @@ import { restoredStatus, statusFromActive } from "../models/status.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { notFound } from "../utils/errors.js";
+import { categoryListQuery } from "../schemas/category.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
@@ -16,12 +18,14 @@ import { assertVisible, scopeFilter } from "./visibility.js";
 
 export const categoryService = {
   // scope (services/visibility.js): en PUBLIC, solo las activas
-  async list(scope) {
-    return categoryRepository.findAll(await scopeFilter("category", scope));
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    return findList(categoryRepository, categoryListQuery.build(query, await scopeFilter("category", scope)));
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    return categoryRepository.findAll({ isActive, ...(await scopeFilter("category", scope)) });
+    return (await categoryService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

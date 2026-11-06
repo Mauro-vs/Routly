@@ -4,8 +4,13 @@ import { toUpdate } from "../utils/update.js";
 
 export const imageRepository = {
   // Por posición dentro de su dueño
-  findAll(filter = {}) {
-    return Image.find(filter).sort({ position: 1, createdAt: 1 }).lean();
+  findAll(filter = {}, { sort = { position: 1, createdAt: 1 }, skip = 0, limit = 0 } = {}) {
+    return Image.find(filter).sort(sort).skip(skip).limit(limit).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Image.countDocuments(filter);
   },
 
   findDeleted() {

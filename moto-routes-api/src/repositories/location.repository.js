@@ -2,11 +2,18 @@ import { Location, LOCATION_COLLATION } from "../models/location.model.js";
 import { toUpdate } from "../utils/update.js";
 
 export const locationRepository = {
-  findAll(filter = {}) {
+  findAll(filter = {}, { sort = { city: 1 }, skip = 0, limit = 0 } = {}) {
     return Location.find(filter)
-      .sort({ city: 1 })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
       .collation(LOCATION_COLLATION)
       .lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Location.countDocuments(filter);
   },
 
   findDeleted() {

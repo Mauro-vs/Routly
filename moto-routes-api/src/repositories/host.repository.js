@@ -4,8 +4,13 @@ import { toUpdate } from "../utils/update.js";
 const withUser = (query) => query.populate("user", "name email");
 
 export const hostRepository = {
-  findAll(filter = {}) {
-    return withUser(Host.find(filter).sort({ createdAt: -1 })).lean();
+  findAll(filter = {}, { sort = { createdAt: -1 }, skip = 0, limit = 0 } = {}) {
+    return withUser(Host.find(filter).sort(sort).skip(skip).limit(limit)).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Host.countDocuments(filter);
   },
 
   findDeleted() {

@@ -1,4 +1,5 @@
 import cors from "cors";
+import { LIST_HEADERS } from "../utils/listQuery.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -12,10 +13,13 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
 // En desarrollo el panel llama a /api a través del proxy de Angular (mismo origen), así
 // que no hacen falta credenciales cruzadas. En producción, si el panel está en otro
 // origen, credentials: true deja que el navegador mande la cookie de sesión.
+// exposedHeaders: sin esto, el navegador no deja leer las cabeceras de la paginación
+// (utils/listQuery.js) a un panel servido desde otro origen
 export const corsMiddleware = cors({
   origin: isProduction ? allowedOrigins : "*",
   methods: ["GET", "POST", "PATCH"],
   credentials: isProduction,
+  exposedHeaders: LIST_HEADERS,
 });
 
 // http://localhost:4200, http://127.0.0.1:3000...

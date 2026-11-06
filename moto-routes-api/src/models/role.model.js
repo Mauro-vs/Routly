@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/role.schema.js).
 export const ROLE_LIMITS = Object.freeze({
@@ -53,5 +54,8 @@ roleSchema.plugin(softDeletePlugin);
 
 // La etiqueta también es única, sin distinguir mayúsculas ni tildes: "Anfitrión" = "anfitrion"
 roleSchema.index({ label: 1 }, { unique: true, collation: ROLE_COLLATION });
+
+// ?q= busca en el nombre interno y el visible
+roleSchema.index({ name: "text", label: "text" }, TEXT_INDEX);
 
 export const Role = mongoose.model("Role", roleSchema);

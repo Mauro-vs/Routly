@@ -6,6 +6,8 @@ import { bikeRepository } from "../repositories/bike.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { canModifyExperience, canModifyHost, isAdminUser } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
+import { experienceListQuery } from "../schemas/experience.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { bikeService } from "./bike.service.js";
 import { departureService } from "./departure.service.js";
 import { imageService } from "./image.service.js";
@@ -63,13 +65,15 @@ async function assertOwnExperience(actor, experience) {
 
 export const experienceService = {
   // scope (services/visibility.js): en PUBLIC, sin las de un anfitrión o una ruta ocultos
-  async list(scope) {
-    return withGuideBikes(await experienceRepository.findAll(await scopeFilter("experience", scope)), scope);
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    const page = await findList(experienceRepository, experienceListQuery.build(query, await scopeFilter("experience", scope)));
+    return { ...page, items: await withGuideBikes(page.items, scope) };
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    const filter = { isActive, ...(await scopeFilter("experience", scope)) };
-    return withGuideBikes(await experienceRepository.findAll(filter), scope);
+    return (await experienceService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

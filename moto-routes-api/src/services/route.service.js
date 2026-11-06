@@ -4,6 +4,8 @@ import { experienceRepository } from "../repositories/experience.repository.js";
 import { locationRepository } from "../repositories/location.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { notFound } from "../utils/errors.js";
+import { routeListQuery } from "../schemas/route.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { imageService } from "./image.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
 import {
@@ -48,14 +50,15 @@ const referencesOf = (data) =>
 // (src/schemas/route.schema.js), aplicados en las rutas con validate().
 export const routeService = {
   // scope (services/visibility.js): sin él lo ve todo; en PUBLIC, sin lo que cuelga de un padre inactivo
-  async list(scope) {
-    return imageService.attachCovers("route", await routeRepository.findAll(await scopeFilter("route", scope)));
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    const page = await findList(routeRepository, routeListQuery.build(query, await scopeFilter("route", scope)));
+    return { ...page, items: await imageService.attachCovers("route", page.items) };
   },
 
-  // Las rutas eliminadas nunca aparecen, tampoco entre las inactivas
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    const filter = { isActive, ...(await scopeFilter("route", scope)) };
-    return imageService.attachCovers("route", await routeRepository.findAll(filter));
+    return (await routeService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   // La papelera: solo rutas eliminadas. Es la única consulta que las devuelve.

@@ -8,6 +8,8 @@ import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
 import { madridDateParts } from "../utils/dates.js";
 import { buildSku } from "../utils/sku.js";
 import { buildSlug } from "../utils/slugify.js";
+import { departureListQuery } from "../schemas/departure.schema.js";
+import { findList } from "../utils/listQuery.js";
 import {
   assertHasChanges,
   assertReference,
@@ -107,13 +109,15 @@ const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !==
 
 export const departureService = {
   // scope (services/visibility.js): en PUBLIC, sin las de una experiencia oculta
-  async list(scope) {
-    return withGuideBikes(await departureRepository.findAll(await scopeFilter("departure", scope)), scope);
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    const page = await findList(departureRepository, departureListQuery.build(query, await scopeFilter("departure", scope)));
+    return { ...page, items: await withGuideBikes(page.items, scope) };
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    const filter = { isActive, ...(await scopeFilter("departure", scope)) };
-    return withGuideBikes(await departureRepository.findAll(filter), scope);
+    return (await departureService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

@@ -33,6 +33,14 @@ const QUERIES_TO_FILTER = [
 export function softDeletePlugin(schema) {
   schema.add({ deletedAt: { type: Date, default: null } });
 
+  // Todos los listados filtran por deletedAt: null (lo añade este plugin), muchos también por
+  // isActive (?status, /actives), y casi todos ordenan por createdAt. Sin este índice, MongoDB
+  // recorrería la colección entera en cada listado. Si el esquema no tiene estado, sin isActive.
+  schema.index(
+    schema.path("isActive") ? { deletedAt: 1, isActive: 1, createdAt: -1 } : { deletedAt: 1, createdAt: -1 },
+    { name: "list_by_state_and_date" },
+  );
+
   schema.pre(QUERIES_TO_FILTER, function () {
     if (this.getOptions().withDeleted) return;
     if (this.getFilter().deletedAt === undefined) {

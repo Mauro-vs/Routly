@@ -2,9 +2,11 @@ import { z } from "zod";
 import {
   BIKE_LIMITS as LIMITS,
   BIKE_TYPES,
+  LICENSES,
   MODIFICATION_TYPES,
   maxBikeYear,
 } from "../models/bike.model.js";
+import { atLeast, atMost, defineListQuery, equals, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 // license no está en el esquema: lo calcula la API con la potencia y la cilindrada.
@@ -58,4 +60,17 @@ const OPTIONAL = ["version", "year", "cc", "hp", "torque", "weight", "seatHeight
 export const updateBikeSchema = bikeFields.partial().extend({
   ...clearable(bikeFields, ...OPTIONAL),
   ...cannotChange("_id", "slug", "userId", "license"),
+});
+
+// Query params de GET /api/bikes (utils/listQuery.js): los comunes y estos filtros
+export const bikeListQuery = defineListQuery({
+  sort: ["brand", "model", "year", "cc", "hp", "createdAt", "updatedAt"],
+  filters: {
+    userId: { schema: objectIdSchema, to: equals("userId") },
+    type: { schema: z.enum(BIKE_TYPES), to: equals("type") },
+    license: { schema: z.enum(LICENSES), to: equals("license") },
+    ccMin: { schema: queryNumber.pipe(z.number().min(0)), to: atLeast("cc") },
+    ccMax: { schema: queryNumber.pipe(z.number().min(0)), to: atMost("cc") },
+  },
+  ranges: [["ccMin", "ccMax"]],
 });

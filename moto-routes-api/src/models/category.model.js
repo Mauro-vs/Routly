@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Comparación en español sin distinguir mayúsculas ni tildes: "Montaña" = "montana"
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/category.schema.js).
@@ -28,5 +29,8 @@ categorySchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] 
 categorySchema.plugin(softDeletePlugin);
 
 categorySchema.index({ name: 1 }, { unique: true, collation: CATEGORY_COLLATION });
+
+// ?q= busca en el nombre y la descripción
+categorySchema.index({ name: "text", description: "text" }, TEXT_INDEX);
 
 export const Category = mongoose.model("Category", categorySchema);

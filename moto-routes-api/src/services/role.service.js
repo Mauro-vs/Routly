@@ -2,6 +2,8 @@ import { STATUS, restoredStatus, statusFromActive } from "../models/status.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, notFound } from "../utils/errors.js";
+import { roleListQuery } from "../schemas/role.schema.js";
+import { findList } from "../utils/listQuery.js";
 import {
   assertHasChanges,
   assertNotTaken,
@@ -15,12 +17,14 @@ import {
 // Los roles base (isSystem) los crea el seed y están protegidos: si se pudiera
 // desactivar o eliminar "admin", nadie podría administrar
 export const roleService = {
-  async list() {
-    return roleRepository.findAll();
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}) {
+    return findList(roleRepository, roleListQuery.build(query));
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive) {
-    return roleRepository.findAll({ isActive });
+    return (await roleService.search({ status: isActive ? "active" : "inactive" })).items;
   },
 
   async listDeleted() {

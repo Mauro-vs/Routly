@@ -3,6 +3,7 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { integer, positive } from "./validators.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/bike.schema.js).
 // Unidades: cc, cv, Nm, kg, mm y km. perUser: motos como mucho en el garaje de un usuario
@@ -140,5 +141,9 @@ bikeSchema.index(
   { userId: 1 },
   { name: "one_primary_bike_per_user", unique: true, partialFilterExpression: { isPrimary: true } }
 );
+
+// ?q= busca en la marca, el modelo y el apodo; ?type= y ?ccMin=/?ccMax=, con su índice
+bikeSchema.index({ brand: "text", model: "text", nickname: "text" }, TEXT_INDEX);
+bikeSchema.index({ type: 1, cc: 1 });
 
 export const Bike = mongoose.model("Bike", bikeSchema);

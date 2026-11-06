@@ -4,8 +4,10 @@ import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { imageRepository } from "../repositories/image.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
+import { imageListQuery } from "../schemas/image.schema.js";
 import { canModifyImageOwner, isAdminUser } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
+import { findList } from "../utils/listQuery.js";
 import {
   assertHasChanges,
   confirmReferences,
@@ -61,19 +63,21 @@ async function assertOwnImage(actor, { ownerType, ownerId }) {
 export const imageService = {
   // Con ownerType y ownerId devuelve la galería de un dueño, que tiene que estar vivo: las
   // imágenes de algo eliminado no se enseñan (404). En PUBLIC (services/visibility.js), tampoco
-  // las de un dueño oculto, ni las imágenes inactivas.
-  async list(filter = {}, scope) {
-    if (filter.ownerType) {
-      if (!(await imageRepository.findOwner(filter.ownerType, filter.ownerId))) {
-        throw notFound(ownerName(filter.ownerType));
+  // las de un dueño oculto, ni las imágenes inactivas. El resto de query params, como en
+  // cualquier listado (utils/listQuery.js).
+  async search(query = {}, scope) {
+    if (query.ownerType) {
+      if (!(await imageRepository.findOwner(query.ownerType, query.ownerId))) {
+        throw notFound(ownerName(query.ownerType));
       }
-      await assertOwnerVisible(filter.ownerType, filter.ownerId, scope, ownerName(filter.ownerType));
+      await assertOwnerVisible(query.ownerType, query.ownerId, scope, ownerName(query.ownerType));
     }
-    return imageRepository.findAll({ ...filter, ...(await scopeFilter("image", scope)) });
+    return findList(imageRepository, imageListQuery.build(query, await scopeFilter("image", scope)));
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    return imageRepository.findAll({ isActive, ...(await scopeFilter("image", scope)) });
+    return (await imageService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

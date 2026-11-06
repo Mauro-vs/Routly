@@ -5,10 +5,15 @@ const withRelations = (query) =>
   query.populate("host", "name slug").populate("route", "title slug");
 
 export const experienceRepository = {
-  findAll(filter = {}) {
+  findAll(filter = {}, { sort = { createdAt: -1 }, skip = 0, limit = 0 } = {}) {
     return withRelations(
-      Experience.find(filter).sort({ createdAt: -1 })
+      Experience.find(filter).sort(sort).skip(skip).limit(limit)
     ).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Experience.countDocuments(filter);
   },
 
   findDeleted() {

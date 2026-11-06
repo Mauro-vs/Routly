@@ -9,8 +9,13 @@ const withRelations = (query) =>
     .populate("endLocation", "city region country slug");
 
 export const routeRepository = {
-  findAll(filter = {}) {
-    return withRelations(Route.find(filter).sort({ createdAt: -1 })).lean();
+  findAll(filter = {}, { sort = { createdAt: -1 }, skip = 0, limit = 0 } = {}) {
+    return withRelations(Route.find(filter).sort(sort).skip(skip).limit(limit)).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Route.countDocuments(filter);
   },
 
   // Solo las eliminadas, de la eliminada más reciente a la más antigua. Como el

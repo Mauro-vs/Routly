@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/user.schema.js).
 // La contraseña no está: no se guarda, solo su hash
@@ -53,5 +54,8 @@ userSchema.virtual("profile", {
 userSchema.plugin(statusPlugin);
 userSchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] });
 userSchema.plugin(softDeletePlugin);
+
+// ?q= busca en el nombre y el email
+userSchema.index({ name: "text", email: "text" }, TEXT_INDEX);
 
 export const User = mongoose.model("User", userSchema);

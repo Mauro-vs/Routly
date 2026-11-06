@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DEPARTURE_LIMITS as LIMITS, DEPARTURE_STATES } from "../models/departure.model.js";
 import { SKU_PATTERN } from "../utils/sku.js";
+import { atLeast, atMost, defineListQuery, equals, queryDate, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 // sku y slug no están en el esquema: los genera el service
@@ -42,4 +43,22 @@ export const updateDepartureSchema = departureFields
 // Se acepta en minúsculas y se normaliza antes de comprobar el formato
 export const skuParamSchema = z.object({
   sku: z.string().trim().toUpperCase().regex(SKU_PATTERN),
+});
+
+// Query params de GET /api/departures (utils/listQuery.js): los comunes y estos filtros
+export const departureListQuery = defineListQuery({
+  sort: ["startAt", "price", "capacity", "createdAt", "updatedAt"],
+  filters: {
+    experienceId: { schema: objectIdSchema, to: equals("experienceId") },
+    state: { schema: z.enum(DEPARTURE_STATES), to: equals("state") },
+    // Por la fecha de inicio: ?from=2026-11-01&to=2026-11-30
+    from: { schema: queryDate, to: atLeast("startAt") },
+    to: { schema: queryDate, to: atMost("startAt") },
+    priceMin: { schema: queryNumber.pipe(z.number().min(0)), to: atLeast("price") },
+    priceMax: { schema: queryNumber.pipe(z.number().min(0)), to: atMost("price") },
+  },
+  ranges: [
+    ["from", "to"],
+    ["priceMin", "priceMax"],
+  ],
 });

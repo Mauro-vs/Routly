@@ -2,8 +2,13 @@ import { Role, ROLE_COLLATION } from "../models/role.model.js";
 import { toUpdate } from "../utils/update.js";
 
 export const roleRepository = {
-  findAll(filter = {}) {
-    return Role.find(filter).sort({ createdAt: -1 }).lean();
+  findAll(filter = {}, { sort = { createdAt: -1 }, skip = 0, limit = 0 } = {}) {
+    return Role.find(filter).sort(sort).skip(skip).limit(limit).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Role.countDocuments(filter);
   },
 
   // La papelera: de la eliminada más reciente a la más antigua

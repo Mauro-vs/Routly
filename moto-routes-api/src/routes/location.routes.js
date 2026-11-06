@@ -4,12 +4,12 @@ import { adminOnly } from "../middlewares/authorize.js";
 import { optionalAuth } from "../middlewares/authenticate.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
-import { createLocationSchema, updateLocationSchema } from "../schemas/location.schema.js";
+import { createLocationSchema, locationListQuery, updateLocationSchema } from "../schemas/location.schema.js";
 
 // La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
 
-router.get("/", optionalAuth, locationController.list);
+router.get("/", optionalAuth, validate({ query: locationListQuery.schema }), locationController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
 router.get("/actives", optionalAuth, locationController.listActives);
 router.get("/inactives", adminOnly, locationController.listInactives);

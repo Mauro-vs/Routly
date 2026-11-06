@@ -2,6 +2,8 @@ import { restoredStatus, statusFromActive } from "../models/status.js";
 import { locationRepository } from "../repositories/location.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { notFound } from "../utils/errors.js";
+import { locationListQuery } from "../schemas/location.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
@@ -36,13 +38,15 @@ function toResponse(location) {
 
 export const locationService = {
   // scope (services/visibility.js): en PUBLIC, solo las activas
-  async list(scope) {
-    return (await locationRepository.findAll(await scopeFilter("location", scope))).map(toResponse);
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    const page = await findList(locationRepository, locationListQuery.build(query, await scopeFilter("location", scope)));
+    return { ...page, items: page.items.map(toResponse) };
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    const filter = { isActive, ...(await scopeFilter("location", scope)) };
-    return (await locationRepository.findAll(filter)).map(toResponse);
+    return (await locationService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

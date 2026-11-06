@@ -1,4 +1,5 @@
 import { roleService } from "../services/role.service.js";
+import { sendList } from "../utils/listQuery.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { roleService } from "../services/role.service.js";
 export const roleController = {
   async list(req, res, next) {
     try {
-      res.json(await roleService.list());
+      sendList(res, await roleService.search(req.query));
     } catch (error) {
       next(error);
     }

@@ -1,5 +1,6 @@
 import { bikeService } from "../services/bike.service.js";
 import { scopeOf } from "../services/visibility.js";
+import { sendList } from "../utils/listQuery.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global.
@@ -8,7 +9,7 @@ import { scopeOf } from "../services/visibility.js";
 export const bikeController = {
   async list(req, res, next) {
     try {
-      res.json(await bikeService.list(scopeOf(req.user)));
+      sendList(res, await bikeService.search(req.query, scopeOf(req.user)));
     } catch (error) {
       next(error);
     }

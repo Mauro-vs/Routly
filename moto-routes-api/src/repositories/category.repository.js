@@ -3,11 +3,18 @@ import { toUpdate } from "../utils/update.js";
 
 export const categoryRepository = {
   // Ordenadas por nombre, con el orden alfabético del español
-  findAll(filter = {}) {
+  findAll(filter = {}, { sort = { name: 1 }, skip = 0, limit = 0 } = {}) {
     return Category.find(filter)
-      .sort({ name: 1 })
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
       .collation(CATEGORY_COLLATION)
       .lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Category.countDocuments(filter);
   },
 
   findDeleted() {

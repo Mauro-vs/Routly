@@ -6,6 +6,8 @@ import { roleRepository } from "../repositories/role.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { canModifyHost } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
+import { hostListQuery } from "../schemas/host.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { bikeService } from "./bike.service.js";
 import { imageService } from "./image.service.js";
 import { PUBLIC, assertVisible, scopeFilter } from "./visibility.js";
@@ -35,15 +37,15 @@ const withBikes = async (host, scope) => ({ ...host, bikes: await bikeService.li
 
 export const hostService = {
   // scope (services/visibility.js): en PUBLIC, sin los anfitriones de un usuario inactivo
-  async list(scope) {
-    const hosts = await hostRepository.findAll(await scopeFilter("host", scope));
-    return (await imageService.attachCovers("host", hosts)).map((host) => forScope(host, scope));
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    const page = await findList(hostRepository, hostListQuery.build(query, await scopeFilter("host", scope)));
+    return { ...page, items: (await imageService.attachCovers("host", page.items)).map((host) => forScope(host, scope)) };
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    const filter = { isActive, ...(await scopeFilter("host", scope)) };
-    const hosts = await hostRepository.findAll(filter);
-    return (await imageService.attachCovers("host", hosts)).map((host) => forScope(host, scope));
+    return (await hostService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

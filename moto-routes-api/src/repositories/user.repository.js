@@ -9,8 +9,13 @@ const withRole = (query) =>
   query.populate("role", "name label").populate("profile", "-__v -deletedAt");
 
 export const userRepository = {
-  findAll(filter = {}) {
-    return withRole(User.find(filter).sort({ createdAt: -1 })).lean();
+  findAll(filter = {}, { sort = { createdAt: -1 }, skip = 0, limit = 0 } = {}) {
+    return withRole(User.find(filter).sort(sort).skip(skip).limit(limit)).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return User.countDocuments(filter);
   },
 
   findDeleted() {

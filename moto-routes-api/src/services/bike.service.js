@@ -8,6 +8,8 @@ import { imageRepository } from "../repositories/image.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { canModifyBike, isAdminUser } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
+import { bikeListQuery } from "../schemas/bike.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { imageService } from "./image.service.js";
 import {
   assertHasChanges,
@@ -84,13 +86,15 @@ function withLicense(data, current) {
  */
 export const bikeService = {
   // scope (services/visibility.js): en PUBLIC, solo las públicas y activas de usuarios activos
-  async list(scope) {
-    return imageService.attachCovers("bike", await bikeRepository.findAll(await scopeFilter("bike", scope)));
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}, scope) {
+    const page = await findList(bikeRepository, bikeListQuery.build(query, await scopeFilter("bike", scope)));
+    return { ...page, items: await imageService.attachCovers("bike", page.items) };
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
-    const filter = { isActive, ...(await scopeFilter("bike", scope)) };
-    return imageService.attachCovers("bike", await bikeRepository.findAll(filter));
+    return (await bikeService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
   },
 
   async listDeleted() {

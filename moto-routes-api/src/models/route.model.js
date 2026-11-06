@@ -3,6 +3,7 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { positive } from "./validators.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/route.schema.js).
 // Distancia en km y duración en horas
@@ -60,5 +61,10 @@ routeSchema.virtual("endLocation", {
 routeSchema.plugin(statusPlugin);
 routeSchema.plugin(slugPlugin, { source: (doc) => doc.title, fields: ["title"] });
 routeSchema.plugin(softDeletePlugin);
+
+// ?q= busca en el título y la descripción; los filtros por dificultad y distancia, con su índice
+routeSchema.index({ title: "text", description: "text" }, TEXT_INDEX);
+routeSchema.index({ difficulty: 1 });
+routeSchema.index({ distance: 1 });
 
 export const Route = mongoose.model("Route", routeSchema);

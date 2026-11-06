@@ -6,6 +6,8 @@ import { profileRepository } from "../repositories/profile.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { conflict, fieldError, notFound } from "../utils/errors.js";
 import { hashPassword, verifyPassword } from "../utils/passwd.js";
+import { userListQuery } from "../schemas/user.schema.js";
+import { findList } from "../utils/listQuery.js";
 import { bikeService } from "./bike.service.js";
 import { imageService } from "./image.service.js";
 import { profileService } from "./profile.service.js";
@@ -59,12 +61,15 @@ async function assertAdminRemains(user) {
  * actor: quien hace la petición (req.user), o SYSTEM_ACTOR en el seed.
  */
 export const userService = {
-  async list() {
-    return imageService.attachCovers("user", await userRepository.findAll());
+  // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
+  async search(query = {}) {
+    const page = await findList(userRepository, userListQuery.build(query));
+    return { ...page, items: await imageService.attachCovers("user", page.items) };
   },
 
+  // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive) {
-    return imageService.attachCovers("user", await userRepository.findAll({ isActive }));
+    return (await userService.search({ status: isActive ? "active" : "inactive" })).items;
   },
 
   async listDeleted() {

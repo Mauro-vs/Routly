@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HOST_LIMITS as LIMITS } from "../models/host.model.js";
+import { defineListQuery, equals } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 const hostFields = z.strictObject({
@@ -15,4 +16,12 @@ export const createHostSchema = hostFields.extend({
 export const updateHostSchema = hostFields.partial().extend({
   ...clearable(hostFields, "biography"),
   ...cannotChange("_id", "slug", "userId"),
+});
+
+// Query params de GET /api/hosts (utils/listQuery.js): los comunes y estos filtros
+export const hostListQuery = defineListQuery({
+  sort: ["name", "createdAt", "updatedAt"],
+  filters: {
+    userId: { schema: objectIdSchema, to: equals("userId") },
+  },
 });

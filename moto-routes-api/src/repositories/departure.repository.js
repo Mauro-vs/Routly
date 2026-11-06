@@ -7,8 +7,13 @@ const withExperience = (query) => query.populate("experience", "title slug guide
 
 export const departureRepository = {
   // Por fecha de salida, de la más próxima a la más lejana
-  findAll(filter = {}) {
-    return withExperience(Departure.find(filter).sort({ startAt: 1 })).lean();
+  findAll(filter = {}, { sort = { startAt: 1 }, skip = 0, limit = 0 } = {}) {
+    return withExperience(Departure.find(filter).sort(sort).skip(skip).limit(limit)).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Departure.countDocuments(filter);
   },
 
   findDeleted() {

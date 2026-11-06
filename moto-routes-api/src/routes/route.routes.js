@@ -4,12 +4,12 @@ import { adminOnly } from "../middlewares/authorize.js";
 import { optionalAuth } from "../middlewares/authenticate.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
-import { createRouteSchema, updateRouteSchema } from "../schemas/route.schema.js";
+import { createRouteSchema, routeListQuery, updateRouteSchema } from "../schemas/route.schema.js";
 
 // La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
 
-router.get("/", optionalAuth, routeController.list);
+router.get("/", optionalAuth, validate({ query: routeListQuery.schema }), routeController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
 router.get("/actives", optionalAuth, routeController.listActives);
 router.get("/inactives", adminOnly, routeController.listInactives);

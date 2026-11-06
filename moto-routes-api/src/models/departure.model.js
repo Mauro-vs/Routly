@@ -3,6 +3,7 @@ import { SKU_PATTERN } from "../utils/sku.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { integer, twoDecimals } from "./validators.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/departure.schema.js).
 // Precio en euros por persona
@@ -49,5 +50,9 @@ departureSchema.plugin(softDeletePlugin);
 
 // Para listar las fechas de una experiencia en orden
 departureSchema.index({ experienceId: 1, startAt: 1 });
+
+// ?q= busca por SKU; ?state= y ?from=/?to= (las próximas, las de un mes), con su índice
+departureSchema.index({ sku: "text" }, TEXT_INDEX);
+departureSchema.index({ state: 1, startAt: 1 });
 
 export const Departure = mongoose.model("Departure", departureSchema);

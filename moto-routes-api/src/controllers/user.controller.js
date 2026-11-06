@@ -1,4 +1,5 @@
 import { userService } from "../services/user.service.js";
+import { sendList } from "../utils/listQuery.js";
 
 // Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
 // service o de Mongoose) se pasan con next() al errorHandler global, que responde
@@ -6,7 +7,7 @@ import { userService } from "../services/user.service.js";
 export const userController = {
   async list(req, res, next) {
     try {
-      res.json(await userService.list());
+      sendList(res, await userService.search(req.query));
     } catch (error) {
       next(error);
     }

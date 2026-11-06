@@ -4,13 +4,13 @@ import { authenticate, optionalAuth } from "../middlewares/authenticate.js";
 import { adminOnly } from "../middlewares/authorize.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema } from "../schemas/common.schema.js";
-import { createImageSchema, imageQuerySchema, updateImageSchema } from "../schemas/image.schema.js";
+import { createImageSchema, imageListQuery, updateImageSchema } from "../schemas/image.schema.js";
 
 // La documentación Swagger de estos endpoints se genera en src/docs/
 // Escribir pide sesión; quién puede tocar cada imagen lo decide el service (ABAC)
 const router = Router();
 
-router.get("/", optionalAuth, validate({ query: imageQuerySchema }), imageController.list);
+router.get("/", optionalAuth, validate({ query: imageListQuery.schema }), imageController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
 router.get("/actives", optionalAuth, imageController.listActives);
 router.get("/inactives", adminOnly, imageController.listInactives);

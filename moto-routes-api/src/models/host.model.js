@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/host.schema.js).
 export const HOST_LIMITS = Object.freeze({ nameMin: 2, nameMax: 100, biographyMax: 1000 });
@@ -33,5 +34,8 @@ hostSchema.virtual("user", {
 hostSchema.plugin(statusPlugin);
 hostSchema.plugin(slugPlugin, { source: (doc) => doc.name, fields: ["name"] });
 hostSchema.plugin(softDeletePlugin);
+
+// ?q= busca en el nombre y la biografía
+hostSchema.index({ name: "text", biography: "text" }, TEXT_INDEX);
 
 export const Host = mongoose.model("Host", hostSchema);

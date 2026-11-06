@@ -3,6 +3,7 @@ import { IMAGE_OWNER_TYPES } from "./imageOwners.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { integer } from "./validators.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/image.schema.js).
 export const IMAGE_LIMITS = Object.freeze({ urlMax: 2048, altMax: 200 });
@@ -37,5 +38,8 @@ imageSchema.index(
   { ownerType: 1, ownerId: 1 },
   { unique: true, partialFilterExpression: { isCover: true } }
 );
+
+// ?q= busca en el texto alternativo
+imageSchema.index({ alt: "text" }, TEXT_INDEX);
 
 export const Image = mongoose.model("Image", imageSchema);

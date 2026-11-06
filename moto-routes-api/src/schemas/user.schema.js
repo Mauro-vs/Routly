@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { USER_LIMITS as LIMITS } from "../models/user.model.js";
+import { defineListQuery, equals } from "../utils/listQuery.js";
 import { cannotChange, objectIdSchema } from "./common.schema.js";
 import { createProfileSchema, updateProfileSchema } from "./profile.schema.js";
 
@@ -51,3 +52,11 @@ export const changePasswordSchema = z
     message: "newPassword must be different from currentPassword",
     path: ["newPassword"],
   });
+
+// Query params de GET /api/users (utils/listQuery.js): los comunes y estos filtros
+export const userListQuery = defineListQuery({
+  sort: ["name", "email", "createdAt", "updatedAt"],
+  filters: {
+    roleId: { schema: objectIdSchema, to: equals("roleId") },
+  },
+});

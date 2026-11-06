@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IMAGE_LIMITS as LIMITS } from "../models/image.model.js";
 import { IMAGE_OWNER_TYPES } from "../models/imageOwners.js";
+import { defineListQuery, equals, queryBoolean } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
 // Solo https: el panel se sirve por https y una imagen http se bloquearía como
@@ -32,12 +33,17 @@ export const updateImageSchema = imageFields
   });
 
 // GET /api/images?ownerType=route&ownerId=<id>: los dos o ninguno
-export const imageQuerySchema = z
-  .object({
-    ownerType: z.enum(IMAGE_OWNER_TYPES).optional(),
-    ownerId: objectIdSchema.optional(),
-  })
-  .refine((query) => (query.ownerType === undefined) === (query.ownerId === undefined), {
-    message: "ownerType and ownerId must be sent together",
-    path: ["ownerType"],
-  });
+export const imageListQuery = defineListQuery({
+  sort: ["position", "createdAt", "updatedAt"],
+  filters: {
+    ownerType: { schema: z.enum(IMAGE_OWNER_TYPES), to: equals("ownerType") },
+    ownerId: { schema: objectIdSchema, to: equals("ownerId") },
+    isCover: { schema: queryBoolean, to: equals("isCover") },
+  },
+  checks: [
+    [
+      (query) => (query.ownerType === undefined) === (query.ownerId === undefined),
+      { message: "ownerType and ownerId must be sent together", path: ["ownerType"] },
+    ],
+  ],
+});

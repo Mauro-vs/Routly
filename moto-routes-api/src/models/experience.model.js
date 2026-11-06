@@ -3,6 +3,7 @@ import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { integer, positive } from "./validators.js";
+import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/experience.schema.js).
 // Duración en horas, con paradas: como mucho 30 días
@@ -86,5 +87,8 @@ experienceSchema.virtual("route", {
 experienceSchema.plugin(statusPlugin);
 experienceSchema.plugin(slugPlugin, { source: (doc) => doc.title, fields: ["title"] });
 experienceSchema.plugin(softDeletePlugin);
+
+// ?q= busca en el título y la descripción (con language_override: ver textIndex.js)
+experienceSchema.index({ title: "text", description: "text" }, TEXT_INDEX);
 
 export const Experience = mongoose.model("Experience", experienceSchema);

@@ -5,8 +5,13 @@ const withUser = (query) => query.populate("user", "name slug");
 
 export const bikeRepository = {
   // La moto principal primero, después la más reciente
-  findAll(filter = {}) {
-    return withUser(Bike.find(filter).sort({ isPrimary: -1, createdAt: -1 })).lean();
+  findAll(filter = {}, { sort = { isPrimary: -1, createdAt: -1 }, skip = 0, limit = 0 } = {}) {
+    return withUser(Bike.find(filter).sort(sort).skip(skip).limit(limit)).lean();
+  },
+
+  // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
+  count(filter = {}) {
+    return Bike.countDocuments(filter);
   },
 
   findDeleted() {
