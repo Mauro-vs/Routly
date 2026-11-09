@@ -511,13 +511,46 @@ Response `200` de **GET** `/api/routes/slug/caminos-de-mallorca-cbccb5`:
 }
 ```
 
-La respuesta trae `host: { _id, name, slug }` y `route: { _id, title, slug }`.
+La respuesta trae `host: { _id, name, slug }`, `route` con su distancia, duración, dificultad, categoría, origen y destino, `coverImage`, y `priceFrom` y `nextDepartureAt` (de sus salidas reservables, o `null`). Por id o por slug, `host` viene entero (biografía y foto).
 
 | Caso | Respuesta |
 |---|---|
 | `minParticipants` mayor que `maxParticipants` | 400 en `maxParticipants` |
 | Bajar `maxParticipants` por debajo de las plazas de una salida | 409 `maxParticipants is lower than the capacity of an existing departure` |
 | Eliminar una experiencia con salidas | 409 `Cannot delete an experience that has departures` |
+
+### La web pública
+
+Todas sin token (pestaña **Authorization**: *No Auth*). Con el seed cargado salen 12 experiencias.
+
+| Petición | Qué comprobar |
+|---|---|
+| **GET** `/api/experiences/facets` | `categories`, `hosts` y `locations`, cada uno con `experienceCount` y `coverImage`, de más a menos |
+| **GET** `/api/experiences/facets?limit=2` | Dos de cada |
+| **GET** `/api/experiences?page=1&limit=5` | 5 experiencias; cabeceras `X-Total-Count: 12`, `X-Page: 1`, `X-Limit: 5` |
+| **GET** `/api/experiences?sort=priceFrom` | De la más barata a la más cara; "Sierra Nevada al atardecer" (sin salidas, `priceFrom: null`) la última |
+| **GET** `/api/experiences?sort=nextDepartureAt` | De la salida más próxima a la más lejana |
+| **GET** `/api/experiences?hasDepartures=true` | 11: todas menos la que no tiene salidas |
+| **GET** `/api/experiences?priceMax=100` | Solo las que tienen alguna salida reservable por 100 € o menos |
+| **GET** `/api/experiences?language=en` | Las dos guiadas en inglés |
+| **GET** `/api/experiences?difficulty=easy` | Las de rutas fáciles |
+| **GET** `/api/experiences?categoryId=<id de Viñedos>` | "Bodegas y viñedos de La Rioja" |
+| **GET** `/api/experiences?locationId=<id de Barcelona>` | Las que empiezan o acaban en Barcelona |
+| **GET** `/api/experiences?from=2026-12-01&to=2026-12-31` | Las que tienen alguna salida reservable en diciembre |
+| **GET** `/api/experiences/slug/<slug>` | El detalle: `host.biography`, `host.coverImage`, `route.category`, `guideBike` |
+| **GET** `/api/departures?experienceId=<id>&state=scheduled&from=<ahora>&sort=startAt` | Las fechas reservables, con `price` y `seatsLeft` |
+| **GET** `/api/images?ownerType=experience&ownerId=<id>&sort=position` | Las cuatro fotos de la experiencia |
+| **GET** `/api/categories` y `/api/locations` | Cada una con su `coverImage` |
+
+`<ahora>` es la fecha actual en ISO 8601, por ejemplo `2026-11-09T12:00:00.000Z`.
+
+| Caso | Respuesta |
+|---|---|
+| `?priceMin=200&priceMax=100` | 400 `priceMax must be greater than or equal to priceMin` |
+| `?hasDepartures=false` | 400: solo admite `true` |
+| `?sort=price` | 400: en experiencias se ordena por `priceFrom` |
+| `/api/experiences/facets?limit=0` | 400 |
+| El slug de una experiencia de una ruta inactiva, sin token | 404 |
 
 ---
 
@@ -545,6 +578,7 @@ Response `201`:
   "capacity": 8,
   "price": 89,
   "state": "scheduled",
+  "seatsLeft": 8,
   "sku": "RTL-DEP-261102-YTSKF",
   "slug": "tramuntana-al-amanecer-2026-11-02-cbccc6",
   "status": "active",
@@ -558,6 +592,7 @@ Response `201`:
 ```
 
 - `sku` y `slug` los genera el servidor. El SKU **no cambia nunca**; el slug sigue a `startAt`.
+- `seatsLeft` son las plazas libres. Mientras no haya reservas, es igual que `capacity`.
 - `state`: `scheduled` (por defecto), `cancelled` o `completed`. Es independiente de `status`.
 - `price` admite como mucho dos decimales.
 

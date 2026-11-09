@@ -9,6 +9,7 @@ import {
   updateDepartureSchema,
 } from "../schemas/departure.schema.js";
 import {
+  FACETS_LIMIT,
   createExperienceSchema,
   experienceListQuery,
   updateExperienceSchema,
@@ -175,11 +176,13 @@ const RESOURCES = [
     female: true,
     create: createCategorySchema,
     update: updateCategorySchema,
-    description: "El nombre es único sin distinguir mayúsculas ni tildes (la ñ cuenta como letra propia).",
+    description:
+      "El nombre es único sin distinguir mayúsculas ni tildes (la ñ cuenta como letra propia). coverImage es su foto principal (una imagen con ownerType category), o null.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c930",
       name: "Montaña",
       description: "Carreteras de sierra y alta montaña",
+      coverImage: { _id: "6710a1b2c3d4e5f6a7b8c993", url: "https://picsum.photos/seed/montana/1200/800", alt: "Montaña" },
       slug: "montana-b8c930",
     },
     conflicts: {
@@ -200,7 +203,8 @@ const RESOURCES = [
     female: true,
     create: createLocationSchema,
     update: updateLocationSchema,
-    description: "latitude y longitude van las dos o ninguna. Se guardan como punto GeoJSON.",
+    description:
+      "latitude y longitude van las dos o ninguna. Se guardan como punto GeoJSON. coverImage es su foto principal (una imagen con ownerType location), o null.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c920",
       city: "Sóller",
@@ -208,6 +212,7 @@ const RESOURCES = [
       country: "España",
       latitude: 39.7667,
       longitude: 2.715,
+      coverImage: { _id: "6710a1b2c3d4e5f6a7b8c994", url: "https://picsum.photos/seed/soller/1200/800", alt: "Sóller" },
       slug: "soller-b8c920",
     },
     conflicts: {
@@ -263,13 +268,30 @@ const RESOURCES = [
     create: createExperienceSchema,
     update: updateExperienceSchema,
     description:
-      "Salida guiada que un anfitrión organiza sobre una ruta. guideBikeId (opcional) es la moto con la que guía: una moto activa y pública del usuario del anfitrión; sale como guideBike.",
+      "Salida guiada que un anfitrión organiza sobre una ruta. guideBikeId (opcional) es la moto con la que guía: una moto activa y pública del usuario del anfitrión; sale como guideBike. " +
+      "Cada experiencia trae lo que necesita su tarjeta: su ruta con distancia, duración, dificultad, categoría, origen y destino; su foto principal (coverImage); " +
+      "y, de sus salidas reservables (activas, programadas y futuras), el precio más bajo (priceFrom) y la fecha más cercana (nextDepartureAt), o null si no tiene ninguna. " +
+      "Se puede ordenar por priceFrom y nextDepartureAt: las que no tienen salidas van siempre al final. " +
+      "Por id o por slug (el detalle), host viene entero: su biografía, su foto y su usuario (sin el email, salvo para el admin).",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c940",
       hostId: "6710a1b2c3d4e5f6a7b8c915",
       host: { _id: "6710a1b2c3d4e5f6a7b8c915", name: "Lucía Ferrer", slug: "lucia-ferrer-b8c915" },
       routeId: "6abfc9f47a7195ca59df38e9",
-      route: { _id: "6abfc9f47a7195ca59df38e9", title: "Caminos de Mallorca", slug: "caminos-de-mallorca-df38e9" },
+      route: {
+        _id: "6abfc9f47a7195ca59df38e9",
+        title: "Caminos de Mallorca",
+        distance: 120,
+        duration: 3,
+        difficulty: "medium",
+        categoryId: "6710a1b2c3d4e5f6a7b8c930",
+        category: { _id: "6710a1b2c3d4e5f6a7b8c930", name: "Montaña", slug: "montana-b8c930" },
+        startLocationId: "6710a1b2c3d4e5f6a7b8c921",
+        startLocation: { _id: "6710a1b2c3d4e5f6a7b8c921", city: "Palma", region: "Islas Baleares", country: "España", slug: "palma-b8c921" },
+        endLocationId: "6710a1b2c3d4e5f6a7b8c920",
+        endLocation: { _id: "6710a1b2c3d4e5f6a7b8c920", city: "Sóller", region: "Islas Baleares", country: "España", slug: "soller-b8c920" },
+        slug: "caminos-de-mallorca-df38e9",
+      },
       title: "Tramuntana al amanecer",
       description: "Salida temprana por la Serra de Tramuntana.",
       meetingPoint: "Plaça d'Espanya, Palma",
@@ -291,12 +313,80 @@ const RESOURCES = [
         userId: "6710a1b2c3d4e5f6a7b8c910",
         coverImage: { _id: "6710a1b2c3d4e5f6a7b8c995", url: "https://picsum.photos/seed/gs/1200/800", alt: "BMW R 1250 GS, foto 1" },
       },
+      coverImage: { _id: "6710a1b2c3d4e5f6a7b8c996", url: "https://picsum.photos/seed/tramuntana/1200/800", alt: "Tramuntana al amanecer, foto 1" },
+      priceFrom: 89,
+      nextDepartureAt: "2026-11-08T06:00:00.000Z",
       slug: "tramuntana-al-amanecer-b8c940",
     },
     conflicts: {
       update: "maxParticipants por debajo de la capacidad de alguna salida",
       remove: "La experiencia tiene salidas",
     },
+    extraPaths: () => ({
+      "/api/experiences/facets": {
+        get: {
+          summary: "Facetas del Home",
+          description:
+            "Los carruseles del Home: las categorías, los anfitriones y las ubicaciones que tienen alguna experiencia visible, " +
+            "cada uno con cuántas (experienceCount), de más a menos y por nombre si empatan. La categoría y las ubicaciones de una " +
+            "experiencia son las de su ruta (origen y destino; si son el mismo sitio, cuenta una vez). Cada elemento viene como en su " +
+            "listado, con su foto (coverImage). Sin token, o sin ser admin, solo cuenta lo que se ve en público.",
+          tags: ["Experiences"],
+          parameters: [
+            {
+              in: "query",
+              name: "limit",
+              required: false,
+              schema: { type: "integer", minimum: 1, maximum: FACETS_LIMIT.max, default: FACETS_LIMIT.default },
+              description: "Cuántos de cada lista, como mucho",
+            },
+          ],
+          responses: {
+            200: {
+              description: "Las tres listas",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      categories: { type: "array", items: { $ref: "#/components/schemas/Category" } },
+                      hosts: { type: "array", items: { $ref: "#/components/schemas/Host" } },
+                      locations: { type: "array", items: { $ref: "#/components/schemas/Location" } },
+                    },
+                  },
+                  example: {
+                    categories: [
+                      {
+                        _id: "6710a1b2c3d4e5f6a7b8c930",
+                        name: "Montaña",
+                        slug: "montana-b8c930",
+                        coverImage: { _id: "6710a1b2c3d4e5f6a7b8c993", url: "https://picsum.photos/seed/montana/1200/800", alt: "Montaña" },
+                        experienceCount: 5,
+                      },
+                    ],
+                    hosts: [
+                      { _id: "6710a1b2c3d4e5f6a7b8c915", name: "Lucía Ferrer", slug: "lucia-ferrer-b8c915", coverImage: null, experienceCount: 3 },
+                    ],
+                    locations: [
+                      {
+                        _id: "6710a1b2c3d4e5f6a7b8c921",
+                        city: "Palma",
+                        region: "Islas Baleares",
+                        country: "España",
+                        slug: "palma-b8c921",
+                        coverImage: { _id: "6710a1b2c3d4e5f6a7b8c997", url: "https://picsum.photos/seed/palma/1200/800", alt: "Palma" },
+                        experienceCount: 3,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            400: error("limit fuera de rango o un query param que no existe"),
+          },
+        },
+      },
+    }),
   },
   {
     path: "departures",
@@ -313,7 +403,8 @@ const RESOURCES = [
     update: updateDepartureSchema,
     description:
       "Fecha concreta de una experiencia. sku (RTL-DEP-AAMMDD-XXXXX) lo genera el servidor y no cambia nunca; el slug sí sigue a la fecha. " +
-      "guideBike es la moto del guía de ese día: la suya (guideBikeId) o, si no tiene, la de su experiencia.",
+      "guideBike es la moto del guía de ese día: la suya (guideBikeId) o, si no tiene, la de su experiencia. " +
+      "seatsLeft son las plazas libres: de momento, la capacidad, porque aún no hay reservas.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c950",
       experienceId: "6710a1b2c3d4e5f6a7b8c940",
@@ -323,6 +414,8 @@ const RESOURCES = [
       capacity: 8,
       price: 89,
       state: "scheduled",
+      // Plazas libres: hoy, la capacidad (cuando haya reservas, la capacidad menos las reservadas)
+      seatsLeft: 8,
       sku: "RTL-DEP-261108-7QX2M",
       // Sin guideBikeId propio: hereda la de su experiencia
       guideBike: {

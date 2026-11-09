@@ -19,7 +19,7 @@ Forma parte del monorepo de Routly. La visión general del proyecto está en el 
 - [Lenguaje y librerías](#lenguaje-y-librerías)
 - [Instalación](#instalación) · [Configuración](#configuración) · [Ejecución](#ejecución) · [Seed](#seed)
 - [Arquitectura](#arquitectura) · [Estructura del proyecto](#estructura-del-proyecto)
-- [Colecciones y relaciones](#colecciones-y-relaciones) · [Endpoints](#endpoints) · [Consultas: filtros, búsqueda, orden y páginas](#consultas-filtros-búsqueda-orden-y-páginas) · [Índices](#índices)
+- [Colecciones y relaciones](#colecciones-y-relaciones) · [Endpoints](#endpoints) · [Consultas: filtros, búsqueda, orden y páginas](#consultas-filtros-búsqueda-orden-y-páginas) · [Índices](#índices) · [La parte pública](#la-parte-pública)
 - [Activo / inactivo frente a eliminado](#activo--inactivo-frente-a-eliminado) · [Soft delete y papelera](#soft-delete-y-papelera) · [Integridad referencial](#integridad-referencial)
 - [Imágenes](#imágenes) · [SKU de las salidas](#sku-de-las-salidas)
 - [Validación (Zod)](#validación-zod) · [Manejo de errores](#manejo-de-errores)
@@ -115,7 +115,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 202 tests con `node:test`:
+`npm test` ejecuta 238 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -134,6 +134,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/list-query.test.js` | Los query params de los listados: `q` (también en plural y sin sesión), `status`, `sort`, `page` y `limit` con sus cabeceras (páginas sin repetir ni saltarse nada, el total de lo filtrado), los filtros de cada colección combinados, los rangos cruzados, los parámetros que no existen y, con `explain()`, que las consultas usan un índice y no recorren la colección |
 | `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, los mensajes documentados y que cada listado documenta justo los query params que acepta |
+| `src/testing/public.test.js` | La web pública: los filtros de experiencias por su ruta y por sus salidas, `priceFrom` y `nextDepartureAt`, los órdenes del Shop (las que no tienen salidas, al final), las facetas, las fotos de categorías y ubicaciones, el anfitrión del detalle, `seatsLeft`, los índices con `explain()` y el número de consultas de cada petición |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
@@ -150,16 +151,16 @@ Con el servidor en marcha, la documentación interactiva está en `http://localh
 | Colección | Datos |
 |---|---|
 | `roles` | `admin` (Administrador), `host` (Anfitrión) y `rider` (Motorista): los tres son roles base protegidos |
-| `users` | Admin Routly (`admin@routly.dev`, admin), Lucía Ferrer (`lucia@routly.dev`, host), Pablo Ortega (`pablo@routly.dev`, host) y Marta Gil (`marta@routly.dev`, rider) |
-| `profiles` | Uno por usuario. Lucía, Pablo y Marta con datos; el del admin, vacío |
+| `users` | Admin Routly (`admin@routly.dev`, admin), Lucía Ferrer (`lucia@routly.dev`, host), Pablo Ortega (`pablo@routly.dev`, host), Núria Vidal (`nuria@routly.dev`, host) y Marta Gil (`marta@routly.dev`, rider) |
+| `profiles` | Uno por usuario. Lucía, Pablo, Núria y Marta con datos; el del admin, vacío |
 | `bikes` | La BMW R 1250 GS de Lucía y la Honda Africa Twin de Pablo, cada una como moto del guía de su experiencia, con modificaciones y fotos; la CB500X de Pablo (privada) y la Yamaha MT-07 (A2) de Marta |
-| `hosts` | Los perfiles de Lucía y Pablo |
+| `hosts` | Los perfiles de Lucía, Pablo y Núria |
 | `categories` | Costa, Montaña, Puertos y Viñedos |
 | `locations` | Barcelona, Huesca, Lleida, Logroño, Haro, Granada, Palma, Sóller, Panes y Potes, con coordenadas reales |
-| `routes` | Seis rutas. "Ruta del Vino" queda inactiva y "Desfiladero de La Hermida y Potes" en la papelera |
-| `experiences` | "Tramuntana al amanecer" (Lucía, Caminos de Mallorca) y "Travesía de los Pirineos" (Pablo, Pirineos Adventure) |
-| `departures` | Tres salidas futuras, calculadas desde el día en que se ejecuta. Una está cancelada |
-| `images` | Fotos de las rutas, de los usuarios, de los anfitriones y de las motos. Las de la ruta de la papelera están eliminadas con ella |
+| `routes` | Siete rutas. "Ruta del Vino" queda inactiva y "Desfiladero de La Hermida y Potes" en la papelera |
+| `experiences` | Doce, repartidas entre los tres anfitriones, las cuatro categorías y cuatro idiomas (`es`, `ca`, `en`, `fr`), para probar los filtros, los órdenes y las páginas del Shop. Entre ellas "Tramuntana al amanecer" (Lucía) y "Travesía de los Pirineos" (Pablo). "Sierra Nevada al atardecer" no tiene salidas |
+| `departures` | Diecisiete salidas futuras, de 5 a 60 días desde el día en que se ejecuta y de 60 a 320 €. Dos están canceladas |
+| `images` | Fotos de las rutas, de las experiencias (cuatro cada una), de las categorías, de las ubicaciones, de los usuarios, de los anfitriones y de las motos. Las de la ruta de la papelera están eliminadas con ella |
 
 > [!WARNING]
 > - El seed **borra físicamente** todas las colecciones. Es la única excepción al soft delete y solo debe usarse en desarrollo.
@@ -167,7 +168,7 @@ Con el servidor en marcha, la documentación interactiva está en `http://localh
 
 Los datos se crean a través de los services, así que pasan por las mismas reglas que una petición a la API: hash de la contraseña, perfil de cada usuario, referencias, slug, SKU... El seed actúa como admin (`SYSTEM_ACTOR`, en `utils/access.js`).
 
-Para probar los permisos: el admin puede con todo; Lucía y Pablo, cada uno con su experiencia ("Tramuntana al amanecer" y "Travesía de los Pirineos"), y Marta, rider, solo con su perfil.
+Para probar los permisos: el admin puede con todo; Lucía, Pablo y Núria, cada uno con sus experiencias, y Marta, rider, solo con su perfil.
 
 ## Arquitectura
 
@@ -495,6 +496,7 @@ Además:
 | GET | `/api/docs` | Documentación Swagger | 200 |
 | GET | `/api/images?ownerType=route&ownerId=<id>` | Imágenes de un dueño, por posición | 200 |
 | GET | `/api/departures/sku/:sku` | Una salida por su SKU (también en minúsculas) | 200 |
+| GET | `/api/experiences/facets` | Los carruseles del Home ([la parte pública](#la-parte-pública)) | 200 |
 
 Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#roles-y-matriz-de-permisos)):
 
@@ -537,7 +539,7 @@ GET /api/routes?q=pirineo&difficulty=hard&distanceMin=100&sort=-distance&page=1&
 | Colección | Filtros | Se puede ordenar por |
 |---|---|---|
 | `routes` | `difficulty`, `categoryId`, `locationId` (de origen o de destino), `distanceMin`/`distanceMax`, `durationMin`/`durationMax` | `title`, `distance`, `duration`, `difficulty` |
-| `experiences` | `hostId`, `routeId`, `language` | `title`, `duration`, `maxParticipants` |
+| `experiences` | `hostId`, `routeId`, `language`; por su ruta `categoryId`, `locationId`, `difficulty`; por sus salidas reservables `priceMin`/`priceMax`, `from`/`to`, `hasDepartures=true` ([la parte pública](#la-parte-pública)) | `title`, `duration`, `maxParticipants`, `priceFrom`, `nextDepartureAt` |
 | `departures` | `experienceId`, `state`, `from`/`to` (fecha de inicio, ISO 8601), `priceMin`/`priceMax` | `startAt`, `price`, `capacity` |
 | `users` | `roleId` | `name`, `email` |
 | `hosts` | `userId` | `name` |
@@ -579,6 +581,7 @@ Cada consulta frecuente tiene su índice, así MongoDB no recorre la colección 
 | `{ difficulty }`, `{ distance }` | `routes` | `?difficulty=`, `?distanceMin=`, `?sort=distance` |
 | `{ state, startAt }` | `departures` | `?state=scheduled&from=...`: las próximas, las de un mes |
 | `{ experienceId, startAt }` | `departures` | Las salidas de una experiencia y la regla de no repetir hora |
+| `{ experienceId, state, startAt }` | `departures` | Las salidas reservables de varias experiencias: `priceFrom`, `nextDepartureAt` y los filtros de precio y fecha del Shop |
 | `{ type, cc }` | `bikes` | `?type=` y `?ccMin=` |
 | `{ ownerType, ownerId, position }` | `images` | La galería de un dueño, en orden |
 | Las claves externas (`categoryId`, `hostId`, `userId`, `roleId`...) | Cada colección | Los filtros por relación, las cascadas y la visibilidad |
@@ -587,6 +590,101 @@ Cada consulta frecuente tiene su índice, así MongoDB no recorre la colección 
 | `expiresAt` con TTL | `revokedtokens` | La lista negra se vacía sola cuando los tokens habrían caducado |
 
 Los índices los crea Mongoose al arrancar (`autoIndex`), y los tests, en su base de datos temporal (`syncIndexes`). Crearlos no cambia ningún documento.
+
+## La parte pública
+
+La web pública (Home, Shop y detalle de una experiencia) solo lee: todo son `GET` sin token. Sin sesión de admin, cada listado y cada detalle ya aplican la [visibilidad pública](#activo--inactivo-frente-a-eliminado): lo inactivo, o lo que cuelga de algo inactivo, no aparece y por id o slug da 404. El cliente no tiene que filtrar nada.
+
+### Lo que pide cada pantalla
+
+| Pantalla | Petición | Para qué |
+|---|---|---|
+| Home | `GET /api/experiences/facets` | Los carruseles: categorías, anfitriones y ubicaciones con experiencias, cada uno con `experienceCount` y su foto |
+| Home | `GET /api/experiences?hasDepartures=true&sort=nextDepartureAt&limit=8` | "Próximas salidas": las primeras ocho que tienen fecha |
+| Shop | `GET /api/experiences?page=1&limit=12&...` | La rejilla, con los filtros de la barra lateral y el total en `X-Total-Count` |
+| Detalle | `GET /api/experiences/slug/:slug` | La experiencia, con su ruta, su anfitrión entero y la moto del guía |
+| Detalle | `GET /api/departures?experienceId=<id>&state=scheduled&from=<ahora>&sort=startAt` | Las fechas que se pueden reservar, con `price` y `seatsLeft` |
+| Detalle | `GET /api/images?ownerType=experience&ownerId=<id>&sort=position` | La galería |
+
+`<ahora>` es la fecha actual en ISO 8601 (`new Date().toISOString()`): así no salen las salidas que ya han empezado.
+
+### Los filtros del Shop
+
+Además de los [comunes](#consultas-filtros-búsqueda-orden-y-páginas) (`q`, `sort`, `page`, `limit`):
+
+| Parámetro | Ejemplo | Qué hace |
+|---|---|---|
+| `categoryId` | `?categoryId=<id>` | La categoría de su ruta |
+| `locationId` | `?locationId=<id>` | El origen o el destino de su ruta |
+| `difficulty` | `?difficulty=easy` | La dificultad de su ruta (`easy`, `medium`, `hard`) |
+| `hostId` | `?hostId=<id>` | Las de un anfitrión |
+| `language` | `?language=en` | El idioma de la salida guiada |
+| `priceMin` / `priceMax` | `?priceMax=100` | Alguna de sus salidas reservables cuesta eso |
+| `from` / `to` | `?from=2026-12-01&to=2026-12-31` | Alguna de sus salidas reservables empieza en esas fechas |
+| `hasDepartures` | `?hasDepartures=true` | Solo las que tienen alguna salida reservable |
+
+Una **salida reservable** es activa, programada (`state: scheduled`) y futura. Los filtros de precio y fecha se cumplen en la misma salida: `?priceMax=100&from=2026-12-01` es "alguna salida de diciembre por 100 € o menos", no una barata en enero y otra cara en diciembre.
+
+Órdenes del Shop: `sort=priceFrom` (más baratas), `sort=nextDepartureAt` (más próximas), `sort=-createdAt` (novedades) y `sort=title`. Las que no tienen salidas van siempre al final, se ordene como se ordene.
+
+### Lo que trae cada experiencia
+
+Cada elemento del listado tiene todo lo que necesita su tarjeta, sin más peticiones:
+
+```json
+{
+  "_id": "6710a1b2c3d4e5f6a7b8c940",
+  "title": "Tramuntana al amanecer",
+  "slug": "tramuntana-al-amanecer-b8c940",
+  "language": "es",
+  "duration": 5,
+  "maxParticipants": 8,
+  "host": { "_id": "6710a1b2c3d4e5f6a7b8c915", "name": "Lucía Ferrer", "slug": "lucia-ferrer-b8c915" },
+  "route": {
+    "title": "Caminos de Mallorca",
+    "distance": 120,
+    "duration": 3,
+    "difficulty": "medium",
+    "category": { "name": "Montaña", "slug": "montana-b8c930" },
+    "startLocation": { "city": "Palma", "region": "Islas Baleares", "country": "España" },
+    "endLocation": { "city": "Sóller", "region": "Islas Baleares", "country": "España" }
+  },
+  "coverImage": { "url": "https://picsum.photos/seed/tramuntana/1200/800", "alt": "Tramuntana al amanecer, foto 1" },
+  "guideBike": { "brand": "BMW", "model": "R 1250 GS", "license": "A" },
+  "priceFrom": 89,
+  "nextDepartureAt": "2026-11-08T06:00:00.000Z"
+}
+```
+
+(Recortado: los `_id` de las relaciones y los campos comunes también vienen.)
+
+- `priceFrom` y `nextDepartureAt` salen de sus salidas reservables: el precio más bajo y la fecha más cercana. Si no tiene ninguna, `null` (la tarjeta enseña "Sin fechas").
+- `coverImage` es la foto principal, o `null`.
+- En el **detalle** (`/experiences/:id` y `/experiences/slug/:slug`), `host` viene entero: `biography`, `coverImage` y su usuario (sin el email, salvo para el admin).
+
+### Las facetas del Home
+
+```
+GET /api/experiences/facets?limit=12
+```
+
+```json
+{
+  "categories": [{ "_id": "...", "name": "Costa", "slug": "costa-...", "coverImage": { "url": "..." }, "experienceCount": 4 }],
+  "hosts": [{ "_id": "...", "name": "Núria Vidal", "slug": "nuria-vidal-...", "coverImage": { "url": "..." }, "experienceCount": 4 }],
+  "locations": [{ "_id": "...", "city": "Barcelona", "country": "España", "coverImage": { "url": "..." }, "experienceCount": 3 }]
+}
+```
+
+Solo salen las que tienen alguna experiencia visible, de más a menos (y por nombre si empatan). Una experiencia cuenta para la categoría de su ruta y para su origen y su destino (si son el mismo sitio, una vez). `limit` va de 1 a 50 (12 por defecto). Cada enlace del carrusel lleva al Shop con su filtro: `?categoryId=`, `?hostId=` o `?locationId=`.
+
+### Las salidas del detalle
+
+Cada salida trae `startAt`, `endAt`, `price`, `capacity`, `state` y `seatsLeft` (las plazas libres). De momento `seatsLeft` es la capacidad, porque aún no hay reservas; cuando las haya, será la capacidad menos las reservadas, y el cliente no cambia. El diseño de las reservas está en [`DATABASE.md`](../DATABASE.md#14-reservas-diseño).
+
+### Cuántas consultas cuesta
+
+`public.test.js` cuenta las consultas a MongoDB de cada petición de la web pública y falla si una pasa de su presupuesto: no crecen con el número de experiencias (no hay N+1). Lo oculto se calcula una vez por petición (`visibilityCache`, en `services/visibility.js`) y se reutiliza en el listado, la moto del guía y las fotos.
 
 ## Activo / inactivo frente a eliminado
 
