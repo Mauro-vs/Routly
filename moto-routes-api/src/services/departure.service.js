@@ -105,6 +105,18 @@ const withGuideBikes = (departures, scope) =>
     scope
   );
 
+/**
+ * Las plazas libres de una salida. Hoy, sin reservas, son todas: cuando las haya, se restarán aquí
+ * y solo aquí, que es lo que tendrá que comprobar una reserva antes de crearse (ver "Reservas" en
+ * DATABASE.md).
+ */
+export const seatsLeftOf = (departure) => departure.capacity;
+
+// Lo que se enseña de una salida además de lo suyo: la moto del guía y las plazas libres
+async function present(departures, scope) {
+  return (await withGuideBikes(departures, scope)).map((departure) => ({ ...departure, seatsLeft: seatsLeftOf(departure) }));
+}
+
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
 
 export const departureService = {
@@ -112,7 +124,7 @@ export const departureService = {
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
     const page = await findList(departureRepository, await departureListQuery.build(query, await scopeFilter("departure", scope)));
-    return { ...page, items: await withGuideBikes(page.items, scope) };
+    return { ...page, items: await present(page.items, scope) };
   },
 
   // /actives e /inactives: lo mismo que ?status=
@@ -121,20 +133,20 @@ export const departureService = {
   },
 
   async listDeleted() {
-    return withGuideBikes(await departureRepository.findDeleted());
+    return present(await departureRepository.findDeleted());
   },
 
   async getById(id, scope) {
     const departure = await findExisting(departureRepository, id, "Departure");
     await assertVisible(departureRepository, "departure", departure, scope, "Departure");
-    return (await withGuideBikes([departure], scope))[0];
+    return (await present([departure], scope))[0];
   },
 
   async getBySlug(slug, scope) {
     const departure = await departureRepository.findBySlug(slug);
     if (!departure) throw notFound("Departure");
     await assertVisible(departureRepository, "departure", departure, scope, "Departure");
-    return (await withGuideBikes([departure], scope))[0];
+    return (await present([departure], scope))[0];
   },
 
   // Llega ya en mayúsculas: lo normaliza skuParamSchema
@@ -142,7 +154,7 @@ export const departureService = {
     const departure = await departureRepository.findBySku(sku);
     if (!departure) throw notFound("Departure");
     await assertVisible(departureRepository, "departure", departure, scope, "Departure");
-    return (await withGuideBikes([departure], scope))[0];
+    return (await present([departure], scope))[0];
   },
 
   async create(data, actor) {

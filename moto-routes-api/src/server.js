@@ -22,6 +22,7 @@ import profileRoutes from "./routes/profile.routes.js";
 import roleRoutes from "./routes/role.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import { visibilityCache } from "./services/visibility.js";
 
 // Sin un JWT_SECRET válido, o con la cookie mal configurada, no se arranca: mejor fallar
 // aquí que en el primer login
@@ -40,6 +41,8 @@ app.use(morganMiddleware);
 // El body más grande es una experiencia con su descripción (unos 3 kB): 50 kB da margen
 // y corta peticiones desmedidas con un 413
 app.use(express.json({ limit: "50kb" }));
+// Lo oculto se calcula como mucho una vez por petición (services/visibility.js)
+app.use(visibilityCache);
 
 app.get("/health", (req, res) => {
   res.json({ ok: true });

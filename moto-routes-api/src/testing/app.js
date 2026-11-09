@@ -18,6 +18,7 @@ import { User } from "../models/user.model.js";
 import { roleService } from "../services/role.service.js";
 import { userService } from "../services/user.service.js";
 import { createToken } from "../utils/jwt.js";
+import { visibilityCache } from "../services/visibility.js";
 
 // Los tests firman con su propio secreto si no hay uno definido, y sin límite de intentos
 process.env.JWT_SECRET ??= "secreto-de-los-tests-con-mas-de-32-caracteres";
@@ -69,6 +70,7 @@ export async function startApi(name) {
   const app = express();
   applyTrustProxy(app);
   app.use(express.json({ limit: "50kb" }));
+  app.use(visibilityCache);
   const routers = {
     auth: authRoutes,
     profile: profileRoutes,

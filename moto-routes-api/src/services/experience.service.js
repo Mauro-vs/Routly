@@ -89,6 +89,14 @@ async function present(experiences, scope) {
   return withDepartureSummary(await imageService.attachCovers("experience", withBikes));
 }
 
+// El detalle: lo de la tarjeta y, además, su anfitrión entero (foto y biografía), presentado por
+// su service (en público, sin el email de su usuario)
+async function presentDetail(experience, scope) {
+  const [presented] = await present([experience], scope);
+  const [host] = await hostService.listByIds([experience.hostId], scope);
+  return { ...presented, host: host ?? presented.host };
+}
+
 // Por los campos de sort, en su sentido. Un dato que falta (una experiencia sin salidas) va
 // siempre al final, se ordene como se ordene; si todo empata, el _id
 const compareBy = (sort) => (a, b) => {
@@ -190,14 +198,14 @@ export const experienceService = {
   async getById(id, scope) {
     const experience = await findExisting(experienceRepository, id, "Experience");
     await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
-    return (await present([experience], scope))[0];
+    return presentDetail(experience, scope);
   },
 
   async getBySlug(slug, scope) {
     const experience = await experienceRepository.findBySlug(slug);
     if (!experience) throw notFound("Experience");
     await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
-    return (await present([experience], scope))[0];
+    return presentDetail(experience, scope);
   },
 
   async create(data, actor) {

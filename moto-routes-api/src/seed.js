@@ -291,6 +291,7 @@ const DEPARTURES = [
 ];
 
 const photo = (seed, size) => `https://picsum.photos/seed/${seed}/${size}`;
+const EXPERIENCE_PHOTOS = 4;
 
 try {
   await mongoose.connect(process.env.MONGODB_URI);
@@ -323,11 +324,28 @@ try {
     hosts[user] = await hostService.create({ ...host, userId: String(users[user]._id) });
   }
 
+  // Una foto por categoría y por ubicación: las tarjetas de los carruseles de la web pública
   const categories = {};
-  for (const category of CATEGORIES) categories[category.name] = await categoryService.create(category);
+  for (const category of CATEGORIES) {
+    categories[category.name] = await categoryService.create(category);
+    await imageService.create({
+      ownerType: "category",
+      ownerId: String(categories[category.name]._id),
+      url: photo(categories[category.name].slug, "1200/800"),
+      alt: `Rutas de ${category.name.toLowerCase()}`,
+    }, SYSTEM_ACTOR);
+  }
 
   const locations = {};
-  for (const location of LOCATIONS) locations[location.city] = await locationService.create(location);
+  for (const location of LOCATIONS) {
+    locations[location.city] = await locationService.create(location);
+    await imageService.create({
+      ownerType: "location",
+      ownerId: String(locations[location.city]._id),
+      url: photo(locations[location.city].slug, "1200/800"),
+      alt: location.city,
+    }, SYSTEM_ACTOR);
+  }
 
   const routes = {};
   for (const { category, from, to, images, state, ...route } of ROUTES) {
@@ -392,6 +410,16 @@ try {
       routeId: String(routes[route]._id),
       ...(guide && { guideBikeId: String(bikes[guide]._id) }),
     }, SYSTEM_ACTOR);
+
+    // Cuatro fotos: el carrusel del detalle de la experiencia en la web pública
+    for (let index = 0; index < EXPERIENCE_PHOTOS; index++) {
+      await imageService.create({
+        ownerType: "experience",
+        ownerId: String(experiences[key]._id),
+        url: photo(`${experiences[key].slug}-${index + 1}`, "1200/800"),
+        alt: `${experience.title}, foto ${index + 1}`,
+      }, SYSTEM_ACTOR);
+    }
   }
 
   for (const { experience, start, hours, ...departure } of DEPARTURES) {

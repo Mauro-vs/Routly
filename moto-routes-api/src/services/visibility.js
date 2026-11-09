@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { bikeRepository } from "../repositories/bike.repository.js";
 import { categoryRepository } from "../repositories/category.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
@@ -35,30 +36,53 @@ export const scopeOf = (user) => (isAdminUser(user) ? ALL : PUBLIC);
 // ---------- ids de lo que está oculto, de abajo arriba ----------
 const inactive = { isActive: false };
 
-const hiddenUsers = () => userRepository.findIds(inactive);
-const hiddenCategories = () => categoryRepository.findIds(inactive);
-const hiddenLocations = () => locationRepository.findIds(inactive);
+// ---------- una sola vez por petición ----------
+// Una misma petición pregunta varias veces por lo oculto (el listado, su moto del guía, las
+// fotos...). Cada GET tiene su memoria (visibilityCache) y cada cálculo se hace una vez: sin caché
+// entre peticiones, así nunca se sirve algo viejo. Las escrituras no la usan: lo oculto podría
+// cambiar a mitad de la petición. Fuera de una petición (tests de services, seed) no se guarda.
+const requestCache = new AsyncLocalStorage();
 
-async function hiddenRoutes() {
-  const [categories, locations] = await Promise.all([hiddenCategories(), hiddenLocations()]);
-  return routeRepository.findIds({ $or: [inactive, ...routeParents(categories, locations)] });
+/** Middleware: la memoria de lo oculto de esta petición, solo en los GET. */
+export function visibilityCache(req, res, next) {
+  if (req.method !== "GET") return next();
+  return requestCache.run(new Map(), next);
 }
 
-async function hiddenHosts() {
-  return hostRepository.findIds({ $or: [inactive, { userId: { $in: await hiddenUsers() } }] });
+function once(key, compute) {
+  const cache = requestCache.getStore();
+  if (!cache) return compute();
+  // Promise.resolve: una Query de Mongoose se ejecuta cada vez que se espera; la promesa, una sola
+  if (!cache.has(key)) cache.set(key, Promise.resolve(compute()));
+  return cache.get(key);
 }
 
-async function hiddenExperiences() {
-  const [hosts, routes] = await Promise.all([hiddenHosts(), hiddenRoutes()]);
-  return experienceRepository.findIds({
-    $or: [inactive, { hostId: { $in: hosts } }, { routeId: { $in: routes } }],
+const hiddenUsers = () => once("users", () => userRepository.findIds(inactive));
+const hiddenCategories = () => once("categories", () => categoryRepository.findIds(inactive));
+const hiddenLocations = () => once("locations", () => locationRepository.findIds(inactive));
+
+const hiddenRoutes = () =>
+  once("routes", async () => {
+    const [categories, locations] = await Promise.all([hiddenCategories(), hiddenLocations()]);
+    return routeRepository.findIds({ $or: [inactive, ...routeParents(categories, locations)] });
   });
-}
 
-async function hiddenBikes() {
-  const users = await hiddenUsers();
-  return bikeRepository.findIds({ $or: [inactive, { isPublic: false }, { userId: { $in: users } }] });
-}
+const hiddenHosts = () =>
+  once("hosts", async () => hostRepository.findIds({ $or: [inactive, { userId: { $in: await hiddenUsers() } }] }));
+
+const hiddenExperiences = () =>
+  once("experiences", async () => {
+    const [hosts, routes] = await Promise.all([hiddenHosts(), hiddenRoutes()]);
+    return experienceRepository.findIds({
+      $or: [inactive, { hostId: { $in: hosts } }, { routeId: { $in: routes } }],
+    });
+  });
+
+const hiddenBikes = () =>
+  once("bikes", async () => {
+    const users = await hiddenUsers();
+    return bikeRepository.findIds({ $or: [inactive, { isPublic: false }, { userId: { $in: users } }] });
+  });
 
 const routeParents = (categories, locations) => [
   { categoryId: { $in: categories } },
@@ -114,6 +138,14 @@ const PUBLIC_FILTERS = {
 /** El filtro que se suma a un listado: vacío en ALL, el de PUBLIC_FILTERS en PUBLIC. */
 export async function scopeFilter(resource, scope) {
   return scope === PUBLIC ? PUBLIC_FILTERS[resource]() : {};
+}
+
+/**
+ * El filtro de la galería de un dueño cuya visibilidad ya se ha comprobado (assertOwnerVisible): en
+ * PUBLIC basta con que la imagen esté activa, sin calcular lo oculto de todos los tipos de dueño.
+ */
+export function ownerGalleryFilter(scope) {
+  return scope === PUBLIC ? active : {};
 }
 
 /** En el alcance público, si el dueño de una galería está oculto, 404 (como si no existiera). */

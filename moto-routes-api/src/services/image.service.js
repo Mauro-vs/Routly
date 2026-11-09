@@ -16,7 +16,7 @@ import {
   findExisting,
   findRestorable,
 } from "./references.js";
-import { assertOwnerVisible, assertVisible, scopeFilter } from "./visibility.js";
+import { assertOwnerVisible, assertVisible, ownerGalleryFilter, scopeFilter } from "./visibility.js";
 
 // La imagen principal (isCover) es la portada de una ruta, la foto de perfil de un
 // usuario... Siempre hay como mucho una por dueño, y nunca es una imagen inactiva.
@@ -72,7 +72,9 @@ export const imageService = {
       }
       await assertOwnerVisible(query.ownerType, query.ownerId, scope, ownerName(query.ownerType));
     }
-    return findList(imageRepository, await imageListQuery.build(query, await scopeFilter("image", scope)));
+    // La galería de un dueño ya comprobado no necesita calcular lo oculto de todos los demás
+    const base = query.ownerType ? ownerGalleryFilter(scope) : await scopeFilter("image", scope);
+    return findList(imageRepository, await imageListQuery.build(query, base));
   },
 
   // /actives e /inactives: lo mismo que ?status=

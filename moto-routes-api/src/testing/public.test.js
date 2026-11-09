@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
+import mongoose from "mongoose";
 import { Departure } from "../models/departure.model.js";
 import { Experience } from "../models/experience.model.js";
 import { Route } from "../models/route.model.js";
@@ -291,6 +292,69 @@ describe("las fotos de categorías y ubicaciones", () => {
     const jaca = (await api.anonymous.get("/locations")).body.find((location) => location._id === data.location._id);
     assert.equal(jaca.coverImage, null);
     assert.equal(jaca.latitude, 42.57);
+  });
+});
+
+describe("cuántas consultas hace cada petición pública", () => {
+  // Medidas al hacerlo (fase 4 del prompt del back): si suben, algo consulta por cada elemento o
+  // vuelve a calcular lo oculto más de una vez por petición. Se cuentan con el debug de Mongoose,
+  // sin la creación de índices, y en la segunda llamada (la primera puede crearlos).
+  const BUDGETS = {
+    "/experiences": 13,
+    "/experiences?page=1&limit=12": 14,
+    "/experiences?sort=priceFrom": 15,
+    "/experiences?categoryId=:category&priceMax=500": 15,
+    "/experiences/facets": 14,
+    "/experiences/slug/:slug": 17,
+    "/departures?experienceId=:experience&state=scheduled": 8,
+    "/images?ownerType=experience&ownerId=:experience": 8,
+    "/categories": 2,
+    "/locations": 2,
+    "/hosts": 4,
+  };
+
+  test("ninguna pasa de lo medido, y no crece con el número de elementos", async () => {
+    let count = 0;
+    mongoose.set("debug", (collection, method) => {
+      if (method !== "createIndex") count++;
+    });
+    try {
+      for (const [template, budget] of Object.entries(BUDGETS)) {
+        const path = template
+          .replace(":category", costa._id)
+          .replace(":slug", costaExperience.slug)
+          .replace(":experience", costaExperience._id);
+        await api.anonymous.get(path);
+        count = 0;
+        await api.anonymous.get(path);
+        assert.ok(count <= budget, `${template}: ${count} consultas, el máximo es ${budget}`);
+      }
+    } finally {
+      mongoose.set("debug", false);
+    }
+  });
+});
+
+describe("las plazas libres de cada salida", () => {
+  test("seatsLeft: hoy, sin reservas, toda la capacidad", async () => {
+    const departures = (await api.anonymous.get(`/departures?experienceId=${costaExperience._id}`)).body;
+    assert.ok(departures.length > 0);
+    for (const departure of departures) assert.equal(departure.seatsLeft, departure.capacity);
+
+    const one = (await api.anonymous.get(`/departures/slug/${departures[0].slug}`)).body;
+    assert.equal(one.seatsLeft, one.capacity);
+  });
+});
+
+describe("el detalle de una experiencia", () => {
+  test("trae su anfitrión entero, sin el email de su usuario", async () => {
+    await api.patch(`/hosts/${data.host._id}`, { biography: "Guía en el Pirineo desde 2010." });
+    const { host } = (await api.anonymous.get(`/experiences/slug/${costaExperience.slug}`)).body;
+
+    assert.equal(host.name, "Ana Rutas");
+    assert.equal(host.biography, "Guía en el Pirineo desde 2010.");
+    assert.ok("coverImage" in host);
+    assert.deepEqual(Object.keys(host.user).sort(), ["_id", "name"]);
   });
 });
 
