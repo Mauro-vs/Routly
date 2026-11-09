@@ -6,11 +6,14 @@ import { bikeRepository } from "../repositories/bike.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
 import { canModifyExperience, canModifyHost, isAdminUser } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound } from "../utils/errors.js";
-import { experienceListQuery } from "../schemas/experience.schema.js";
+import { FACETS_LIMIT, experienceListQuery } from "../schemas/experience.schema.js";
 import { findList } from "../utils/listQuery.js";
 import { bikeService } from "./bike.service.js";
+import { categoryService } from "./category.service.js";
 import { departureService } from "./departure.service.js";
+import { hostService } from "./host.service.js";
 import { imageService } from "./image.service.js";
+import { locationService } from "./location.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
@@ -138,6 +141,46 @@ export const experienceService = {
   // /actives e /inactives: lo mismo que ?status=
   async listByActive(isActive, scope) {
     return (await experienceService.search({ status: isActive ? "active" : "inactive" }, scope)).items;
+  },
+
+  /**
+   * Los carruseles del Home: las categorías, los anfitriones y las ubicaciones que tienen alguna
+   * experiencia visible, cada uno con cuántas (experienceCount), de más a menos y por nombre si
+   * empatan. La categoría y las ubicaciones de una experiencia son las de su ruta: una ruta que
+   * empieza y acaba en el mismo sitio cuenta una vez. Se cuenta en memoria con dos consultas
+   * ligeras (las experiencias y sus rutas), y cada lista la presenta su service (con su foto).
+   */
+  async facets({ limit = FACETS_LIMIT.default } = {}, scope) {
+    const experiences = await experienceRepository.findFacetKeys(await scopeFilter("experience", scope));
+    const routes = await routeRepository.findReferences([...new Set(experiences.map((e) => String(e.routeId)))]);
+    const routeById = new Map(routes.map((route) => [String(route._id), route]));
+
+    const counts = { categories: new Map(), hosts: new Map(), locations: new Map() };
+    const add = (map, id) => map.set(String(id), (map.get(String(id)) ?? 0) + 1);
+    for (const experience of experiences) {
+      add(counts.hosts, experience.hostId);
+      const route = routeById.get(String(experience.routeId));
+      if (!route) continue;
+      add(counts.categories, route.categoryId);
+      for (const id of new Set([String(route.startLocationId), String(route.endLocationId)])) add(counts.locations, id);
+    }
+
+    const [categories, hosts, locations] = await Promise.all([
+      categoryService.listByIds([...counts.categories.keys()]),
+      hostService.listByIds([...counts.hosts.keys()], scope),
+      locationService.listByIds([...counts.locations.keys()]),
+    ]);
+    const rank = (items, map, label) =>
+      items
+        .map((item) => ({ ...item, experienceCount: map.get(String(item._id)) ?? 0 }))
+        .sort((a, b) => b.experienceCount - a.experienceCount || label(a).localeCompare(label(b), "es"))
+        .slice(0, limit);
+
+    return {
+      categories: rank(categories, counts.categories, (category) => category.name),
+      hosts: rank(hosts, counts.hosts, (host) => host.name),
+      locations: rank(locations, counts.locations, (location) => location.city),
+    };
   },
 
   async listDeleted() {

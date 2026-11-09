@@ -20,7 +20,8 @@ export const categoryService = {
   // scope (services/visibility.js): en PUBLIC, solo las activas
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
-    return findList(categoryRepository, await categoryListQuery.build(query, await scopeFilter("category", scope)));
+    const page = await findList(categoryRepository, await categoryListQuery.build(query, await scopeFilter("category", scope)));
+    return { ...page, items: await imageService.attachCovers("category", page.items) };
   },
 
   // /actives e /inactives: lo mismo que ?status=
@@ -32,17 +33,22 @@ export const categoryService = {
     return categoryRepository.findDeleted();
   },
 
+  // Las de unos _id, con su foto: las facetas del Home (experience.service.js)
+  async listByIds(ids) {
+    return imageService.attachCovers("category", await categoryRepository.findAll({ _id: { $in: ids } }));
+  },
+
   async getById(id, scope) {
     const category = await findExisting(categoryRepository, id, "Category");
     await assertVisible(categoryRepository, "category", category, scope, "Category");
-    return category;
+    return imageService.attachCover("category", category);
   },
 
   async getBySlug(slug, scope) {
     const category = await categoryRepository.findBySlug(slug);
     if (!category) throw notFound("Category");
     await assertVisible(categoryRepository, "category", category, scope, "Category");
-    return category;
+    return imageService.attachCover("category", category);
   },
 
   // "Montaña" y "MONTAÑA", o "Costa" y "Cósta", cuentan como el mismo nombre

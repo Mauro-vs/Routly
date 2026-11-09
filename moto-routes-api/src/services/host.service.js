@@ -52,6 +52,13 @@ export const hostService = {
     return hostRepository.findDeleted();
   },
 
+  // Los de unos _id, con su foto y, en público, sin el email de su usuario: las facetas del
+  // Home (experience.service.js)
+  async listByIds(ids, scope) {
+    const hosts = await imageService.attachCovers("host", await hostRepository.findAll({ _id: { $in: ids } }));
+    return hosts.map((host) => forScope(host, scope));
+  },
+
   async getById(id, scope) {
     const host = await findExisting(hostRepository, id, "Host");
     await assertVisible(hostRepository, "host", host, scope, "Host");

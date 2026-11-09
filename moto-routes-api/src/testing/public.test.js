@@ -227,6 +227,73 @@ describe("los órdenes nuevos del Shop", () => {
   });
 });
 
+describe("las facetas del Home", () => {
+  // De cada lista: nombre (o ciudad) y cuántas experiencias tiene, en el orden en que llegan
+  const summary = (items, label = "name") => items.map((item) => `${item[label]}: ${item.experienceCount}`);
+
+  test("solo lo que tiene experiencias visibles, con cuántas, de más a menos", async () => {
+    const response = await api.anonymous.get("/experiences/facets");
+
+    assert.equal(response.status, 200);
+    // Costa: Costa en moto y Delta salvaje. Desierto no tiene ninguna
+    assert.deepEqual(summary(response.body.categories), ["Costa: 2", "Montaña: 1"]);
+    assert.deepEqual(summary(response.body.hosts), ["Ana Rutas: 3"]);
+    // Una ruta que empieza y acaba en Jaca (Valle de Tena) cuenta una vez; empatadas, por ciudad
+    assert.deepEqual(summary(response.body.locations, "city"), ["Jaca: 2", "Tarragona: 2"]);
+  });
+
+  test("lo que pide cada tarjeta, y sin sesión el anfitrión no trae el email de su usuario", async () => {
+    const { categories, hosts, locations } = (await api.anonymous.get("/experiences/facets")).body;
+
+    assert.ok(categories[0].slug && "coverImage" in categories[0]);
+    assert.ok(hosts[0].slug && "coverImage" in hosts[0]);
+    assert.deepEqual(Object.keys(hosts[0].user).sort(), ["_id", "name"]);
+    assert.ok(locations[0].slug && "coverImage" in locations[0]);
+  });
+
+  test("una experiencia oculta no cuenta", async () => {
+    await api.patch(`/routes/${deltaRoute._id}/active`, { isActive: false });
+    const { categories, locations } = (await api.anonymous.get("/experiences/facets")).body;
+    await api.patch(`/routes/${deltaRoute._id}/active`, { isActive: true });
+
+    assert.deepEqual(summary(categories), ["Costa: 1", "Montaña: 1"]);
+    assert.deepEqual(summary(locations, "city"), ["Jaca: 2", "Tarragona: 1"]);
+  });
+
+  test("limit corta cada lista; un limit no válido o un parámetro de más es un 400", async () => {
+    const { categories, locations } = (await api.anonymous.get("/experiences/facets?limit=1")).body;
+    assert.deepEqual(summary(categories), ["Costa: 2"]);
+    assert.equal(locations.length, 1);
+
+    assert.equal((await api.anonymous.get("/experiences/facets?limit=0")).status, 400);
+    assert.equal((await api.anonymous.get("/experiences/facets?limit=51")).status, 400);
+    assert.equal(fieldMessage(await api.anonymous.get("/experiences/facets?q=moto"), "q"), "q is not allowed");
+  });
+
+  test("/facets no se confunde con /:id", async () => {
+    assert.equal((await api.anonymous.get(`/experiences/${costaExperience._id}`)).status, 200);
+  });
+});
+
+describe("las fotos de categorías y ubicaciones", () => {
+  test("el listado, el detalle y las facetas traen la foto principal", async () => {
+    const url = "https://picsum.photos/seed/costa/1200/800";
+    await api.post("/images", { ownerType: "category", ownerId: costa._id, url, alt: "Costa" });
+
+    const listed = (await api.anonymous.get("/categories")).body.find((category) => category._id === costa._id);
+    assert.equal(listed.coverImage.url, url);
+    assert.equal((await api.anonymous.get(`/categories/slug/${costa.slug}`)).body.coverImage.url, url);
+    const faceted = (await api.anonymous.get("/experiences/facets")).body.categories.find((category) => category._id === costa._id);
+    assert.equal(faceted.coverImage.url, url);
+  });
+
+  test("una ubicación sin fotos trae coverImage null, y sigue trayendo sus coordenadas", async () => {
+    const jaca = (await api.anonymous.get("/locations")).body.find((location) => location._id === data.location._id);
+    assert.equal(jaca.coverImage, null);
+    assert.equal(jaca.latitude, 42.57);
+  });
+});
+
 describe("índices de los filtros nuevos", () => {
   async function assertUsesIndex(query) {
     const stages = await planStages(query);

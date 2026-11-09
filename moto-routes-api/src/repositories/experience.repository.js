@@ -32,6 +32,11 @@ export const experienceRepository = {
     return Experience.find(filter).select(SORT_KEYS).lean();
   },
 
+  // Solo el anfitrión y la ruta de las que cumplen el filtro: para las facetas del Home
+  findFacetKeys(filter = {}) {
+    return Experience.find(filter).select("hostId routeId").lean();
+  },
+
   // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados
   count(filter = {}) {
     return Experience.countDocuments(filter);

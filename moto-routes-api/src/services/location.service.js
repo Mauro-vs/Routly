@@ -41,7 +41,7 @@ export const locationService = {
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
     const page = await findList(locationRepository, await locationListQuery.build(query, await scopeFilter("location", scope)));
-    return { ...page, items: page.items.map(toResponse) };
+    return { ...page, items: (await imageService.attachCovers("location", page.items)).map(toResponse) };
   },
 
   // /actives e /inactives: lo mismo que ?status=
@@ -53,17 +53,22 @@ export const locationService = {
     return (await locationRepository.findDeleted()).map(toResponse);
   },
 
+  // Las de unos _id, con su foto: las facetas del Home (experience.service.js)
+  async listByIds(ids) {
+    return (await imageService.attachCovers("location", await locationRepository.findAll({ _id: { $in: ids } }))).map(toResponse);
+  },
+
   async getById(id, scope) {
     const location = await findExisting(locationRepository, id, "Location");
     await assertVisible(locationRepository, "location", location, scope, "Location");
-    return toResponse(location);
+    return toResponse(await imageService.attachCover("location", location));
   },
 
   async getBySlug(slug, scope) {
     const location = await locationRepository.findBySlug(slug);
     if (!location) throw notFound("Location");
     await assertVisible(locationRepository, "location", location, scope, "Location");
-    return toResponse(location);
+    return toResponse(await imageService.attachCover("location", location));
   },
 
   async create(data) {
