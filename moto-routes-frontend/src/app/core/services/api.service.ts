@@ -1,11 +1,12 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
+import { ListPage } from '../models/list-query.model';
 
 /** Parámetros de consulta admitidos en la URL. */
-type QueryParams = Record<string, string | number | boolean>;
+export type QueryParams = Record<string, string | number | boolean>;
 
 interface RequestOptions {
   params?: QueryParams;
@@ -31,6 +32,22 @@ export class ApiService {
 
   get<T>(path: string, options: RequestOptions = {}): Promise<T> {
     return firstValueFrom(this.http.get<T>(this.url(path), options));
+  }
+
+  /**
+   * Una página de un listado: el cuerpo es el array de siempre y el total va en la cabecera
+   * `X-Total-Count`. Es un Observable para poder cancelarla: al darse de baja, HttpClient
+   * aborta la petición (el buscador lo hace con cada letra nueva).
+   */
+  getList<T>(path: string, params: QueryParams): Observable<ListPage<T>> {
+    return this.http.get<T[]>(this.url(path), { params, observe: 'response' }).pipe(
+      map((response) => {
+        const items = response.body ?? [];
+        // Sin la cabecera (una API que no pagina), el total es lo que ha llegado
+        const header = response.headers.get('X-Total-Count');
+        return { items, total: header === null ? items.length : Number(header) };
+      }),
+    );
   }
 
   post<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {

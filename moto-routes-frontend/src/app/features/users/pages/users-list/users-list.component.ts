@@ -44,29 +44,29 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/users/new"
       trashPath="/users/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Usuarios"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="name" [uiCellOf]="pager.items()" let-user>
+        <ng-template uiCell="name" [uiCellOf]="rows()" let-user>
           <span class="cell-media">
             <span class="thumb thumb--round" aria-hidden="true">
               @if (user.coverImage; as photo) {
@@ -78,16 +78,16 @@ const COLUMNS: readonly TableColumn[] = [
             <a class="link cell-title" [routerLink]="['/users', user.slug]" [title]="user.name">{{ user.name }}</a>
           </span>
         </ng-template>
-        <ng-template uiCell="email" [uiCellOf]="pager.items()" let-user>
+        <ng-template uiCell="email" [uiCellOf]="rows()" let-user>
           <span class="cell-sub email" translate="no" [title]="user.email">{{ user.email }}</span>
         </ng-template>
-        <ng-template uiCell="role" [uiCellOf]="pager.items()" let-user>
+        <ng-template uiCell="role" [uiCellOf]="rows()" let-user>
           <ui-relation-link
             [label]="user.role?.label ?? null"
             [path]="user.role ? ['/roles', 'id', user.role._id] : null"
           />
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-user>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-user>
           <ui-status-toggle
             [active]="user.isActive"
             [label]="user.name"
@@ -97,7 +97,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(user, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-user>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-user>
           <ui-row-actions
             [label]="user.name"
             [detailPath]="['/users', user.slug]"
@@ -120,9 +120,4 @@ const COLUMNS: readonly TableColumn[] = [
 export class UsersListComponent extends EntityListPage<User> {
   protected readonly store = inject(UsersStore);
   protected readonly columns = COLUMNS;
-
-  protected override searchText(user: User): string {
-    return [user.name, user.email, user.role?.label].filter(Boolean).join(' ');
-  }
-
 }

@@ -51,51 +51,51 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/departures/new"
       trashPath="/departures/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Salidas"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="start" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="start" [uiCellOf]="rows()" let-departure>
           <a class="link cell-title nowrap" [routerLink]="['/departures', departure.slug]">
             <time [attr.datetime]="departure.startAt">{{ dateTime(departure.startAt) }}</time>
           </a>
           <span class="cell-sub" translate="no">{{ departure.sku }}</span>
         </ng-template>
-        <ng-template uiCell="experience" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="experience" [uiCellOf]="rows()" let-departure>
           <ui-relation-link
             gender="f"
             [label]="departure.experience?.title ?? null"
             [path]="departure.experience ? ['/experiences', departure.experience.slug] : null"
           />
         </ng-template>
-        <ng-template uiCell="capacity" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="capacity" [uiCellOf]="rows()" let-departure>
           {{ departure.capacity }}
         </ng-template>
-        <ng-template uiCell="price" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="price" [uiCellOf]="rows()" let-departure>
           {{ money(departure.price) }}
         </ng-template>
-        <ng-template uiCell="state" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="state" [uiCellOf]="rows()" let-departure>
           <ui-status-badge gender="f" [status]="departure.state" />
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-departure>
           <ui-status-toggle
             [active]="departure.isActive"
             [label]="name(departure)"
@@ -104,7 +104,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(departure, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-departure>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-departure>
           <ui-row-actions
             [label]="name(departure)"
             [detailPath]="['/departures', departure.slug]"
@@ -122,14 +122,9 @@ export class DeparturesListComponent extends EntityListPage<Departure> {
   protected readonly columns = COLUMNS;
   protected readonly dateTime = formatDateTime;
   protected readonly money = formatMoney;
-  protected override readonly sorts: readonly ListSort<Departure>[] = [
-    { value: 'fecha', label: 'Fecha de salida' },
-    { value: 'precio', label: 'Precio (menor)', compare: (a: Departure, b: Departure) => a.price - b.price },
-    { value: 'plazas', label: 'Más plazas', compare: (a: Departure, b: Departure) => b.capacity - a.capacity },
+  protected override readonly sorts: readonly ListSort[] = [
+    { value: 'fecha', label: 'Fecha de salida', sort: 'startAt' },
+    { value: 'precio', label: 'Precio (menor)', sort: 'price' },
+    { value: 'plazas', label: 'Más plazas', sort: '-capacity' },
   ];
-
-  protected override searchText(departure: Departure): string {
-    return [departure.experience?.title, departure.sku].filter(Boolean).join(' ');
-  }
-
 }

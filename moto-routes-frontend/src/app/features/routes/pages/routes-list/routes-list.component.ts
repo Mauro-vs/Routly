@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { DIFFICULTIES, DIFFICULTY_LABELS, Route } from '../../../../core/models/route.model';
+import { Route } from '../../../../core/models/route.model';
 import {
   DataTableComponent,
   TableCellDirective,
@@ -14,7 +14,7 @@ import { RelationLinkComponent } from '../../../../shared/components/relation-li
 import { RouteGlyphComponent } from '../../../../shared/components/route-glyph/route-glyph.component';
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
-import { ListSort, byText } from '../../../../shared/utils/search';
+import { ListSort } from '../../../../shared/utils/search';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
 import { formatNumber } from '../../../../shared/utils/format';
 import { RoutesStore } from '../../services/routes.store';
@@ -86,23 +86,10 @@ export class RoutesListComponent extends EntityListPage<Route> {
   protected readonly store = inject(RoutesStore);
   protected readonly columns = COLUMNS;
   protected readonly number = formatNumber;
-  protected override readonly sorts: readonly ListSort<Route>[] = [
-    { value: 'recientes', label: 'Más recientes' },
-    { value: 'nombre', label: 'Nombre (A-Z)', compare: byText((route: Route) => route.title) },
-    { value: 'km', label: 'Más kilómetros', compare: (a: Route, b: Route) => b.distance - a.distance },
-    { value: 'dificultad', label: 'Más difícil', compare: (a: Route, b: Route) => DIFFICULTIES.indexOf(b.difficulty) - DIFFICULTIES.indexOf(a.difficulty) },
+  protected override readonly sorts: readonly ListSort[] = [
+    { value: 'recientes', label: 'Más recientes', sort: '-createdAt' },
+    { value: 'nombre', label: 'Nombre (A-Z)', sort: 'title' },
+    { value: 'km', label: 'Más kilómetros', sort: '-distance' },
+    { value: 'dificultad', label: 'Más difícil', sort: '-difficulty' },
   ];
-
-  protected override searchText(route: Route): string {
-    return [
-      route.title,
-      route.category?.name,
-      route.startLocation?.city,
-      route.endLocation?.city,
-      DIFFICULTY_LABELS[route.difficulty],
-    ]
-      .filter(Boolean)
-      .join(' ');
-  }
-
 }

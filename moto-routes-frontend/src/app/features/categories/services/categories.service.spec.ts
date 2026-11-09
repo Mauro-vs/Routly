@@ -31,8 +31,8 @@ describe('CategoriesService', () => {
   });
 
   it('GET /categories/actives y /categories/inactives', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
+    await service.getActives();
+    await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/categories/actives'], ['/categories/inactives']]);
   });
 

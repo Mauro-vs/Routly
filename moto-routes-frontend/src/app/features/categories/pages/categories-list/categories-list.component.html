@@ -4,42 +4,42 @@
   createPath="/categories/new"
   trashPath="/categories/trash"
   [labels]="store.labels"
-  [loaded]="store.loaded()"
+  [loaded]="listLoaded()"
   [failed]="loadFailed()"
   [counts]="counts()"
-  [total]="pager.total()"
-  [pageSize]="pager.pageSize"
+  [total]="store.pageTotal()"
+  [pageSize]="pageSize"
   [trashCount]="store.deletedCount()"
   [status]="store.status()"
   [(query)]="query"
   [sorts]="sorts"
   [(sort)]="sort"
   (statusChange)="setStatus($event)"
-  [(page)]="pager.page"
+  [(page)]="page"
   (retry)="reload()"
 >
   <ui-data-table
     caption="Categorías"
     [columns]="columns"
-    [rows]="pager.items()"
+    [rows]="rows()"
     [rowKey]="rowKey"
     [mutedWhen]="isInactive"
     [loading]="showSkeleton()"
   >
-    <ng-template uiCell="name" [uiCellOf]="pager.items()" let-category>
+    <ng-template uiCell="name" [uiCellOf]="rows()" let-category>
       <a class="link cell-title" [routerLink]="['/categories', category.slug]" [title]="category.name">{{ category.name }}</a>
     </ng-template>
-    <ng-template uiCell="description" [uiCellOf]="pager.items()" let-category>
+    <ng-template uiCell="description" [uiCellOf]="rows()" let-category>
       @if (category.description) {
         <span class="cell-text" [title]="category.description">{{ category.description }}</span>
       } @else {
         <span class="cell-text">Sin descripción</span>
       }
     </ng-template>
-    <ng-template uiCell="updated" [uiCellOf]="pager.items()" let-category>
+    <ng-template uiCell="updated" [uiCellOf]="rows()" let-category>
       <time class="nowrap" [attr.datetime]="category.updatedAt">{{ updated(category) }}</time>
     </ng-template>
-    <ng-template uiCell="status" [uiCellOf]="pager.items()" let-category>
+    <ng-template uiCell="status" [uiCellOf]="rows()" let-category>
       <ui-status-toggle
         [active]="category.isActive"
         [label]="category.name"
@@ -48,7 +48,7 @@
         (activeChange)="setActive(category, $event)"
       />
     </ng-template>
-    <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-category>
+    <ng-template uiCell="actions" [uiCellOf]="rows()" let-category>
       <ui-row-actions
         [label]="category.name"
         [detailPath]="['/categories', category.slug]"

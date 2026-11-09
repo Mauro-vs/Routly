@@ -24,13 +24,17 @@ function localIn(days: number, hour = 9): string {
   return toLocalInput(date.toISOString());
 }
 
+// Dentro de un mes: una salida que aún no ha terminado, se ejecute el test cuando se ejecute
+const START = new Date(Date.now() + 30 * 24 * 3600 * 1000);
+START.setUTCHours(8, 0, 0, 0);
+
 const DEPARTURE: Departure = {
   _id: 'd1',
   slug: 'costa-2026-11-08-d1',
   experienceId: 'e1',
   experience: { _id: 'e1', title: 'Costa Brava en moto', slug: 'costa-e1' },
-  startAt: '2026-11-08T08:00:00.000Z',
-  endAt: '2026-11-08T16:00:00.000Z',
+  startAt: START.toISOString(),
+  endAt: new Date(START.getTime() + 8 * 3600 * 1000).toISOString(),
   capacity: 6,
   price: 120,
   state: 'scheduled',

@@ -31,8 +31,8 @@ describe('UsersService', () => {
   });
 
   it('GET /users/actives y /users/inactives', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
+    await service.getActives();
+    await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/users/actives'], ['/users/inactives']]);
   });
 

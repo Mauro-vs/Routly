@@ -58,16 +58,12 @@ describe('RoutesStore', () => {
   beforeEach(async () => {
     service = jasmine.createSpyObj<RoutesService>('service', [
       'getAll',
-      'getByActive',
       'remove',
       'restore',
       'getCategoryOptions',
       'getLocationOptions',
     ]);
     service.getAll.and.resolveTo(ROUTES);
-    service.getByActive.and.callFake((isActive: boolean) =>
-      Promise.resolve(ROUTES.filter((item) => item.isActive === isActive)),
-    );
     notifications = jasmine.createSpyObj<NotificationService>('notifications', [
       'confirm',
       'undoable',
@@ -87,8 +83,6 @@ describe('RoutesStore', () => {
     await store.load();
   });
 
-  const titles = (): string[] => store.visible().map((item) => item.title);
-
   it('carga las categorías y ubicaciones activas para los selects', async () => {
     service.getCategoryOptions.and.resolveTo([]);
     service.getLocationOptions.and.resolveTo([]);
@@ -100,17 +94,6 @@ describe('RoutesStore', () => {
     expect(store.locationOptions.loading()).toBeFalse();
   });
 
-  it('setStatus filtra al instante y lo confirma con el endpoint de ese estado', () => {
-    store.setStatus('inactive');
-    expect(titles()).toEqual(['Ruta del Vino']);
-    expect(service.getByActive).toHaveBeenCalledOnceWith(false);
-
-    store.setStatus('active');
-    expect(service.getByActive).toHaveBeenCalledWith(true);
-
-    store.setStatus('all');
-    expect(service.getAll).toHaveBeenCalledTimes(2);
-  });
 
   it('publica el número de rutas para el contador del menú', () => {
     TestBed.tick();

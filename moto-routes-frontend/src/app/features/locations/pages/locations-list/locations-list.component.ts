@@ -40,43 +40,43 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/locations/new"
       trashPath="/locations/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Ubicaciones"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="city" [uiCellOf]="pager.items()" let-location>
+        <ng-template uiCell="city" [uiCellOf]="rows()" let-location>
           <a class="link cell-title" [routerLink]="['/locations', location.slug]" [title]="location.city">{{ location.city }}</a>
           <span class="cell-sub">{{ location.region || 'Sin región' }}</span>
         </ng-template>
-        <ng-template uiCell="country" [uiCellOf]="pager.items()" let-location>
+        <ng-template uiCell="country" [uiCellOf]="rows()" let-location>
           {{ location.country }}
         </ng-template>
-        <ng-template uiCell="coordinates" [uiCellOf]="pager.items()" let-location>
+        <ng-template uiCell="coordinates" [uiCellOf]="rows()" let-location>
           @if (coordinates(location); as value) {
             <span class="num nowrap">{{ value }}</span>
           } @else {
             <span class="muted">Sin coordenadas</span>
           }
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-location>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-location>
           <ui-status-toggle
             [active]="location.isActive"
             [label]="location.city"
@@ -85,7 +85,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(location, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-location>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-location>
           <ui-row-actions
             [label]="location.city"
             [detailPath]="['/locations', location.slug]"
@@ -103,8 +103,7 @@ export class LocationsListComponent extends EntityListPage<Location> {
   protected readonly columns = COLUMNS;
   protected readonly coordinates = locationCoordinates;
 
-  protected override searchText(location: Location): string {
-    return [location.city, location.region, location.country].filter(Boolean).join(' ');
+  protected override nameSort(): string {
+    return 'city';
   }
-
 }

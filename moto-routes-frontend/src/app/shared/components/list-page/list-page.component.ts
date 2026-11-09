@@ -243,7 +243,7 @@ export class ListPageComponent {
   readonly page = model.required<number>();
   /** El texto del buscador. */
   readonly query = model('');
-  readonly sorts = input<readonly ListSort<never>[]>([]);
+  readonly sorts = input<readonly ListSort[]>([]);
   readonly sort = model('');
   readonly retry = output<void>();
 

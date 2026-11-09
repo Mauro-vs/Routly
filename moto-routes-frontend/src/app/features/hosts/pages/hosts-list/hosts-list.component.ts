@@ -44,29 +44,29 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/hosts/new"
       trashPath="/hosts/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Anfitriones"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="name" [uiCellOf]="pager.items()" let-host>
+        <ng-template uiCell="name" [uiCellOf]="rows()" let-host>
           <span class="cell-media">
             <span class="thumb thumb--round" aria-hidden="true">
               @if (host.coverImage; as photo) {
@@ -78,7 +78,7 @@ const COLUMNS: readonly TableColumn[] = [
             <a class="link cell-title" [routerLink]="['/hosts', host.slug]" [title]="host.name">{{ host.name }}</a>
           </span>
         </ng-template>
-        <ng-template uiCell="user" [uiCellOf]="pager.items()" let-host>
+        <ng-template uiCell="user" [uiCellOf]="rows()" let-host>
           <ui-relation-link
             [label]="host.user?.name ?? null"
             [path]="host.user ? ['/users', 'id', host.user._id] : null"
@@ -87,10 +87,10 @@ const COLUMNS: readonly TableColumn[] = [
             <span class="cell-sub" translate="no" [title]="email">{{ email }}</span>
           }
         </ng-template>
-        <ng-template uiCell="biography" [uiCellOf]="pager.items()" let-host>
+        <ng-template uiCell="biography" [uiCellOf]="rows()" let-host>
           <span class="cell-text">{{ host.biography || 'Sin biografía' }}</span>
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-host>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-host>
           <ui-status-toggle
             [active]="host.isActive"
             [label]="host.name"
@@ -99,7 +99,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(host, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-host>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-host>
           <ui-row-actions
             [label]="host.name"
             [detailPath]="['/hosts', host.slug]"
@@ -115,9 +115,4 @@ const COLUMNS: readonly TableColumn[] = [
 export class HostsListComponent extends EntityListPage<Host> {
   protected readonly store = inject(HostsStore);
   protected readonly columns = COLUMNS;
-
-  protected override searchText(host: Host): string {
-    return [host.name, host.user?.name, host.user?.email].filter(Boolean).join(' ');
-  }
-
 }

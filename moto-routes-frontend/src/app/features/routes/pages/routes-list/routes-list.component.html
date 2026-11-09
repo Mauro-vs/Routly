@@ -4,35 +4,35 @@
   createPath="/routes/new"
   trashPath="/routes/trash"
   [labels]="store.labels"
-  [loaded]="store.loaded()"
+  [loaded]="listLoaded()"
   [failed]="loadFailed()"
   [counts]="counts()"
-  [total]="pager.total()"
-  [pageSize]="pager.pageSize"
+  [total]="store.pageTotal()"
+  [pageSize]="pageSize"
   [trashCount]="store.deletedCount()"
   [status]="store.status()"
   [(query)]="query"
   [sorts]="sorts"
   [(sort)]="sort"
   (statusChange)="setStatus($event)"
-  [(page)]="pager.page"
+  [(page)]="page"
   (retry)="reload()"
 >
   <ui-data-table
     caption="Rutas"
     [columns]="columns"
-    [rows]="pager.items()"
+    [rows]="rows()"
     [rowKey]="rowKey"
     [mutedWhen]="isInactive"
     [loading]="showSkeleton()"
   >
-    <ng-template uiCell="distance" [uiCellOf]="pager.items()" let-route>
+    <ng-template uiCell="distance" [uiCellOf]="rows()" let-route>
       <span class="mark">
         <b class="slanted">{{ number(route.distance) }}</b>
         <span>km · {{ number(route.duration) }} h</span>
       </span>
     </ng-template>
-    <ng-template uiCell="title" [uiCellOf]="pager.items()" let-route>
+    <ng-template uiCell="title" [uiCellOf]="rows()" let-route>
       <span class="cell-media">
         <ui-route-glyph [difficulty]="route.difficulty" />
         <span class="route">
@@ -53,17 +53,17 @@
         </span>
       </span>
     </ng-template>
-    <ng-template uiCell="category" [uiCellOf]="pager.items()" let-route>
+    <ng-template uiCell="category" [uiCellOf]="rows()" let-route>
       <ui-relation-link
         gender="f"
         [label]="route.category?.name ?? null"
         [path]="route.category ? ['/categories', route.category.slug] : null"
       />
     </ng-template>
-    <ng-template uiCell="difficulty" [uiCellOf]="pager.items()" let-route>
+    <ng-template uiCell="difficulty" [uiCellOf]="rows()" let-route>
       <ui-level-meter [difficulty]="route.difficulty" />
     </ng-template>
-    <ng-template uiCell="status" [uiCellOf]="pager.items()" let-route>
+    <ng-template uiCell="status" [uiCellOf]="rows()" let-route>
       <ui-status-toggle
         [active]="route.isActive"
         [label]="route.title"
@@ -72,7 +72,7 @@
         (activeChange)="setActive(route, $event)"
       />
     </ng-template>
-    <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-route>
+    <ng-template uiCell="actions" [uiCellOf]="rows()" let-route>
       <ui-row-actions
         [label]="route.title"
         [detailPath]="['/routes', route.slug]"

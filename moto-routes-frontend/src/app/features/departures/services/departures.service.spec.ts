@@ -31,8 +31,8 @@ describe('DeparturesService', () => {
   });
 
   it('GET /departures/actives y /departures/inactives', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
+    await service.getActives();
+    await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/departures/actives'], ['/departures/inactives']]);
   });
 

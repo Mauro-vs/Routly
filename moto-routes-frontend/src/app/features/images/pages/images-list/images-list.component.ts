@@ -12,6 +12,7 @@ import { ListPageComponent } from '../../../../shared/components/list-page/list-
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
+import { ListSort } from '../../../../shared/utils/search';
 import { ImagesStore } from '../../services/images.store';
 
 const COLUMNS: readonly TableColumn[] = [
@@ -47,29 +48,29 @@ const COLUMNS: readonly TableColumn[] = [
       trashPath="/images/trash"
       emptyDescription="Se añaden desde la galería de una ruta, un usuario, una categoría…"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Imágenes"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="image" [uiCellOf]="pager.items()" let-image>
+        <ng-template uiCell="image" [uiCellOf]="rows()" let-image>
           <span class="cell-media">
             <span class="thumb" aria-hidden="true">
               <img [src]="image.url" alt="" loading="lazy" decoding="async" width="40" height="40" />
@@ -77,21 +78,21 @@ const COLUMNS: readonly TableColumn[] = [
             <a class="link cell-title" [routerLink]="['/images', image._id]" [title]="name(image)">{{ name(image) }}</a>
           </span>
         </ng-template>
-        <ng-template uiCell="owner" [uiCellOf]="pager.items()" let-image>
+        <ng-template uiCell="owner" [uiCellOf]="rows()" let-image>
           <a class="link" [routerLink]="ownerPath(image)">{{ owners[image.ownerType].label }}</a>
           <span class="cell-sub mono" translate="no">…{{ image.ownerId.slice(-6) }}</span>
         </ng-template>
-        <ng-template uiCell="cover" [uiCellOf]="pager.items()" let-image>
+        <ng-template uiCell="cover" [uiCellOf]="rows()" let-image>
           @if (image.isCover) {
             <span class="badge badge--icon badge--neutral"><ui-icon name="star" />Principal</span>
           } @else {
             <span class="muted">No</span>
           }
         </ng-template>
-        <ng-template uiCell="position" [uiCellOf]="pager.items()" let-image>
+        <ng-template uiCell="position" [uiCellOf]="rows()" let-image>
           {{ image.position + 1 }}
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-image>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-image>
           <ui-status-toggle
             [active]="image.isActive"
             [label]="name(image)"
@@ -100,7 +101,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(image, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-image>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-image>
           <ui-row-actions
             [label]="name(image)"
             [detailPath]="['/images', image._id]"
@@ -120,12 +121,10 @@ const COLUMNS: readonly TableColumn[] = [
 })
 export class ImagesListComponent extends EntityListPage<Image> {
   protected readonly store = inject(ImagesStore);
+  protected override readonly sorts: readonly ListSort[] = [
+    { value: 'recientes', label: 'Más recientes', sort: '-createdAt' },
+  ];
   protected readonly columns = COLUMNS;
   protected readonly owners = IMAGE_OWNERS;
   protected readonly ownerPath = imageOwnerPath;
-
-  protected override searchText(image: Image): string {
-    return [this.store.displayName(image), image.ownerType].join(' ');
-  }
-
 }

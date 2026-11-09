@@ -31,8 +31,8 @@ describe('ImagesService', () => {
   });
 
   it('GET /images/actives y /images/inactives', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
+    await service.getActives();
+    await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/images/actives'], ['/images/inactives']]);
   });
 

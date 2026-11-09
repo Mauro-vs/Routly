@@ -31,8 +31,8 @@ describe('ExperiencesService', () => {
   });
 
   it('GET /experiences/actives y /experiences/inactives', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
+    await service.getActives();
+    await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/experiences/actives'], ['/experiences/inactives']]);
   });
 

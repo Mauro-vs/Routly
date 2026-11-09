@@ -2,6 +2,7 @@ import { HttpContext, provideHttpClient, withInterceptors } from '@angular/commo
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { authInterceptor } from '../../auth/auth.interceptor';
@@ -47,6 +48,23 @@ describe('ApiService con sus interceptores', () => {
     const promise = api.get<{ ok: boolean }>('/routes');
     http.expectOne({ method: 'GET', url: `${BASE}/routes` }).flush({ ok: true });
     expect(await promise).toEqual({ ok: true });
+  });
+
+  it('getList envía los query params y lee el total de X-Total-Count', async () => {
+    const promise = firstValueFrom(api.getList<{ id: number }>('/routes', { page: 2, limit: 12, q: 'pirineo' }));
+    const request = http.expectOne((req) => req.url === `${BASE}/routes`);
+    expect(request.request.params.get('page')).toBe('2');
+    expect(request.request.params.get('q')).toBe('pirineo');
+    request.flush([{ id: 1 }], { headers: { 'X-Total-Count': '37' } });
+
+    expect(await promise).toEqual({ items: [{ id: 1 }], total: 37 });
+  });
+
+  it('getList sin la cabecera cuenta lo que ha llegado', async () => {
+    const promise = firstValueFrom(api.getList<number>('/routes', { page: 1, limit: 12 }));
+    http.expectOne((req) => req.url === `${BASE}/routes`).flush([1, 2]);
+
+    expect(await promise).toEqual({ items: [1, 2], total: 2 });
   });
 
   it('respeta una URL completa', async () => {

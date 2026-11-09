@@ -45,52 +45,52 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/experiences/new"
       trashPath="/experiences/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Experiencias"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="title" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="title" [uiCellOf]="rows()" let-experience>
           <a class="link cell-title" [routerLink]="['/experiences', experience.slug]" [title]="experience.title">{{ experience.title }}</a>
           <span class="cell-sub">{{ language(experience.language) }}</span>
         </ng-template>
-        <ng-template uiCell="route" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="route" [uiCellOf]="rows()" let-experience>
           <ui-relation-link
             gender="f"
             [label]="experience.route?.title ?? null"
             [path]="experience.route ? ['/routes', experience.route.slug] : null"
           />
         </ng-template>
-        <ng-template uiCell="host" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="host" [uiCellOf]="rows()" let-experience>
           <ui-relation-link
             [label]="experience.host?.name ?? null"
             [path]="experience.host ? ['/hosts', experience.host.slug] : null"
           />
         </ng-template>
-        <ng-template uiCell="participants" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="participants" [uiCellOf]="rows()" let-experience>
           {{ experience.minParticipants }}–{{ experience.maxParticipants }}
         </ng-template>
-        <ng-template uiCell="duration" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="duration" [uiCellOf]="rows()" let-experience>
           {{ number(experience.duration) }}&nbsp;h
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-experience>
           <ui-status-toggle
             [active]="experience.isActive"
             [label]="experience.title"
@@ -99,7 +99,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(experience, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-experience>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-experience>
           <ui-row-actions
             [label]="experience.title"
             [detailPath]="['/experiences', experience.slug]"
@@ -118,8 +118,7 @@ export class ExperiencesListComponent extends EntityListPage<Experience> {
   protected readonly language = languageName;
   protected readonly number = formatNumber;
 
-  protected override searchText(experience: Experience): string {
-    return [experience.title, experience.host?.name, experience.route?.title].filter(Boolean).join(' ');
+  protected override nameSort(): string {
+    return 'title';
   }
-
 }

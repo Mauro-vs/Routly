@@ -1,9 +1,11 @@
 import { Injectable, provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Subject, of, throwError } from 'rxjs';
 
 import { CollectionLabels } from '../../shared/utils/labels';
 import { ApiError } from '../models/api-error.model';
 import { BaseEntity } from '../models/entity.model';
+import { ListPage, ListQuery } from '../models/list-query.model';
 import { toApiError } from '../utils/api-error.mapper';
 import { EntityApi, EntityStore } from './entity.store';
 import { ErrorHandlerService } from './error-handler.service';
@@ -67,7 +69,7 @@ describe('EntityStore', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<Required<EntityApi<Item, ItemPayload>>>('api', [
       'getAll',
-      'getByActive',
+      'search',
       'getDeleted',
       'getById',
       'getBySlug',
@@ -224,30 +226,6 @@ describe('EntityStore', () => {
     });
   });
 
-  describe('refreshByActive (filtro por estado)', () => {
-    it('sustituye solo los registros de ese estado y mantiene el orden por fecha', async () => {
-      await loadWith([
-        item('1', true, '2026-03-01T00:00:00.000Z'),
-        item('2', false, '2026-02-01T00:00:00.000Z'),
-        item('3', true, '2026-01-01T00:00:00.000Z'),
-      ]);
-      // En el servidor la 3 ya no está activa y hay una activa nueva, la 4.
-      api.getByActive.and.resolveTo([
-        item('4', true, '2026-04-01T00:00:00.000Z'),
-        item('1', true, '2026-03-01T00:00:00.000Z'),
-      ]);
-
-      await store.refreshByActive(true);
-
-      expect(api.getByActive).toHaveBeenCalledOnceWith(true);
-      expect(store.items().map((entry) => entry._id)).toEqual(['4', '1', '2']);
-    });
-
-    it('no pide nada si el listado aún no se ha cargado', async () => {
-      await store.refreshByActive(false);
-      expect(api.getByActive).not.toHaveBeenCalled();
-    });
-  });
 
   describe('papelera', () => {
     // Como en la API: un eliminado conserva su estado y lo marca deletedAt
@@ -466,29 +444,95 @@ describe('EntityStore', () => {
     });
   });
 
-  describe('filtro por estado', () => {
-    it('visible muestra todos, solo los activos o solo los inactivos', async () => {
-      await loadWith([item('1'), item('2', false), item('3')]);
-      api.getByActive.and.callFake(async (isActive) =>
-        [item('1'), item('2', false), item('3')].filter((entry) => entry.isActive === isActive),
-      );
+  describe('página del listado', () => {
+    const query = (page = 1, extra: Partial<ListQuery> = {}): ListQuery => ({ page, limit: 12, ...extra });
 
-      store.setStatus('inactive');
-      expect(store.visible().map((entry) => entry._id)).toEqual(['2']);
+    it('guarda la página y el total que da la API', () => {
+      api.search.and.returnValue(of({ items: [item('1'), item('2')], total: 30 }));
 
-      store.setStatus('active');
-      expect(store.visible().map((entry) => entry._id)).toEqual(['1', '3']);
-      expect(api.getByActive).toHaveBeenCalledWith(true);
+      store.loadPage(query(1, { q: 'pirineo', status: 'active' }));
+
+      expect(api.search).toHaveBeenCalledOnceWith(query(1, { q: 'pirineo', status: 'active' }));
+      expect(store.page().map((entry) => entry._id)).toEqual(['1', '2']);
+      expect(store.pageTotal()).toBe(30);
+      expect(store.pageLoaded()).toBeTrue();
+      expect(store.pageLoading()).toBeFalse();
     });
 
-    it('al volver a "todos" pide el listado completo', async () => {
-      await loadWith([item('1')]);
-      api.getAll.calls.reset();
+    it('cancela la petición anterior: solo cuenta la última', () => {
+      const first = new Subject<ListPage<Item>>();
+      const second = new Subject<ListPage<Item>>();
+      api.search.and.returnValues(first, second);
 
-      store.setStatus('all');
+      store.loadPage(query(1, { q: 'pi' }));
+      store.loadPage(query(1, { q: 'pirineo' }));
 
-      expect(store.visible().length).toBe(1);
-      expect(api.getAll).toHaveBeenCalledTimes(1);
+      expect(first.observed).toBeFalse();
+      second.next({ items: [item('2')], total: 1 });
+      expect(store.page().map((entry) => entry._id)).toEqual(['2']);
+    });
+
+    it('mientras llega la nueva, se sigue viendo la página que había', () => {
+      const next = new Subject<ListPage<Item>>();
+      api.search.and.returnValues(of({ items: [item('1')], total: 13 }), next);
+
+      store.loadPage(query(1));
+      store.loadPage(query(2));
+
+      expect(store.pageLoading()).toBeTrue();
+      expect(store.page().map((entry) => entry._id)).toEqual(['1']);
+      next.next({ items: [item('13')], total: 13 });
+      expect(store.page().map((entry) => entry._id)).toEqual(['13']);
+    });
+
+    it('si falla, deja el error y no la da por cargada', () => {
+      api.search.and.returnValue(throwError(() => serverError()));
+
+      store.loadPage(query());
+
+      expect(store.pageError()?.type).toBe('server');
+      expect(store.pageLoaded()).toBeFalse();
+      expect(store.pageLoading()).toBeFalse();
+    });
+
+    it('reloadPage vuelve a pedir la última, con los mismos filtros', () => {
+      api.search.and.returnValue(of({ items: [], total: 0 }));
+      store.reloadPage();
+      expect(api.search).not.toHaveBeenCalled();
+
+      store.loadPage(query(3, { sort: 'title' }));
+      store.reloadPage();
+
+      expect(api.search.calls.allArgs()).toEqual([[query(3, { sort: 'title' })], [query(3, { sort: 'title' })]]);
+    });
+
+    it('un cambio de estado se ve también en la página', async () => {
+      api.search.and.returnValue(of({ items: [item('1')], total: 1 }));
+      store.loadPage(query());
+      api.setActive.and.resolveTo(item('1', false));
+
+      await store.setActive(item('1'), false);
+
+      expect(store.page()[0].isActive).toBeFalse();
+    });
+
+    it('un registro eliminado sale de la página y del total', async () => {
+      api.search.and.returnValue(of({ items: [item('1'), item('2')], total: 20 }));
+      store.loadPage(query());
+      api.remove.and.resolveTo();
+
+      await store.remove(item('1'));
+
+      expect(store.page().map((entry) => entry._id)).toEqual(['2']);
+      expect(store.pageTotal()).toBe(19);
+    });
+
+    it('setStatus solo cambia el filtro: la página la pide la pantalla', () => {
+      store.setStatus('inactive');
+
+      expect(store.status()).toBe('inactive');
+      expect(api.search).not.toHaveBeenCalled();
+      expect(api.getAll).not.toHaveBeenCalled();
     });
   });
 

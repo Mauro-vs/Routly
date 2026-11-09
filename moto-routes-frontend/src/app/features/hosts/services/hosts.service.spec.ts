@@ -31,8 +31,8 @@ describe('HostsService', () => {
   });
 
   it('GET /hosts/actives y /hosts/inactives', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
+    await service.getActives();
+    await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/hosts/actives'], ['/hosts/inactives']]);
   });
 

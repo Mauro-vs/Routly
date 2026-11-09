@@ -139,7 +139,7 @@ src/app/
 │   │                      galería de imágenes, insignias, interruptor, campos...
 │   ├── forms/             EntityForm (base de los formularios) y opciones de los selects
 │   ├── pages/             Bases de las páginas y collectionRoutes()
-│   └── utils/             Formato, fechas, textos de cada colección, paginación, validadores
+│   └── utils/             Formato, fechas, textos de cada colección, órdenes, validadores
 ├── layouts/
 │   └── admin-layout/      Sidebar con grupos y contadores, barra superior y navigation.ts
 ├── features/
@@ -176,7 +176,7 @@ Cada colección tiene las mismas cinco páginas:
 
 | Ruta | Página |
 |---|---|
-| `/<colección>` | Listado con filtro por estado (en la URL: `?estado=active&pagina=2`), interruptor, ver, editar y eliminar |
+| `/<colección>` | Listado paginado por la API, con búsqueda, filtro por estado y orden (en la URL: `?q=pirineo&estado=active&orden=km&pagina=2`), interruptor, ver, editar y eliminar |
 | `/<colección>/new` | Crear |
 | `/<colección>/:slug` | Detalle: datos por secciones, relaciones enlazadas, estado, registro, eliminar y galería |
 | `/<colección>/:slug/edit` | Editar, con la galería debajo del formulario |
@@ -288,7 +288,18 @@ Las demás colecciones (`roles`, `users`, `hosts`, `categories`, `locations`, `e
 
 Las URL del panel identifican cada ruta por su `slug` (`/routes/:slug/edit`). La API solo admite `slug` para leer, así que guardar, activar y eliminar van por `_id`.
 
-Al elegir "Activas" o "Inactivas", el listado se filtra al instante con lo que ya hay en memoria y, a la vez, pide ese grupo a su endpoint para ponerlo al día.
+Cada listado pide a la API solo la página que se ve, con sus query params (`EntityListPage`, en `shared/pages/`):
+
+```
+GET /api/routes?page=2&limit=12&q=pirineo&status=active&sort=-distance
+```
+
+- **La búsqueda, el filtro por estado, el orden y la página los hace la API.** El total llega en la cabecera `X-Total-Count` (`ApiService.getList`) y la paginación lo usa para saber cuántas páginas hay.
+- **El buscador espera a que se deje de escribir** (300 ms) y, si la petición anterior aún no ha vuelto, la cancela: solo cuenta la última. Busca palabras enteras en los textos de la colección (el índice de texto de la API), no en los nombres de sus relaciones.
+- **Cada página dice cómo se ordena** con el `sort` de la API (`sorts`): por ejemplo `-distance` en "Más kilómetros". El nombre en la URL del panel (`?orden=km`) no cambia.
+- **Mientras llega una página nueva se sigue viendo la anterior.** Los skeletons solo salen la primera vez.
+- **Una página que ya no existe** (`?pagina=20` con 8 páginas, o al borrar las últimas filas) pasa a la última que hay.
+- **Los formularios no cambian**: sus desplegables siguen pidiendo la lista entera (`getAll`, `/actives`), aparte de la página del listado.
 
 </details>
 
@@ -477,17 +488,18 @@ La dirección visual ("D Mixta") y sus reglas están en [`DESIGN.md`](DESIGN.md)
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-467 tests. Cubren la lógica y los formularios:
+471 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
 | `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes (409 por duplicado, campos que no se pueden cambiar...) |
 | `api.service.spec.ts`, `<x>.service.spec.ts` | URLs, métodos y cuerpo de cada petición |
-| `entity.store.spec.ts`, `routes.store.spec.ts` | Carga, CRUD, actualización optimista, filtro por estado, papelera, deshacer y contador del menú |
+| `entity.store.spec.ts`, `routes.store.spec.ts` | Carga, la página del listado (total, cancelar la anterior, seguir viendo la que había, errores), CRUD, actualización optimista, papelera, deshacer y contador del menú |
+| `entity-list-page.spec.ts` | La base de los listados: la primera petición con lo que dice la URL, el buscador con espera, volver a la página 1 al cambiar el orden, la página que ya no existe y la URL |
 | `<x>-form.component.spec.ts` (9) | Validaciones, lo que se envía al crear y al editar, y dónde se pinta cada error de la API |
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
-| `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos, paginación y validadores |
+| `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos y validadores |
 | `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión (el token nunca llega a `localStorage`), interceptor (`withCredentials`, sesión caducada, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
 | `users.store.spec.ts`, `user-form.component.spec.ts` | Tu propia cuenta no se desactiva, ni se elimina, ni cambia de rol |
 | `experience-form-page.component.spec.ts` | La página pide las motos del anfitrión una sola vez (sin bucle de peticiones) |

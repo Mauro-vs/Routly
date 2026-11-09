@@ -43,9 +43,4 @@ export class CategoriesListComponent extends EntityListPage<Category> {
   protected updated(category: Category): string {
     return formatRelativeTime(category.updatedAt);
   }
-
-  protected override searchText(category: Category): string {
-    return [category.name, category.description].filter(Boolean).join(' ');
-  }
-
 }

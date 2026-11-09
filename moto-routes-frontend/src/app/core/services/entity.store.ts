@@ -1,21 +1,24 @@
 import { computed, effect, inject, signal } from '@angular/core';
+import { Observable, Subscription } from 'rxjs';
 
 import { CollectionLabels, agree, capitalize, statusWord } from '../../shared/utils/labels';
 import { ApiError } from '../models/api-error.model';
 import { BaseRecord, EntityStatus } from '../models/entity.model';
+import { ListPage, ListQuery } from '../models/list-query.model';
 import { ErrorHandlerService } from './error-handler.service';
 import { NavBadgeService } from './nav-badge.service';
 import { NotificationService } from './notification.service';
 import { SessionResetService } from './session-reset.service';
 
-/** El filtro por estado de los listados. Es el único que ofrece la API. */
+/** El filtro por estado de los listados (`?status=` en la API; `all` no lo envía). */
 export type StatusFilter = 'all' | 'active' | 'inactive';
 
 /** Llamadas a la API que necesita un store. Las implementa el servicio de cada entidad. */
 export interface EntityApi<T extends BaseRecord, TPayload> {
+  /** Todos, sin paginar: para los desplegables de los formularios y el Resumen. */
   getAll(): Promise<T[]>;
-  /** Solo los activos (`true`) o solo los inactivos (`false`). */
-  getByActive(isActive: boolean): Promise<T[]>;
+  /** Una página del listado con los query params de la API. Se cancela dándose de baja. */
+  search(query: ListQuery): Observable<ListPage<T>>;
   /** La papelera: solo los eliminados, del más reciente al más antiguo. */
   getDeleted(): Promise<T[]>;
   getById(id: string): Promise<T>;
@@ -53,6 +56,9 @@ export type StoreResult<T> = { ok: true; data: T } | { ok: false; error: ApiErro
  *
  * Mientras el listado está cargado, publica su total en el menú (NavBadgeService),
  * con el id de la sección: `listPath` sin la barra.
+ *
+ * Tiene dos lecturas del listado: `items`, la colección entera (`load`), y `page`, la página
+ * que pide la pantalla del listado a la API con sus filtros (`loadPage`).
  */
 export abstract class EntityStore<T extends BaseRecord, TPayload> {
   protected abstract readonly api: EntityApi<T, TPayload>;
@@ -89,6 +95,14 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   private readonly _deletedLoading = signal(false);
   private readonly _deletedLoaded = signal(false);
   private readonly _deletedError = signal<ApiError | null>(null);
+  private readonly _page = signal<T[]>([]);
+  private readonly _pageTotal = signal(0);
+  private readonly _pageLoading = signal(false);
+  private readonly _pageLoaded = signal(false);
+  private readonly _pageError = signal<ApiError | null>(null);
+  /** La última página pedida, para volver a pedirla (`reloadPage`). */
+  private lastQuery: ListQuery | null = null;
+  private pageRequest: Subscription | null = null;
   private lookups = 0;
   /** Sube al vaciar el store: lo que aún estuviera en camino ya no se guarda. */
   private generation = 0;
@@ -114,15 +128,17 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   readonly deletedError = this._deletedError.asReadonly();
   readonly deletedCount = computed(() => this._deleted().length);
 
+  /** La página del listado que se está viendo, tal como la devuelve la API. */
+  readonly page = this._page.asReadonly();
+  /** Cuántos hay en total con los filtros de esa página (`X-Total-Count`). */
+  readonly pageTotal = this._pageTotal.asReadonly();
+  readonly pageLoading = this._pageLoading.asReadonly();
+  /** Ya llegó al menos una página. */
+  readonly pageLoaded = this._pageLoaded.asReadonly();
+  readonly pageError = this._pageError.asReadonly();
+
   /** Filtro por estado del listado. Se conserva al volver del detalle o del formulario. */
   readonly status = signal<StatusFilter>('all');
-  /** Los registros que pasan el filtro por estado, en el orden de la API. */
-  readonly visible = computed(() => {
-    const status = this.status();
-    if (status === 'all') return this._items();
-    const isActive = status === 'active';
-    return this._items().filter((item) => item.isActive === isActive);
-  });
 
   private readonly badges = inject(NavBadgeService);
 
@@ -148,18 +164,53 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     this._deletedLoading.set(false);
     this._deletedLoaded.set(false);
     this._deletedError.set(null);
+    this.pageRequest?.unsubscribe();
+    this.pageRequest = null;
+    this.lastQuery = null;
+    this._page.set([]);
+    this._pageTotal.set(0);
+    this._pageLoading.set(false);
+    this._pageLoaded.set(false);
+    this._pageError.set(null);
     this.status.set('all');
   }
 
-  /**
-   * Cambia el filtro por estado. Lo que hay en memoria se filtra al instante, y a la
-   * vez se confirma con el endpoint de ese estado (`/actives`, `/inactives` o el
-   * listado completo), por si algo ha cambiado en el servidor.
-   */
+  /** Cambia el filtro por estado. La pantalla del listado pide entonces su página. */
   setStatus(status: StatusFilter): void {
     this.status.set(status);
-    if (status === 'all') void this.load();
-    else void this.refreshByActive(status === 'active');
+  }
+
+  /**
+   * Pide una página del listado. Si la anterior aún no ha vuelto, se cancela: solo cuenta la
+   * última (el buscador pide una por cada búsqueda). Mientras llega, se sigue viendo la página
+   * que había.
+   */
+  loadPage(query: ListQuery): void {
+    this.pageRequest?.unsubscribe();
+    this.lastQuery = query;
+
+    const generation = this.generation;
+    this._pageLoading.set(true);
+    this._pageError.set(null);
+    this.pageRequest = this.api.search(query).subscribe({
+      next: ({ items, total }) => {
+        if (generation !== this.generation) return;
+        this._page.set(items);
+        this._pageTotal.set(total);
+        this._pageLoaded.set(true);
+        this._pageLoading.set(false);
+      },
+      error: (error: unknown) => {
+        if (generation !== this.generation) return;
+        this._pageError.set(this.errors.handle(error, { pageLoad: true }));
+        this._pageLoading.set(false);
+      },
+    });
+  }
+
+  /** Vuelve a pedir la última página, con los mismos filtros. */
+  reloadPage(): void {
+    if (this.lastQuery) this.loadPage(this.lastQuery);
   }
 
   /** Hay un cambio de estado o un borrado en curso para ese registro. */
@@ -183,28 +234,6 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       this._error.set(this.errors.handle(error, { pageLoad: true }));
     } finally {
       if (generation === this.generation) this._loading.set(false);
-    }
-  }
-
-  /**
-   * Vuelve a pedir solo los activos o solo los inactivos y pone al día esa parte del
-   * listado, sin tocar el resto. Lo usa el filtro por estado: lo que ya hay en memoria
-   * se ve al instante y esta llamada lo confirma con el servidor.
-   */
-  async refreshByActive(isActive: boolean): Promise<void> {
-    // Sin una primera carga no hay nada que poner al día, y un cambio de estado en
-    // curso no debe pisarse con datos que salieron antes de terminarlo.
-    if (!this._loaded() || this._busyIds().size > 0) return;
-
-    try {
-      const fresh = await this.api.getByActive(isActive);
-      const freshIds = new Set(fresh.map((item) => item._id));
-      const others = this._items().filter(
-        (item) => item.isActive !== isActive && !freshIds.has(item._id),
-      );
-      this._items.set(this.sorted([...others, ...fresh]));
-    } catch (error) {
-      this.errors.handle(error);
     }
   }
 
@@ -340,6 +369,7 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       // Desde el detalle puede que el listado no esté cargado: el contador resta igual.
       if (!this._loaded()) this.badges.adjust(this.navId(), -1);
       this._items.update((items) => items.filter((item) => item._id !== id));
+      this.dropFromPage(id);
       if (this._selected()?._id === id) this._selected.set(null);
       // Pasa a la papelera, si ya se había cargado (si no, llegará con su primera carga).
       // Conserva su estado, como en la API. La fecha exacta la pone el servidor; esta
@@ -486,11 +516,21 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     return this.listPath.slice(1);
   }
 
-  /** Devuelve un registro restaurado al listado, en su sitio. */
+  /** Devuelve un registro restaurado al listado, en su sitio. La página se vuelve a pedir. */
   private putBack(entity: T): void {
     this._items.update((items) =>
       this.sorted([entity, ...items.filter((item) => item._id !== entity._id)]),
     );
+    this.reloadPage();
+  }
+
+  /** Quita un registro eliminado de la página que se ve, y del total. */
+  private dropFromPage(id: string): void {
+    const before = this._page();
+    const after = before.filter((item) => item._id !== id);
+    if (after.length === before.length) return;
+    this._page.set(after);
+    this._pageTotal.update((total) => Math.max(0, total - 1));
   }
 
   private sorted(items: T[]): T[] {
@@ -511,9 +551,9 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   }
 
   private replace(entity: T): void {
-    this._items.update((items) =>
-      items.map((item) => (item._id === entity._id ? entity : item)),
-    );
+    const swap = (items: T[]): T[] => items.map((item) => (item._id === entity._id ? entity : item));
+    this._items.update(swap);
+    this._page.update(swap);
     if (this._selected()?._id === entity._id) this._selected.set(entity);
   }
 

@@ -12,7 +12,7 @@ import { ListPageComponent } from '../../../../shared/components/list-page/list-
 import { RelationLinkComponent } from '../../../../shared/components/relation-link/relation-link.component';
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
-import { ListSort, byText } from '../../../../shared/utils/search';
+import { ListSort } from '../../../../shared/utils/search';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
 import { BikesStore } from '../../services/bikes.store';
 
@@ -46,29 +46,29 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/bikes/new"
       trashPath="/bikes/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Motos"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="bike" [uiCellOf]="pager.items()" let-bike>
+        <ng-template uiCell="bike" [uiCellOf]="rows()" let-bike>
           <span class="cell-media">
             <span class="thumb" aria-hidden="true">
               @if (bike.coverImage; as cover) {
@@ -83,19 +83,19 @@ const COLUMNS: readonly TableColumn[] = [
             </span>
           </span>
         </ng-template>
-        <ng-template uiCell="owner" [uiCellOf]="pager.items()" let-bike>
+        <ng-template uiCell="owner" [uiCellOf]="rows()" let-bike>
           <ui-relation-link
             [label]="bike.user?.name ?? null"
             [path]="bike.user ? ['/users', bike.user.slug] : null"
           />
         </ng-template>
-        <ng-template uiCell="specs" [uiCellOf]="pager.items()" let-bike>
+        <ng-template uiCell="specs" [uiCellOf]="rows()" let-bike>
           <span class="num nowrap">{{ specs(bike) }}</span>
         </ng-template>
-        <ng-template uiCell="license" [uiCellOf]="pager.items()" let-bike>
+        <ng-template uiCell="license" [uiCellOf]="rows()" let-bike>
           <b class="slanted">{{ bike.license }}</b>
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-bike>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-bike>
           <ui-status-toggle
             [active]="bike.isActive"
             [label]="name(bike)"
@@ -104,7 +104,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(bike, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-bike>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-bike>
           <ui-row-actions
             [label]="name(bike)"
             [detailPath]="['/bikes', bike.slug]"
@@ -125,14 +125,9 @@ export class BikesListComponent extends EntityListPage<Bike> {
   protected specs(bike: Bike): string {
     return [bike.cc && `${bike.cc} cc`, bike.hp && `${bike.hp} cv`].filter(Boolean).join(' · ') || 'Sin ficha';
   }
-  protected override readonly sorts: readonly ListSort<Bike>[] = [
-    { value: 'recientes', label: 'Más recientes' },
-    { value: 'nombre', label: 'Nombre (A-Z)', compare: byText((bike: Bike) => this.store.displayName(bike)) },
-    { value: 'potencia', label: 'Más potencia', compare: (a: Bike, b: Bike) => (b.hp ?? 0) - (a.hp ?? 0) },
+  protected override readonly sorts: readonly ListSort[] = [
+    { value: 'recientes', label: 'Más recientes', sort: '-createdAt' },
+    { value: 'nombre', label: 'Nombre (A-Z)', sort: 'brand,model' },
+    { value: 'potencia', label: 'Más potencia', sort: '-hp' },
   ];
-
-  protected override searchText(bike: Bike): string {
-    return [bike.brand, bike.model, bike.nickname, bike.version, bike.user?.name, bike.license].filter(Boolean).join(' ');
-  }
-
 }

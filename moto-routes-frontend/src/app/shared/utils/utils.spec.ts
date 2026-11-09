@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 
 import { fromLocalInput, toLocalInput } from './dates';
@@ -11,7 +10,6 @@ import {
   statusFilterLabels,
   statusWord,
 } from './labels';
-import { createPager } from './pager';
 import { notBlank } from './validators';
 
 describe('format', () => {
@@ -80,42 +78,6 @@ describe('labels', () => {
     expect(newLabel(users)).toBe('Nuevo usuario');
     expect(statusFilterLabels('f')).toEqual({ all: 'Todas', active: 'Activas', inactive: 'Inactivas' });
     expect(statusFilterLabels('m')).toEqual({ all: 'Todos', active: 'Activos', inactive: 'Inactivos' });
-  });
-});
-
-describe('pager', () => {
-  const numbers = (count: number): number[] => Array.from({ length: count }, (_, index) => index);
-
-  it('corta la página actual', () => {
-    const rows = signal(numbers(30));
-    const pager = createPager(rows, () => 'todos', 12);
-
-    expect(pager.items()).toEqual(numbers(12));
-    pager.page.set(3);
-    expect(pager.items()).toEqual([24, 25, 26, 27, 28, 29]);
-    expect(pager.total()).toBe(30);
-  });
-
-  it('vuelve a la página 1 al cambiar el filtro', () => {
-    const rows = signal(numbers(30));
-    const key = signal('todos');
-    const pager = createPager(rows, key, 12);
-
-    pager.page.set(2);
-    key.set('activos');
-
-    expect(pager.page()).toBe(1);
-  });
-
-  it('no se queda en una página que ya no existe', () => {
-    const rows = signal(numbers(30));
-    const pager = createPager(rows, () => 'todos', 12);
-
-    pager.page.set(3);
-    rows.set(numbers(13));
-
-    expect(pager.page()).toBe(2);
-    expect(pager.items()).toEqual([12]);
   });
 });
 

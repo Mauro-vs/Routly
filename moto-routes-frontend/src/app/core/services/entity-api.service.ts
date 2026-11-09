@@ -1,6 +1,8 @@
 import { inject } from '@angular/core';
+import { Observable } from 'rxjs';
 
 import { BaseEntity, BaseRecord } from '../models/entity.model';
+import { ListPage, ListQuery, listQueryParams } from '../models/list-query.model';
 import { ApiService } from './api.service';
 import { EntityApi } from './entity.store';
 
@@ -13,6 +15,7 @@ import { EntityApi } from './entity.store';
  * el borrado es lógico y va por PATCH.
  *
  *   GET   /<path>              getAll
+ *   GET   /<path>?q=&page=...  search (una página, con el total en X-Total-Count)
  *   GET   /<path>/actives      getActives
  *   GET   /<path>/inactives    getInactives
  *   GET   /<path>/deleted      getDeleted
@@ -35,16 +38,16 @@ export abstract class RecordApiService<T extends BaseRecord, TPayload>
     return this.api.get<T[]>(this.path);
   }
 
+  search(query: ListQuery): Observable<ListPage<T>> {
+    return this.api.getList<T>(this.path, listQueryParams(query));
+  }
+
   getActives(): Promise<T[]> {
     return this.api.get<T[]>(`${this.path}/actives`);
   }
 
   getInactives(): Promise<T[]> {
     return this.api.get<T[]>(`${this.path}/inactives`);
-  }
-
-  getByActive(isActive: boolean): Promise<T[]> {
-    return isActive ? this.getActives() : this.getInactives();
   }
 
   getDeleted(): Promise<T[]> {

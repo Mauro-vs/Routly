@@ -45,43 +45,43 @@ const COLUMNS: readonly TableColumn[] = [
       createPath="/roles/new"
       trashPath="/roles/trash"
       [labels]="store.labels"
-      [loaded]="store.loaded()"
+      [loaded]="listLoaded()"
       [failed]="loadFailed()"
       [counts]="counts()"
-      [total]="pager.total()"
-      [pageSize]="pager.pageSize"
+      [total]="store.pageTotal()"
+      [pageSize]="pageSize"
       [trashCount]="store.deletedCount()"
       [status]="store.status()"
       [(query)]="query"
       [sorts]="sorts"
       [(sort)]="sort"
       (statusChange)="setStatus($event)"
-      [(page)]="pager.page"
+      [(page)]="page"
       (retry)="reload()"
     >
       <ui-data-table
         caption="Roles"
         [columns]="columns"
-        [rows]="pager.items()"
+        [rows]="rows()"
         [rowKey]="rowKey"
         [mutedWhen]="isInactive"
         [loading]="showSkeleton()"
       >
-        <ng-template uiCell="label" [uiCellOf]="pager.items()" let-role>
+        <ng-template uiCell="label" [uiCellOf]="rows()" let-role>
           <a class="link cell-title" [routerLink]="['/roles', role.slug]" [title]="role.label">{{ role.label }}</a>
           <span class="cell-sub mono" translate="no">{{ role.name }}</span>
         </ng-template>
-        <ng-template uiCell="description" [uiCellOf]="pager.items()" let-role>
+        <ng-template uiCell="description" [uiCellOf]="rows()" let-role>
           <span class="cell-text">{{ role.description || 'Sin descripción' }}</span>
         </ng-template>
-        <ng-template uiCell="type" [uiCellOf]="pager.items()" let-role>
+        <ng-template uiCell="type" [uiCellOf]="rows()" let-role>
           @if (role.isSystem) {
             <span class="badge badge--icon badge--neutral"><ui-icon name="lock-simple" />Base</span>
           } @else {
             <span class="muted">Personalizado</span>
           }
         </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="pager.items()" let-role>
+        <ng-template uiCell="status" [uiCellOf]="rows()" let-role>
           <ui-status-toggle
             [active]="role.isActive"
             [label]="role.label"
@@ -91,7 +91,7 @@ const COLUMNS: readonly TableColumn[] = [
             (activeChange)="setActive(role, $event)"
           />
         </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="pager.items()" let-role>
+        <ng-template uiCell="actions" [uiCellOf]="rows()" let-role>
           <ui-row-actions
             [label]="role.label"
             [detailPath]="['/roles', role.slug]"
@@ -114,8 +114,7 @@ export class RolesListComponent extends EntityListPage<Role> {
   protected readonly store = inject(RolesStore);
   protected readonly columns = COLUMNS;
 
-  protected override searchText(role: Role): string {
-    return [role.label, role.name, role.description].filter(Boolean).join(' ');
+  protected override nameSort(): string {
+    return 'label';
   }
-
 }

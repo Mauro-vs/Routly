@@ -1,5 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { firstValueFrom, of } from 'rxjs';
 
 import { RoutePayload } from '../../../core/models/route.model';
 import { ApiService } from '../../../core/services/api.service';
@@ -23,7 +24,7 @@ describe('RoutesService', () => {
   let api: jasmine.SpyObj<ApiService>;
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<ApiService>('api', ['get', 'post', 'patch']);
+    api = jasmine.createSpyObj<ApiService>('api', ['get', 'getList', 'post', 'patch']);
     api.get.and.resolveTo([]);
     api.post.and.resolveTo({});
     api.patch.and.resolveTo({});
@@ -39,17 +40,26 @@ describe('RoutesService', () => {
     expect(api.get).toHaveBeenCalledOnceWith('/routes');
   });
 
+  it('GET /routes con los query params de la página, sin enviar lo vacío', async () => {
+    api.getList.and.returnValue(of({ items: [], total: 0 }));
+
+    await firstValueFrom(
+      service.search({ q: ' pirineo ', status: 'active', sort: '-distance', page: 2, limit: 12, filters: { difficulty: 'hard', categoryId: '' } }),
+    );
+    await firstValueFrom(service.search({ q: '  ', page: 1, limit: 12 }));
+
+    expect(api.getList.calls.allArgs()).toEqual([
+      ['/routes', { page: 2, limit: 12, q: 'pirineo', status: 'active', sort: '-distance', difficulty: 'hard' }],
+      ['/routes', { page: 1, limit: 12 }],
+    ]);
+  });
+
   it('GET /routes/actives y /routes/inactives', async () => {
     await service.getActives();
     await service.getInactives();
     expect(api.get.calls.allArgs()).toEqual([['/routes/actives'], ['/routes/inactives']]);
   });
 
-  it('getByActive elige el endpoint según el estado', async () => {
-    await service.getByActive(true);
-    await service.getByActive(false);
-    expect(api.get.calls.allArgs()).toEqual([['/routes/actives'], ['/routes/inactives']]);
-  });
 
   it('GET /routes/deleted', async () => {
     await service.getDeleted();
