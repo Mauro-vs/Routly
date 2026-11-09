@@ -1,5 +1,5 @@
 import { restoredStatus, statusFromActive } from "../models/status.js";
-import { departureRepository } from "../repositories/departure.repository.js";
+import { departureRepository, reservable } from "../repositories/departure.repository.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { bikeRepository } from "../repositories/bike.repository.js";
@@ -33,8 +33,7 @@ const LIST_RESOLVERS = {
   },
   // Por sus salidas reservables: activas, programadas y futuras, y que cumplen el resto
   async departure(clauses) {
-    const reservable = { isActive: true, state: "scheduled", startAt: { $gte: new Date() } };
-    return { _id: { $in: await departureRepository.findExperienceIds({ $and: [reservable, ...clauses] }) } };
+    return { _id: { $in: await departureRepository.findExperienceIds({ $and: [reservable(), ...clauses] }) } };
   },
 };
 
@@ -65,6 +64,54 @@ const referencesOf = (data) =>
 const withGuideBikes = (experiences, scope) =>
   bikeService.attachGuideBikes(experiences, (experience) => experience.guideBikeId, scope);
 
+// Los datos que no son de la experiencia sino de sus salidas, y por los que se puede ordenar
+const COMPUTED_SORT = new Set(["priceFrom", "nextDepartureAt"]);
+
+// El precio "desde" y la próxima fecha de cada una (de sus salidas reservables), o null si no
+// tiene ninguna. Una sola agregación para todas.
+async function withDepartureSummary(experiences) {
+  if (experiences.length === 0) return experiences;
+  const summaries = await departureRepository.summarizeReservable(experiences.map((experience) => experience._id));
+  const byId = new Map(summaries.map((summary) => [String(summary._id), summary]));
+  return experiences.map((experience) => {
+    const summary = byId.get(String(experience._id));
+    return { ...experience, priceFrom: summary?.priceFrom ?? null, nextDepartureAt: summary?.nextDepartureAt ?? null };
+  });
+}
+
+// Lo que se enseña de una experiencia además de lo suyo: la moto del guía, la foto principal, el
+// precio "desde" y la próxima fecha
+async function present(experiences, scope) {
+  const withBikes = await withGuideBikes(experiences, scope);
+  return withDepartureSummary(await imageService.attachCovers("experience", withBikes));
+}
+
+// Por los campos de sort, en su sentido. Un dato que falta (una experiencia sin salidas) va
+// siempre al final, se ordene como se ordene; si todo empata, el _id
+const compareBy = (sort) => (a, b) => {
+  for (const [field, direction] of Object.entries(sort)) {
+    const [x, y] = [a[field], b[field]];
+    if (x == null || y == null) {
+      if (x == null && y == null) continue;
+      return x == null ? 1 : -1;
+    }
+    const difference = typeof x === "string" ? x.localeCompare(y, "es") : x - y;
+    if (difference !== 0) return difference * direction;
+  }
+  return String(a._id).localeCompare(String(b._id));
+};
+
+// Ordenar por un dato calculado: se ordenan los campos de orden de todas las que cumplen el filtro
+// y solo después se traen las de la página, en ese orden
+async function findByComputedSort({ filter, sort, page, limit }) {
+  const rows = (await withDepartureSummary(await experienceRepository.findSortKeys(filter))).sort(compareBy(sort));
+  const slice = page === undefined ? rows : rows.slice((page - 1) * limit, page * limit);
+  const position = new Map(slice.map((row, index) => [String(row._id), index]));
+  const items = slice.length === 0 ? [] : await experienceRepository.findAll({ _id: { $in: slice.map((row) => row._id) } });
+  items.sort((a, b) => position.get(String(a._id)) - position.get(String(b._id)));
+  return page === undefined ? { items } : { items, total: rows.length, page, limit };
+}
+
 // ABAC: el admin, con todas; un anfitrión, solo con las de su perfil de anfitrión
 async function assertOwnHost(actor, hostId) {
   if (isAdminUser(actor)) return;
@@ -82,8 +129,10 @@ export const experienceService = {
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
   async search(query = {}, scope) {
     const base = await scopeFilter("experience", scope);
-    const page = await findList(experienceRepository, await experienceListQuery.build(query, base, LIST_RESOLVERS));
-    return { ...page, items: await withGuideBikes(page.items, scope) };
+    const listQuery = await experienceListQuery.build(query, base, LIST_RESOLVERS);
+    const byComputed = listQuery.sort && Object.keys(listQuery.sort).some((field) => COMPUTED_SORT.has(field));
+    const page = byComputed ? await findByComputedSort(listQuery) : await findList(experienceRepository, listQuery);
+    return { ...page, items: await present(page.items, scope) };
   },
 
   // /actives e /inactives: lo mismo que ?status=
@@ -98,14 +147,14 @@ export const experienceService = {
   async getById(id, scope) {
     const experience = await findExisting(experienceRepository, id, "Experience");
     await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
-    return (await withGuideBikes([experience], scope))[0];
+    return (await present([experience], scope))[0];
   },
 
   async getBySlug(slug, scope) {
     const experience = await experienceRepository.findBySlug(slug);
     if (!experience) throw notFound("Experience");
     await assertVisible(experienceRepository, "experience", experience, scope, "Experience");
-    return (await withGuideBikes([experience], scope))[0];
+    return (await present([experience], scope))[0];
   },
 
   async create(data, actor) {

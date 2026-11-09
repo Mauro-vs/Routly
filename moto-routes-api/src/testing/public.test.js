@@ -18,6 +18,8 @@ let deltaExperience;
 
 const HOUR = 60 * 60 * 1000;
 const titles = (response) => response.body.map((experience) => experience.title).sort();
+// En el orden en que llegan
+const names = (response) => response.body.map((experience) => experience.title);
 
 async function departure(experienceId, inDays, price) {
   const response = await api.post("/departures", {
@@ -150,6 +152,81 @@ describe("los filtros nuevos con el resto", () => {
   });
 });
 
+describe("lo que trae cada experiencia", () => {
+  const byTitle = (response) => Object.fromEntries(response.body.map((experience) => [experience.title, experience]));
+
+  test("su ruta, con km, horas, dificultad, categoría y ubicaciones", async () => {
+    const costaEnMoto = byTitle(await api.anonymous.get("/experiences"))["Costa en moto"];
+
+    assert.equal(costaEnMoto.route.title, "Costa Dorada");
+    assert.equal(costaEnMoto.route.distance, 120);
+    assert.equal(costaEnMoto.route.duration, 3);
+    assert.equal(costaEnMoto.route.difficulty, "easy");
+    assert.equal(costaEnMoto.route.category.name, "Costa");
+    assert.equal(costaEnMoto.route.startLocation.city, data.location.city);
+    assert.equal(costaEnMoto.route.endLocation.city, "Tarragona");
+  });
+
+  test("su foto principal", async () => {
+    const url = "https://picsum.photos/seed/costa-en-moto/1200/800";
+    await api.post("/images", { ownerType: "experience", ownerId: costaExperience._id, url, alt: "Costa en moto" });
+
+    const experiences = byTitle(await api.anonymous.get("/experiences"));
+    assert.equal(experiences["Costa en moto"].coverImage.url, url);
+    assert.equal(experiences["Pirineo en moto"].coverImage, null);
+  });
+
+  test("el precio desde y la próxima fecha, solo de sus salidas reservables", async () => {
+    const experiences = byTitle(await api.anonymous.get("/experiences"));
+
+    // Costa en moto: 80 € en 10 días y 400 € en 60; la de 50 € está cancelada
+    assert.equal(experiences["Costa en moto"].priceFrom, 80);
+    const next = new Date(experiences["Costa en moto"].nextDepartureAt).getTime();
+    assert.ok(Math.abs(next - (Date.now() + 10 * DAY)) < DAY, "la próxima es la de dentro de 10 días");
+    assert.equal(experiences["Pirineo en moto"].priceFrom, 120);
+    // Delta salvaje: su única salida está desactivada
+    assert.equal(experiences["Delta salvaje"].priceFrom, null);
+    assert.equal(experiences["Delta salvaje"].nextDepartureAt, null);
+  });
+
+  test("el detalle trae lo mismo que la tarjeta", async () => {
+    const detail = (await api.anonymous.get(`/experiences/slug/${costaExperience.slug}`)).body;
+
+    assert.equal(detail.route.category.name, "Costa");
+    assert.equal(detail.priceFrom, 80);
+    assert.ok(detail.coverImage.url);
+  });
+});
+
+describe("los órdenes nuevos del Shop", () => {
+  test("por precio desde: las que no tienen salidas, siempre al final", async () => {
+    assert.deepEqual(names(await api.anonymous.get("/experiences?sort=priceFrom")), ["Costa en moto", "Pirineo en moto", "Delta salvaje"]);
+    assert.deepEqual(names(await api.anonymous.get("/experiences?sort=-priceFrom")), ["Pirineo en moto", "Costa en moto", "Delta salvaje"]);
+  });
+
+  test("por la próxima salida", async () => {
+    // Pirineo sale en 7 días y Costa en 10
+    assert.deepEqual(names(await api.anonymous.get("/experiences?sort=nextDepartureAt")), ["Pirineo en moto", "Costa en moto", "Delta salvaje"]);
+  });
+
+  test("con paginación: el orden se calcula antes de cortar la página", async () => {
+    const second = await api.anonymous.get("/experiences?sort=priceFrom&page=2&limit=1");
+    assert.deepEqual(names(second), ["Pirineo en moto"]);
+    assert.equal(second.headers.get("x-total-count"), "3");
+    assert.equal(second.headers.get("x-page"), "2");
+  });
+
+  test("con filtros, y con un segundo campo para desempatar", async () => {
+    assert.deepEqual(names(await api.anonymous.get(`/experiences?categoryId=${costa._id}&sort=priceFrom`)), ["Costa en moto", "Delta salvaje"]);
+    assert.deepEqual(names(await api.anonymous.get("/experiences?sort=nextDepartureAt,title&hasDepartures=true")), ["Pirineo en moto", "Costa en moto"]);
+  });
+
+  test("los órdenes de siempre siguen igual: por título y por más recientes", async () => {
+    assert.deepEqual(names(await api.anonymous.get("/experiences?sort=title")), ["Costa en moto", "Delta salvaje", "Pirineo en moto"]);
+    assert.equal(names(await api.anonymous.get("/experiences?sort=-createdAt"))[0], "Delta salvaje");
+  });
+});
+
 describe("índices de los filtros nuevos", () => {
   async function assertUsesIndex(query) {
     const stages = await planStages(query);
@@ -164,6 +241,11 @@ describe("índices de los filtros nuevos", () => {
 
   test("las salidas reservables, por precio y por fecha", async () => {
     await assertUsesIndex(Departure.find({ isActive: true, state: "scheduled", startAt: { $gte: new Date() }, price: { $lte: 100 } }));
+  });
+
+  test("el precio desde y la próxima fecha de las experiencias de una página", async () => {
+    const ids = [costaExperience._id, deltaExperience._id];
+    await assertUsesIndex(Departure.find({ experienceId: { $in: ids }, deletedAt: null, isActive: true, state: "scheduled", startAt: { $gte: new Date() } }));
   });
 
   test("las experiencias de unas rutas, o con unos _id", async () => {

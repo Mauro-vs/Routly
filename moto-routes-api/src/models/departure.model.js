@@ -54,5 +54,7 @@ departureSchema.index({ experienceId: 1, startAt: 1 });
 // ?q= busca por SKU; ?state= y ?from=/?to= (las próximas, las de un mes), con su índice
 departureSchema.index({ sku: "text" }, TEXT_INDEX);
 departureSchema.index({ state: 1, startAt: 1 });
+// El precio "desde" y la próxima fecha de unas experiencias: sus salidas programadas y futuras
+departureSchema.index({ experienceId: 1, state: 1, startAt: 1 });
 
 export const Departure = mongoose.model("Departure", departureSchema);

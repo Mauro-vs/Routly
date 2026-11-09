@@ -1,14 +1,35 @@
 import { Experience } from "../models/experience.model.js";
 import { toUpdate } from "../utils/update.js";
 
-const withRelations = (query) =>
-  query.populate("host", "name slug").populate("route", "title slug");
+// La ruta con lo que enseñan la tarjeta y el detalle de una experiencia en la web pública: sus km,
+// horas y dificultad, su categoría y sus dos ubicaciones (la ubicación de una experiencia es la de
+// su ruta). Todo en el mismo populate: una consulta por colección, no por experiencia.
+const ROUTE_SUMMARY = {
+  path: "route",
+  select: "title slug distance duration difficulty categoryId startLocationId endLocationId",
+  populate: [
+    { path: "category", select: "name slug" },
+    { path: "startLocation", select: "city region country slug" },
+    { path: "endLocation", select: "city region country slug" },
+  ],
+};
+
+const withRelations = (query) => query.populate("host", "name slug").populate(ROUTE_SUMMARY);
+
+// Los campos por los que se puede ordenar en memoria (sort=priceFrom o nextDepartureAt)
+const SORT_KEYS = "_id title duration maxParticipants createdAt updatedAt";
 
 export const experienceRepository = {
   findAll(filter = {}, { sort = { createdAt: -1 }, skip = 0, limit = 0 } = {}) {
     return withRelations(
       Experience.find(filter).sort(sort).skip(skip).limit(limit)
     ).lean();
+  },
+
+  // Solo los campos de orden de las que cumplen el filtro: para ordenar por un dato calculado
+  // (el precio "desde", la próxima fecha) antes de paginar, sin traer las experiencias enteras
+  findSortKeys(filter = {}) {
+    return Experience.find(filter).select(SORT_KEYS).lean();
   },
 
   // El total de un listado paginado (utils/listQuery.js): el mismo filtro, sin los eliminados

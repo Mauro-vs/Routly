@@ -51,7 +51,8 @@ export const updateExperienceSchema = experienceFields
 // consulta por colección (experience.service.js). Los de una misma colección se cumplen a la vez:
 // ?priceMax=100&from=2026-12-01 es "alguna salida de 100 € o menos a partir de diciembre".
 export const experienceListQuery = defineListQuery({
-  sort: ["title", "duration", "maxParticipants", "createdAt", "updatedAt"],
+  // priceFrom y nextDepartureAt salen de sus salidas: el service los ordena aparte
+  sort: ["title", "duration", "maxParticipants", "priceFrom", "nextDepartureAt", "createdAt", "updatedAt"],
   filters: {
     hostId: { schema: objectIdSchema, to: equals("hostId") },
     routeId: { schema: objectIdSchema, to: equals("routeId") },

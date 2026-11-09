@@ -5,6 +5,12 @@ import { toUpdate } from "../utils/update.js";
 // guideBikeId de la experiencia: la salida hereda su moto del guía
 const withExperience = (query) => query.populate("experience", "title slug guideBikeId");
 
+/**
+ * Una salida reservable: activa, programada y que todavía no ha empezado. La usan los filtros
+ * de experiencias por sus salidas y el precio "desde" (y la usarán las reservas).
+ */
+export const reservable = (now = new Date()) => ({ isActive: true, state: "scheduled", startAt: { $gte: now } });
+
 export const departureRepository = {
   // Por fecha de salida, de la más próxima a la más lejana
   findAll(filter = {}, { sort = { startAt: 1 }, skip = 0, limit = 0 } = {}) {
@@ -47,6 +53,16 @@ export const departureRepository = {
   // filtros de experiencias por precio y fechas (experience.service.js)
   findExperienceIds(filter) {
     return Departure.distinct("experienceId", filter);
+  },
+
+  // De cada experiencia, su precio "desde" y su próxima fecha: el mínimo de sus salidas
+  // reservables. Una sola agregación para todas. Una agregación no pasa por el plugin de soft
+  // delete: el $match filtra deletedAt a mano.
+  summarizeReservable(experienceIds, now = new Date()) {
+    return Departure.aggregate([
+      { $match: { experienceId: { $in: experienceIds }, deletedAt: null, ...reservable(now) } },
+      { $group: { _id: "$experienceId", priceFrom: { $min: "$price" }, nextDepartureAt: { $min: "$startAt" } } },
+    ]);
   },
 
   exists(filter) {
