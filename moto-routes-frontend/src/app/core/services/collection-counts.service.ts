@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 
 import { ApiService } from './api.service';
 import { NavBadgeService } from './nav-badge.service';
 
 /**
- * Cuántos registros tiene cada colección, para los contadores del menú. La API no
- * tiene un endpoint de totales: se pide cada listado y se cuenta. Con los datos de
- * este panel son unas decenas de registros por colección.
+ * Cuántos registros tiene cada colección, para los contadores del menú. Se pide una página
+ * de un solo registro y el total sale de la cabecera `X-Total-Count`: no se descarga la
+ * colección entera para contarla.
  *
  * Después, cada store mantiene su contador al día cuando carga su listado.
  */
@@ -20,8 +21,8 @@ export class CollectionCountsService {
     await Promise.all(
       collections.map(async (collection) => {
         try {
-          const items = await this.api.get<unknown[]>(`/${collection}`);
-          this.badges.set(collection, items.length);
+          const { total } = await firstValueFrom(this.api.getList(`/${collection}`, { page: 1, limit: 1 }));
+          this.badges.set(collection, total);
         } catch {
           // Es un dato de fondo: sin él, la sección se queda sin contador. Si la API
           // no responde ya lo dice el estado de la conexión, al pie del menú, y no

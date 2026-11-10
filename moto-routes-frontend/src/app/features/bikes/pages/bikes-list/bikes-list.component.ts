@@ -47,6 +47,7 @@ const COLUMNS: readonly TableColumn[] = [
       trashPath="/bikes/trash"
       [labels]="store.labels"
       [loaded]="listLoaded()"
+      [refreshing]="refreshing()"
       [failed]="loadFailed()"
       [counts]="counts()"
       [total]="store.pageTotal()"

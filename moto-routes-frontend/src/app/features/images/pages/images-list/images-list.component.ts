@@ -49,6 +49,7 @@ const COLUMNS: readonly TableColumn[] = [
       emptyDescription="Se añaden desde la galería de una ruta, un usuario, una categoría…"
       [labels]="store.labels"
       [loaded]="listLoaded()"
+      [refreshing]="refreshing()"
       [failed]="loadFailed()"
       [counts]="counts()"
       [total]="store.pageTotal()"

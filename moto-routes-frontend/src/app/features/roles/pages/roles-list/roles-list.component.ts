@@ -46,6 +46,7 @@ const COLUMNS: readonly TableColumn[] = [
       trashPath="/roles/trash"
       [labels]="store.labels"
       [loaded]="listLoaded()"
+      [refreshing]="refreshing()"
       [failed]="loadFailed()"
       [counts]="counts()"
       [total]="store.pageTotal()"

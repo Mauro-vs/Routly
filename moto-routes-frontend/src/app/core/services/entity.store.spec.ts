@@ -444,6 +444,67 @@ describe('EntityStore', () => {
     });
   });
 
+  describe('contadores del filtro', () => {
+    const totals = (all: number, active: number) => (query: ListQuery) =>
+      of({ items: [], total: query.status === 'active' ? active : all });
+    /** Deja terminar las promesas en curso (firstValueFrom, Promise.all...). */
+    const settle = async (): Promise<void> => {
+      for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+    };
+
+    it('pide todas y las activas con limit=1; las inactivas son la diferencia', async () => {
+      api.search.and.callFake(totals(10, 7));
+
+      await store.loadCounts();
+
+      expect(api.search.calls.allArgs()).toEqual([
+        [{ page: 1, limit: 1 }],
+        [{ status: 'active', page: 1, limit: 1 }],
+      ]);
+      expect(store.counts()).toEqual({ all: 10, active: 7, inactive: 3 });
+    });
+
+    it('el menú cuenta la colección entera, sin cargarla', async () => {
+      api.search.and.callFake(totals(10, 7));
+
+      await store.loadCounts();
+      TestBed.tick();
+
+      expect(TestBed.inject(NavBadgeService).count('items')).toBe(10);
+      expect(api.getAll).not.toHaveBeenCalled();
+    });
+
+    it('después de una escritura se vuelven a pedir, si se están usando', async () => {
+      api.search.and.callFake(totals(10, 7));
+      await store.loadCounts();
+      api.search.and.callFake(totals(10, 6));
+      api.setActive.and.resolveTo(item('1', false));
+
+      await store.setActive(item('1'), false);
+      await settle();
+
+      expect(store.counts()).toEqual({ all: 10, active: 6, inactive: 4 });
+    });
+
+    it('sin pedirlos antes, una escritura no los pide', async () => {
+      api.setActive.and.resolveTo(item('1', false));
+
+      await store.setActive(item('1'), false);
+
+      expect(api.search).not.toHaveBeenCalled();
+    });
+
+    it('si fallan, se quedan los que había', async () => {
+      api.search.and.callFake(totals(10, 7));
+      await store.loadCounts();
+      api.search.and.returnValue(throwError(() => serverError()));
+
+      await store.loadCounts();
+
+      expect(store.counts()).toEqual({ all: 10, active: 7, inactive: 3 });
+    });
+  });
+
   describe('página del listado', () => {
     const query = (page = 1, extra: Partial<ListQuery> = {}): ListQuery => ({ page, limit: 12, ...extra });
 
@@ -506,25 +567,36 @@ describe('EntityStore', () => {
       expect(api.search.calls.allArgs()).toEqual([[query(3, { sort: 'title' })], [query(3, { sort: 'title' })]]);
     });
 
-    it('un cambio de estado se ve también en la página', async () => {
+    it('un cambio de estado se ve al instante y después se pide la página otra vez', async () => {
       api.search.and.returnValue(of({ items: [item('1')], total: 1 }));
-      store.loadPage(query());
-      api.setActive.and.resolveTo(item('1', false));
+      store.loadPage(query(1, { status: 'active' }));
+      const pending = deferred<Item>();
+      api.setActive.and.returnValue(pending.promise);
+      api.search.and.returnValue(of({ items: [], total: 0 }));
 
-      await store.setActive(item('1'), false);
-
+      const saving = store.setActive(item('1'), false);
       expect(store.page()[0].isActive).toBeFalse();
+      pending.resolve(item('1', false));
+      await saving;
+
+      // Ya no pasa el filtro de activas: sale de la página
+      expect(api.search.calls.mostRecent().args[0]).toEqual(query(1, { status: 'active' }));
+      expect(store.page()).toEqual([]);
     });
 
-    it('un registro eliminado sale de la página y del total', async () => {
+    it('un registro eliminado sale al instante y después entra el siguiente', async () => {
       api.search.and.returnValue(of({ items: [item('1'), item('2')], total: 20 }));
       store.loadPage(query());
+      const next = new Subject<ListPage<Item>>();
+      api.search.and.returnValue(next);
       api.remove.and.resolveTo();
 
       await store.remove(item('1'));
 
       expect(store.page().map((entry) => entry._id)).toEqual(['2']);
       expect(store.pageTotal()).toBe(19);
+      next.next({ items: [item('2'), item('3')], total: 19 });
+      expect(store.page().map((entry) => entry._id)).toEqual(['2', '3']);
     });
 
     it('setStatus solo cambia el filtro: la página la pide la pantalla', () => {

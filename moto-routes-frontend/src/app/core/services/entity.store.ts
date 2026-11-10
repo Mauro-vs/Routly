@@ -1,5 +1,5 @@
 import { computed, effect, inject, signal } from '@angular/core';
-import { Observable, Subscription } from 'rxjs';
+import { Observable, Subscription, firstValueFrom } from 'rxjs';
 
 import { CollectionLabels, agree, capitalize, statusWord } from '../../shared/utils/labels';
 import { ApiError } from '../models/api-error.model';
@@ -30,6 +30,13 @@ export interface EntityApi<T extends BaseRecord, TPayload> {
   remove(id: string): Promise<void>;
   /** Sin `isActive`, vuelve con el estado que tenía al eliminarlo. */
   restore(id: string, isActive?: boolean): Promise<T>;
+}
+
+/** Cuántos hay de cada estado en la colección entera (sin búsqueda ni filtros). */
+export interface CollectionCounts {
+  all: number;
+  active: number;
+  inactive: number;
 }
 
 /** Resultado de una escritura: o los datos guardados, o el error ya normalizado. */
@@ -103,6 +110,8 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   /** La última página pedida, para volver a pedirla (`reloadPage`). */
   private lastQuery: ListQuery | null = null;
   private pageRequest: Subscription | null = null;
+  private readonly _counts = signal<CollectionCounts | null>(null);
+  private countsRequest = 0;
   private lookups = 0;
   /** Sube al vaciar el store: lo que aún estuviera en camino ya no se guarda. */
   private generation = 0;
@@ -136,6 +145,8 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   /** Ya llegó al menos una página. */
   readonly pageLoaded = this._pageLoaded.asReadonly();
   readonly pageError = this._pageError.asReadonly();
+  /** Los contadores del filtro por estado (`loadCounts`), o null si aún no se han pedido. */
+  readonly counts = this._counts.asReadonly();
 
   /** Filtro por estado del listado. Se conserva al volver del detalle o del formulario. */
   readonly status = signal<StatusFilter>('all');
@@ -143,8 +154,11 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   private readonly badges = inject(NavBadgeService);
 
   constructor() {
+    // El menú cuenta la colección entera: con los contadores, si se han pedido; si no, con
+    // el listado completo, si está cargado
     effect(() => {
-      if (this._loaded()) this.badges.set(this.navId(), this.total());
+      const all = this._counts()?.all ?? (this._loaded() ? this.total() : null);
+      if (all !== null) this.badges.set(this.navId(), all);
     });
     inject(SessionResetService).register(() => this.reset());
   }
@@ -172,6 +186,8 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     this._pageLoading.set(false);
     this._pageLoaded.set(false);
     this._pageError.set(null);
+    this.countsRequest++;
+    this._counts.set(null);
     this.status.set('all');
   }
 
@@ -211,6 +227,46 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   /** Vuelve a pedir la última página, con los mismos filtros. */
   reloadPage(): void {
     if (this.lastQuery) this.loadPage(this.lastQuery);
+  }
+
+  /**
+   * Los contadores del filtro por estado: dos páginas de un registro (todas y las activas),
+   * de las que solo interesa `X-Total-Count`. Las inactivas son la diferencia. Es un dato de
+   * fondo: si falla, se quedan los que había (el listado ya avisa si la API no responde).
+   */
+  async loadCounts(): Promise<void> {
+    const request = ++this.countsRequest;
+    const generation = this.generation;
+    try {
+      const [all, active] = await Promise.all([
+        firstValueFrom(this.api.search({ page: 1, limit: 1 })),
+        firstValueFrom(this.api.search({ status: 'active', page: 1, limit: 1 })),
+      ]);
+      if (request !== this.countsRequest || generation !== this.generation) return;
+      this._counts.set({ all: all.total, active: active.total, inactive: Math.max(0, all.total - active.total) });
+    } catch {
+      // Se mantienen los anteriores.
+    }
+  }
+
+  /**
+   * Después de una escritura, lo que se ve se pide otra vez: la página (un registro que ya no
+   * pasa el filtro sale y entra el siguiente) y los contadores, si se están usando.
+   */
+  private refreshLists(): void {
+    this.reloadPage();
+    if (this._counts()) void this.loadCounts();
+  }
+
+  /** El registro ya no existe en el servidor: lo que se tenga cargado se pide otra vez. */
+  private reloadAfterNotFound(): void {
+    if (this._loaded()) void this.load();
+    this.refreshLists();
+  }
+
+  /** Sin el listado ni los contadores, el número del menú se ajusta a mano. */
+  private adjustBadge(delta: number): void {
+    if (!this._loaded() && !this._counts()) this.badges.adjust(this.navId(), delta);
   }
 
   /** Hay un cambio de estado o un borrado en curso para ese registro. */
@@ -301,8 +357,9 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     try {
       const created = await this.api.create(payload);
       // Sin el listado cargado (se entró directo al formulario), el contador suma igual.
-      if (!this._loaded()) this.badges.adjust(this.navId(), 1);
+      this.adjustBadge(1);
       this._items.update((items) => this.sorted([created, ...items]));
+      this.refreshLists();
       return { ok: true, data: created };
     } catch (error) {
       return { ok: false, error: this.errors.handle(error, { inline: true }) };
@@ -346,12 +403,13 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     try {
       const saved = await this.api.setActive(id, isActive);
       this.replace(saved);
+      this.refreshLists();
       return { ok: true, data: saved };
     } catch (error) {
       this.replace(entity);
       const apiError = this.errors.handle(error, { notFoundMessage: this.notFoundMessage });
       // El registro ya no existe en el servidor: se vuelve a pedir el listado.
-      if (apiError.isNotFound) void this.load();
+      if (apiError.isNotFound) this.reloadAfterNotFound();
       // Si la API tardó o falló a medias, puede que sí aplicara el cambio: se comprueba.
       else if (apiError.type === 'timeout' || apiError.type === 'server') void this.resync(id);
       return { ok: false, error: apiError };
@@ -367,9 +425,11 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     try {
       await this.api.remove(id);
       // Desde el detalle puede que el listado no esté cargado: el contador resta igual.
-      if (!this._loaded()) this.badges.adjust(this.navId(), -1);
+      this.adjustBadge(-1);
       this._items.update((items) => items.filter((item) => item._id !== id));
+      // Sale al instante y después se pide la página otra vez, para que entre la siguiente
       this.dropFromPage(id);
+      this.refreshLists();
       if (this._selected()?._id === id) this._selected.set(null);
       // Pasa a la papelera, si ya se había cargado (si no, llegará con su primera carga).
       // Conserva su estado, como en la API. La fecha exacta la pone el servidor; esta
@@ -384,7 +444,7 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       return { ok: true, data: entity };
     } catch (error) {
       const apiError = this.errors.handle(error, { notFoundMessage: this.notFoundMessage });
-      if (apiError.isNotFound) void this.load();
+      if (apiError.isNotFound) this.reloadAfterNotFound();
       return { ok: false, error: apiError };
     } finally {
       this.markBusy(id, false);
@@ -395,8 +455,9 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
   async restore(entity: T): Promise<StoreResult<T>> {
     try {
       const restored = await this.api.restore(entity._id);
-      if (!this._loaded()) this.badges.adjust(this.navId(), 1);
+      this.adjustBadge(1);
       this.putBack(restored);
+      this.refreshLists();
       this._deleted.update((deleted) => deleted.filter((item) => item._id !== restored._id));
       return { ok: true, data: restored };
     } catch (error) {
@@ -441,7 +502,8 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
       // Si el listado aún no se ha cargado, ya llegará con su primera carga; mientras
       // tanto, el contador del menú suma el restaurado.
       if (this._loaded()) this.putBack(restored);
-      else this.badges.adjust(this.navId(), 1);
+      else this.adjustBadge(1);
+      this.refreshLists();
       return { ok: true, data: restored };
     } catch (error) {
       const apiError = this.errors.handle(error, { notFoundMessage: this.notFoundMessage });
@@ -516,12 +578,11 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     return this.listPath.slice(1);
   }
 
-  /** Devuelve un registro restaurado al listado, en su sitio. La página se vuelve a pedir. */
+  /** Devuelve un registro restaurado al listado, en su sitio. */
   private putBack(entity: T): void {
     this._items.update((items) =>
       this.sorted([entity, ...items.filter((item) => item._id !== entity._id)]),
     );
-    this.reloadPage();
   }
 
   /** Quita un registro eliminado de la página que se ve, y del total. */

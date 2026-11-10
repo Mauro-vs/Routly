@@ -62,21 +62,20 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
   /** La página que se ve, tal como la devuelve la API. */
   protected readonly rows = computed(() => this.store.page());
 
-  protected readonly counts = computed<StatusCounts>(() => ({
-    all: this.store.total(),
-    active: this.store.activeCount(),
-    inactive: this.store.inactiveCount(),
-  }));
+  /** Cuántos hay de cada estado en la colección (`X-Total-Count`), para el filtro. */
+  protected readonly counts = computed<StatusCounts>(
+    () => this.store.counts() ?? { all: 0, active: 0, inactive: 0 },
+  );
   /** Ya hay datos para juzgar si el listado está vacío. */
-  protected readonly listLoaded = computed(() => this.store.loaded() && this.store.pageLoaded());
+  protected readonly listLoaded = computed(() => this.store.pageLoaded() && this.store.counts() !== null);
   /** Primera carga en curso: se pintan los skeletons. Las recargas no los muestran. */
   protected readonly showSkeleton = computed(() => !this.store.pageLoaded() && !this.store.pageError());
+  /** Llega otra página: se sigue viendo la que había, atenuada, con la barra de carga. */
+  protected readonly refreshing = computed(() => this.store.pageLoaded() && this.store.pageLoading());
   /** El error de la carga (o null): las páginas compartidas cuentan con él el motivo. */
-  protected readonly loadFailed = computed(() => {
-    const pageFailed = !this.store.pageLoaded() && !this.store.pageLoading() && this.store.pageError();
-    const listFailed = !this.store.loaded() && !this.store.loading() && this.store.error();
-    return pageFailed || listFailed || null;
-  });
+  protected readonly loadFailed = computed(
+    () => (!this.store.pageLoaded() && !this.store.pageLoading() && this.store.pageError()) || null,
+  );
 
   protected readonly rowKey = (row: T): string => row._id;
   protected readonly isInactive = (row: T): boolean => !row.isActive;
@@ -161,15 +160,15 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
     }
     this.ready.set(true);
 
-    // La colección entera, para los contadores del filtro y del menú.
-    void this.store.load();
+    // Los contadores del filtro y del menú.
+    void this.store.loadCounts();
     // Para el contador del acceso a la papelera.
     void this.store.loadDeleted();
   }
 
   protected reload(): void {
     this.store.reloadPage();
-    void this.store.load();
+    void this.store.loadCounts();
   }
 
   protected setStatus(status: StatusFilter): void {

@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, Injectable, inject, provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 
 import { BaseEntity } from '../../core/models/entity.model';
-import { ListQuery } from '../../core/models/list-query.model';
+import { ListPage, ListQuery } from '../../core/models/list-query.model';
 import { EntityApi, EntityStore } from '../../core/services/entity.store';
 import { ErrorHandlerService } from '../../core/services/error-handler.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -64,7 +64,22 @@ describe('EntityListPage', () => {
     currentPage(): number {
       return this.page();
     }
+
+    statusCounts() {
+      return this.counts();
+    }
+
+    isRefreshing(): boolean {
+      return this.refreshing();
+    }
   }
+
+  /** Las peticiones de la página (las de los contadores son de un registro). */
+  const pageCalls = (): ListQuery[][] => api.search.calls.allArgs().filter(([query]) => query.limit === 12);
+  /** Deja terminar las promesas en curso. */
+  const settle = async (): Promise<void> => {
+    for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+  };
 
   /** Lo que se espera que pida a la API, con los valores por defecto. */
   const expected = (changes: Partial<ListQuery> = {}): ListQuery => ({
@@ -111,20 +126,42 @@ describe('EntityListPage', () => {
 
   afterEach(() => jasmine.clock().uninstall());
 
-  it('al abrir, pide la primera página con el orden por defecto', () => {
+  it('al abrir, pide la primera página con el orden por defecto, sin cargar la colección', () => {
     create();
 
-    expect(api.search).toHaveBeenCalledOnceWith(expected());
-    expect(api.getAll).toHaveBeenCalledTimes(1);
+    expect(pageCalls()).toEqual([[expected()]]);
+    expect(api.getAll).not.toHaveBeenCalled();
+  });
+
+  it('los contadores del filtro salen de X-Total-Count', async () => {
+    api.search.and.callFake((query: ListQuery) =>
+      of({ items: [], total: query.limit === 1 ? (query.status === 'active' ? 7 : 10) : 0 }),
+    );
+    const list = create();
+    await settle();
+
+    expect(list.statusCounts()).toEqual({ all: 10, active: 7, inactive: 3 });
+  });
+
+  it('mientras llega otra página, se sigue viendo la anterior con la barra de carga', () => {
+    const next = new Subject<ListPage<Item>>();
+    const list = create();
+    expect(list.isRefreshing()).toBeFalse();
+
+    api.search.and.returnValue(next);
+    list.goTo(2);
+    TestBed.tick();
+
+    expect(list.isRefreshing()).toBeTrue();
+    next.next({ items: [item('13')], total: 13 });
+    expect(list.isRefreshing()).toBeFalse();
   });
 
   it('la primera petición ya lleva lo que dice la URL', () => {
     api.search.and.returnValue(of({ items: [item('1')], total: 40 }));
     create({ estado: 'inactive', q: 'pirineo', orden: 'nombre', pagina: '3' });
 
-    expect(api.search).toHaveBeenCalledOnceWith(
-      expected({ q: 'pirineo', status: 'inactive', sort: 'name', page: 3 }),
-    );
+    expect(pageCalls()).toEqual([[expected({ q: 'pirineo', status: 'inactive', sort: 'name', page: 3 })]]);
   });
 
   it('busca cuando se deja de escribir, una sola vez, y vuelve a la página 1', () => {
@@ -155,11 +192,7 @@ describe('EntityListPage', () => {
     list.orderBy('nombre');
     TestBed.tick();
 
-    expect(api.search.calls.allArgs()).toEqual([
-      [expected()],
-      [expected({ page: 3 })],
-      [expected({ sort: 'name' })],
-    ]);
+    expect(pageCalls()).toEqual([[expected()], [expected({ page: 3 })], [expected({ sort: 'name' })]]);
   });
 
   it('una página que ya no existe pasa a la última', () => {

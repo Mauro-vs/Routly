@@ -128,7 +128,11 @@ export interface StatusCounts {
         </ui-empty-state>
       </div>
     } @else {
-      <ng-content />
+      <!-- Mientras llega otra página se sigue viendo la que había, atenuada -->
+      <div class="list-body" [class.list-body--refreshing]="refreshing()" [attr.aria-busy]="refreshing() || null">
+        <span class="list-bar" aria-hidden="true"></span>
+        <div class="list-rows"><ng-content /></div>
+      </div>
       @if (loaded()) {
         <ui-pagination class="pager" [(page)]="page" [pageSize]="pageSize()" [total]="total()" />
       }
@@ -198,6 +202,65 @@ export interface StatusCounts {
       margin-top: var(--space-3);
     }
 
+    /* Otra página en camino. Lo que dura menos de 150 ms no se llega a ver: sin parpadeos */
+    .list-body {
+      position: relative;
+    }
+
+    .list-rows {
+      transition: opacity var(--motion-base) var(--motion-ease);
+    }
+
+    .list-body--refreshing .list-rows {
+      opacity: 0.55;
+      transition-delay: 150ms;
+    }
+
+    .list-bar {
+      position: absolute;
+      inset: 0 0 auto;
+      z-index: 1;
+      height: 2px;
+      overflow: hidden;
+      border-radius: var(--radius-pill);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--motion-fast) var(--motion-ease);
+    }
+
+    .list-bar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      width: 40%;
+      background: var(--color-primary);
+      transform: translateX(-100%);
+    }
+
+    .list-body--refreshing .list-bar {
+      opacity: 1;
+      transition-delay: 150ms;
+    }
+
+    .list-body--refreshing .list-bar::before {
+      animation: list-bar 1.1s linear infinite;
+    }
+
+    @keyframes list-bar {
+      to {
+        transform: translateX(250%);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      /* sin desplazamiento: la barra entera, quieta */
+      .list-body--refreshing .list-bar::before {
+        width: 100%;
+        transform: none;
+        animation: none;
+      }
+    }
+
     @media (max-width: 560px) {
       .toolbar > ui-segmented,
       .toolbar__end,
@@ -224,6 +287,8 @@ export class ListPageComponent {
   readonly icon = input.required<IconName>();
   /** La primera carga ha terminado. Hasta entonces no se juzga si está vacío. */
   readonly loaded = input.required<boolean>();
+  /** Llega otra página: la que se ve se atenúa y sale la barra de carga. */
+  readonly refreshing = input(false);
   /** La primera carga ha fallado: se muestra el error con "Reintentar". */
   /** El error de la carga (o solo si ha fallado): el recuadro de error cuenta el motivo. */
   readonly failed = input<LoadFailure>(false);

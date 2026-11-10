@@ -297,7 +297,9 @@ GET /api/routes?page=2&limit=12&q=pirineo&status=active&sort=-distance
 - **La búsqueda, el filtro por estado, el orden y la página los hace la API.** El total llega en la cabecera `X-Total-Count` (`ApiService.getList`) y la paginación lo usa para saber cuántas páginas hay.
 - **El buscador espera a que se deje de escribir** (300 ms) y, si la petición anterior aún no ha vuelto, la cancela: solo cuenta la última. Busca palabras enteras en los textos de la colección (el índice de texto de la API), no en los nombres de sus relaciones.
 - **Cada página dice cómo se ordena** con el `sort` de la API (`sorts`): por ejemplo `-distance` en "Más kilómetros". El nombre en la URL del panel (`?orden=km`) no cambia.
-- **Mientras llega una página nueva se sigue viendo la anterior.** Los skeletons solo salen la primera vez.
+- **Mientras llega una página nueva se sigue viendo la anterior**, atenuada y con una barra fina arriba (si tarda más de 150 ms; con movimiento reducido, la barra quieta). Los skeletons solo salen la primera vez.
+- **Los contadores del filtro** (todas, activas, inactivas) son dos páginas de un registro, `?limit=1` y `?status=active&limit=1`, de las que solo se lee `X-Total-Count`; las inactivas son la diferencia. **El número del menú** es el total de la colección, sin búsqueda ni filtros, y también sale de `X-Total-Count` (`CollectionCountsService`): ya no se descarga ninguna colección entera para contarla.
+- **Después de activar, desactivar, eliminar o restaurar una fila**, el cambio se ve al instante y después se piden otra vez la página y los contadores: un registro que ya no pasa el filtro sale y entra el siguiente. Si la página se queda vacía, se pasa a la anterior.
 - **Una página que ya no existe** (`?pagina=20` con 8 páginas, o al borrar las últimas filas) pasa a la última que hay.
 - **Los formularios no cambian**: sus desplegables siguen pidiendo la lista entera (`getAll`, `/actives`), aparte de la página del listado.
 
@@ -488,14 +490,14 @@ La dirección visual ("D Mixta") y sus reglas están en [`DESIGN.md`](DESIGN.md)
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-471 tests. Cubren la lógica y los formularios:
+478 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
 | `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes (409 por duplicado, campos que no se pueden cambiar...) |
 | `api.service.spec.ts`, `<x>.service.spec.ts` | URLs, métodos y cuerpo de cada petición |
-| `entity.store.spec.ts`, `routes.store.spec.ts` | Carga, la página del listado (total, cancelar la anterior, seguir viendo la que había, errores), CRUD, actualización optimista, papelera, deshacer y contador del menú |
-| `entity-list-page.spec.ts` | La base de los listados: la primera petición con lo que dice la URL, el buscador con espera, volver a la página 1 al cambiar el orden, la página que ya no existe y la URL |
+| `entity.store.spec.ts`, `routes.store.spec.ts` | Carga, la página del listado (total, cancelar la anterior, seguir viendo la que había, errores, pedirla otra vez tras una acción), los contadores con `X-Total-Count`, CRUD, actualización optimista, papelera, deshacer y contador del menú |
+| `entity-list-page.spec.ts` | La base de los listados: la primera petición con lo que dice la URL, los contadores, la barra de carga, el buscador con espera, volver a la página 1 al cambiar el orden, la página que ya no existe y la URL |
 | `<x>-form.component.spec.ts` (9) | Validaciones, lo que se envía al crear y al editar, y dónde se pinta cada error de la API |
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
