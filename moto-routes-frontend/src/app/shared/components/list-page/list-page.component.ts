@@ -12,7 +12,7 @@ import {
   statusWord,
 } from '../../utils/labels';
 import { RouterPath } from '../../utils/router';
-import { ListSort } from '../../utils/search';
+import { ListFilter, ListSort } from '../../utils/search';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { ErrorStateComponent } from '../error-state/error-state.component';
 import { IconComponent } from '../icon/icon.component';
@@ -71,6 +71,22 @@ export interface StatusCounts {
         [value]="status()"
         (valueChange)="status.set($event)"
       />
+      @for (filter of filters(); track filter.param) {
+        <label class="filter">
+          <span class="sr-only">{{ filter.label }}</span>
+          <select
+            class="select"
+            [name]="filter.param"
+            [class.filter--on]="!!filterValues()[filter.param]"
+            (change)="filterChange.emit({ param: filter.param, value: $any($event.target).value })"
+          >
+            <option value="" [selected]="!filterValues()[filter.param]">{{ filter.allLabel }}</option>
+            @for (option of filter.options(); track option.value) {
+              <option [value]="option.value" [selected]="option.value === filterValues()[filter.param]">{{ option.label }}</option>
+            }
+          </select>
+        </label>
+      }
       <ng-content select="[listToolbar]" />
       <div class="toolbar__end">
         <label class="search">
@@ -117,6 +133,12 @@ export interface StatusCounts {
       <div class="card">
         <ui-empty-state icon="magnifying-glass" [title]="'Nada para «' + query().trim() + '»'" description="Prueba con otra palabra o quita la búsqueda.">
           <button type="button" class="btn btn--secondary" (click)="query.set('')">Quitar la búsqueda</button>
+        </ui-empty-state>
+      </div>
+    } @else if (loaded() && total() === 0 && hasFilters()) {
+      <div class="card">
+        <ui-empty-state icon="eye-slash" [title]="filtersEmptyTitle()" description="Cambia los filtros o quítalos para ver el resto.">
+          <button type="button" class="btn btn--secondary" (click)="clearFilters.emit()">Quitar los filtros</button>
         </ui-empty-state>
       </div>
     } @else if (loaded() && total() === 0) {
@@ -178,6 +200,16 @@ export interface StatusCounts {
 
     .search .input {
       padding-left: 34px;
+    }
+
+    .filter .select {
+      width: auto;
+      max-width: 220px;
+    }
+
+    /* un filtro puesto se distingue de los que están en "todas" */
+    .filter .select.filter--on {
+      border-color: var(--color-primary);
     }
 
     .sort {
@@ -262,6 +294,16 @@ export interface StatusCounts {
     }
 
     @media (max-width: 560px) {
+      /* dos por fila */
+      .filter {
+        flex: 1 1 40%;
+      }
+
+      .filter .select {
+        width: 100%;
+        max-width: none;
+      }
+
       .toolbar > ui-segmented,
       .toolbar__end,
       .search {
@@ -310,7 +352,18 @@ export class ListPageComponent {
   readonly query = model('');
   readonly sorts = input<readonly ListSort[]>([]);
   readonly sort = model('');
+  /** Los filtros propios de la colección y el valor de cada uno, por su `param`. */
+  readonly filters = input<readonly ListFilter[]>([]);
+  readonly filterValues = input<Readonly<Record<string, string>>>({});
+  readonly filterChange = output<{ param: string; value: string }>();
+  readonly clearFilters = output<void>();
   readonly retry = output<void>();
+  protected readonly hasFilters = computed(() => Object.values(this.filterValues()).some(Boolean));
+  /** "Ninguna ruta con estos filtros", "Ningún usuario con estos filtros". */
+  protected readonly filtersEmptyTitle = computed(() => {
+    const { singular, gender } = this.labels();
+    return `${agree(gender, 'Ninguna', 'Ningún')} ${singular} con estos filtros`;
+  });
 
   protected readonly statusLabels = computed(() => statusFilterLabels(this.labels().gender));
   protected readonly statusOptions = computed<SegmentOption<StatusFilter>[]>(() => {

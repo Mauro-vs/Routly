@@ -14,14 +14,6 @@ export const experienceController = {
     }
   },
 
-  async facets(req, res, next) {
-    try {
-      res.json(await experienceService.facets(req.query, scopeOf(req.user)));
-    } catch (error) {
-      next(error);
-    }
-  },
-
   async listActives(req, res, next) {
     try {
       res.json(await experienceService.listByActive(true, scopeOf(req.user)));

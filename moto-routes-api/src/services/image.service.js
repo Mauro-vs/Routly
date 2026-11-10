@@ -63,17 +63,18 @@ async function assertOwnImage(actor, { ownerType, ownerId }) {
 export const imageService = {
   // Con ownerType y ownerId devuelve la galería de un dueño, que tiene que estar vivo: las
   // imágenes de algo eliminado no se enseñan (404). En PUBLIC (services/visibility.js), tampoco
-  // las de un dueño oculto, ni las imágenes inactivas. El resto de query params, como en
-  // cualquier listado (utils/listQuery.js).
+  // las de un dueño oculto, ni las imágenes inactivas. Solo con ownerType, las de ese tipo de
+  // dueño, como cualquier filtro. El resto de query params, como en cualquier listado
+  // (utils/listQuery.js).
   async search(query = {}, scope) {
-    if (query.ownerType) {
+    if (query.ownerId) {
       if (!(await imageRepository.findOwner(query.ownerType, query.ownerId))) {
         throw notFound(ownerName(query.ownerType));
       }
       await assertOwnerVisible(query.ownerType, query.ownerId, scope, ownerName(query.ownerType));
     }
     // La galería de un dueño ya comprobado no necesita calcular lo oculto de todos los demás
-    const base = query.ownerType ? ownerGalleryFilter(scope) : await scopeFilter("image", scope);
+    const base = query.ownerId ? ownerGalleryFilter(scope) : await scopeFilter("image", scope);
     return findList(imageRepository, await imageListQuery.build(query, base));
   },
 

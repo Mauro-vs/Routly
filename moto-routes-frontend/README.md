@@ -302,6 +302,18 @@ GET /api/routes?page=2&limit=12&q=pirineo&status=active&sort=-distance
 - **Después de activar, desactivar, eliminar o restaurar una fila**, el cambio se ve al instante y después se piden otra vez la página y los contadores: un registro que ya no pasa el filtro sale y entra el siguiente. Si la página se queda vacía, se pasa a la anterior.
 - **Una página que ya no existe** (`?pagina=20` con 8 páginas, o al borrar las últimas filas) pasa a la última que hay.
 - **Los formularios no cambian**: sus desplegables siguen pidiendo la lista entera (`getAll`, `/actives`), aparte de la página del listado.
+- **Filtros propios** de algunas colecciones, en desplegables junto al filtro por estado. Cada página los declara en `listFilters` (su nombre en la URL, sus opciones y su traducción a la API); van en la URL y vuelven a la página 1 al cambiarlos. Si dejan el listado vacío, se ofrece "Quitar los filtros".
+
+| Listado | Filtro (URL del panel) | Query param de la API |
+|---|---|---|
+| Rutas | `?dificultad=hard` | `difficulty` |
+| Rutas | `?categoria=<id>` (las categorías activas) | `categoryId` |
+| Salidas | `?situacion=cancelled` | `state` |
+| Salidas | `?cuando=proximas` o `pasadas` | `from` o `to` con la hora actual |
+| Usuarios | `?rol=<id>` (los roles activos) | `roleId` |
+| Imágenes | `?dueno=category` | `ownerType` |
+
+"Más difícil" en Rutas ordena por el nivel de la dificultad (fácil, media, difícil): la API lo guarda aparte para eso.
 
 </details>
 
@@ -490,14 +502,14 @@ La dirección visual ("D Mixta") y sus reglas están en [`DESIGN.md`](DESIGN.md)
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-478 tests. Cubren la lógica y los formularios:
+482 tests. Cubren la lógica y los formularios:
 
 | Spec | Qué prueba |
 |---|---|
 | `api-error.mapper.spec.ts` | Conversión de cualquier fallo HTTP a `ApiError` y traducción de los mensajes (409 por duplicado, campos que no se pueden cambiar...) |
 | `api.service.spec.ts`, `<x>.service.spec.ts` | URLs, métodos y cuerpo de cada petición |
 | `entity.store.spec.ts`, `routes.store.spec.ts` | Carga, la página del listado (total, cancelar la anterior, seguir viendo la que había, errores, pedirla otra vez tras una acción), los contadores con `X-Total-Count`, CRUD, actualización optimista, papelera, deshacer y contador del menú |
-| `entity-list-page.spec.ts` | La base de los listados: la primera petición con lo que dice la URL, los contadores, la barra de carga, el buscador con espera, volver a la página 1 al cambiar el orden, la página que ya no existe y la URL |
+| `entity-list-page.spec.ts` | La base de los listados: la primera petición con lo que dice la URL, los contadores, la barra de carga, los filtros (a la API, a la URL y desde la URL), el buscador con espera, volver a la página 1 al cambiar el orden, la página que ya no existe y la URL |
 | `<x>-form.component.spec.ts` (9) | Validaciones, lo que se envía al crear y al editar, y dónde se pinta cada error de la API |
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |

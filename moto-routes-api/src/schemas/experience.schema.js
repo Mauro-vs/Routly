@@ -78,9 +78,5 @@ export const experienceListQuery = defineListQuery({
   ],
 });
 
-// Query params de GET /api/experiences/facets: cuántos elementos trae cada lista
+// Cuántos elementos trae cada carrusel del Home (GET /api/shop/categories...)
 export const FACETS_LIMIT = Object.freeze({ default: 12, max: 50 });
-
-export const experienceFacetsQuery = z.strictObject({
-  limit: queryNumber.pipe(z.number().int().min(1).max(FACETS_LIMIT.max)).optional(),
-});

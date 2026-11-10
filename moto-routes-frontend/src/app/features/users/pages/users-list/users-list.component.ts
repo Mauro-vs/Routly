@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { User } from '../../../../core/models/user.model';
@@ -13,6 +13,7 @@ import { RelationLinkComponent } from '../../../../shared/components/relation-li
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
+import { ListFilter } from '../../../../shared/utils/search';
 import { UsersStore } from '../../services/users.store';
 
 const COLUMNS: readonly TableColumn[] = [
@@ -46,6 +47,10 @@ const COLUMNS: readonly TableColumn[] = [
       [labels]="store.labels"
       [loaded]="listLoaded()"
       [refreshing]="refreshing()"
+      [filters]="listFilters"
+      [filterValues]="filterValues()"
+      (filterChange)="setFilter($event)"
+      (clearFilters)="clearFilters()"
       [failed]="loadFailed()"
       [counts]="counts()"
       [total]="store.pageTotal()"
@@ -118,7 +123,21 @@ const COLUMNS: readonly TableColumn[] = [
     }
   `,
 })
-export class UsersListComponent extends EntityListPage<User> {
+export class UsersListComponent extends EntityListPage<User> implements OnInit {
   protected readonly store = inject(UsersStore);
+  protected override readonly listFilters: readonly ListFilter[] = [
+    {
+      param: 'rol',
+      label: 'Filtrar por rol',
+      allLabel: 'Todos los roles',
+      options: () => this.store.roleOptions.items().map((role) => ({ value: role._id, label: role.label })),
+      toApi: (roleId) => ({ roleId }),
+    },
+  ];
   protected readonly columns = COLUMNS;
+
+  override ngOnInit(): void {
+    super.ngOnInit();
+    void this.store.roleOptions.load();
+  }
 }

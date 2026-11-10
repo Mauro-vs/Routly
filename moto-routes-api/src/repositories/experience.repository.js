@@ -61,6 +61,11 @@ export const experienceRepository = {
     return withRelations(Experience.findOne({ slug })).lean();
   },
 
+  // Sin las relaciones: para comprobar que existe y es visible (las salidas de la tienda)
+  findPlainBySlug(slug) {
+    return Experience.findOne({ slug }).lean();
+  },
+
   findDeletedById(id) {
     return Experience.findOne({ _id: id, deletedAt: { $ne: null } }).lean();
   },

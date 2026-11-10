@@ -58,6 +58,44 @@ describe('ListPageComponent', () => {
     expect(fixture.componentInstance.status()).toBe('all');
   });
 
+  const FILTERS = [
+    {
+      param: 'rol',
+      label: 'Filtrar por rol',
+      allLabel: 'Todos los roles',
+      options: () => [
+        { value: 'r1', label: 'Administrador' },
+        { value: 'r2', label: 'Anfitrión' },
+      ],
+      toApi: (roleId: string) => ({ roleId }),
+    },
+  ];
+
+  it('pinta cada filtro con su opción elegida y avisa al cambiarlo', async () => {
+    const element = await render({ all: 4, active: 3, inactive: 1 }, 4, { filters: FILTERS, filterValues: { rol: 'r2' } });
+    const changes: unknown[] = [];
+    fixture.componentInstance.filterChange.subscribe((change) => changes.push(change));
+
+    const select = element.querySelector<HTMLSelectElement>('select[name="rol"]')!;
+    expect([...select.options].map((option) => option.textContent?.trim())).toEqual(['Todos los roles', 'Administrador', 'Anfitrión']);
+    expect(select.value).toBe('r2');
+    expect(select.closest('label')?.textContent).toContain('Filtrar por rol');
+
+    select.value = 'r1';
+    select.dispatchEvent(new Event('change'));
+    expect(changes).toEqual([{ param: 'rol', value: 'r1' }]);
+  });
+
+  it('si los filtros lo dejan vacío, ofrece quitarlos', async () => {
+    const element = await render({ all: 4, active: 3, inactive: 1 }, 0, { filters: FILTERS, filterValues: { rol: 'r1' } });
+    let cleared = false;
+    fixture.componentInstance.clearFilters.subscribe(() => (cleared = true));
+
+    expect(element.querySelector('.empty__title')?.textContent?.trim()).toBe('Ningún usuario con estos filtros');
+    (element.querySelector('.empty__actions button') as HTMLButtonElement).click();
+    expect(cleared).toBeTrue();
+  });
+
   it('si la carga falla, muestra el error con reintentar', async () => {
     const element = await render({ all: 0, active: 0, inactive: 0 }, 0, { failed: true });
     const retried = jasmine.createSpy('retry');

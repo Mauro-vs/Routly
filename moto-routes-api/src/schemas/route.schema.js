@@ -26,6 +26,8 @@ export const updateRouteSchema = routeFields.partial().extend({
 // Query params de GET /api/routes (utils/listQuery.js): los comunes y estos filtros
 export const routeListQuery = defineListQuery({
   sort: ["title", "distance", "duration", "difficulty", "createdAt", "updatedAt"],
+  // Por su nivel (fácil, media, difícil), no por el texto
+  sortFields: { difficulty: "difficultyLevel" },
   filters: {
     difficulty: { schema: z.enum(ROUTE_DIFFICULTIES), to: equals("difficulty") },
     categoryId: { schema: objectIdSchema, to: equals("categoryId") },

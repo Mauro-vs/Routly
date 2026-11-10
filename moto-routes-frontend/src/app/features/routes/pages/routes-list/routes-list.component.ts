@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Route } from '../../../../core/models/route.model';
+import { DIFFICULTIES, DIFFICULTY_LABELS, Route } from '../../../../core/models/route.model';
 import {
   DataTableComponent,
   TableCellDirective,
@@ -14,7 +14,7 @@ import { RelationLinkComponent } from '../../../../shared/components/relation-li
 import { RouteGlyphComponent } from '../../../../shared/components/route-glyph/route-glyph.component';
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
-import { ListSort } from '../../../../shared/utils/search';
+import { ListFilter, ListSort } from '../../../../shared/utils/search';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
 import { formatNumber } from '../../../../shared/utils/format';
 import { RoutesStore } from '../../services/routes.store';
@@ -82,7 +82,7 @@ const COLUMNS: readonly TableColumn[] = [
     }
   `,
 })
-export class RoutesListComponent extends EntityListPage<Route> {
+export class RoutesListComponent extends EntityListPage<Route> implements OnInit {
   protected readonly store = inject(RoutesStore);
   protected readonly columns = COLUMNS;
   protected readonly number = formatNumber;
@@ -92,4 +92,26 @@ export class RoutesListComponent extends EntityListPage<Route> {
     { value: 'km', label: 'Más kilómetros', sort: '-distance' },
     { value: 'dificultad', label: 'Más difícil', sort: '-difficulty' },
   ];
+  protected override readonly listFilters: readonly ListFilter[] = [
+    {
+      param: 'dificultad',
+      label: 'Filtrar por dificultad',
+      allLabel: 'Todas las dificultades',
+      options: () => DIFFICULTIES.map((value) => ({ value, label: DIFFICULTY_LABELS[value] })),
+      toApi: (difficulty) => ({ difficulty }),
+    },
+    {
+      param: 'categoria',
+      label: 'Filtrar por categoría',
+      allLabel: 'Todas las categorías',
+      // Las activas: las mismas que se pueden elegir en el formulario
+      options: () => this.store.categoryOptions.items().map((category) => ({ value: category._id, label: category.name })),
+      toApi: (categoryId) => ({ categoryId }),
+    },
+  ];
+
+  override ngOnInit(): void {
+    super.ngOnInit();
+    void this.store.categoryOptions.load();
+  }
 }

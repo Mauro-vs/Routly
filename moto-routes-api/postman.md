@@ -519,38 +519,41 @@ La respuesta trae `host: { _id, name, slug }`, `route` con su distancia, duraci�
 | Bajar `maxParticipants` por debajo de las plazas de una salida | 409 `maxParticipants is lower than the capacity of an existing departure` |
 | Eliminar una experiencia con salidas | 409 `Cannot delete an experience that has departures` |
 
-### La web pública
+---
 
-Todas sin token (pestaña **Authorization**: *No Auth*). Con el seed cargado salen 12 experiencias.
+## Shop
+
+La tienda pública: el Home, el Shop y el detalle. Todas sin token (pestaña **Authorization**: *No Auth*); con token se ve lo mismo. Responden `{ data }` y el listado, `{ data, pagination }`. Con el seed cargado salen 12 experiencias.
 
 | Petición | Qué comprobar |
 |---|---|
-| **GET** `/api/experiences/facets` | `categories`, `hosts` y `locations`, cada uno con `experienceCount` y `coverImage`, de más a menos |
-| **GET** `/api/experiences/facets?limit=2` | Dos de cada |
-| **GET** `/api/experiences?page=1&limit=5` | 5 experiencias; cabeceras `X-Total-Count: 12`, `X-Page: 1`, `X-Limit: 5` |
-| **GET** `/api/experiences?sort=priceFrom` | De la más barata a la más cara; "Sierra Nevada al atardecer" (sin salidas, `priceFrom: null`) la última |
-| **GET** `/api/experiences?sort=nextDepartureAt` | De la salida más próxima a la más lejana |
-| **GET** `/api/experiences?hasDepartures=true` | 11: todas menos la que no tiene salidas |
-| **GET** `/api/experiences?priceMax=100` | Solo las que tienen alguna salida reservable por 100 € o menos |
-| **GET** `/api/experiences?language=en` | Las dos guiadas en inglés |
-| **GET** `/api/experiences?difficulty=easy` | Las de rutas fáciles |
-| **GET** `/api/experiences?categoryId=<id de Viñedos>` | "Bodegas y viñedos de La Rioja" |
-| **GET** `/api/experiences?locationId=<id de Barcelona>` | Las que empiezan o acaban en Barcelona |
-| **GET** `/api/experiences?from=2026-12-01&to=2026-12-31` | Las que tienen alguna salida reservable en diciembre |
-| **GET** `/api/experiences/slug/<slug>` | El detalle: `host.biography`, `host.coverImage`, `route.category`, `guideBike` |
-| **GET** `/api/departures?experienceId=<id>&state=scheduled&from=<ahora>&sort=startAt` | Las fechas reservables, con `price` y `seatsLeft` |
-| **GET** `/api/images?ownerType=experience&ownerId=<id>&sort=position` | Las cuatro fotos de la experiencia |
-| **GET** `/api/categories` y `/api/locations` | Cada una con su `coverImage` |
+| **GET** `/api/shop/categories` | `data`: Montaña (6), Costa (3), Puertos (2) y Viñedos (1), cada una con `experienceCount` y `coverImage`: de más a menos |
+| **GET** `/api/shop/hosts` | Pablo (5), Núria (4) y Lucía (3) |
+| **GET** `/api/shop/locations?limit=3` | Las tres ubicaciones con más experiencias |
+| **GET** `/api/shop/experiences` | 12 experiencias de las más recientes a las más antiguas; `pagination: { total: 12, page: 1, limit: 12, totalPages: 1 }` |
+| **GET** `/api/shop/experiences?limit=5&page=3` | 2 experiencias; `pagination.totalPages: 3` |
+| **GET** `/api/shop/experiences?category=<slug de Viñedos>` | "Bodegas y viñedos de La Rioja" |
+| **GET** `/api/shop/experiences?host=<slug de Núria>` | Las 4 de Núria |
+| **GET** `/api/shop/experiences?location=<slug de Barcelona>` | Las que empiezan o acaban en Barcelona |
+| **GET** `/api/shop/experiences?search=costa` | Las tres de la Costa Brava; `?search=COST` encuentra lo mismo |
+| **GET** `/api/shop/experiences?sort=priceFrom` | De la más barata a la más cara; "Sierra Nevada al atardecer" (sin salidas, `priceFrom: null`) la última |
+| **GET** `/api/shop/experiences?priceMax=100&language=es` | En español y con alguna salida por 100 € o menos |
+| **GET** `/api/shop/experiences?hasDepartures=true` | 11: todas menos la que no tiene salidas |
+| **GET** `/api/shop/experiences/<slug>` | `data`: el detalle con `host.biography`, `route.category`, `guideBike` e `images` (cuatro, por posición) |
+| **GET** `/api/shop/experiences/<slug>/departures` | `data`: las salidas reservables, con `price` y `seatsLeft` |
 
-`<ahora>` es la fecha actual en ISO 8601, por ejemplo `2026-11-09T12:00:00.000Z`.
+Los slugs se ven en `GET /api/shop/categories`, `/hosts`, `/locations` y `/experiences`.
 
 | Caso | Respuesta |
 |---|---|
+| `?category=no-existe` | 200 con `data: []` y `pagination.total: 0` |
+| `?category=No Vale` | 400: no es un slug |
+| `?categoryId=...` | 400 `categoryId is not allowed`: en la tienda los filtros van por slug |
 | `?priceMin=200&priceMax=100` | 400 `priceMax must be greater than or equal to priceMin` |
-| `?hasDepartures=false` | 400: solo admite `true` |
-| `?sort=price` | 400: en experiencias se ordena por `priceFrom` |
-| `/api/experiences/facets?limit=0` | 400 |
-| El slug de una experiencia de una ruta inactiva, sin token | 404 |
+| `?sort=price` | 400: se ordena por `priceFrom` |
+| `?limit=51` | 400: como mucho 50 |
+| `/api/shop/categories?limit=0` | 400 |
+| El slug de una experiencia de una ruta inactiva | 404 |
 
 ---
 
@@ -631,7 +634,8 @@ Response `201`:
 | Caso | Respuesta |
 |---|---|
 | El dueño no existe o está eliminado | 400 en `ownerId`: `ownerId must reference an existing route` |
-| Filtro con solo `ownerType` o solo `ownerId` | 400: `ownerType and ownerId must be sent together` |
+| Solo `ownerType` (`?ownerType=route`) | 200: las imágenes de las rutas |
+| Solo `ownerId` | 400: `ownerType is required with ownerId` |
 | Galería de un dueño que no existe o está eliminado (o, en público, oculto) | 404: `Category not found` (o el dueño que sea) |
 | Marcar como principal una imagen inactiva | 409 `Inactive images cannot be the cover` |
 

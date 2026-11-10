@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Departure } from '../../../../core/models/departure.model';
+import { DEPARTURE_STATE_LABELS, Departure, DepartureState } from '../../../../core/models/departure.model';
 import {
   DataTableComponent,
   TableCellDirective,
@@ -12,7 +12,7 @@ import { RelationLinkComponent } from '../../../../shared/components/relation-li
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
-import { ListSort } from '../../../../shared/utils/search';
+import { ListFilter, ListSort } from '../../../../shared/utils/search';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
 import { formatDateTime, formatMoney } from '../../../../shared/utils/format';
 import { DeparturesStore } from '../../services/departures.store';
@@ -53,6 +53,10 @@ const COLUMNS: readonly TableColumn[] = [
       [labels]="store.labels"
       [loaded]="listLoaded()"
       [refreshing]="refreshing()"
+      [filters]="listFilters"
+      [filterValues]="filterValues()"
+      (filterChange)="setFilter($event)"
+      (clearFilters)="clearFilters()"
       [failed]="loadFailed()"
       [counts]="counts()"
       [total]="store.pageTotal()"
@@ -127,5 +131,34 @@ export class DeparturesListComponent extends EntityListPage<Departure> {
     { value: 'fecha', label: 'Fecha de salida', sort: 'startAt' },
     { value: 'precio', label: 'Precio (menor)', sort: 'price' },
     { value: 'plazas', label: 'Más plazas', sort: '-capacity' },
+  ];
+  protected override readonly listFilters: readonly ListFilter[] = [
+    {
+      param: 'situacion',
+      label: 'Filtrar por estado de la salida',
+      allLabel: 'Programadas, canceladas y realizadas',
+      options: () =>
+        (Object.keys(DEPARTURE_STATE_LABELS) as DepartureState[]).map((value) => ({
+          value,
+          label: DEPARTURE_STATE_LABELS[value],
+        })),
+      toApi: (state) => ({ state }),
+    },
+    {
+      param: 'cuando',
+      label: 'Filtrar por fecha',
+      allLabel: 'Próximas y pasadas',
+      options: () => [
+        { value: 'proximas', label: 'Próximas' },
+        { value: 'pasadas', label: 'Pasadas' },
+      ],
+      // Desde ahora, o hasta ahora: por la fecha de inicio
+      toApi: (when): Record<string, string> => {
+        const now = new Date().toISOString();
+        if (when === 'proximas') return { from: now };
+        if (when === 'pasadas') return { to: now };
+        return {};
+      },
+    },
   ];
 }

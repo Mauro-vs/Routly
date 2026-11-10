@@ -19,6 +19,7 @@ import { createImageSchema, imageListQuery, updateImageSchema } from "../schemas
 import { createLocationSchema, locationListQuery, updateLocationSchema } from "../schemas/location.schema.js";
 import { createRoleSchema, roleListQuery, updateRoleSchema } from "../schemas/role.schema.js";
 import { createRouteSchema, routeListQuery, updateRouteSchema } from "../schemas/route.schema.js";
+import { SHOP_DEFAULT_SORT, SHOP_LIMIT, SHOP_SORT, shopExperiencesQuery } from "../schemas/shop.schema.js";
 import {
   changePasswordSchema,
   createUserSchema,
@@ -322,71 +323,6 @@ const RESOURCES = [
       update: "maxParticipants por debajo de la capacidad de alguna salida",
       remove: "La experiencia tiene salidas",
     },
-    extraPaths: () => ({
-      "/api/experiences/facets": {
-        get: {
-          summary: "Facetas del Home",
-          description:
-            "Los carruseles del Home: las categorías, los anfitriones y las ubicaciones que tienen alguna experiencia visible, " +
-            "cada uno con cuántas (experienceCount), de más a menos y por nombre si empatan. La categoría y las ubicaciones de una " +
-            "experiencia son las de su ruta (origen y destino; si son el mismo sitio, cuenta una vez). Cada elemento viene como en su " +
-            "listado, con su foto (coverImage). Sin token, o sin ser admin, solo cuenta lo que se ve en público.",
-          tags: ["Experiences"],
-          parameters: [
-            {
-              in: "query",
-              name: "limit",
-              required: false,
-              schema: { type: "integer", minimum: 1, maximum: FACETS_LIMIT.max, default: FACETS_LIMIT.default },
-              description: "Cuántos de cada lista, como mucho",
-            },
-          ],
-          responses: {
-            200: {
-              description: "Las tres listas",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "object",
-                    properties: {
-                      categories: { type: "array", items: { $ref: "#/components/schemas/Category" } },
-                      hosts: { type: "array", items: { $ref: "#/components/schemas/Host" } },
-                      locations: { type: "array", items: { $ref: "#/components/schemas/Location" } },
-                    },
-                  },
-                  example: {
-                    categories: [
-                      {
-                        _id: "6710a1b2c3d4e5f6a7b8c930",
-                        name: "Montaña",
-                        slug: "montana-b8c930",
-                        coverImage: { _id: "6710a1b2c3d4e5f6a7b8c993", url: "https://picsum.photos/seed/montana/1200/800", alt: "Montaña" },
-                        experienceCount: 5,
-                      },
-                    ],
-                    hosts: [
-                      { _id: "6710a1b2c3d4e5f6a7b8c915", name: "Lucía Ferrer", slug: "lucia-ferrer-b8c915", coverImage: null, experienceCount: 3 },
-                    ],
-                    locations: [
-                      {
-                        _id: "6710a1b2c3d4e5f6a7b8c921",
-                        city: "Palma",
-                        region: "Islas Baleares",
-                        country: "España",
-                        slug: "palma-b8c921",
-                        coverImage: { _id: "6710a1b2c3d4e5f6a7b8c997", url: "https://picsum.photos/seed/palma/1200/800", alt: "Palma" },
-                        experienceCount: 3,
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-            400: error("limit fuera de rango o un query param que no existe"),
-          },
-        },
-      },
-    }),
   },
   {
     path: "departures",
@@ -653,8 +589,8 @@ const FILTER_DOCS = {
   license: "Carnet necesario",
   ccMin: "Cilindrada, como mínimo",
   ccMax: "Cilindrada, como máximo",
-  ownerType: "Tipo de dueño (con ownerId)",
-  ownerId: "Id del dueño (con ownerType)",
+  ownerType: "Tipo de dueño. Solo, las imágenes de ese tipo; con ownerId, la galería de ese dueño",
+  ownerId: "Id del dueño (necesita ownerType)",
   isCover: "Solo la principal (true) o las demás (false)",
   hasDepartures: "Solo las que tienen alguna salida reservable: activa, programada y futura (solo admite true)",
 };
@@ -1045,13 +981,146 @@ export const apiComponents = {
   },
 };
 
+// ---------- La tienda pública: /api/shop ----------
+
+const SHOP_TAGS = ["Shop"];
+const slugPath = { in: "path", name: "slug", required: true, schema: { type: "string" }, example: "tramuntana-al-amanecer-b8c940" };
+const shopData = (description, schema, example) => ({
+  description,
+  content: { "application/json": { schema: { type: "object", properties: { data: schema } }, ...(example && { example: { data: example } }) } },
+});
+
+const SHOP_PARAM_DOCS = {
+  category: "Slug de la categoría (la de su ruta). Si no existe, el Shop sale vacío",
+  host: "Slug del anfitrión. Si no existe, el Shop sale vacío",
+  location: "Slug de una ubicación, de origen o de destino de su ruta. Si no existe, el Shop sale vacío",
+  search: "Un trozo del título, sin distinguir mayúsculas: pir encuentra Pirineos",
+  difficulty: "Dificultad de su ruta",
+  language: "Idioma (código de dos letras)",
+  priceMin: "Alguna de sus salidas reservables cuesta esto o más",
+  priceMax: "Alguna de sus salidas reservables cuesta esto o menos",
+  from: "Alguna de sus salidas reservables empieza en esta fecha o después (ISO 8601)",
+  to: "Alguna de sus salidas reservables empieza en esta fecha o antes (ISO 8601)",
+  hasDepartures: "Solo las que tienen alguna salida reservable (solo admite true)",
+  sort: `Orden: ${SHOP_SORT.join(", ")}, con - delante para descendente. Por defecto, ${SHOP_DEFAULT_SORT}. Las que no tienen salidas van al final al ordenar por priceFrom o nextDepartureAt`,
+  page: "Página, desde 1 (1 por defecto)",
+  limit: `Tamaño de la página, de 1 a ${SHOP_LIMIT.max} (${SHOP_LIMIT.default} por defecto)`,
+};
+
+const carouselPath = (summary, schema) => ({
+  get: {
+    summary,
+    description:
+      "Para un carrusel del Home: solo los que tienen alguna experiencia visible, cada uno con cuántas (experienceCount) y su foto " +
+      "(coverImage), de más a menos y por nombre si empatan. La categoría y las ubicaciones de una experiencia son las de su ruta. " +
+      "Público: con o sin sesión se ve lo mismo.",
+    tags: SHOP_TAGS,
+    parameters: [
+      {
+        in: "query",
+        name: "limit",
+        required: false,
+        schema: { type: "integer", minimum: 1, maximum: FACETS_LIMIT.max, default: FACETS_LIMIT.default },
+        description: "Cuántos, como mucho",
+      },
+    ],
+    responses: {
+      200: shopData("La lista", { type: "array", items: { $ref: `#/components/schemas/${schema}` } }),
+      400: error("limit fuera de rango o un query param que no existe"),
+    },
+  },
+});
+
+const SHOP_PATHS = {
+  "/api/shop/categories": carouselPath("Categorías del Home", "Category"),
+  "/api/shop/hosts": carouselPath("Anfitriones del Home", "Host"),
+  "/api/shop/locations": carouselPath("Ubicaciones del Home", "Location"),
+  "/api/shop/experiences": {
+    get: {
+      summary: "Experiencias del Shop",
+      description:
+        "Una página de experiencias visibles, con los filtros combinables. Cada una trae lo de su tarjeta: su ruta (distancia, duración, " +
+        "dificultad, categoría, origen y destino), el anfitrión, la foto principal, la moto del guía, priceFrom y nextDepartureAt. " +
+        "El total va en el cuerpo, en pagination. Público: con o sin sesión se ve lo mismo.",
+      tags: SHOP_TAGS,
+      parameters: Object.entries(shopExperiencesQuery.shape).map(([name, schema]) => ({
+        in: "query",
+        name,
+        required: false,
+        schema: filterSchema(schema),
+        description: SHOP_PARAM_DOCS[name] ?? name,
+      })),
+      responses: {
+        200: {
+          description: "La página y su paginación",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  data: { type: "array", items: { $ref: "#/components/schemas/Experience" } },
+                  pagination: {
+                    type: "object",
+                    properties: {
+                      total: { type: "integer" },
+                      page: { type: "integer" },
+                      limit: { type: "integer" },
+                      totalPages: { type: "integer" },
+                    },
+                  },
+                },
+              },
+              example: { data: ["..."], pagination: { total: 12, page: 1, limit: 12, totalPages: 1 } },
+            },
+          },
+        },
+        400: error("Un query param que no existe, un valor no válido o un rango cruzado"),
+      },
+    },
+  },
+  "/api/shop/experiences/{slug}": {
+    get: {
+      summary: "Detalle de una experiencia",
+      description:
+        "Lo de la tarjeta y, además, el anfitrión entero (biografía, foto y su usuario sin el email) e images: su galería activa, por posición.",
+      tags: SHOP_TAGS,
+      parameters: [slugPath],
+      responses: {
+        200: shopData("La experiencia", { $ref: "#/components/schemas/Experience" }),
+        400: error("Slug con formato inválido"),
+        404: error("No existe, está eliminada o no es visible"),
+      },
+    },
+  },
+  "/api/shop/experiences/{slug}/departures": {
+    get: {
+      summary: "Salidas reservables de una experiencia",
+      description:
+        "Las activas, programadas y futuras, de la más próxima a la más lejana, con startAt, endAt, capacity, price y seatsLeft (las plazas libres).",
+      tags: SHOP_TAGS,
+      parameters: [slugPath],
+      responses: {
+        200: shopData("Las salidas", { type: "array", items: { $ref: "#/components/schemas/Departure" } }),
+        400: error("Slug con formato inválido"),
+        404: error("La experiencia no existe, está eliminada o no es visible"),
+      },
+    },
+  },
+};
+
 export const apiTags = [
   { name: "Auth", description: "Registro, login (JWT) y sesión. Ver el botón Authorize." },
   { name: "Profile", description: "El usuario de la sesión y su perfil. El perfil pertenece al usuario: nace, se elimina y se restaura con él." },
   ...RESOURCES.map(({ tag, description }) => ({ name: tag, ...(description && { description }) })),
+  {
+    name: "Shop",
+    description:
+      "La tienda pública: el Home (sus tres carruseles), el Shop (las experiencias con filtros y página) y el detalle con sus salidas. " +
+      "Responde { data } y, en el listado, { data, pagination }. Sin sesión, y con sesión se ve lo mismo.",
+  },
 ];
 
-export const apiPaths = Object.assign({}, AUTH_PATHS, PROFILE_PATHS, ...RESOURCES.map(crudPaths));
+export const apiPaths = Object.assign({}, AUTH_PATHS, PROFILE_PATHS, ...RESOURCES.map(crudPaths), SHOP_PATHS);
 
 export const apiSchemas = {
   Session: {

@@ -30,6 +30,7 @@ export const queryDate = z.iso.datetime({ offset: true }).or(z.iso.date()).trans
  * Define los query params de un listado.
  *
  * @param options.sort     campos por los que se puede ordenar
+ * @param options.sortFields un campo de sort que en la base de datos es otro: { difficulty: "difficultyLevel" }
  * @param options.filters  { nombre: { schema, to, via? } }: el esquema de Zod del valor (ya
  *                         convertido), cómo se traduce a un trozo del filtro de MongoDB y, si es
  *                         una condición sobre otra colección, cuál (ver build)
@@ -38,7 +39,7 @@ export const queryDate = z.iso.datetime({ offset: true }).or(z.iso.date()).trans
  * @returns { schema, build, sortable, filters, ranges } schema para validate({ query }), build(query,
  *          base) para el service, y el resto para la documentación
  */
-export function defineListQuery({ sort: sortable, filters = {}, ranges = [], checks = [] }) {
+export function defineListQuery({ sort: sortable, sortFields = {}, filters = {}, ranges = [], checks = [] }) {
   const field = `(${sortable.join("|")})`;
   const sortPattern = new RegExp(`^-?${field}(,-?${field})*$`);
 
@@ -101,7 +102,7 @@ export function defineListQuery({ sort: sortable, filters = {}, ranges = [], che
     const page = query.page ?? (query.limit !== undefined ? 1 : undefined);
     return {
       filter,
-      sort: query.sort ? parseSort(query.sort) : undefined,
+      sort: query.sort ? parseSort(query.sort, sortFields) : undefined,
       page,
       limit: page === undefined ? undefined : (query.limit ?? DEFAULT_LIMIT),
     };
@@ -112,10 +113,16 @@ export function defineListQuery({ sort: sortable, filters = {}, ranges = [], che
   return { schema, build, sortable, filters: filterSchemas, ranges };
 }
 
-/** "-distance,title" → { distance: -1, title: 1 }. */
-export function parseSort(sort) {
+/**
+ * "-distance,title" → { distance: -1, title: 1 }. Con fields, un campo de la URL se ordena por
+ * otro de la base de datos: { difficulty: "difficultyLevel" }.
+ */
+export function parseSort(sort, fields = {}) {
   return Object.fromEntries(
-    sort.split(",").map((part) => (part.startsWith("-") ? [part.slice(1), -1] : [part, 1])),
+    sort.split(",").map((part) => {
+      const [name, direction] = part.startsWith("-") ? [part.slice(1), -1] : [part, 1];
+      return [fields[name] ?? name, direction];
+    }),
   );
 }
 

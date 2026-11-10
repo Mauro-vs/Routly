@@ -5,7 +5,7 @@ import { BaseRecord } from '../../core/models/entity.model';
 import { ListQuery } from '../../core/models/list-query.model';
 import { EntityStore, StatusFilter } from '../../core/services/entity.store';
 import { StatusCounts } from '../components/list-page/list-page.component';
-import { ListSort } from '../utils/search';
+import { ListFilter, ListSort } from '../utils/search';
 
 /** Parámetros de la URL con el estado del listado: `?estado=inactive&pagina=2`. */
 const STATUS_PARAM = 'estado';
@@ -28,9 +28,10 @@ function readStatus(value: string | null): StatusFilter | null {
  * orden y la paginación los hace el servidor. Las acciones de cada fila van al store. Cada
  * página declara su `store`, sus columnas, sus celdas y sus órdenes (`sorts`).
  *
- * La búsqueda, el orden, el filtro y la página van en la URL: se pueden enlazar y sobreviven
- * a una recarga. Sin parámetros se usa el filtro que ya tenía el store, así se conserva al
- * volver del detalle.
+ * La búsqueda, el orden, los filtros y la página van en la URL: se pueden enlazar y sobreviven
+ * a una recarga. Sin parámetros se usa el filtro por estado que ya tenía el store, así se
+ * conserva al volver del detalle. Los filtros propios de cada colección (la dificultad, el
+ * rol...) los declara su página en `listFilters`.
  */
 @Directive()
 export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
@@ -52,10 +53,14 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
     { value: 'nombre', label: 'Nombre (A-Z)', sort: this.nameSort() },
   ];
   protected readonly sort = signal('');
+  /** Los filtros propios de la colección. Por defecto, ninguno. */
+  protected readonly listFilters: readonly ListFilter[] = [];
+  /** El valor elegido de cada filtro, por su `param`. Sin valor, sin filtrar. */
+  protected readonly filterValues = signal<Readonly<Record<string, string>>>({});
   protected readonly pageSize = PAGE_SIZE;
-  /** La página, desde 1. Vuelve a la primera al cambiar el filtro, la búsqueda o el orden. */
+  /** La página, desde 1. Vuelve a la primera al cambiar un filtro, la búsqueda o el orden. */
   protected readonly page = linkedSignal<string, number>({
-    source: () => [this.store.status(), this.searchTerm(), this.sort(), JSON.stringify(this.filters())].join('|'),
+    source: () => [this.store.status(), this.searchTerm(), this.sort(), JSON.stringify(this.filterValues())].join('|'),
     computation: (key, previous) => (previous && previous.source === key ? previous.value : 1),
   });
 
@@ -80,6 +85,15 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
   protected readonly rowKey = (row: T): string => row._id;
   protected readonly isInactive = (row: T): boolean => !row.isActive;
 
+  /** Los query params de la API de los filtros elegidos. */
+  private readonly apiFilters = computed(() => {
+    const values = this.filterValues();
+    return Object.assign(
+      {},
+      ...this.listFilters.filter((filter) => values[filter.param]).map((filter) => filter.toApi(values[filter.param])),
+    ) as Readonly<Record<string, string>>;
+  });
+
   /** Lo que se le pide a la API. */
   private readonly listQuery = computed<ListQuery>(() => {
     const status = this.store.status();
@@ -89,7 +103,7 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
       sort: this.sorts.find((option) => option.value === this.sort())?.sort,
       page: this.page(),
       limit: PAGE_SIZE,
-      filters: this.filters(),
+      filters: this.apiFilters(),
     };
   });
   /** Hasta leer la URL no se pide nada: la primera petición ya lleva sus parámetros. */
@@ -127,6 +141,7 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
       const page = this.page();
       const query = this.searchTerm();
       const sort = this.sort();
+      const values = this.filterValues();
       untracked(() => {
         void this.router.navigate([], {
           relativeTo: this.route,
@@ -135,6 +150,7 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
             [PAGE_PARAM]: page > 1 ? page : null,
             [QUERY_PARAM]: query || null,
             [SORT_PARAM]: sort && sort !== this.sorts[0]?.value ? sort : null,
+            ...Object.fromEntries(this.listFilters.map((filter) => [filter.param, values[filter.param] || null])),
           },
           queryParamsHandling: 'merge',
           replaceUrl: true,
@@ -152,6 +168,14 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
     this.searchTerm.set(query);
     const sort = params.get(SORT_PARAM);
     this.sort.set(this.sorts.some((option) => option.value === sort) ? (sort as string) : (this.sorts[0]?.value ?? ''));
+    // Un valor que no existe llega a la API, que responde con un 400 que se ve en el listado
+    this.filterValues.set(
+      Object.fromEntries(
+        this.listFilters
+          .map((filter) => [filter.param, (params.get(filter.param) ?? '').trim()] as const)
+          .filter(([, value]) => value !== ''),
+      ),
+    );
     // La página, después del resto: cambiarlos la devuelve a la 1.
     const page = Number(params.get(PAGE_PARAM));
     if (Number.isInteger(page) && page > 1) {
@@ -175,6 +199,19 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
     this.store.setStatus(status);
   }
 
+  /** Elige un valor de un filtro; vacío, deja de filtrar. */
+  protected setFilter({ param, value }: { param: string; value: string }): void {
+    this.filterValues.update((values) => {
+      const { [param]: _previous, ...rest } = values;
+      return value ? { ...rest, [param]: value } : rest;
+    });
+  }
+
+  /** Quita todos los filtros propios (no la búsqueda ni el estado). */
+  protected clearFilters(): void {
+    this.filterValues.set({});
+  }
+
   protected setActive(row: T, isActive: boolean): void {
     void this.store.setActive(row, isActive);
   }
@@ -190,10 +227,5 @@ export abstract class EntityListPage<T extends BaseRecord> implements OnInit {
   /** El campo de la API para "Nombre (A-Z)". Cada colección dice el suyo: `title`, `city`... */
   protected nameSort(): string {
     return 'name';
-  }
-
-  /** Los filtros propios de la página, con los nombres de la API. Por defecto, ninguno. */
-  protected filters(): Readonly<Record<string, string>> {
-    return {};
   }
 }

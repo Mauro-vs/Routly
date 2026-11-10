@@ -5,6 +5,7 @@ import { loadAuthConfig } from "./config/auth.js";
 import { loadCookieConfig } from "./config/cookies.js";
 import { corsMiddleware } from "./config/cors.js";
 import { connectDB } from "./config/db.js";
+import { Route } from "./models/route.model.js";
 import { helmetMiddleware } from "./config/helmet.js";
 import { morganMiddleware } from "./config/morgan.js";
 import { applyTrustProxy } from "./config/proxy.js";
@@ -12,6 +13,7 @@ import { swaggerSpec } from "./config/swagger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
 import bikeRoutes from "./routes/bike.routes.js";
+import shopRoutes from "./routes/shop.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import departureRoutes from "./routes/departure.routes.js";
 import experienceRoutes from "./routes/experience.routes.js";
@@ -66,11 +68,15 @@ app.use("/api/experiences", experienceRoutes);
 app.use("/api/departures", departureRoutes);
 app.use("/api/images", imageRoutes);
 app.use("/api/bikes", bikeRoutes);
+// La tienda pública: el Home, el Shop y el detalle de una experiencia
+app.use("/api/shop", shopRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
 
 connectDB()
+  // Las rutas de antes de existir difficultyLevel: una sola vez, luego no cambia nada
+  .then(() => Route.syncDifficultyLevels())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);

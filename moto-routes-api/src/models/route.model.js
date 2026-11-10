@@ -16,6 +16,8 @@ export const ROUTE_LIMITS = Object.freeze({
 });
 
 export const ROUTE_DIFFICULTIES = Object.freeze(["easy", "medium", "hard"]);
+// Su nivel, para ordenar por dificultad (sort=difficulty): como texto saldría easy, hard, medium
+export const DIFFICULTY_LEVELS = Object.freeze({ easy: 1, medium: 2, hard: 3 });
 
 const routeSchema = new mongoose.Schema(
   {
@@ -28,6 +30,8 @@ const routeSchema = new mongoose.Schema(
     },
     description: { type: String, trim: true, maxlength: ROUTE_LIMITS.descriptionMax },
     difficulty: { type: String, required: true, enum: ROUTE_DIFFICULTIES },
+    // Interno: lo pone el modelo a partir de difficulty y no sale en las respuestas
+    difficultyLevel: { type: Number, select: false },
     distance: { type: Number, required: true, max: ROUTE_LIMITS.distanceMax, validate: positive },
     duration: { type: Number, required: true, max: ROUTE_LIMITS.durationMax, validate: positive },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: true, index: true },
@@ -58,6 +62,27 @@ routeSchema.virtual("endLocation", {
   justOne: true,
 });
 
+// difficultyLevel sigue siempre a difficulty: al crear y al editar
+routeSchema.pre("validate", function () {
+  if (this.difficulty) this.difficultyLevel = DIFFICULTY_LEVELS[this.difficulty];
+});
+routeSchema.pre(["findOneAndUpdate", "updateOne", "updateMany"], function () {
+  const update = this.getUpdate() ?? {};
+  const difficulty = update.difficulty ?? update.$set?.difficulty;
+  if (difficulty) this.set("difficultyLevel", DIFFICULTY_LEVELS[difficulty]);
+});
+
+/** Pone el nivel a las rutas que aún no lo tienen (las de antes de existir el campo). */
+routeSchema.statics.syncDifficultyLevels = async function () {
+  await Promise.all(
+    Object.entries(DIFFICULTY_LEVELS).map(([difficulty, level]) =>
+      this.updateMany({ difficulty, difficultyLevel: { $ne: level } }, { $set: { difficultyLevel: level } }).setOptions({
+        withDeleted: true,
+      }),
+    ),
+  );
+};
+
 routeSchema.plugin(statusPlugin);
 routeSchema.plugin(slugPlugin, { source: (doc) => doc.title, fields: ["title"] });
 routeSchema.plugin(softDeletePlugin);
@@ -65,6 +90,7 @@ routeSchema.plugin(softDeletePlugin);
 // ?q= busca en el título y la descripción; los filtros por dificultad y distancia, con su índice
 routeSchema.index({ title: "text", description: "text" }, TEXT_INDEX);
 routeSchema.index({ difficulty: 1 });
+routeSchema.index({ difficultyLevel: 1 });
 routeSchema.index({ distance: 1 });
 
 export const Route = mongoose.model("Route", routeSchema);

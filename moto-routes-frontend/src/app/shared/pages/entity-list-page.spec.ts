@@ -10,6 +10,7 @@ import { ErrorHandlerService } from '../../core/services/error-handler.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { toApiError } from '../../core/utils/api-error.mapper';
 import { CollectionLabels } from '../utils/labels';
+import { ListFilter } from '../utils/search';
 import { EntityListPage } from './entity-list-page';
 
 interface Item extends BaseEntity {
@@ -48,6 +49,23 @@ describe('EntityListPage', () => {
   @Component({ selector: 'test-items-list', template: '', changeDetection: ChangeDetectionStrategy.OnPush })
   class ItemsListComponent extends EntityListPage<Item> {
     protected readonly store = inject(ItemsStore);
+    protected override readonly listFilters: readonly ListFilter[] = [
+      {
+        param: 'dificultad',
+        label: 'Dificultad',
+        allLabel: 'Todas',
+        options: () => [{ value: 'hard', label: 'Difícil' }],
+        toApi: (difficulty) => ({ difficulty }),
+      },
+    ];
+
+    pick(param: string, value: string): void {
+      this.setFilter({ param, value });
+    }
+
+    clear(): void {
+      this.clearFilters();
+    }
 
     type(text: string): void {
       this.query.set(text);
@@ -204,6 +222,30 @@ describe('EntityListPage', () => {
     expect(api.search).toHaveBeenCalledWith(expected({ page: 3 }));
   });
 
+  it('un filtro va a la API con su nombre, vuelve a la página 1 y se refleja en la URL', () => {
+    api.search.and.returnValue(of({ items: [item('1')], total: 40 }));
+    const list = create();
+    list.goTo(2);
+    TestBed.tick();
+
+    list.pick('dificultad', 'hard');
+    TestBed.tick();
+
+    expect(pageCalls().at(-1)).toEqual([expected({ filters: { difficulty: 'hard' } })]);
+    expect(router.navigate.calls.mostRecent().args[1]?.queryParams?.['dificultad']).toBe('hard');
+
+    list.clear();
+    TestBed.tick();
+    expect(pageCalls().at(-1)).toEqual([expected()]);
+  });
+
+  it('la primera petición ya lleva los filtros de la URL', () => {
+    api.search.and.returnValue(of({ items: [item('1')], total: 40 }));
+    create({ dificultad: 'hard', pagina: '2' });
+
+    expect(pageCalls()).toEqual([[expected({ page: 2, filters: { difficulty: 'hard' } })]]);
+  });
+
   it('refleja el estado en la URL con los nombres del panel', () => {
     const list = create();
     list.goTo(2);
@@ -211,7 +253,7 @@ describe('EntityListPage', () => {
     TestBed.tick();
 
     const [, extras] = router.navigate.calls.mostRecent().args;
-    expect(extras?.queryParams).toEqual({ estado: null, pagina: null, q: null, orden: 'nombre' });
+    expect(extras?.queryParams).toEqual({ estado: null, pagina: null, q: null, orden: 'nombre', dificultad: null });
     expect(extras?.replaceUrl).toBeTrue();
   });
 });

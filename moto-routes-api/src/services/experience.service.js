@@ -138,8 +138,9 @@ async function assertOwnExperience(actor, experience) {
 export const experienceService = {
   // scope (services/visibility.js): en PUBLIC, sin las de un anfitrión o una ruta ocultos
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
-  async search(query = {}, scope) {
-    const base = await scopeFilter("experience", scope);
+  // extra: una condición más que no es un query param (la búsqueda en el título de la tienda)
+  async search(query = {}, scope, extra = {}) {
+    const base = { ...(await scopeFilter("experience", scope)), ...extra };
     const listQuery = await experienceListQuery.build(query, base, LIST_RESOLVERS);
     const byComputed = listQuery.sort && Object.keys(listQuery.sort).some((field) => COMPUTED_SORT.has(field));
     const page = byComputed ? await findByComputedSort(listQuery) : await findList(experienceRepository, listQuery);
@@ -158,7 +159,7 @@ export const experienceService = {
    * empieza y acaba en el mismo sitio cuenta una vez. Se cuenta en memoria con dos consultas
    * ligeras (las experiencias y sus rutas), y cada lista la presenta su service (con su foto).
    */
-  async facets({ limit = FACETS_LIMIT.default } = {}, scope) {
+  async facets({ limit = FACETS_LIMIT.default, kinds = ["categories", "hosts", "locations"] } = {}, scope) {
     const experiences = await experienceRepository.findFacetKeys(await scopeFilter("experience", scope));
     const routes = await routeRepository.findReferences([...new Set(experiences.map((e) => String(e.routeId)))]);
     const routeById = new Map(routes.map((route) => [String(route._id), route]));
@@ -173,10 +174,12 @@ export const experienceService = {
       for (const id of new Set([String(route.startLocationId), String(route.endLocationId)])) add(counts.locations, id);
     }
 
+    // Solo se presentan las listas pedidas (la tienda pide una por carrusel)
+    const wanted = (kind, list) => (kinds.includes(kind) ? list() : []);
     const [categories, hosts, locations] = await Promise.all([
-      categoryService.listByIds([...counts.categories.keys()]),
-      hostService.listByIds([...counts.hosts.keys()], scope),
-      locationService.listByIds([...counts.locations.keys()]),
+      wanted("categories", () => categoryService.listByIds([...counts.categories.keys()])),
+      wanted("hosts", () => hostService.listByIds([...counts.hosts.keys()], scope)),
+      wanted("locations", () => locationService.listByIds([...counts.locations.keys()])),
     ]);
     const rank = (items, map, label) =>
       items
@@ -184,11 +187,12 @@ export const experienceService = {
         .sort((a, b) => b.experienceCount - a.experienceCount || label(a).localeCompare(label(b), "es"))
         .slice(0, limit);
 
-    return {
+    const lists = {
       categories: rank(categories, counts.categories, (category) => category.name),
       hosts: rank(hosts, counts.hosts, (host) => host.name),
       locations: rank(locations, counts.locations, (location) => location.city),
     };
+    return Object.fromEntries(kinds.map((kind) => [kind, lists[kind]]));
   },
 
   async listDeleted() {

@@ -40,10 +40,12 @@ export const imageListQuery = defineListQuery({
     ownerId: { schema: objectIdSchema, to: equals("ownerId") },
     isCover: { schema: queryBoolean, to: equals("isCover") },
   },
+  // ownerType solo: las imágenes de ese tipo de dueño. Con ownerId: la galería de un dueño, que
+  // necesita saber de qué colección es
   checks: [
     [
-      (query) => (query.ownerType === undefined) === (query.ownerId === undefined),
-      { message: "ownerType and ownerId must be sent together", path: ["ownerType"] },
+      (query) => query.ownerId === undefined || query.ownerType !== undefined,
+      { message: "ownerType is required with ownerId", path: ["ownerType"] },
     ],
   ],
 });

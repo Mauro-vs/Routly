@@ -4,15 +4,13 @@ import { adminOnly, hostOrAdmin } from "../middlewares/authorize.js";
 import { optionalAuth } from "../middlewares/authenticate.js";
 import { validate } from "../middlewares/validate.js";
 import { idParamSchema, restoreSchema, setActiveSchema, slugParamSchema } from "../schemas/common.schema.js";
-import { createExperienceSchema, experienceFacetsQuery, experienceListQuery, updateExperienceSchema } from "../schemas/experience.schema.js";
+import { createExperienceSchema, experienceListQuery, updateExperienceSchema } from "../schemas/experience.schema.js";
 
 // La documentación Swagger de estos endpoints se genera en src/docs/
 const router = Router();
 
 router.get("/", optionalAuth, validate({ query: experienceListQuery.schema }), experienceController.list);
 // Deben ir antes de "/:id" para que "actives", "inactives" y "deleted" no se tomen como un id
-// Antes de /:id: si no, "facets" se tomaría por un id
-router.get("/facets", optionalAuth, validate({ query: experienceFacetsQuery }), experienceController.facets);
 router.get("/actives", optionalAuth, experienceController.listActives);
 router.get("/inactives", adminOnly, experienceController.listInactives);
 router.get("/deleted", adminOnly, experienceController.listDeleted);

@@ -93,13 +93,36 @@ describe("sort", () => {
     const byDistance = await api.get("/routes?sort=-distance");
     assert.deepEqual(byDistance.body.map((route) => route.distance), [320, 150, 120, 80, 40]);
 
+    // La dificultad, por su nivel (fácil, media, difícil), no por el texto (easy, hard, medium)
     const byDifficultyThenTitle = await api.get("/routes?sort=difficulty,title&status=active");
     assert.deepEqual(titles(byDifficultyThenTitle), [
       "Costa Dorada",
+      "Valle de Tena",
       "Puertos del Pirineo aragonés",
       "Travesía del Pirineo",
-      "Valle de Tena",
     ]);
+    const hardestFirst = await api.get("/routes?sort=-difficulty,title&status=active");
+    assert.deepEqual(hardestFirst.body.map((route) => route.difficulty), ["hard", "hard", "medium", "easy"]);
+  });
+
+  test("el nivel de la dificultad es interno: no sale en las respuestas y sigue a difficulty", async () => {
+    const response = await api.get("/routes?sort=difficulty&status=active");
+    assert.ok(response.body.every((route) => !("difficultyLevel" in route)));
+
+    const costaDorada = response.body.find((route) => route.title === "Costa Dorada");
+    await api.patch(`/routes/${costaDorada._id}`, { difficulty: "hard" });
+    const after = await api.get("/routes?sort=-difficulty,title&status=active");
+    assert.deepEqual(titles(after).slice(0, 3), ["Costa Dorada", "Puertos del Pirineo aragonés", "Travesía del Pirineo"]);
+    await api.patch(`/routes/${costaDorada._id}`, { difficulty: "easy" });
+  });
+
+  test("al arrancar, las rutas sin nivel (de antes del campo) lo reciben", async () => {
+    await Route.collection.updateMany({}, { $unset: { difficultyLevel: "" } });
+    await Route.syncDifficultyLevels();
+
+    const levels = await Route.find({}, { difficulty: 1, difficultyLevel: 1 }).setOptions({ withDeleted: true }).lean();
+    assert.ok(levels.length > 0);
+    assert.ok(levels.every((route) => route.difficultyLevel === { easy: 1, medium: 2, hard: 3 }[route.difficulty]));
   });
 
   test("un campo que no se puede ordenar es un 400 que dice cuáles valen", async () => {
@@ -240,10 +263,18 @@ describe("filtros de las demás colecciones", () => {
     assert.deepEqual((await api.get("/locations?country=Fran")).body, []);
   });
 
-  test("imágenes: ownerType y ownerId van juntos", async () => {
-    const response = await api.get("/images?ownerType=route");
-    assert.equal(response.status, 400);
-    assert.equal(fieldMessage(response, "ownerType"), "ownerType and ownerId must be sent together");
+  test("imágenes: por tipo de dueño, o la galería de uno (ownerId necesita ownerType)", async () => {
+    await api.post("/images", { ownerType: "route", ownerId: data.route._id, url: "https://picsum.photos/seed/r/800/600" });
+    await api.post("/images", { ownerType: "category", ownerId: data.category._id, url: "https://picsum.photos/seed/c/800/600" });
+
+    const byType = await api.get("/images?ownerType=route");
+    assert.equal(byType.status, 200);
+    assert.ok(byType.body.length > 0);
+    assert.ok(byType.body.every((image) => image.ownerType === "route"));
+
+    const withoutType = await api.get(`/images?ownerId=${data.route._id}`);
+    assert.equal(withoutType.status, 400);
+    assert.equal(fieldMessage(withoutType, "ownerType"), "ownerType is required with ownerId");
     assert.equal((await api.get(`/images?ownerType=route&ownerId=${data.route._id}&isCover=true`)).status, 200);
   });
 });

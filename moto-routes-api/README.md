@@ -115,7 +115,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 238 tests con `node:test`:
+`npm test` ejecuta 253 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -134,7 +134,8 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/list-query.test.js` | Los query params de los listados: `q` (también en plural y sin sesión), `status`, `sort`, `page` y `limit` con sus cabeceras (páginas sin repetir ni saltarse nada, el total de lo filtrado), los filtros de cada colección combinados, los rangos cruzados, los parámetros que no existen y, con `explain()`, que las consultas usan un índice y no recorren la colección |
 | `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, los mensajes documentados y que cada listado documenta justo los query params que acepta |
-| `src/testing/public.test.js` | La web pública: los filtros de experiencias por su ruta y por sus salidas, `priceFrom` y `nextDepartureAt`, los órdenes del Shop (las que no tienen salidas, al final), las facetas, las fotos de categorías y ubicaciones, el anfitrión del detalle, `seatsLeft`, los índices con `explain()` y el número de consultas de cada petición |
+| `src/testing/public.test.js` | Lo que usa la tienda en `/api/experiences` y `/api/departures`: los filtros de experiencias por su ruta y por sus salidas, `priceFrom` y `nextDepartureAt`, sus órdenes, las fotos de categorías y ubicaciones, el anfitrión del detalle, `seatsLeft`, los índices con `explain()` y el número de consultas |
+| `src/testing/shop.test.js` | La tienda (`/api/shop`): los carruseles (solo lo que tiene experiencias, con cuántas), el Shop en `{ data, pagination }` con sus filtros por slug, la búsqueda por un trozo del título, un slug que no existe, los 400, la misma vista con sesión de admin, el detalle con su galería, las salidas reservables y el número de consultas |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
@@ -297,17 +298,19 @@ src/
 │       └── slug.plugin.js         slug único
 ├── schemas/
 │   ├── <recurso>.schema.js        Esquemas de Zod de cada colección (body y los query params de su
-│   │                              listado), y auth.schema.js (registro y login)
+│   │                              listado), auth.schema.js (registro y login) y shop.schema.js
+│   │                              (los query params de la tienda)
 │   └── common.schema.js           Piezas comunes (:id, :slug, cannotChange, clearable...)
 ├── repositories/<recurso>.repository.js
 ├── services/
 │   ├── visibility.js              Qué se ve en público (lo que cuelga de un padre inactivo, no)
 │   ├── integrity.service.js       La comprobación de npm run check:integrity
-│   ├── <recurso>.service.js       También auth.service.js (login, registro, sesión) y
-│   │                              profile.service.js (solo lo usa user.service.js)
+│   ├── <recurso>.service.js       También auth.service.js (login, registro, sesión),
+│   │                              profile.service.js (solo lo usa user.service.js) y
+│   │                              shop.service.js (la tienda: usa los de cada colección)
 │   └── references.js              Comprobaciones entre colecciones, doble comprobación y cascadas
-├── controllers/<recurso>.controller.js   Más auth y profile
-├── routes/<recurso>.routes.js           Más auth (/api/auth) y profile (/api/profile)
+├── controllers/<recurso>.controller.js   Más auth, profile y shop
+├── routes/<recurso>.routes.js           Más auth (/api/auth), profile (/api/profile) y shop (/api/shop)
 ├── middlewares/
 │   ├── authenticate.js            JWT → req.user (401)
 │   ├── authorize.js               Roles (authorizeRoles, isAdmin) y propiedad (authorizeOwnership)
@@ -496,7 +499,7 @@ Además:
 | GET | `/api/docs` | Documentación Swagger | 200 |
 | GET | `/api/images?ownerType=route&ownerId=<id>` | Imágenes de un dueño, por posición | 200 |
 | GET | `/api/departures/sku/:sku` | Una salida por su SKU (también en minúsculas) | 200 |
-| GET | `/api/experiences/facets` | Los carruseles del Home ([la parte pública](#la-parte-pública)) | 200 |
+| GET | `/api/shop/...` | La tienda pública: los carruseles del Home, el Shop y el detalle ([la parte pública](#la-parte-pública)) | 200 |
 
 Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#roles-y-matriz-de-permisos)):
 
@@ -538,14 +541,14 @@ GET /api/routes?q=pirineo&difficulty=hard&distanceMin=100&sort=-distance&page=1&
 
 | Colección | Filtros | Se puede ordenar por |
 |---|---|---|
-| `routes` | `difficulty`, `categoryId`, `locationId` (de origen o de destino), `distanceMin`/`distanceMax`, `durationMin`/`durationMax` | `title`, `distance`, `duration`, `difficulty` |
+| `routes` | `difficulty`, `categoryId`, `locationId` (de origen o de destino), `distanceMin`/`distanceMax`, `durationMin`/`durationMax` | `title`, `distance`, `duration`, `difficulty` (por su nivel: fácil, media, difícil) |
 | `experiences` | `hostId`, `routeId`, `language`; por su ruta `categoryId`, `locationId`, `difficulty`; por sus salidas reservables `priceMin`/`priceMax`, `from`/`to`, `hasDepartures=true` ([la parte pública](#la-parte-pública)) | `title`, `duration`, `maxParticipants`, `priceFrom`, `nextDepartureAt` |
 | `departures` | `experienceId`, `state`, `from`/`to` (fecha de inicio, ISO 8601), `priceMin`/`priceMax` | `startAt`, `price`, `capacity` |
 | `users` | `roleId` | `name`, `email` |
 | `hosts` | `userId` | `name` |
 | `bikes` | `userId`, `type`, `license`, `ccMin`/`ccMax` | `brand`, `model`, `year`, `cc`, `hp` |
 | `locations` | `country` (entero, sin distinguir mayúsculas) | `city`, `country` |
-| `images` | `ownerType` y `ownerId` (juntos), `isCover` | `position` |
+| `images` | `ownerType` (solo, las de ese tipo de dueño; con `ownerId`, la galería de uno), `isCover` | `position` |
 | `roles` | `isSystem` | `name`, `label` |
 | `categories` | (solo los comunes) | `name` |
 
@@ -579,6 +582,7 @@ Cada consulta frecuente tiene su índice, así MongoDB no recorre la colección 
 | `{ deletedAt, isActive, createdAt: -1 }` | Todas las colecciones (`softDelete.plugin.js`) | Los listados: todos filtran por `deletedAt: null`, muchos por `isActive` (`?status`, `/actives`) y casi todos ordenan por fecha |
 | De texto, en español | Una por colección (`textIndex.js`) | `?q=`. Con `language_override`: el campo `language` de las experiencias (`ca`, `eu`, `gl`...) no se toma como el idioma del índice, que MongoDB no admite |
 | `{ difficulty }`, `{ distance }` | `routes` | `?difficulty=`, `?distanceMin=`, `?sort=distance` |
+| `{ difficultyLevel }` | `routes` | `?sort=difficulty`: un campo interno (1, 2, 3) que el modelo pone a partir de `difficulty` y no sale en las respuestas. Al arrancar, la API se lo pone a las rutas que aún no lo tienen |
 | `{ state, startAt }` | `departures` | `?state=scheduled&from=...`: las próximas, las de un mes |
 | `{ experienceId, startAt }` | `departures` | Las salidas de una experiencia y la regla de no repetir hora |
 | `{ experienceId, state, startAt }` | `departures` | Las salidas reservables de varias experiencias: `priceFrom`, `nextDepartureAt` y los filtros de precio y fecha del Shop |
@@ -593,43 +597,48 @@ Los índices los crea Mongoose al arrancar (`autoIndex`), y los tests, en su bas
 
 ## La parte pública
 
-La web pública (Home, Shop y detalle de una experiencia) solo lee: todo son `GET` sin token. Sin sesión de admin, cada listado y cada detalle ya aplican la [visibilidad pública](#activo--inactivo-frente-a-eliminado): lo inactivo, o lo que cuelga de algo inactivo, no aparece y por id o slug da 404. El cliente no tiene que filtrar nada.
+La web pública (Home, Shop y detalle de una experiencia) tiene su propio módulo: **`/api/shop`**, la tienda. Son seis `GET` públicos, sin token, que dan a cada pantalla lo que necesita en la forma en que lo necesita. No tienen consultas propias: `services/shop.service.js` traduce sus parámetros a los de los services de cada colección (experiencias, salidas, imágenes) y siempre lee con la [visibilidad pública](#activo--inactivo-frente-a-eliminado), también con sesión de admin, porque es la tienda y no el panel. Lo inactivo, o lo que cuelga de algo inactivo, no aparece, y por slug da 404.
 
-### Lo que pide cada pantalla
+Al contrario que el resto de la API, la tienda responde **`{ data }`** y, en el listado, **`{ data, pagination }`**, con el total en el cuerpo. Los errores, con el formato de siempre.
 
-| Pantalla | Petición | Para qué |
+### Los endpoints
+
+| Pantalla | Petición | Responde |
 |---|---|---|
-| Home | `GET /api/experiences/facets` | Los carruseles: categorías, anfitriones y ubicaciones con experiencias, cada uno con `experienceCount` y su foto |
-| Home | `GET /api/experiences?hasDepartures=true&sort=nextDepartureAt&limit=8` | "Próximas salidas": las primeras ocho que tienen fecha |
-| Shop | `GET /api/experiences?page=1&limit=12&...` | La rejilla, con los filtros de la barra lateral y el total en `X-Total-Count` |
-| Detalle | `GET /api/experiences/slug/:slug` | La experiencia, con su ruta, su anfitrión entero y la moto del guía |
-| Detalle | `GET /api/departures?experienceId=<id>&state=scheduled&from=<ahora>&sort=startAt` | Las fechas que se pueden reservar, con `price` y `seatsLeft` |
-| Detalle | `GET /api/images?ownerType=experience&ownerId=<id>&sort=position` | La galería |
+| Home | `GET /api/shop/categories` | `{ data: [categorías] }`: las que tienen alguna experiencia visible, con `experienceCount` y `coverImage`, de más a menos |
+| Home | `GET /api/shop/hosts` | Lo mismo con los anfitriones |
+| Home | `GET /api/shop/locations` | Lo mismo con las ubicaciones (el origen y el destino de la ruta de cada experiencia) |
+| Shop | `GET /api/shop/experiences?category=&host=&location=&search=&page=&limit=` | `{ data: [experiencias], pagination: { total, page, limit, totalPages } }` |
+| Detalle | `GET /api/shop/experiences/:slug` | `{ data: experiencia }`, con su anfitrión entero y su galería (`images`) |
+| Detalle | `GET /api/shop/experiences/:slug/departures` | `{ data: [salidas] }`: las reservables, de la más próxima a la más lejana |
 
-`<ahora>` es la fecha actual en ISO 8601 (`new Date().toISOString()`): así no salen las salidas que ya han empezado.
+Los tres carruseles admiten `?limit=` (de 1 a 50, 12 por defecto). Del Home al Shop se enlaza con el slug: una categoría lleva a `?category=<slug>`, un anfitrión a `?host=<slug>` y una ubicación a `?location=<slug>`.
 
 ### Los filtros del Shop
 
-Además de los [comunes](#consultas-filtros-búsqueda-orden-y-páginas) (`q`, `sort`, `page`, `limit`):
+Todos opcionales y combinables:
 
 | Parámetro | Ejemplo | Qué hace |
 |---|---|---|
-| `categoryId` | `?categoryId=<id>` | La categoría de su ruta |
-| `locationId` | `?locationId=<id>` | El origen o el destino de su ruta |
+| `category` | `?category=montana-b8c930` | La categoría de su ruta, por slug |
+| `host` | `?host=lucia-ferrer-b8c915` | Las de un anfitrión, por slug |
+| `location` | `?location=palma-b8c921` | El origen o el destino de su ruta, por slug |
+| `search` | `?search=pir` | Un trozo del título, sin distinguir mayúsculas: "pir" encuentra "Pirineos". Se busca tal cual: `.` o `*` no son una expresión regular |
 | `difficulty` | `?difficulty=easy` | La dificultad de su ruta (`easy`, `medium`, `hard`) |
-| `hostId` | `?hostId=<id>` | Las de un anfitrión |
 | `language` | `?language=en` | El idioma de la salida guiada |
 | `priceMin` / `priceMax` | `?priceMax=100` | Alguna de sus salidas reservables cuesta eso |
 | `from` / `to` | `?from=2026-12-01&to=2026-12-31` | Alguna de sus salidas reservables empieza en esas fechas |
 | `hasDepartures` | `?hasDepartures=true` | Solo las que tienen alguna salida reservable |
+| `sort` | `?sort=priceFrom` | `priceFrom` (más baratas), `nextDepartureAt` (más próximas), `title` o `createdAt`, con `-` delante para descendente. Por defecto, `-createdAt` (novedades). Las que no tienen salidas van al final al ordenar por precio o fecha |
+| `page` / `limit` | `?page=2&limit=12` | La página, desde 1, y su tamaño, de 1 a 50 (12 por defecto) |
 
-Una **salida reservable** es activa, programada (`state: scheduled`) y futura. Los filtros de precio y fecha se cumplen en la misma salida: `?priceMax=100&from=2026-12-01` es "alguna salida de diciembre por 100 € o menos", no una barata en enero y otra cara en diciembre.
-
-Órdenes del Shop: `sort=priceFrom` (más baratas), `sort=nextDepartureAt` (más próximas), `sort=-createdAt` (novedades) y `sort=title`. Las que no tienen salidas van siempre al final, se ordene como se ordene.
+- **Un slug que no existe** deja el Shop vacío, con un 200: `{ data: [], pagination: { total: 0, ... } }`. Uno con formato no válido (`?category=No Vale`) es un 400.
+- **Una salida reservable** es activa, programada (`state: scheduled`) y futura. Los filtros de precio y fecha se cumplen en la misma salida: `?priceMax=100&from=2026-12-01` es "alguna salida de diciembre por 100 € o menos".
+- Un parámetro que no existe (`?categoryId=`), un valor no válido o un rango cruzado es un 400, como en cualquier listado.
 
 ### Lo que trae cada experiencia
 
-Cada elemento del listado tiene todo lo que necesita su tarjeta, sin más peticiones:
+Cada elemento del Shop tiene todo lo que necesita su tarjeta, sin más peticiones:
 
 ```json
 {
@@ -660,31 +669,15 @@ Cada elemento del listado tiene todo lo que necesita su tarjeta, sin más petici
 
 - `priceFrom` y `nextDepartureAt` salen de sus salidas reservables: el precio más bajo y la fecha más cercana. Si no tiene ninguna, `null` (la tarjeta enseña "Sin fechas").
 - `coverImage` es la foto principal, o `null`.
-- En el **detalle** (`/experiences/:id` y `/experiences/slug/:slug`), `host` viene entero: `biography`, `coverImage` y su usuario (sin el email, salvo para el admin).
-
-### Las facetas del Home
-
-```
-GET /api/experiences/facets?limit=12
-```
-
-```json
-{
-  "categories": [{ "_id": "...", "name": "Costa", "slug": "costa-...", "coverImage": { "url": "..." }, "experienceCount": 4 }],
-  "hosts": [{ "_id": "...", "name": "Núria Vidal", "slug": "nuria-vidal-...", "coverImage": { "url": "..." }, "experienceCount": 4 }],
-  "locations": [{ "_id": "...", "city": "Barcelona", "country": "España", "coverImage": { "url": "..." }, "experienceCount": 3 }]
-}
-```
-
-Solo salen las que tienen alguna experiencia visible, de más a menos (y por nombre si empatan). Una experiencia cuenta para la categoría de su ruta y para su origen y su destino (si son el mismo sitio, una vez). `limit` va de 1 a 50 (12 por defecto). Cada enlace del carrusel lleva al Shop con su filtro: `?categoryId=`, `?hostId=` o `?locationId=`.
+- En el **detalle**, además, `host` viene entero (`biography`, `coverImage` y su usuario, sin el email) e `images` es su galería activa, por posición, para el carrusel.
 
 ### Las salidas del detalle
 
-Cada salida trae `startAt`, `endAt`, `price`, `capacity`, `state` y `seatsLeft` (las plazas libres). De momento `seatsLeft` es la capacidad, porque aún no hay reservas; cuando las haya, será la capacidad menos las reservadas, y el cliente no cambia. El diseño de las reservas está en [`DATABASE.md`](../DATABASE.md#14-reservas-diseño).
+`GET /api/shop/experiences/:slug/departures` da las reservables, de la más próxima a la más lejana. Cada una trae `startAt`, `endAt`, `price`, `capacity`, `state`, `sku` y `seatsLeft` (las plazas libres). De momento `seatsLeft` es la capacidad, porque aún no hay reservas; cuando las haya, será la capacidad menos las reservadas, y el cliente no cambia. El diseño de las reservas está en [`DATABASE.md`](../DATABASE.md#14-reservas-diseño).
 
 ### Cuántas consultas cuesta
 
-`public.test.js` cuenta las consultas a MongoDB de cada petición de la web pública y falla si una pasa de su presupuesto: no crecen con el número de experiencias (no hay N+1). Lo oculto se calcula una vez por petición (`visibilityCache`, en `services/visibility.js`) y se reutiliza en el listado, la moto del guía y las fotos.
+`shop.test.js` cuenta las consultas a MongoDB de cada petición de la tienda y falla si una pasa de su presupuesto: no crecen con el número de experiencias (no hay N+1). Lo oculto se calcula una vez por petición (`visibilityCache`, en `services/visibility.js`) y se reutiliza en el listado, la moto del guía y las fotos; cada carrusel solo presenta su lista. La búsqueda por un trozo del título no puede usar un índice de texto, pero va junto al filtro de los listados (`deletedAt`, `isActive`), que sí lo usa: el test lo comprueba con `explain()`.
 
 ## Activo / inactivo frente a eliminado
 

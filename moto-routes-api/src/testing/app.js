@@ -13,6 +13,7 @@ import locationRoutes from "../routes/location.routes.js";
 import profileRoutes from "../routes/profile.routes.js";
 import roleRoutes from "../routes/role.routes.js";
 import routeRoutes from "../routes/route.routes.js";
+import shopRoutes from "../routes/shop.routes.js";
 import userRoutes from "../routes/user.routes.js";
 import { User } from "../models/user.model.js";
 import { roleService } from "../services/role.service.js";
@@ -80,6 +81,7 @@ export async function startApi(name) {
     categories: categoryRoutes,
     locations: locationRoutes,
     routes: routeRoutes,
+    shop: shopRoutes,
     experiences: experienceRoutes,
     departures: departureRoutes,
     images: imageRoutes,

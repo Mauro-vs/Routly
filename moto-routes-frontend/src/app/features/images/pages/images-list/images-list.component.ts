@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { IMAGE_OWNERS, Image, imageOwnerPath } from '../../../../core/models/image.model';
+import { IMAGE_OWNERS, Image, ImageOwnerType, imageOwnerPath } from '../../../../core/models/image.model';
 import {
   DataTableComponent,
   TableCellDirective,
@@ -12,7 +12,7 @@ import { ListPageComponent } from '../../../../shared/components/list-page/list-
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
-import { ListSort } from '../../../../shared/utils/search';
+import { ListFilter, ListSort } from '../../../../shared/utils/search';
 import { ImagesStore } from '../../services/images.store';
 
 const COLUMNS: readonly TableColumn[] = [
@@ -50,6 +50,10 @@ const COLUMNS: readonly TableColumn[] = [
       [labels]="store.labels"
       [loaded]="listLoaded()"
       [refreshing]="refreshing()"
+      [filters]="listFilters"
+      [filterValues]="filterValues()"
+      (filterChange)="setFilter($event)"
+      (clearFilters)="clearFilters()"
       [failed]="loadFailed()"
       [counts]="counts()"
       [total]="store.pageTotal()"
@@ -124,6 +128,16 @@ export class ImagesListComponent extends EntityListPage<Image> {
   protected readonly store = inject(ImagesStore);
   protected override readonly sorts: readonly ListSort[] = [
     { value: 'recientes', label: 'Más recientes', sort: '-createdAt' },
+  ];
+  protected override readonly listFilters: readonly ListFilter[] = [
+    {
+      param: 'dueno',
+      label: 'Filtrar por tipo de dueño',
+      allLabel: 'De todo',
+      options: () =>
+        (Object.keys(IMAGE_OWNERS) as ImageOwnerType[]).map((value) => ({ value, label: IMAGE_OWNERS[value].label })),
+      toApi: (ownerType) => ({ ownerType }),
+    },
   ];
   protected readonly columns = COLUMNS;
   protected readonly owners = IMAGE_OWNERS;
