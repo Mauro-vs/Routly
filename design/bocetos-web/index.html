@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Routly · bocetos de la web pública</title>
+<link rel="icon" href="/assets/logo-r.svg">
+<style>
+@font-face { font-family: "Onest Variable"; font-weight: 100 900; font-display: swap;
+  src: url(/fonts/onest-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2190-2199, U+2212, U+2215; }
+@font-face { font-family: "Onest Variable"; font-weight: 100 900; font-display: swap;
+  src: url(/fonts/onest-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+/* Los tokens del panel (moto-routes-frontend/src/styles/tokens.css) */
+:root {
+  --accent: #c6f04d; --accent-hover: #b4e134; --on-accent: #16260a;
+  --primary: #14663f; --primary-soft: #dcefe3;
+  --band: #0c2419; --band-raised: #16382a; --on-band: #fff; --on-band-muted: #b4c9bc;
+  --bg: #f1f4f0; --surface: #fbfcfa; --surface-2: #e7ede8; --border: #c5d0c8; --border-strong: #748379;
+  --text: #0f1a15; --muted: #4c5d53; --danger: #b3261e;
+  --font: "Onest Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --slant: -16deg; --slant-text: -8deg;
+  --r-sm: 3px; --r-md: 4px; --r-lg: 6px;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --gutter: clamp(16px, 4vw, 48px);
+  --content: 1240px;
+}
+[data-theme="dark"] {
+  --primary: #c6f04d; --primary-soft: #1d3019;
+  --band: #0f2a1e; --band-raised: #173a2a;
+  --bg: #0b1310; --surface: #111c17; --surface-2: #1a2922; --border: #263a31; --border-strong: #66796e;
+  --text: #eaf3ed; --muted: #9db2a6; --danger: #ff8f80;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 400 15px/1.5 var(--font); color: var(--text); background: var(--bg); }
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+button, input, select { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.on-band :focus-visible { outline-color: var(--accent); }
+
+/* ---------- La barra de los bocetos (no es parte del diseño) ---------- */
+.switch { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 8px var(--gutter); background: #fff; color: #0f1a15; border-bottom: 1px solid #c5d0c8; font-size: 13px; }
+[data-theme="dark"] .switch { background: #07100b; color: #eaf3ed; border-color: #263a31; }
+.switch b { margin-right: 4px; }
+.switch button { border: 1px solid currentColor; background: none; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #c6f04d; color: #16260a; border-color: #c6f04d; font-weight: 700; }
+.switch .spacer { flex: 1; }
+.boceto-label { max-width: var(--content); margin: 0 auto; padding: 20px var(--gutter) 0; }
+.boceto-label p { margin: 0; color: var(--muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; font-weight: 650; }
+.boceto-label h2 { margin: 2px 0 0; font-size: 22px; letter-spacing: -.02em; }
+.screen-tag { max-width: var(--content); margin: 56px auto 0; padding: 0 var(--gutter) 10px; display: flex; gap: 10px; align-items: center;
+  font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.screen-tag::after { content: ""; flex: 1; border-top: 1px dashed var(--border-strong); }
+.frame { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+[hidden] { display: none !important; }
+
+/* ---------- Piezas comunes ---------- */
+.wrap { max-width: var(--content); margin: 0 auto; padding: 0 var(--gutter); }
+.on-band { background: var(--band); color: var(--on-band); --muted: var(--on-band-muted); --border: #2a4a3b; }
+.site-head { display: flex; align-items: center; gap: 28px; height: 64px; }
+.site-head .logo { height: 30px; width: auto; }
+.site-head nav { display: flex; gap: 22px; font-weight: 650; font-size: 14px; }
+.site-head nav a { text-decoration: none; color: var(--on-band-muted); padding: 6px 0; }
+.site-head nav a[aria-current] { color: var(--on-band); box-shadow: inset 0 -2px var(--accent); }
+.site-head .grow { flex: 1; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #2a4a3b; border-radius: var(--r-md); background: none; cursor: pointer; color: var(--on-band); }
+.btn-primary { position: relative; isolation: isolate; display: inline-flex; align-items: center; gap: 10px; height: 48px; padding: 0 26px;
+  border: 0; background: none; color: var(--on-accent); font-weight: 750; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.btn-primary::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent); transform: skewX(var(--slant)); border-radius: var(--r-sm);
+  transition: background .12s; }
+.btn-primary:hover::before { background: var(--accent-hover); }
+.btn-primary:active { transform: scale(.97); }
+.field { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); color: var(--text); min-width: 0; }
+.field input, .field select { border: 0; background: none; outline: 0; width: 100%; min-width: 0; font-size: 16px; }
+.on-band .field { background: #0a1d14; border-color: #3b5c4c; color: #fff; }
+.slanted { display: inline-block; transform: skewX(var(--slant-text)); }
+.kicker { font-size: 12px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.diff { display: inline-flex; gap: 2px; vertical-align: middle; }
+.diff i { width: 10px; height: 6px; background: var(--border); transform: skewX(var(--slant)); }
+.diff[data-l="1"] i:nth-child(-n+1), .diff[data-l="2"] i:nth-child(-n+2), .diff[data-l="3"] i:nth-child(-n+3) { background: var(--primary); }
+.on-band .diff i { background: #2f5242; }
+.on-band .diff[data-l="1"] i:nth-child(-n+1), .on-band .diff[data-l="2"] i:nth-child(-n+2), .on-band .diff[data-l="3"] i:nth-child(-n+3) { background: var(--accent); }
+.photo { position: relative; overflow: hidden; background: var(--band); }
+.photo img { width: 100%; height: 100%; object-fit: cover; }
+.photo.no-img { display: grid; place-items: center; }
+.photo.no-img svg { width: 40%; opacity: .5; }
+.rail-head { display: flex; align-items: end; gap: 16px; margin-bottom: 18px; }
+.rail-head h3 { margin: 0; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -.03em; font-weight: 800; }
+.rail-head .grow { flex: 1; }
+.rail-head a { font-weight: 650; font-size: 14px; color: var(--primary); }
+.rail-btns { display: flex; gap: 6px; }
+.rail-btns button { width: 44px; height: 44px; border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--r-md); cursor: pointer; display: grid; place-items: center; }
+.rail { display: grid; grid-auto-flow: column; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+.rail::-webkit-scrollbar { display: none; }
+.rail > * { scroll-snap-align: start; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 12px; border-radius: var(--r-sm); background: var(--primary-soft); color: var(--text); font-size: 13px; font-weight: 650; border: 0; }
+.chip button { width: 24px; height: 24px; border: 0; background: none; cursor: pointer; border-radius: 2px; }
+.pager { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 28px 0 56px; }
+.pager a, .pager span { min-width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: var(--r-md); text-decoration: none; font-weight: 650; }
+.pager [aria-current] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.foot { padding: 40px 0 48px; font-size: 13px; }
+.foot .wrap { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; }
+.foot p { margin: 0; color: var(--on-band-muted); max-width: 46ch; }
+.foot nav { display: flex; gap: 18px; margin-left: auto; }
+.foot nav a { color: var(--on-band-muted); }
+
+/* =====================================================================
+   A · TABLÓN DE SALIDAS: la portada es el tablón de las próximas salidas
+   ===================================================================== */
+.A .hero { padding-block: 28px 0; }
+.A .hero-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; }
+.A .hero h1 { margin: 6px 0 0; font-size: clamp(38px, 6.4vw, 84px); line-height: .92; letter-spacing: -.045em; font-weight: 850; }
+.A .hero h1 span { display: block; }
+.A .hero h1 .lime { color: var(--accent); }
+.A .board-meta { text-align: right; color: var(--on-band-muted); font-size: 13px; }
+.A .board-meta strong { display: block; font-size: 40px; line-height: 1; color: #fff; font-weight: 800; letter-spacing: -.03em; }
+.A .finder { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 10px; margin: 28px 0 0; }
+.A .board { margin-top: 26px; border-top: 2px solid var(--accent); }
+.A .board-cols, .A .board-row { display: grid; grid-template-columns: 112px 64px minmax(0, 1fr) 150px 110px 44px; gap: 16px; align-items: center; }
+.A .board-cols { padding: 10px 0; font-size: 11px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; color: var(--on-band-muted); border-bottom: 1px solid #2a4a3b; }
+.A .board-row { padding: 12px 0; border-bottom: 1px solid #23402f; text-decoration: none; position: relative; transition: background .2s var(--ease); }
+.A .board-row::before { content: ""; position: absolute; left: calc(-1 * var(--gutter)); top: 0; bottom: 0; width: 6px; background: var(--accent); transform: scaleY(0); transition: transform .2s var(--ease); }
+.A .board-row:hover { background: var(--band-raised); }
+.A .board-row:hover::before { transform: none; }
+.A .when b { display: block; font-size: 26px; line-height: 1; font-weight: 800; letter-spacing: -.02em; text-transform: uppercase; }
+.A .when span { font-size: 13px; color: var(--on-band-muted); }
+.A .thumb { width: 64px; height: 48px; border-radius: var(--r-sm); }
+.A .what b { display: block; font-size: 17px; font-weight: 750; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.A .what span { font-size: 13px; color: var(--on-band-muted); }
+.A .seats { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.A .pips { display: flex; gap: 3px; }
+.A .pips i { width: 9px; height: 12px; transform: skewX(var(--slant)); background: var(--accent); }
+.A .pips i.taken { background: #2f5242; }
+.A .full { display: inline-block; padding: 2px 10px; background: #fff; color: var(--band); font-weight: 800; font-size: 12px; letter-spacing: .08em; transform: skewX(var(--slant)); }
+.A .price { text-align: right; }
+.A .price small { display: block; font-size: 11px; color: var(--on-band-muted); text-transform: uppercase; letter-spacing: .1em; }
+.A .price b { font-size: 22px; font-weight: 800; }
+.A .go { color: var(--accent); font-size: 22px; text-align: center; }
+.A .board-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0 30px; font-size: 14px; color: var(--on-band-muted); }
+.A .board-foot a { color: var(--accent); font-weight: 700; }
+.A .platforms { padding-block: 56px 24px; display: grid; gap: 56px; }
+.A .platforms > section, .A .shop > section { min-width: 0; }
+.A .card-cat { width: clamp(220px, 23vw, 280px); }
+.A .card-cat .photo { aspect-ratio: 3 / 4; border-radius: var(--r-lg); }
+.A .card-cat .label { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px; color: #fff; background: linear-gradient(transparent, rgb(7 18 12 / .85)); }
+.A .card-cat .label b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.A .card-cat .label span { font-size: 13px; color: #d9e6dd; }
+.A .card-loc { width: clamp(200px, 19vw, 230px); text-decoration: none; }
+.A .card-loc .photo { aspect-ratio: 4 / 3; border-radius: var(--r-lg); }
+.A .card-loc b { display: block; margin-top: 10px; font-size: 17px; font-weight: 750; }
+.A .card-loc span { font-size: 13px; color: var(--muted); }
+.A .card-host { width: 300px; display: grid; grid-template-columns: 88px 1fr; gap: 14px; padding: 14px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); text-decoration: none; }
+.A .card-host .photo { aspect-ratio: 1; border-radius: var(--r-md); }
+.A .card-host b { display: block; font-size: 16px; font-weight: 750; }
+.A .card-host p { margin: 4px 0 0; font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.A .shop-head { padding-block: 26px 22px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: 24px; align-items: end; }
+.A .shop-head h1 { margin: 0; font-size: clamp(32px, 4.4vw, 54px); line-height: 1; letter-spacing: -.04em; font-weight: 850; }
+.A .shop { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 36px; padding-block: 28px 0; }
+.A .filters h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+.A .filters fieldset { border: 0; border-top: 1px solid var(--border); margin: 0; padding: 14px 0 18px; }
+.A .filters legend { font-size: 12px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 8px; float: left; width: 100%; }
+.A .filters label { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; cursor: pointer; }
+.A .filters label span { margin-left: auto; color: var(--muted); font-size: 13px; }
+.A .filters input[type=radio], .A .filters input[type=checkbox] { accent-color: var(--primary); width: 18px; height: 18px; }
+.A .results-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.A .results-bar strong { font-size: 18px; }
+.A .result { display: grid; grid-template-columns: 180px minmax(0, 1fr) 150px 120px; gap: 20px; align-items: center; padding: 16px 0; border-top: 1px solid var(--border); text-decoration: none; }
+.A .result .photo { aspect-ratio: 4 / 3; border-radius: var(--r-md); }
+.A .result h3 { margin: 4px 0 6px; font-size: 19px; letter-spacing: -.02em; font-weight: 750; }
+.A .result .meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.A .result .cat { font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
+.A .result .next b { display: block; font-size: 18px; font-weight: 800; text-transform: uppercase; }
+.A .result .next span, .A .result .from small { font-size: 12px; color: var(--muted); }
+.A .result .from { text-align: right; }
+.A .result .from b { display: block; font-size: 22px; font-weight: 800; }
+
+/* =====================================================================
+   B · SEÑALES DE CARRETERA: el panel de orientación es la navegación
+   ===================================================================== */
+.B .hero { position: relative; min-height: min(86vh, 760px); display: grid; align-items: end; color: #fff; }
+.B .hero > .photo { position: absolute; inset: 0; }
+.B .hero > .photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgb(7 18 12 / .78), rgb(7 18 12 / .2) 70%), linear-gradient(transparent 55%, rgb(7 18 12 / .7)); }
+.B .hero .head { position: absolute; top: 0; left: 0; right: 0; z-index: 2; }
+.B .hero .head .site-head { color: #fff; }
+.B .hero-body { width: 100%; position: relative; z-index: 2; display: grid; grid-template-columns: minmax(0, 560px) 1fr; gap: 32px; align-items: end; padding-bottom: 48px; padding-top: 110px; }
+.B .sign { background: var(--primary); color: #fff; border-radius: var(--r-lg); padding: 6px; box-shadow: 0 30px 60px -30px rgb(0 0 0 / .7); }
+[data-theme="dark"] .B .sign { background: #14663f; }
+.B .sign-in { border: 3px solid #fff; border-radius: 4px; padding: 18px 20px 14px; }
+.B .sign h1 { margin: 0 0 12px; font-size: clamp(28px, 3.6vw, 44px); line-height: 1; letter-spacing: -.035em; font-weight: 850; }
+.B .sign-row { display: grid; grid-template-columns: 1fr auto 44px; gap: 12px; align-items: center; min-height: 52px; border-top: 2px solid rgb(255 255 255 / .35); text-decoration: none; font-size: 22px; font-weight: 750; letter-spacing: -.01em; }
+.B .sign-row .n { font-size: 15px; font-weight: 650; opacity: .85; }
+.B .sign-row .arr { width: 44px; height: 36px; display: grid; place-items: center; }
+.B .sign-row:hover .arr { background: var(--accent); color: var(--on-accent); border-radius: 3px; }
+.B .sign-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-top: 12px; padding-top: 14px; border-top: 2px solid rgb(255 255 255 / .35); }
+.B .sign-search .field { background: #fff; color: #0f1a15; border: 0; }
+.B .post { justify-self: end; display: grid; gap: 0; width: 132px; text-align: center; color: #0f1a15; filter: drop-shadow(0 20px 30px rgb(0 0 0 / .5)); }
+.B .post .cap { background: var(--accent); height: 40px; border-radius: 6px 6px 0 0; display: grid; place-items: center; font-weight: 800; font-size: 13px; letter-spacing: .1em; }
+.B .post .body { background: #fff; padding: 12px 8px 16px; }
+.B .post b { display: block; font-size: 44px; line-height: 1; font-weight: 850; letter-spacing: -.04em; }
+.B .post span { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; }
+.B .post .leg { height: 70px; width: 24px; margin: 0 auto; background: #fff; opacity: .9; }
+.B .section { padding: 56px 0 8px; }
+.B .plate-card { width: clamp(230px, 24vw, 290px); text-decoration: none; }
+.B .plate-card .photo { aspect-ratio: 4 / 3; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.B .plate { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 0 0 var(--r-lg) var(--r-lg); font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
+.B .plate small { font-weight: 650; font-size: 13px; }
+.B .plate.green { background: var(--primary); color: #fff; }
+[data-theme="dark"] .B .plate.green { background: #14663f; }
+.B .plate.town { background: #fff; color: #0f1a15; border: 3px solid #0f1a15; border-top: 0; }
+[data-theme="dark"] .B .plate.town { border-color: #fff; }
+.B .plate.lime { background: var(--accent); color: var(--on-accent); }
+.B .shop-gantry { padding-block: 22px 26px; }
+.B .gantry { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr); gap: 8px; margin-top: 18px; }
+.B .gplate { background: var(--primary); color: #fff; border-radius: var(--r-md); padding: 4px; }
+[data-theme="dark"] .B .gplate { background: #14663f; }
+.B .gplate > div { border: 2px solid #fff; border-radius: 3px; padding: 8px 10px; height: 100%; }
+.B .gplate small { display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .8; font-weight: 700; }
+.B .gplate select { width: 100%; border: 0; background: none; color: #fff; font-weight: 750; font-size: 16px; padding: 4px 0; }
+.B .gplate select option { color: #0f1a15; }
+.B .gplate .field { height: 36px; border: 0; background: #fff; color: #0f1a15; padding: 0 10px; margin-top: 4px; }
+.B .shop-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 22px 0 18px; }
+.B .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 28px 20px; }
+.B .exp { text-decoration: none; display: grid; gap: 10px; }
+.B .exp .photo { aspect-ratio: 4 / 3; border-radius: var(--r-lg); }
+.B .km { position: absolute; right: 12px; bottom: -1px; width: 64px; background: #fff; color: #0f1a15; text-align: center; border-radius: 5px 5px 0 0; overflow: hidden; }
+.B .km i { display: block; height: 12px; background: var(--accent); }
+.B .km b { display: block; font-size: 22px; font-weight: 850; line-height: 1.1; padding-top: 2px; }
+.B .km span { display: block; font-size: 10px; font-weight: 750; letter-spacing: .1em; padding-bottom: 4px; }
+.B .exp h3 { margin: 0; font-size: 19px; line-height: 1.2; letter-spacing: -.02em; font-weight: 750; }
+.B .exp .meta { font-size: 13px; color: var(--muted); }
+.B .exp .bottom { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--border); padding-top: 10px; font-size: 13px; }
+.B .exp .bottom b { font-size: 19px; font-weight: 800; }
+
+/* =====================================================================
+   C · PARRILLA DE SALIDA: las experiencias en orden de salida, P1 primero
+   ===================================================================== */
+.C .hero { padding: 26px 0 64px; position: relative; overflow: hidden; }
+.C .hero-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: start; }
+.C .lead h1 { margin: 18px 0 0; font-size: clamp(40px, 6vw, 80px); line-height: .9; letter-spacing: -.05em; font-weight: 850; }
+.C .lead h1 em { font-style: normal; color: var(--accent); }
+.C .countdown { margin-top: 26px; display: flex; align-items: end; gap: 16px; }
+.C .countdown b { font-size: clamp(96px, 13vw, 168px); line-height: .8; font-weight: 850; letter-spacing: -.06em; color: var(--accent); }
+.C .countdown p { margin: 0 0 10px; font-size: 15px; color: var(--on-band-muted); max-width: 22ch; }
+.C .countdown p strong { color: #fff; display: block; font-size: 18px; }
+.C .lead form { margin-top: 30px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.C .gridslots { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; padding-top: 8px; }
+.C .slot { position: relative; text-decoration: none; display: grid; grid-template-columns: 48px 1fr; gap: 10px; align-items: start; }
+.C .slot:nth-child(even) { margin-top: 46px; }
+.C .slot .pos { font-size: 30px; font-weight: 850; letter-spacing: -.04em; line-height: 1; color: var(--accent); transform: skewX(var(--slant-text)); padding-top: 4px; }
+.C .slot .photo { aspect-ratio: 16 / 10; border-radius: var(--r-md); }
+.C .slot .tag { position: absolute; top: 8px; left: 66px; padding: 2px 10px; font-size: 12px; font-weight: 800; color: var(--on-accent); }
+.C .slot .tag::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent); transform: skewX(var(--slant)); }
+.C .slot .tag { isolation: isolate; }
+.C .slot h3 { margin: 8px 0 2px; font-size: 16px; line-height: 1.2; font-weight: 750; }
+.C .slot span { font-size: 13px; color: var(--on-band-muted); }
+.C .slot .body { min-width: 0; }
+.C .stripe { position: absolute; right: -10%; top: -20%; width: 46%; height: 140%; background: repeating-linear-gradient(90deg, rgb(198 240 77 / .06) 0 22px, transparent 22px 44px); transform: skewX(var(--slant)); pointer-events: none; }
+.C .section { padding: 56px 0 8px; }
+.C .tile { width: clamp(220px, 22vw, 270px); text-decoration: none; position: relative; }
+.C .tile .photo { aspect-ratio: 1; border-radius: var(--r-lg); }
+.C .tile .name { position: absolute; left: 12px; bottom: 12px; right: 12px; display: flex; justify-content: space-between; align-items: end; gap: 8px; }
+.C .tile .name b { padding: 4px 12px; font-size: 18px; font-weight: 800; color: var(--on-accent); isolation: isolate; position: relative; }
+.C .tile .name b::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent); transform: skewX(var(--slant)); border-radius: 2px; }
+.C .tile .name span { color: #fff; font-weight: 750; font-size: 13px; text-shadow: 0 1px 6px rgb(0 0 0 / .8); }
+.C .pitlane { position: sticky; top: 38px; z-index: 10; background: var(--surface); border-bottom: 1px solid var(--border); }
+.C .pitlane .wrap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 12px; padding-bottom: 12px; }
+.C .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-md); overflow: hidden; }
+.C .seg button { border: 0; background: none; height: 40px; padding: 0 14px; font-weight: 650; font-size: 14px; cursor: pointer; }
+.C .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+.C .pitlane select { height: 40px; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface); padding: 0 10px; }
+.C .shop-title { padding-block: 22px 18px; display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.C .shop-title h1 { margin: 0; font-size: clamp(32px, 4.4vw, 54px); line-height: 1; letter-spacing: -.04em; font-weight: 850; }
+.C .shop-title h1 em { font-style: normal; color: var(--accent); }
+.C .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 30px 20px; padding: 26px 0 0; }
+.C .exp { text-decoration: none; display: grid; grid-template-columns: 44px 1fr; gap: 6px 10px; }
+.C .exp .pos { grid-row: 1 / 3; font-size: 26px; font-weight: 850; letter-spacing: -.04em; color: var(--primary); transform: skewX(var(--slant-text)); line-height: 1; padding-top: 2px; }
+.C .exp .photo { aspect-ratio: 4 / 3; border-radius: var(--r-md); }
+.C .exp h3 { margin: 4px 0 2px; font-size: 18px; line-height: 1.2; letter-spacing: -.02em; font-weight: 750; }
+.C .exp .meta { font-size: 13px; color: var(--muted); }
+.C .exp .bottom { grid-column: 2; display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+.C .exp .bottom b { font-size: 19px; font-weight: 800; }
+.C .gap-row { grid-column: 2; }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 860px) {
+  .site-head nav { display: none; }
+  .A .hero-top { grid-template-columns: 1fr; }
+  .A .board-meta { text-align: left; }
+  .A .finder { grid-template-columns: 1fr; }
+  .A .board-cols { display: none; }
+  .A .board-row { grid-template-columns: 76px minmax(0, 1fr) auto; grid-template-areas: "when what price" "when seats price"; row-gap: 6px; }
+  .A .board-row .when { grid-area: when; } .A .board-row .what { grid-area: what; } .A .board-row .seats { grid-area: seats; } .A .board-row .price { grid-area: price; }
+  .A .board-row .thumb, .A .board-row .go { display: none; }
+  .A .when b { font-size: 20px; }
+  .A .what b { white-space: normal; }
+  .A .shop-head { grid-template-columns: 1fr; }
+  .A .shop { grid-template-columns: 1fr; }
+  .A .filters { display: none; }
+  .A .result { grid-template-columns: 112px minmax(0, 1fr); }
+  .A .result .next, .A .result .from { grid-column: 2; text-align: left; }
+  .B .hero-body { grid-template-columns: 1fr; padding-top: 90px; }
+  .B .post { display: none; }
+  .B .gantry { grid-template-columns: 1fr 1fr; }
+  .C .hero-grid { grid-template-columns: 1fr; }
+  .C .lead form, .B .sign-search { grid-template-columns: 1fr; }
+  .C .gridslots { grid-template-columns: 1fr; }
+  .C .slot:nth-child(even) { margin-top: 0; }
+  .C .slot:nth-child(n+5) { display: none; }
+  .mobile-filters { display: inline-flex !important; }
+}
+.mobile-filters { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<div class="switch" role="toolbar" aria-label="Bocetos">
+  <b>Bocetos</b>
+  <button type="button" data-dir="A" aria-pressed="true">A · Tablón de salidas</button>
+  <button type="button" data-dir="B" aria-pressed="false">B · Señales de carretera</button>
+  <button type="button" data-dir="C" aria-pressed="false">C · Parrilla de salida</button>
+  <span class="spacer"></span>
+  <button type="button" id="theme" aria-pressed="false">Tema oscuro</button>
+</div>
+<main id="app"></main>
+<script src="data.js"></script>
+<script>
+// Las fotos del seed son de picsum: se piden a través del servidor de maquetas (design/serve.mjs)
+const D = JSON.parse(JSON.stringify(window.ROUTLY).replaceAll('https://picsum.photos/', '/img/'));
+const LOGO = '/assets/logo-lime.svg';
+const ROAD = `<svg viewBox="0 0 100 100" aria-hidden="true"><g transform="translate(15.7 0) skewX(-16)"><path fill="#c6f04d" fill-rule="evenodd" d="M-12 13 L16 10 H62 L80 28 V44 L66 58 H58 L78.2 80 H100 V92 L71.2 92 L40 58 H34 V92 H16 V26 Z M34 26 H56 L64 34 V42 H34 Z"/></g></svg>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const money = (n) => n == null ? '' : new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
+const day = (iso) => new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', timeZone: 'Europe/Madrid' }).format(new Date(iso)).replace('.', '');
+const hour = (iso) => new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }).format(new Date(iso));
+const weekday = (iso) => new Intl.DateTimeFormat('es-ES', { weekday: 'short', timeZone: 'Europe/Madrid' }).format(new Date(iso)).replace('.', '');
+const daysTo = (iso) => Math.max(0, Math.ceil((new Date(iso) - Date.now()) / 864e5));
+const LEVEL = { easy: 1, medium: 2, hard: 3 };
+const LEVEL_NAME = { easy: 'Fácil', medium: 'Media', hard: 'Difícil' };
+const diff = (d) => `<span class="diff" data-l="${LEVEL[d]}" aria-hidden="true"><i></i><i></i><i></i></span> ${LEVEL_NAME[d]}`;
+const photo = (url, alt = '', cls = '') => url
+  ? `<div class="photo ${cls}"><img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" width="1200" height="800"></div>`
+  : `<div class="photo no-img ${cls}">${ROAD}</div>`;
+const route = (r) => `${esc(r.from)} → ${esc(r.to)}`;
+const head = (current) => `<div class="wrap site-head">
+  <img class="logo" src="${LOGO}" alt="Routly" width="90" height="30">
+  <nav aria-label="Principal"><a href="#" ${current === 'home' ? 'aria-current="page"' : ''}>Inicio</a><a href="#" ${current === 'shop' ? 'aria-current="page"' : ''}>Experiencias</a></nav>
+  <span class="grow"></span>
+  <button class="icon-btn" type="button" aria-label="Cambiar el tema">◐</button>
+</div>`;
+const foot = () => `<footer class="foot on-band"><div class="wrap">
+  <img src="${LOGO}" alt="Routly" width="90" height="30">
+  <p>Salidas guiadas en moto por carreteras elegidas una a una. Proyecto de DAW.</p>
+  <nav aria-label="Pie"><a href="#">Inicio</a><a href="#">Experiencias</a></nav>
+</div></footer>`;
+const railHead = (title, link) => `<div class="rail-head"><h3>${title}</h3><span class="grow"></span><a href="#">${link}</a>
+  <div class="rail-btns"><button type="button" aria-label="Anteriores">←</button><button type="button" aria-label="Siguientes">→</button></div></div>`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const tag = (name) => `<div class="screen-tag">${name}</div>`;
+const label = (k, t) => `<div class="boceto-label"><p>${k}</p><h2>${t}</h2></div>`;
+const exps = D.experiences;
+const deps = D.departures;
+
+/* ---------- A ---------- */
+function A() {
+  const rows = deps.slice(0, 7).map((d) => {
+    const taken = d.capacity - d.seatsLeft;
+    const pips = Array.from({ length: d.capacity }, (_, i) => `<i class="${i < taken ? 'taken' : ''}"></i>`).join('');
+    return `<a class="board-row" href="#">
+      <div class="when num"><b>${day(d.startAt)}</b><span>${weekday(d.startAt)} · ${hour(d.startAt)}</span></div>
+      ${photo(d.cover, '', 'thumb')}
+      <div class="what"><b>${esc(d.experience)}</b><span>${route(d)} · <span class="num">${d.distance} km</span> · ${esc(d.category)}</span></div>
+      <div class="seats">${d.isFull ? '<span><span class="full">COMPLETA</span></span>' : `<div class="pips" aria-hidden="true">${pips}</div><span class="num">${plural(d.seatsLeft, 'plaza libre', 'plazas libres')}</span>`}</div>
+      <div class="price num"><small>Precio</small><b>${money(d.price)}</b></div>
+      <div class="go" aria-hidden="true">→</div>
+    </a>`;
+  }).join('');
+  const home = `
+  <section class="on-band">
+    ${head('home')}
+    <div class="wrap hero">
+      <div class="hero-top">
+        <div><p class="kicker">Salidas guiadas en moto</p>
+          <h1><span>Elige carretera.</span><span class="lime">La fecha ya está puesta.</span></h1></div>
+        <div class="board-meta num"><strong>${deps.length}</strong>próximas salidas<br>en ${D.total} experiencias</div>
+      </div>
+      <form class="finder" onsubmit="return false">
+        <label class="field"><span class="sr">Buscar</span><span aria-hidden="true">⌕</span><input placeholder="Busca: costa, pirineo, viñedos…"></label>
+        <label class="field"><span class="sr">Tipo de carretera</span><select><option>Cualquier carretera</option>${D.categories.map((c) => `<option>${esc(c.name)}</option>`).join('')}</select></label>
+        <button class="btn-primary" type="submit">Ver experiencias →</button>
+      </form>
+      <div class="board" role="table" aria-label="Próximas salidas">
+        <div class="board-cols"><span>Salida</span><span></span><span>Experiencia</span><span>Plazas</span><span style="text-align:right">Precio</span><span></span></div>
+        ${rows}
+      </div>
+      <div class="board-foot"><span>Las completas siguen en el tablón: se ven, pero no se reservan.</span><a href="#">Todas las experiencias →</a></div>
+    </div>
+  </section>
+  <div class="wrap platforms">
+    <section>${railHead('Por tipo de carretera', 'Ver todas')}
+      <div class="rail">${D.categories.map((c) => `<a class="card-cat" href="#" style="text-decoration:none"><div class="photo" style="aspect-ratio:3/4;border-radius:6px">${c.cover ? `<img src="${esc(c.cover)}" alt="" loading="lazy">` : ROAD}<div class="label"><b>${esc(c.name)}</b><span class="num">${plural(c.count, 'experiencia', 'experiencias')}</span></div></div></a>`).join('')}</div></section>
+    <section>${railHead('Por destino', 'Ver todos')}
+      <div class="rail">${D.locations.map((l) => `<a class="card-loc" href="#">${photo(l.cover)}<b>${esc(l.name)}</b><span class="num">${plural(l.count, 'experiencia', 'experiencias')}</span></a>`).join('')}</div></section>
+    <section>${railHead('Con quién rodar', 'Ver todos')}
+      <div class="rail">${D.hosts.map((h) => `<a class="card-host" href="#">${photo(h.cover)}<div><b>${esc(h.name)}</b><span class="num" style="font-size:13px;color:var(--muted)">${plural(h.count, 'experiencia', 'experiencias')}</span><p>${esc(h.bio ?? 'Sin biografía todavía.')}</p></div></a>`).join('')}</div></section>
+  </div>
+  ${foot()}`;
+  const shop = `
+  <section class="on-band">
+    ${head('shop')}
+    <div class="wrap shop-head">
+      <div><p class="kicker">Experiencias</p><h1>Todas las salidas guiadas</h1></div>
+      <label class="field"><span class="sr">Buscar</span><span aria-hidden="true">⌕</span><input value="" placeholder="Palabras enteras: costa, pirineo…"></label>
+    </div>
+  </section>
+  <div class="wrap shop">
+    <aside class="filters" aria-label="Filtros">
+      <fieldset><legend>Tipo de carretera</legend>${D.categories.map((c, i) => `<label><input type="radio" name="a-cat" ${i === 0 ? 'checked' : ''}> ${esc(c.name)} <span class="num">${c.count}</span></label>`).join('')}</fieldset>
+      <fieldset><legend>Destino</legend>${D.locations.slice(0, 5).map((l) => `<label><input type="radio" name="a-loc"> ${esc(l.name)} <span class="num">${l.count}</span></label>`).join('')}</fieldset>
+      <fieldset><legend>Anfitrión</legend>${D.hosts.map((h) => `<label><input type="radio" name="a-host"> ${esc(h.name)} <span class="num">${h.count}</span></label>`).join('')}</fieldset>
+      <fieldset><legend>Dificultad</legend>${['easy', 'medium', 'hard'].map((d) => `<label><input type="radio" name="a-diff"> ${diff(d)}</label>`).join('')}</fieldset>
+      <fieldset><legend>Fechas</legend><label><input type="checkbox" checked> Solo con salidas</label></fieldset>
+    </aside>
+    <section aria-label="Resultados">
+      <div class="results-bar"><strong class="num" aria-live="polite">${plural(exps.filter((e) => e.route.category === D.categories[0].name).length, 'experiencia', 'experiencias')}</strong>
+        <div class="chips"><span class="chip">${esc(D.categories[0].name)}<button type="button" aria-label="Quitar ${esc(D.categories[0].name)}">✕</button></span><span class="chip">Solo con salidas<button type="button" aria-label="Quitar el filtro de fechas">✕</button></span></div>
+        <button class="mobile-filters btn-primary" type="button">Filtros · 2</button>
+        <label class="field" style="height:40px"><span class="sr">Ordenar</span><select><option>Próxima salida</option><option>Más baratas</option><option>Título</option><option>Novedades</option></select></label>
+      </div>
+      ${exps.filter((e) => e.route.category === D.categories[0].name).map((e) => `<a class="result" href="#">
+        ${photo(e.cover, '')}
+        <div><span class="cat">${esc(e.route.category)}</span><h3>${esc(e.title)}</h3>
+          <div class="meta"><span>${route(e.route)}</span><span class="num">${e.route.distance} km · ${e.route.duration} h</span><span>${diff(e.route.difficulty)}</span><span>con ${esc(e.host)}</span></div></div>
+        <div class="next num">${e.nextDepartureAt ? `<span>Próxima salida</span><b>${day(e.nextDepartureAt)}</b>` : '<span>Sin fechas por ahora</span>'}</div>
+        <div class="from num">${e.priceFrom != null ? `<small>desde</small><b>${money(e.priceFrom)}</b>` : ''}</div>
+      </a>`).join('')}
+      <nav class="pager" aria-label="Páginas"><span aria-current="page">1</span><a href="#">2</a><a href="#" aria-label="Siguiente">→</a></nav>
+    </section>
+  </div>
+  ${foot()}`;
+  return label('Boceto A · descartado', 'Tablón de salidas') + tag('Home') + `<div class="frame A">${home}</div>` + tag('Shop · filtrado por categoría') + `<div class="frame A">${shop}</div>`;
+}
+
+/* ---------- B ---------- */
+function B() {
+  const heroExp = exps.find((e) => e.cover) ?? exps[0];
+  const home = `
+  <section class="hero">
+    ${photo(heroExp.cover, '')}
+    <div class="head">${head('home')}</div>
+    <div class="wrap hero-body">
+      <div class="sign" role="navigation" aria-label="Tipos de carretera">
+        <div class="sign-in">
+          <h1>¿Hacia dónde rodamos?</h1>
+          ${D.categories.map((c) => `<a class="sign-row" href="#"><span>${esc(c.name)}</span><span class="n num">${plural(c.count, 'experiencia', 'experiencias')}</span><span class="arr" aria-hidden="true">↗</span></a>`).join('')}
+          <form class="sign-search" onsubmit="return false"><label class="field"><span class="sr">Buscar</span><input placeholder="Otro destino: Sóller, Jaca, La Rioja…"></label><button class="btn-primary" type="submit">Buscar</button></form>
+        </div>
+      </div>
+      <div class="post num" aria-label="${D.total} experiencias"><div class="cap">ROUTLY</div><div class="body"><b>${D.total}</b><span>experiencias</span></div><div class="leg"></div></div>
+    </div>
+  </section>
+  <div class="wrap">
+    <section class="section">${railHead('Entradas de población', 'Todos los destinos')}
+      <div class="rail">${D.locations.map((l) => `<a class="plate-card" href="#">${photo(l.cover)}<div class="plate town"><span>${esc(l.name)}</span><small class="num">${l.count}</small></div></a>`).join('')}</div></section>
+    <section class="section">${railHead('Tipos de carretera', 'Ver todas')}
+      <div class="rail">${D.categories.map((c) => `<a class="plate-card" href="#">${photo(c.cover)}<div class="plate green"><span>${esc(c.name)} ↗</span><small class="num">${c.count}</small></div></a>`).join('')}</div></section>
+    <section class="section" style="padding-bottom:56px">${railHead('Tus guías', 'Ver todos')}
+      <div class="rail">${D.hosts.map((h) => `<a class="plate-card" href="#">${photo(h.cover)}<div class="plate lime"><span>${esc(h.name)}</span><small class="num">${plural(h.count, 'experiencia', 'experiencias')}</small></div></a>`).join('')}</div></section>
+  </div>
+  ${foot()}`;
+  const shop = `
+  <section class="on-band">${head('shop')}
+    <div class="wrap shop-gantry">
+      <p class="kicker">Experiencias</p>
+      <div class="gantry" role="group" aria-label="Filtros">
+        <div class="gplate"><div><small>Carretera</small><select aria-label="Tipo de carretera"><option>${esc(D.categories[0].name)}</option>${D.categories.slice(1).map((c) => `<option>${esc(c.name)}</option>`).join('')}</select></div></div>
+        <div class="gplate"><div><small>Destino</small><select aria-label="Destino"><option>Cualquiera</option>${D.locations.map((l) => `<option>${esc(l.name)}</option>`).join('')}</select></div></div>
+        <div class="gplate"><div><small>Guía</small><select aria-label="Anfitrión"><option>Cualquiera</option>${D.hosts.map((h) => `<option>${esc(h.name)}</option>`).join('')}</select></div></div>
+        <div class="gplate"><div><small>Buscar</small><label class="field"><span class="sr">Buscar</span><input placeholder="costa, pirineo…"></label></div></div>
+      </div>
+    </div>
+  </section>
+  <div class="wrap">
+    <div class="shop-bar"><strong class="num" aria-live="polite">${plural(exps.filter((e) => e.route.category === D.categories[0].name).length, 'experiencia', 'experiencias')} en ${esc(D.categories[0].name)}</strong>
+      <div class="chips"><span class="chip">${esc(D.categories[0].name)}<button type="button" aria-label="Quitar">✕</button></span></div>
+      <label class="field" style="height:40px"><span class="sr">Ordenar</span><select><option>Próxima salida</option><option>Más baratas</option></select></label></div>
+    <div class="grid">${exps.filter((e) => e.route.category === D.categories[0].name).map((e) => `<a class="exp" href="#">
+      <div class="photo" style="aspect-ratio:4/3;border-radius:6px;overflow:visible">${e.cover ? `<img src="${esc(e.cover)}" alt="" loading="lazy" style="border-radius:6px">` : ROAD}<div class="km num"><i></i><b>${e.route.distance}</b><span>KM</span></div></div>
+      <h3>${esc(e.title)}</h3>
+      <div class="meta">${route(e.route)} · <span class="num">${e.route.duration} h</span> · ${diff(e.route.difficulty)}<br>con ${esc(e.host)}</div>
+      <div class="bottom num"><span>${e.nextDepartureAt ? `Próxima: ${day(e.nextDepartureAt)}` : 'Sin fechas'}</span>${e.priceFrom != null ? `<span>desde <b>${money(e.priceFrom)}</b></span>` : ''}</div>
+    </a>`).join('')}</div>
+    <nav class="pager" aria-label="Páginas"><span aria-current="page">1</span><a href="#">2</a><a href="#" aria-label="Siguiente">→</a></nav>
+  </div>
+  ${foot()}`;
+  return label('Boceto B · el elegido (fase 2)', 'Señales de carretera') + tag('Home') + `<div class="frame B">${home}</div>` + tag('Shop · filtrado por categoría') + `<div class="frame B">${shop}</div>`;
+}
+
+/* ---------- C ---------- */
+function C() {
+  const grid = exps.filter((e) => e.nextDepartureAt).slice(0, 6);
+  const first = grid[0];
+  const home = `
+  <section class="on-band hero">
+    <div class="stripe" aria-hidden="true"></div>
+    ${head('home')}
+    <div class="wrap hero-grid">
+      <div class="lead">
+        <p class="kicker" style="margin-top:28px">Parrilla de salida</p>
+        <h1>La próxima sale<br>en <em>${daysTo(first.nextDepartureAt)} días</em>.</h1>
+        <div class="countdown num"><b>P1</b><p><strong>${esc(first.title)}</strong>${day(first.nextDepartureAt)} · ${route(first.route)}</p></div>
+        <form onsubmit="return false"><label class="field"><span class="sr">Buscar</span><span aria-hidden="true">⌕</span><input placeholder="Busca una carretera: costa, pirineo…"></label><button class="btn-primary" type="submit">Ver la parrilla</button></form>
+      </div>
+      <div class="gridslots" aria-label="Las seis próximas en salir">
+        ${grid.map((e, i) => `<a class="slot" href="#"><div class="pos num">P${i + 1}</div><div class="body">${photo(e.cover)}<span class="tag num">en ${daysTo(e.nextDepartureAt)} d</span><h3>${esc(e.title)}</h3><span class="num">${e.route.distance} km · desde ${money(e.priceFrom)}</span></div></a>`).join('')}
+      </div>
+    </div>
+  </section>
+  <div class="wrap">
+    <section class="section">${railHead('Elige el tipo de carretera', 'Ver todas')}
+      <div class="rail">${D.categories.map((c) => `<a class="tile" href="#">${photo(c.cover)}<div class="name"><b>${esc(c.name)}</b><span class="num">${c.count}</span></div></a>`).join('')}</div></section>
+    <section class="section">${railHead('Dónde se sale', 'Ver todos')}
+      <div class="rail">${D.locations.map((l) => `<a class="tile" href="#">${photo(l.cover)}<div class="name"><b>${esc(l.name)}</b><span class="num">${l.count}</span></div></a>`).join('')}</div></section>
+    <section class="section" style="padding-bottom:56px">${railHead('Quién guía', 'Ver todos')}
+      <div class="rail">${D.hosts.map((h) => `<a class="tile" href="#">${photo(h.cover)}<div class="name"><b>${esc(h.name)}</b><span class="num">${h.count}</span></div></a>`).join('')}</div></section>
+  </div>
+  ${foot()}`;
+  const list = exps.filter((e) => e.route.difficulty !== 'easy');
+  const shop = `
+  <section class="on-band">${head('shop')}
+    <div class="wrap shop-title"><h1>Experiencias <em class="num">${list.length}</em></h1><label class="field" style="min-width:min(100%,380px)"><span class="sr">Buscar</span><span aria-hidden="true">⌕</span><input placeholder="Palabras enteras: costa, pirineo…"></label></div>
+  </section>
+  <div class="pitlane"><div class="wrap">
+    <div class="seg" role="group" aria-label="Dificultad"><button type="button" aria-pressed="false">Todas</button><button type="button" aria-pressed="false">Fácil</button><button type="button" aria-pressed="true">Media y difícil</button></div>
+    <select aria-label="Tipo de carretera"><option>Toda carretera</option>${D.categories.map((c) => `<option>${esc(c.name)}</option>`).join('')}</select>
+    <select aria-label="Destino"><option>Todo destino</option>${D.locations.map((l) => `<option>${esc(l.name)}</option>`).join('')}</select>
+    <select aria-label="Anfitrión"><option>Todo guía</option>${D.hosts.map((h) => `<option>${esc(h.name)}</option>`).join('')}</select>
+    <span style="flex:1"></span>
+    <select aria-label="Ordenar"><option>Orden: próxima salida</option><option>Más baratas</option></select>
+  </div></div>
+  <div class="wrap">
+    <div class="grid">${list.map((e, i) => `<a class="exp" href="#"><div class="pos num">P${i + 1}</div>${photo(e.cover)}
+      <div class="gap-row"><h3>${esc(e.title)}</h3><div class="meta">${esc(e.route.category)} · ${route(e.route)} · <span class="num">${e.route.distance} km</span> · ${diff(e.route.difficulty)}</div></div>
+      <div class="bottom num"><span>${e.nextDepartureAt ? `Sale el ${day(e.nextDepartureAt)}` : 'Sin fechas'}</span>${e.priceFrom != null ? `<span>desde <b>${money(e.priceFrom)}</b></span>` : ''}</div></a>`).join('')}</div>
+    <nav class="pager" aria-label="Páginas"><span aria-current="page">1</span><a href="#">2</a><a href="#" aria-label="Siguiente">→</a></nav>
+  </div>
+  ${foot()}`;
+  return label('Boceto C · descartado', 'Parrilla de salida') + tag('Home') + `<div class="frame C">${home}</div>` + tag('Shop · media y difícil, ordenado por salida') + `<div class="frame C">${shop}</div>`;
+}
+
+const VIEWS = { A, B, C };
+const app = document.getElementById('app');
+function show(dir) {
+  app.innerHTML = VIEWS[dir]();
+  document.querySelectorAll('[data-dir]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dir === dir)));
+  app.querySelectorAll('.rail-btns').forEach((btns) => {
+    const rail = btns.closest('section').querySelector('.rail');
+    const [prev, next] = btns.querySelectorAll('button');
+    const step = () => rail.clientWidth * 0.8;
+    prev.onclick = () => rail.scrollBy({ left: -step(), behavior: 'smooth' });
+    next.onclick = () => rail.scrollBy({ left: step(), behavior: 'smooth' });
+  });
+  history.replaceState(null, '', `#${dir}`);
+}
+document.querySelectorAll('[data-dir]').forEach((b) => b.addEventListener('click', () => { show(b.dataset.dir); scrollTo(0, 0); }));
+document.getElementById('theme').addEventListener('click', (e) => {
+  const dark = document.documentElement.dataset.theme !== 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  e.currentTarget.setAttribute('aria-pressed', String(dark));
+  e.currentTarget.textContent = dark ? 'Tema claro' : 'Tema oscuro';
+});
+show(['A', 'B', 'C'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'B');
+</script>
+</body>
+</html>
