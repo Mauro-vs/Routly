@@ -49,7 +49,7 @@ import { IconComponent } from '../../shared/ui/icon/icon.component';
 
     .brand {
       display: block;
-      padding: 6px 0;
+      padding: 8px 0;
       --brand-height: 28px;
     }
 

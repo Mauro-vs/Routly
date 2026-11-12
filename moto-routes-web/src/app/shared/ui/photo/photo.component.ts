@@ -4,8 +4,11 @@ import { drawLandscape } from './landscape';
 
 /**
  * Una foto que ocupa su caja (object-fit: cover) con su tamaño reservado: quien la usa le da la
- * proporción con `aspect-ratio`, así no hay saltos mientras carga. Sin url, o si la imagen no
- * carga, el paisaje de la marca (landscape.ts) en su lugar, nunca un icono roto.
+ * proporción con `aspect-ratio`, así no hay saltos mientras carga.
+ *
+ * Debajo siempre está el paisaje de la marca (landscape.ts), y la foto aparece encima cuando llega.
+ * Así, sin url, si la foto falla o si el servidor de imágenes no contesta nunca (pasa con picsum),
+ * se ve el paisaje y no un hueco ni un icono roto.
  *
  * Las fotos del seed son de 1200 × 800: es el tamaño intrínseco que se declara. La API no da
  * variantes de tamaño, así que no hay srcset.
@@ -14,20 +17,9 @@ import { drawLandscape } from './landscape';
   selector: 'ui-photo',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (src() && !failed()) {
-      <img
-        [src]="src()"
-        [alt]="alt()"
-        width="1200"
-        height="800"
-        [attr.loading]="priority() ? 'eager' : 'lazy'"
-        [attr.fetchpriority]="priority() ? 'high' : null"
-        decoding="async"
-        (error)="failed.set(true)"
-      />
-    } @else {
-      <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" role="img" [attr.aria-label]="alt() || null"
-        [attr.aria-hidden]="alt() ? null : 'true'" focusable="false">
+    <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" focusable="false"
+      [attr.role]="showsImage() ? null : 'img'" [attr.aria-label]="showsImage() ? null : alt() || null"
+      [attr.aria-hidden]="showsImage() || !alt() ? 'true' : null">
         <defs>
           <linearGradient [attr.id]="gradientId" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" [attr.stop-color]="landscape().sky[0]" />
@@ -40,7 +32,20 @@ import { drawLandscape } from './landscape';
         <path [attr.d]="landscape().ridges[2]" fill="#173a2a" />
         <path [attr.d]="landscape().road" fill="#0f1a15" />
         <path [attr.d]="landscape().line" fill="none" stroke="#c6f04d" stroke-width="6" stroke-dasharray="24 18" />
-      </svg>
+    </svg>
+    @if (showsImage()) {
+      <img
+        [src]="src()"
+        [alt]="alt()"
+        width="1200"
+        height="800"
+        [class.is-loaded]="loaded()"
+        [attr.loading]="priority() ? 'eager' : 'lazy'"
+        [attr.fetchpriority]="priority() ? 'high' : null"
+        decoding="async"
+        (load)="loaded.set(true)"
+        (error)="failed.set(true)"
+      />
     }
   `,
   styles: `
@@ -58,6 +63,17 @@ import { drawLandscape } from './landscape';
       height: 100%;
       object-fit: cover;
     }
+
+    img {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity var(--motion-slow) var(--motion-ease);
+    }
+
+    img.is-loaded {
+      opacity: 1;
+    }
   `,
 })
 export class PhotoComponent {
@@ -70,6 +86,8 @@ export class PhotoComponent {
   readonly priority = input(false);
 
   protected readonly failed = signal(false);
+  protected readonly loaded = signal(false);
+  protected readonly showsImage = computed(() => !!this.src() && !this.failed());
   protected readonly landscape = computed(() => drawLandscape(this.seed()));
   protected readonly gradientId = `sky-${nextId++}`;
 
@@ -78,6 +96,7 @@ export class PhotoComponent {
     effect(() => {
       this.src();
       this.failed.set(false);
+      this.loaded.set(false);
     });
   }
 }

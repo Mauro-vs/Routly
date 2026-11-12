@@ -25,6 +25,18 @@ describe('PhotoComponent', () => {
     expect(img.getAttribute('loading')).toBe('lazy');
   });
 
+  it('mientras la foto no llega se ve el paisaje, y al cargar aparece encima', () => {
+    const fixture = render({ src: 'https://example.com/lenta.jpg', seed: 'costa' });
+    const img: HTMLImageElement = fixture.nativeElement.querySelector('img');
+
+    expect(fixture.nativeElement.querySelector('svg')).not.toBeNull();
+    expect(img.classList).not.toContain('is-loaded');
+
+    img.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+    expect(img.classList).toContain('is-loaded');
+  });
+
   it('con prioridad, la primera imagen se pide enseguida', () => {
     const img: HTMLImageElement = render({ src: 'https://example.com/a.jpg', priority: true }).nativeElement.querySelector('img');
 

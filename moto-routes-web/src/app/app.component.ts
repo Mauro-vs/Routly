@@ -1,17 +1,22 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 
 import { SiteFooterComponent } from './layout/site-footer/site-footer.component';
 import { SiteHeaderComponent } from './layout/site-header/site-header.component';
 
-/** El armazón de la web: saltar al contenido, la cabecera, la página y el pie. */
+/**
+ * El armazón de la web: saltar al contenido, la cabecera, la página y el pie. En el Home la cabecera
+ * va transparente, sobre la foto.
+ */
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, SiteHeaderComponent, SiteFooterComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="skip" href="#contenido">Saltar al contenido</a>
-    <app-site-header />
+    <app-site-header [overlay]="isHome()" />
     <main id="contenido" tabindex="-1"><router-outlet /></main>
     <app-site-footer />
   `,
@@ -45,4 +50,14 @@ import { SiteHeaderComponent } from './layout/site-header/site-header.component'
     }
   `,
 })
-export class AppComponent {}
+export class AppComponent {
+  private readonly router = inject(Router);
+
+  protected readonly isHome = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects.split(/[?#]/)[0] === '/'),
+    ),
+    { initialValue: false },
+  );
+}

@@ -2,7 +2,15 @@
 
 La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una experiencia**, donde un motero sin cuenta encuentra una salida guiada y elige fecha. Usa solo `/api/shop`, la tienda pública de la API (sin sesión). El panel de administración es otra aplicación, `moto-routes-frontend/`.
 
-> Estado: **fase 3 de 7**. Están la base (configuración, cliente de la API, cabecera, pie, tema) y los componentes reutilizables con sus specs. El Home, el Shop y el detalle se construyen en las fases 4, 5 y 6.
+> Estado: **fase 4 de 7**. Están la base (configuración, cliente de la API, cabecera, pie, tema), los componentes reutilizables y el **Home**. El Shop y el detalle se construyen en las fases 5 y 6.
+
+## El Home
+
+`features/home/`: una carretera a sangre (la foto del tipo de carretera con más experiencias, o el paisaje de marca) y, encima, el **panel de orientación**: una fila por tipo de carretera, con cuántas experiencias tiene, que lleva a `/experiencias?categoria=<slug>`, y la búsqueda como última fila (`?buscar=`). A la derecha, el hito con el total. Debajo, tres carriles: destinos (`?ubicacion=`), tipos de carretera y guías (`?anfitrion=`).
+
+- `HomeStore` pide los tres carruseles y el total a la vez, con un `AbortController`: al salir de la página, lo pendiente se cancela. Con error, el panel lo explica y deja reintentar.
+- Composición lista + tarjeta: `app-place-rail` pinta un `ui-carousel` con un `app-place-card` por elemento. Un carril sin elementos no se pinta.
+- La cabecera va transparente sobre la foto solo en el Home.
 
 ## Arrancar
 
