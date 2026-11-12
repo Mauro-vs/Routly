@@ -2,7 +2,7 @@
 
 La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una experiencia**, donde un motero sin cuenta encuentra una salida guiada y elige fecha. Usa solo `/api/shop`, la tienda pública de la API (sin sesión). El panel de administración es otra aplicación, `moto-routes-frontend/`.
 
-> Estado: **fase 5 de 7**. Están la base (configuración, cliente de la API, cabecera, pie, tema), los componentes reutilizables, el **Home** y el **Shop**. El detalle se construye en la fase 6.
+> Estado: **fase 6 de 7**. Están la base, los componentes reutilizables, el **Home**, el **Shop** y el **detalle** con la elección de salida. Queda el pulido (fase 7).
 
 ## El Home
 
@@ -35,6 +35,24 @@ La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una exper
   - en el móvil, la búsqueda y una hoja con los filtros (`dialog`);
   - estados de vacío (con "Quitar los filtros") y de error (con reintentar).
 - Lista + tarjeta: `app-experience-list` y `app-experience-card`, con el hito kilométrico sobre la foto.
+
+## El detalle y la elección de salida
+
+`features/experience/`: `/experiencias/:slug?salida=<slug de la salida>`.
+
+- `ExperienceStore` pide la experiencia y sus salidas a la vez, con su `AbortController`. Una experiencia que no existe, o que no se ve, queda como "no encontrada".
+- En pantalla:
+  - la galería en el carrusel;
+  - el cartel de la ruta: origen y destino como placas de población, km, horas, dificultad y tipo de carretera;
+  - la descripción, lo práctico (punto de encuentro, duración, idioma, participantes, moto del guía);
+  - el anfitrión con su foto, su biografía y "Más salidas con…" (`?anfitrion=`).
+- **Las salidas** son un grupo de radios con forma de billete: fecha, hora de salida y llegada, plazas libres (`seatsLeft`) y precio.
+  - La elegida va en la URL (`?salida=`, con `replaceUrl`), con el contorno sólido y el sello lima.
+  - Una completa (`isFull`) se ve, con su sello, pero no se puede elegir, tampoco si llega en la URL.
+  - Sin salidas, se dice.
+- **La reserva, preparada:** `core/booking/booking.service.ts` tiene la interfaz (`BookingRequest`, `Booking`, `reserve`) y `available = false`. El botón "Reservar" está deshabilitado y explica por qué (`aria-describedby`); cuando la API tenga `/api/bookings`, basta con `available = true` y la llamada.
+- "Volver a las experiencias" vuelve atrás si se llegó desde la web (el Shop, con sus filtros); si no, al Shop.
+- La pestaña lleva el nombre de la experiencia y la descripción, su primer párrafo (SEO). Cambiar solo `?salida=` no los pisa.
 
 ## Arrancar
 

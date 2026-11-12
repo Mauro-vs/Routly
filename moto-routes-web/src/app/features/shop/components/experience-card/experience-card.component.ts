@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { ShopExperience } from '../../../../core/api/shop.models';
 import { DifficultyComponent } from '../../../../shared/ui/difficulty/difficulty.component';
+import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { PhotoComponent } from '../../../../shared/ui/photo/photo.component';
 import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../../shared/utils/shop-format';
 
@@ -13,7 +14,7 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
  */
 @Component({
   selector: 'app-experience-card',
-  imports: [RouterLink, PhotoComponent, DifficultyComponent],
+  imports: [RouterLink, PhotoComponent, DifficultyComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a [routerLink]="['/experiencias', experience().slug]">
@@ -28,7 +29,7 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
         <p class="where">
           <span>{{ route.startLocation?.city }}</span>
           @if (route.endLocation && route.endLocation.city !== route.startLocation?.city) {
-            <span aria-hidden="true"> → </span><span class="sr-only"> hasta </span><span>{{ route.endLocation.city }}</span>
+            <ui-icon name="arrow-right" class="to" /><span class="sr-only"> hasta </span><span>{{ route.endLocation.city }}</span>
           }
         </p>
         <p class="meta">
@@ -130,8 +131,17 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
     }
 
     .where {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0 6px;
       font-weight: 650;
       overflow-wrap: anywhere;
+    }
+
+    .to {
+      font-size: 14px;
+      color: var(--color-text-muted);
     }
 
     .meta {

@@ -17,7 +17,11 @@ export class PageMetaStrategy extends TitleStrategy {
   private readonly meta = inject(Meta);
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
-    this.set(this.buildTitle(snapshot) ?? null, deepestDescription(snapshot.root));
+    const pageTitle = this.buildTitle(snapshot);
+    // Una ruta sin title (el detalle) los pone ella al conocer su contenido: cambiar solo los
+    // parámetros de su URL (?salida=) no los pisa
+    if (pageTitle === undefined) return;
+    this.set(pageTitle, deepestDescription(snapshot.root));
   }
 
   /** "Costa en moto · Routly" y su descripción. Sin título, el nombre del sitio. */
