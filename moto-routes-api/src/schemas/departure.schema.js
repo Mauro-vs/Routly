@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { DEPARTURE_LIMITS as LIMITS, DEPARTURE_STATES } from "../models/departure.model.js";
 import { SKU_PATTERN } from "../utils/sku.js";
-import { atLeast, atMost, defineListQuery, equals, queryDate, queryNumber } from "../utils/listQuery.js";
+import { atLeast, atMost, defineListQuery, equals, queryBoolean, queryDate, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
-// sku y slug no están en el esquema: los genera el service
+// sku y slug no están en el esquema: los genera el service. seatsBooked tampoco: lo cambiarán
+// las reservas, nunca el body (al crear es "is not allowed"; al editar, "cannot be changed")
 
 // Solo texto ISO 8601 con hora y zona: "2026-11-08T08:00:00.000Z" o "...+01:00".
 // z.coerce.date() aceptaba cualquier cosa convertible (true, 0, "2026").
@@ -34,7 +35,7 @@ export const createDepartureSchema = departureFields.refine(
 export const updateDepartureSchema = departureFields
   .omit({ experienceId: true })
   .partial()
-  .extend({ ...clearable(departureFields, "guideBikeId"), ...cannotChange("_id", "slug", "sku", "experienceId") })
+  .extend({ ...clearable(departureFields, "guideBikeId"), ...cannotChange("_id", "slug", "sku", "experienceId", "seatsBooked") })
   .refine(
     (data) => data.startAt === undefined || data.endAt === undefined || data.endAt > data.startAt,
     datesError
@@ -56,6 +57,11 @@ export const departureListQuery = defineListQuery({
     to: { schema: queryDate, to: atMost("startAt") },
     priceMin: { schema: queryNumber.pipe(z.number().min(0)), to: atLeast("price") },
     priceMax: { schema: queryNumber.pipe(z.number().min(0)), to: atMost("price") },
+    // ?full=true: las que no tienen plazas libres (seatsBooked >= capacity); false, las que sí
+    full: {
+      schema: queryBoolean,
+      to: (full) => ({ $expr: { [full ? "$gte" : "$lt"]: [{ $ifNull: ["$seatsBooked", 0] }, "$capacity"] } }),
+    },
   },
   ranges: [
     ["from", "to"],

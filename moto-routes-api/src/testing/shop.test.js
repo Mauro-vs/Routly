@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import mongoose from "mongoose";
+import { Departure } from "../models/departure.model.js";
 import { Experience } from "../models/experience.model.js";
 import { DAY, fieldMessage, fromNow, planStages, seedBasics, startApi } from "./app.js";
 
@@ -147,13 +148,39 @@ describe("el Shop", () => {
     assert.deepEqual(response.body, { data: [], pagination: { total: 0, page: 1, limit: 12, totalPages: 0 } });
   });
 
-  test("search: un trozo del título, sin distinguir mayúsculas, y literal", async () => {
-    assert.deepEqual(titles(await shop("/experiences?search=COST")), ["Costa en moto"]);
+  test("search: palabras del título o la descripción, sin mayúsculas ni acentos, con el índice de texto", async () => {
+    assert.deepEqual(titles(await shop("/experiences?search=COSTA")), ["Costa en moto"]);
+    // "en" no cuenta (palabra vacía en español): busca "moto"
     assert.deepEqual(titles(await shop("/experiences?search=en%20moto")).sort(), ["Costa en moto", "Pirineo en moto"]);
+    // Sus variantes: "salvajes" encuentra "salvaje"
+    assert.deepEqual(titles(await shop("/experiences?search=salvajes")), ["Delta salvaje"]);
+    // También la descripción, y sin acentos
+    await api.patch(`/experiences/${deltaExperience._id}`, { description: "Arrozales y flamencos en la desembocadura." });
+    assert.deepEqual(titles(await shop("/experiences?search=desembocadura")), ["Delta salvaje"]);
+    assert.deepEqual(titles(await shop("/experiences?search=DESEMBOCADURÁ")), ["Delta salvaje"]);
     // Los caracteres especiales no son una expresión regular
     assert.deepEqual((await shop("/experiences?search=.*")).body.data, []);
     // Vacío, sin buscar
     assert.equal((await shop("/experiences?search=")).body.pagination.total, 3);
+  });
+
+  test("search sin sort: las que mejor encajan primero; con sort, el pedido", async () => {
+    // "moto" sale dos veces en la de la descripción: encaja mejor que la otra
+    await api.patch(`/experiences/${data.experience._id}`, { description: "Moto, moto y más moto por el Pirineo." });
+    assert.deepEqual(titles(await shop("/experiences?search=moto")), ["Pirineo en moto", "Costa en moto"]);
+    assert.deepEqual(titles(await shop("/experiences?search=moto&sort=title")), ["Costa en moto", "Pirineo en moto"]);
+  });
+
+  test("ordenar por precio con un filtro por slug de anfitrión (los ids llegan como texto)", async () => {
+    assert.deepEqual(titles(await shop(`/experiences?host=${data.host.slug}&sort=priceFrom`)), [
+      "Costa en moto",
+      "Pirineo en moto",
+      "Delta salvaje",
+    ]);
+    const page = await shop(`/experiences?host=${data.host.slug}&sort=-priceFrom&limit=1&page=2`);
+    // Sin salidas va al final también en descendente: la segunda es la de 80 €
+    assert.deepEqual(titles(page), ["Costa en moto"]);
+    assert.equal(page.body.pagination.total, 3);
   });
 
   test("los filtros y órdenes de las experiencias", async () => {
@@ -220,14 +247,36 @@ describe("el detalle", () => {
     }
     assert.deepEqual((await shop(`/experiences/${deltaExperience.slug}/departures`)).body.data, []);
   });
+
+  test("una salida completa sale marcada, pero no cuenta para el precio desde ni para hasDepartures", async () => {
+    // Delta salvaje: una sola salida, y se llena (aún no hay reservas: se escribe a mano)
+    const full = await departure(deltaExperience._id, 15, 30);
+    await Departure.updateOne({ _id: full._id }, { seatsBooked: 6 });
+    try {
+      const [listed] = (await shop(`/experiences/${deltaExperience.slug}/departures`)).body.data;
+      assert.deepEqual([listed.seatsBooked, listed.seatsLeft, listed.isFull], [6, 0, true]);
+
+      const delta = (await shop(`/experiences/${deltaExperience.slug}`)).body.data;
+      assert.equal(delta.priceFrom, null);
+      assert.ok(!titles(await shop("/experiences?hasDepartures=true")).includes("Delta salvaje"));
+
+      // Con una plaza libre vuelve a contar
+      await Departure.updateOne({ _id: full._id }, { seatsBooked: 5 });
+      const [freed] = (await shop(`/experiences/${deltaExperience.slug}/departures`)).body.data;
+      assert.deepEqual([freed.seatsLeft, freed.isFull], [1, false]);
+      assert.equal((await shop(`/experiences/${deltaExperience.slug}`)).body.data.priceFrom, 30);
+    } finally {
+      await Departure.deleteOne({ _id: full._id });
+    }
+  });
 });
 
 describe("rendimiento", () => {
-  test("la búsqueda del Shop usa un índice (el de los listados), no recorre la colección", async () => {
+  test("la búsqueda del Shop usa el índice de texto, no recorre la colección", async () => {
     const stages = await planStages(
-      Experience.find({ deletedAt: null, isActive: true, title: { $regex: "cost", $options: "i" } }).sort({ createdAt: -1, _id: 1 }),
+      Experience.find({ deletedAt: null, isActive: true, $text: { $search: "costa" } }).sort({ score: { $meta: "textScore" }, _id: 1 }),
     );
-    assert.ok(stages.includes("IXSCAN") && !stages.includes("COLLSCAN"), stages.join(" > "));
+    assert.ok(stages.includes("TEXT_MATCH") && stages.includes("IXSCAN") && !stages.includes("COLLSCAN"), stages.join(" > "));
   });
 
   // Medidas al hacerlo: si suben, algo consulta por cada elemento

@@ -106,15 +106,27 @@ const withGuideBikes = (departures, scope) =>
   );
 
 /**
- * Las plazas libres de una salida. Hoy, sin reservas, son todas: cuando las haya, se restarán aquí
- * y solo aquí, que es lo que tendrá que comprobar una reserva antes de crearse (ver "Reservas" en
- * DATABASE.md).
+ * Las plazas libres de una salida: la capacidad menos las reservadas (seatsBooked). Es lo que
+ * comprobará una reserva antes de crearse (ver "Reservas" en DATABASE.md). Nunca negativo, por si
+ * una salida antigua llegara con más reservas que plazas.
  */
-export const seatsLeftOf = (departure) => departure.capacity;
+export const seatsLeftOf = (departure) => Math.max(0, departure.capacity - (departure.seatsBooked ?? 0));
 
-// Lo que se enseña de una salida además de lo suyo: la moto del guía y las plazas libres
+// Lo que se enseña de una salida además de lo suyo: la moto del guía, las plazas reservadas y
+// libres, y si está completa (la web la enseña, pero no deja reservarla)
 async function present(departures, scope) {
-  return (await withGuideBikes(departures, scope)).map((departure) => ({ ...departure, seatsLeft: seatsLeftOf(departure) }));
+  return (await withGuideBikes(departures, scope)).map((departure) => {
+    const seatsLeft = seatsLeftOf(departure);
+    return { ...departure, seatsBooked: departure.seatsBooked ?? 0, seatsLeft, isFull: seatsLeft === 0 };
+  });
+}
+
+// No se puede dejar una salida con menos plazas de las que ya tiene reservadas: 409, como bajar el
+// máximo de una experiencia por debajo de sus salidas (DATABASE.md, 14.3)
+function assertSeatsBookedFit(capacity, departure) {
+  if (capacity < (departure.seatsBooked ?? 0)) {
+    throw conflict("capacity is lower than the seats already booked");
+  }
 }
 
 const isSkuClash = (error) => error?.code === 11000 && error.keyPattern?.sku !== undefined;
@@ -213,7 +225,10 @@ export const departureService = {
     const endAt = data.endAt ?? departure.endAt;
     if (endAt <= startAt) throw fieldError("endAt", "endAt must be after startAt");
 
-    if (data.capacity !== undefined) assertCapacity(data.capacity, experience);
+    if (data.capacity !== undefined) {
+      assertCapacity(data.capacity, experience);
+      assertSeatsBookedFit(data.capacity, departure);
+    }
     if (data.guideBikeId) await bikeService.assertGuideBike(data.guideBikeId, experience.hostId);
     if (data.state !== undefined || data.endAt !== undefined) {
       assertState(data.state ?? departure.state, departure.state, endAt);

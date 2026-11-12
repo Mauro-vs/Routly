@@ -427,7 +427,7 @@ const inDays = (days, hour) => {
 };
 
 const DEPARTURES = [
-  { experience: "tramuntana", start: inDays(14, 6), hours: 5, capacity: 8, price: 89 },
+  { experience: "tramuntana", start: inDays(14, 6), hours: 5, capacity: 8, price: 89, booked: 5 },
   { experience: "tramuntana", start: inDays(28, 6), hours: 5, capacity: 6, price: 89, state: "cancelled" },
   { experience: "pirineos", start: inDays(21, 7), hours: 9, capacity: 10, price: 149.5 },
   { experience: "costa-amanecer", start: inDays(7, 6), hours: 4, capacity: 8, price: 65 },
@@ -439,7 +439,8 @@ const DEPARTURES = [
   { experience: "pirineo-dos-dias", start: inDays(30, 7), hours: 16, capacity: 10, price: 320 },
   { experience: "pirineo-dos-dias", start: inDays(60, 7), hours: 16, capacity: 10, price: 320, state: "cancelled" },
   { experience: "cols-pyrenees", start: inDays(25, 7), hours: 8, capacity: 10, price: 160 },
-  { experience: "calas-mallorca", start: inDays(5, 8), hours: 4, capacity: 6, price: 70 },
+  // Completa: sale en el detalle, pero no cuenta para el precio "desde" ni deja reservar
+  { experience: "calas-mallorca", start: inDays(5, 8), hours: 4, capacity: 6, price: 70, booked: 6 },
   { experience: "calas-mallorca", start: inDays(40, 8), hours: 4, capacity: 6, price: 75 },
   { experience: "tramuntana-sunset", start: inDays(9, 16), hours: 3, capacity: 8, price: 60 },
   { experience: "bodegas-rioja", start: inDays(15, 9), hours: 5, capacity: 10, price: 85 },
@@ -578,13 +579,15 @@ try {
     }
   }
 
-  for (const { experience, start, hours, ...departure } of DEPARTURES) {
-    await departureService.create({
+  for (const { experience, start, hours, booked, ...departure } of DEPARTURES) {
+    const created = await departureService.create({
       ...departure,
       experienceId: String(experiences[experience]._id),
       startAt: start,
       endAt: new Date(start.getTime() + hours * 60 * 60 * 1000),
     }, SYSTEM_ACTOR);
+    // Aún no hay reservas que las ocupen: las plazas reservadas de ejemplo se escriben directamente
+    if (booked) await Departure.updateOne({ _id: created._id }, { seatsBooked: booked });
   }
 
   for (const Model of MODELS) {

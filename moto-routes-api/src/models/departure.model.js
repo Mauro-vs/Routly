@@ -20,6 +20,10 @@ const departureSchema = new mongoose.Schema(
     startAt: { type: Date, required: true },
     endAt: { type: Date, required: true },
     capacity: { type: Number, required: true, min: 1, validate: integer },
+    // Plazas ya reservadas. Solo las cambiarán las reservas (no llega en el body: lo rechaza
+    // schemas/departure.schema.js); el service no deja bajar capacity por debajo. Las plazas libres
+    // (seatsLeft) y si está completa (isFull) se calculan con ellas en departure.service.js
+    seatsBooked: { type: Number, default: 0, min: 0, validate: integer },
     // Euros por persona
     price: {
       type: Number,

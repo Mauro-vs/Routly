@@ -6,10 +6,16 @@ import { toUpdate } from "../utils/update.js";
 const withExperience = (query) => query.populate("experience", "title slug guideBikeId");
 
 /**
- * Una salida reservable: activa, programada y que todavía no ha empezado. La usan los filtros
- * de experiencias por sus salidas y el precio "desde" (y la usarán las reservas).
+ * Una salida reservable: activa, programada, que todavía no ha empezado y con alguna plaza libre.
+ * La usan los filtros de experiencias por sus salidas y el precio "desde" (y la usarán las
+ * reservas). La comparación de plazas va en $expr: es entre dos campos del mismo documento.
  */
-export const reservable = (now = new Date()) => ({ isActive: true, state: "scheduled", startAt: { $gte: now } });
+export const reservable = (now = new Date()) => ({
+  isActive: true,
+  state: "scheduled",
+  startAt: { $gte: now },
+  $expr: { $lt: [{ $ifNull: ["$seatsBooked", 0] }, "$capacity"] },
+});
 
 export const departureRepository = {
   // Por fecha de salida, de la más próxima a la más lejana

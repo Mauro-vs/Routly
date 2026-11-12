@@ -36,7 +36,7 @@ export const shopExperiencesQuery = z
     category: slug.optional(),
     host: slug.optional(),
     location: slug.optional(),
-    // Un trozo del título, sin distinguir mayúsculas. Vacío, sin buscar
+    // Palabras del título o la descripción, con el índice de texto (shop.service.js). Vacío, sin buscar
     search: z.string().trim().max(100).optional(),
     difficulty: difficulty.optional(),
     language: language.optional(),

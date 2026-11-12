@@ -115,7 +115,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 253 tests con `node:test`:
+`npm test` ejecuta 257 tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
@@ -135,7 +135,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, los mensajes documentados y que cada listado documenta justo los query params que acepta |
 | `src/testing/public.test.js` | Lo que usa la tienda en `/api/experiences` y `/api/departures`: los filtros de experiencias por su ruta y por sus salidas, `priceFrom` y `nextDepartureAt`, sus órdenes, las fotos de categorías y ubicaciones, el anfitrión del detalle, `seatsLeft`, los índices con `explain()` y el número de consultas |
-| `src/testing/shop.test.js` | La tienda (`/api/shop`): los carruseles (solo lo que tiene experiencias, con cuántas), el Shop en `{ data, pagination }` con sus filtros por slug, la búsqueda por un trozo del título, un slug que no existe, los 400, la misma vista con sesión de admin, el detalle con su galería, las salidas reservables y el número de consultas |
+| `src/testing/shop.test.js` | La tienda (`/api/shop`): los carruseles (solo lo que tiene experiencias, con cuántas), el Shop en `{ data, pagination }` con sus filtros por slug, la búsqueda con el índice de texto y por relevancia, el orden por precio con un filtro por slug, un slug que no existe, los 400, la misma vista con sesión de admin, el detalle con su galería, las salidas reservables, una salida completa y el número de consultas |
 | `src/testing/slug.test.js` | Slug con sufijo del `_id`, que sigue al nombre, el de las salidas al renombrar su experiencia (también las eliminadas) y que no se puede cambiar a mano |
 | `src/testing/departure.test.js` | SKU inmutable y buscable en minúsculas, fechas ISO, salida en el futuro, plazas entre el mínimo y el máximo, dos salidas a la misma hora, estados y precio |
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
@@ -543,7 +543,7 @@ GET /api/routes?q=pirineo&difficulty=hard&distanceMin=100&sort=-distance&page=1&
 |---|---|---|
 | `routes` | `difficulty`, `categoryId`, `locationId` (de origen o de destino), `distanceMin`/`distanceMax`, `durationMin`/`durationMax` | `title`, `distance`, `duration`, `difficulty` (por su nivel: fácil, media, difícil) |
 | `experiences` | `hostId`, `routeId`, `language`; por su ruta `categoryId`, `locationId`, `difficulty`; por sus salidas reservables `priceMin`/`priceMax`, `from`/`to`, `hasDepartures=true` ([la parte pública](#la-parte-pública)) | `title`, `duration`, `maxParticipants`, `priceFrom`, `nextDepartureAt` |
-| `departures` | `experienceId`, `state`, `from`/`to` (fecha de inicio, ISO 8601), `priceMin`/`priceMax` | `startAt`, `price`, `capacity` |
+| `departures` | `experienceId`, `state`, `from`/`to` (fecha de inicio, ISO 8601), `priceMin`/`priceMax`, `full` (`true`, las completas; `false`, las que tienen plazas) | `startAt`, `price`, `capacity` |
 | `users` | `roleId` | `name`, `email` |
 | `hosts` | `userId` | `name` |
 | `bikes` | `userId`, `type`, `license`, `ccMin`/`ccMax` | `brand`, `model`, `year`, `cc`, `hp` |
@@ -623,17 +623,17 @@ Todos opcionales y combinables:
 | `category` | `?category=montana-b8c930` | La categoría de su ruta, por slug |
 | `host` | `?host=lucia-ferrer-b8c915` | Las de un anfitrión, por slug |
 | `location` | `?location=palma-b8c921` | El origen o el destino de su ruta, por slug |
-| `search` | `?search=pir` | Un trozo del título, sin distinguir mayúsculas: "pir" encuentra "Pirineos". Se busca tal cual: `.` o `*` no son una expresión regular |
+| `search` | `?search=montana` | Palabras del título o la descripción, con el índice de texto en español: sin distinguir mayúsculas ni acentos ("montana" encuentra "Montaña") y con sus variantes ("rutas" encuentra "ruta"). Son palabras enteras: "pir" no encuentra "Pirineos". Sin `sort`, las que mejor encajan primero. `.` o `*` no son una expresión regular |
 | `difficulty` | `?difficulty=easy` | La dificultad de su ruta (`easy`, `medium`, `hard`) |
 | `language` | `?language=en` | El idioma de la salida guiada |
 | `priceMin` / `priceMax` | `?priceMax=100` | Alguna de sus salidas reservables cuesta eso |
 | `from` / `to` | `?from=2026-12-01&to=2026-12-31` | Alguna de sus salidas reservables empieza en esas fechas |
 | `hasDepartures` | `?hasDepartures=true` | Solo las que tienen alguna salida reservable |
-| `sort` | `?sort=priceFrom` | `priceFrom` (más baratas), `nextDepartureAt` (más próximas), `title` o `createdAt`, con `-` delante para descendente. Por defecto, `-createdAt` (novedades). Las que no tienen salidas van al final al ordenar por precio o fecha |
+| `sort` | `?sort=priceFrom` | `priceFrom` (más baratas), `nextDepartureAt` (más próximas), `title` o `createdAt`, con `-` delante para descendente. Por defecto, `-createdAt` (novedades), o la relevancia si hay `search`. Las que no tienen salidas van al final al ordenar por precio o fecha |
 | `page` / `limit` | `?page=2&limit=12` | La página, desde 1, y su tamaño, de 1 a 50 (12 por defecto) |
 
 - **Un slug que no existe** deja el Shop vacío, con un 200: `{ data: [], pagination: { total: 0, ... } }`. Uno con formato no válido (`?category=No Vale`) es un 400.
-- **Una salida reservable** es activa, programada (`state: scheduled`) y futura. Los filtros de precio y fecha se cumplen en la misma salida: `?priceMax=100&from=2026-12-01` es "alguna salida de diciembre por 100 € o menos".
+- **Una salida reservable** es activa, programada (`state: scheduled`), futura y con alguna plaza libre. Los filtros de precio y fecha se cumplen en la misma salida: `?priceMax=100&from=2026-12-01` es "alguna salida de diciembre por 100 € o menos".
 - Un parámetro que no existe (`?categoryId=`), un valor no válido o un rango cruzado es un 400, como en cualquier listado.
 
 ### Lo que trae cada experiencia
@@ -673,11 +673,23 @@ Cada elemento del Shop tiene todo lo que necesita su tarjeta, sin más peticione
 
 ### Las salidas del detalle
 
-`GET /api/shop/experiences/:slug/departures` da las reservables, de la más próxima a la más lejana. Cada una trae `startAt`, `endAt`, `price`, `capacity`, `state`, `sku` y `seatsLeft` (las plazas libres). De momento `seatsLeft` es la capacidad, porque aún no hay reservas; cuando las haya, será la capacidad menos las reservadas, y el cliente no cambia. El diseño de las reservas está en [`DATABASE.md`](../DATABASE.md#14-reservas-diseño).
+`GET /api/shop/experiences/:slug/departures` da las activas, programadas y futuras, de la más próxima a la más lejana. Cada una trae `startAt`, `endAt`, `price`, `capacity`, `state`, `sku` y sus plazas:
+
+- `seatsBooked`: las reservadas. No se envían en el body (al crear, `is not allowed`; al editar, `cannot be changed`): las cambiarán las reservas.
+- `seatsLeft`: las libres, `capacity - seatsBooked`.
+- `isFull`: si no queda ninguna. Una salida completa sale en el detalle, marcada, pero no es reservable: no cuenta para `priceFrom`, `nextDepartureAt` ni los filtros por salidas.
+
+La capacidad no puede bajar de las reservadas (409). Es la parte de las salidas del diseño de las reservas, que está en [`DATABASE.md`](../DATABASE.md#14-reservas-diseño): cuando lleguen, reservar será incrementar `seatsBooked` con una escritura condicional, y el cliente no cambia.
 
 ### Cuántas consultas cuesta
 
-`shop.test.js` cuenta las consultas a MongoDB de cada petición de la tienda y falla si una pasa de su presupuesto: no crecen con el número de experiencias (no hay N+1). Lo oculto se calcula una vez por petición (`visibilityCache`, en `services/visibility.js`) y se reutiliza en el listado, la moto del guía y las fotos; cada carrusel solo presenta su lista. La búsqueda por un trozo del título no puede usar un índice de texto, pero va junto al filtro de los listados (`deletedAt`, `isActive`), que sí lo usa: el test lo comprueba con `explain()`.
+`shop.test.js` cuenta las consultas a MongoDB de cada petición de la tienda y falla si una pasa de su presupuesto: no crecen con el número de experiencias (no hay N+1). Lo oculto se calcula una vez por petición (`visibilityCache`, en `services/visibility.js`) y se reutiliza en el listado, la moto del guía y las fotos; cada carrusel solo presenta su lista.
+
+Lo pesado lo hace MongoDB, no Node:
+
+- **Ordenar por `priceFrom` o `nextDepartureAt`**: una agregación cruza cada experiencia con sus salidas reservables (`$lookup` por el índice `{ experienceId, state, startAt }`), ordena y corta la página. A Node solo llegan los `_id` de la página y el total (`experienceRepository.findPageByComputedSort`).
+- **Los carruseles**: los recuentos salen de un `$group` (`experienceRepository.countFacets`). A Node llega un número por categoría, anfitrión o ubicación, no las experiencias.
+- **La búsqueda**: usa el índice de texto (`$text`). El test lo comprueba con `explain()`: `TEXT_MATCH` sobre un `IXSCAN`, nunca `COLLSCAN`.
 
 ## Activo / inactivo frente a eliminado
 

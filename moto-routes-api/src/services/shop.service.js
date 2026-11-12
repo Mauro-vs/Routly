@@ -16,9 +16,6 @@ import { PUBLIC, assertVisible } from "./visibility.js";
  * tienda y no el panel.
  */
 
-// Un texto de búsqueda como expresión regular literal: "a.b" busca "a.b", no "a" + cualquiera + "b"
-const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 // El id de un slug: undefined si no se ha pedido, null si no existe (el Shop sale vacío)
 async function idOf(repository, slug) {
   if (slug === undefined) return undefined;
@@ -48,9 +45,13 @@ export const shopService = {
   },
 
   /**
-   * El Shop: una página de experiencias con los filtros por slug, la búsqueda en el título y los
-   * filtros de las experiencias (dificultad, idioma, precio y fechas de sus salidas). Un slug que
-   * no existe deja el Shop vacío.
+   * El Shop: una página de experiencias con los filtros por slug, la búsqueda y los filtros de las
+   * experiencias (dificultad, idioma, precio y fechas de sus salidas). Un slug que no existe deja
+   * el Shop vacío.
+   *
+   * La búsqueda usa el índice de texto de las experiencias (título y descripción, en español):
+   * palabras enteras, sin distinguir mayúsculas ni acentos ("montana" encuentra "Montaña") y con
+   * sus variantes ("rutas" encuentra "ruta"). Sin sort, las que mejor encajan primero.
    */
   async experiences(query = {}) {
     const { category, host, location, search, page = 1, limit = SHOP_LIMIT.default, sort, ...filters } = query;
@@ -69,12 +70,14 @@ export const shopService = {
         ...(categoryId && { categoryId }),
         ...(hostId && { hostId }),
         ...(locationId && { locationId }),
-        sort: sort ?? SHOP_DEFAULT_SORT,
+        ...(text && { q: text }),
+        // Buscando, sin sort, por relevancia; sin buscar, las más recientes
+        ...((sort || !text) && { sort: sort ?? SHOP_DEFAULT_SORT }),
         page,
         limit,
       },
       PUBLIC,
-      text ? { title: { $regex: escapeRegex(text), $options: "i" } } : {},
+      { byRelevance: true },
     );
     return { data: items, pagination: pagination(total, page, limit) };
   },

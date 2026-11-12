@@ -1,6 +1,6 @@
 import { restoredStatus, statusFromActive } from "../models/status.js";
 import { departureRepository, reservable } from "../repositories/departure.repository.js";
-import { experienceRepository } from "../repositories/experience.repository.js";
+import { COMPUTED_SORT, experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { bikeRepository } from "../repositories/bike.repository.js";
 import { routeRepository } from "../repositories/route.repository.js";
@@ -67,9 +67,6 @@ const referencesOf = (data) =>
 const withGuideBikes = (experiences, scope) =>
   bikeService.attachGuideBikes(experiences, (experience) => experience.guideBikeId, scope);
 
-// Los datos que no son de la experiencia sino de sus salidas, y por los que se puede ordenar
-const COMPUTED_SORT = new Set(["priceFrom", "nextDepartureAt"]);
-
 // El precio "desde" y la próxima fecha de cada una (de sus salidas reservables), o null si no
 // tiene ninguna. Una sola agregación para todas.
 async function withDepartureSummary(experiences) {
@@ -97,30 +94,15 @@ async function presentDetail(experience, scope) {
   return { ...presented, host: host ?? presented.host };
 }
 
-// Por los campos de sort, en su sentido. Un dato que falta (una experiencia sin salidas) va
-// siempre al final, se ordene como se ordene; si todo empata, el _id
-const compareBy = (sort) => (a, b) => {
-  for (const [field, direction] of Object.entries(sort)) {
-    const [x, y] = [a[field], b[field]];
-    if (x == null || y == null) {
-      if (x == null && y == null) continue;
-      return x == null ? 1 : -1;
-    }
-    const difference = typeof x === "string" ? x.localeCompare(y, "es") : x - y;
-    if (difference !== 0) return difference * direction;
-  }
-  return String(a._id).localeCompare(String(b._id));
-};
-
-// Ordenar por un dato calculado: se ordenan los campos de orden de todas las que cumplen el filtro
-// y solo después se traen las de la página, en ese orden
-async function findByComputedSort({ filter, sort, page, limit }) {
-  const rows = (await withDepartureSummary(await experienceRepository.findSortKeys(filter))).sort(compareBy(sort));
-  const slice = page === undefined ? rows : rows.slice((page - 1) * limit, page * limit);
-  const position = new Map(slice.map((row, index) => [String(row._id), index]));
-  const items = slice.length === 0 ? [] : await experienceRepository.findAll({ _id: { $in: slice.map((row) => row._id) } });
+// Ordenar por un dato calculado: MongoDB ordena y corta la página (findPageByComputedSort) y
+// después se traen esas experiencias con sus relaciones, en el mismo orden
+async function findByComputedSort(listQuery) {
+  const { ids, total } = await experienceRepository.findPageByComputedSort(listQuery);
+  const position = new Map(ids.map((id, index) => [String(id), index]));
+  const items = ids.length === 0 ? [] : await experienceRepository.findAll({ _id: { $in: ids } });
   items.sort((a, b) => position.get(String(a._id)) - position.get(String(b._id)));
-  return page === undefined ? { items } : { items, total: rows.length, page, limit };
+  const { page, limit } = listQuery;
+  return page === undefined ? { items } : { items, total, page, limit };
 }
 
 // ABAC: el admin, con todas; un anfitrión, solo con las de su perfil de anfitrión
@@ -138,11 +120,11 @@ async function assertOwnExperience(actor, experience) {
 export const experienceService = {
   // scope (services/visibility.js): en PUBLIC, sin las de un anfitrión o una ruta ocultos
   // Listado con query params (utils/listQuery.js): filtros, búsqueda, orden y página.
-  // extra: una condición más que no es un query param (la búsqueda en el título de la tienda)
-  async search(query = {}, scope, extra = {}) {
-    const base = { ...(await scopeFilter("experience", scope)), ...extra };
-    const listQuery = await experienceListQuery.build(query, base, LIST_RESOLVERS);
-    const byComputed = listQuery.sort && Object.keys(listQuery.sort).some((field) => COMPUTED_SORT.has(field));
+  // byRelevance: con ?q= y sin sort, las que mejor encajan primero (la búsqueda de la tienda)
+  async search(query = {}, scope, { byRelevance = false } = {}) {
+    const listQuery = await experienceListQuery.build(query, await scopeFilter("experience", scope), LIST_RESOLVERS);
+    if (byRelevance && listQuery.filter.$text && !listQuery.sort) listQuery.sort = { score: { $meta: "textScore" } };
+    const byComputed = listQuery.sort && Object.keys(listQuery.sort).some((field) => COMPUTED_SORT.includes(field));
     const page = byComputed ? await findByComputedSort(listQuery) : await findList(experienceRepository, listQuery);
     return { ...page, items: await present(page.items, scope) };
   },
@@ -156,23 +138,14 @@ export const experienceService = {
    * Los carruseles del Home: las categorías, los anfitriones y las ubicaciones que tienen alguna
    * experiencia visible, cada uno con cuántas (experienceCount), de más a menos y por nombre si
    * empatan. La categoría y las ubicaciones de una experiencia son las de su ruta: una ruta que
-   * empieza y acaba en el mismo sitio cuenta una vez. Se cuenta en memoria con dos consultas
-   * ligeras (las experiencias y sus rutas), y cada lista la presenta su service (con su foto).
+   * empieza y acaba en el mismo sitio cuenta una vez. MongoDB cuenta con $group
+   * (experienceRepository.countFacets): a Node solo llega un recuento por categoría, anfitrión o
+   * ubicación, no las experiencias. Cada lista la presenta su service (con su foto).
    */
   async facets({ limit = FACETS_LIMIT.default, kinds = ["categories", "hosts", "locations"] } = {}, scope) {
-    const experiences = await experienceRepository.findFacetKeys(await scopeFilter("experience", scope));
-    const routes = await routeRepository.findReferences([...new Set(experiences.map((e) => String(e.routeId)))]);
-    const routeById = new Map(routes.map((route) => [String(route._id), route]));
-
-    const counts = { categories: new Map(), hosts: new Map(), locations: new Map() };
-    const add = (map, id) => map.set(String(id), (map.get(String(id)) ?? 0) + 1);
-    for (const experience of experiences) {
-      add(counts.hosts, experience.hostId);
-      const route = routeById.get(String(experience.routeId));
-      if (!route) continue;
-      add(counts.categories, route.categoryId);
-      for (const id of new Set([String(route.startLocationId), String(route.endLocationId)])) add(counts.locations, id);
-    }
+    const grouped = await experienceRepository.countFacets(await scopeFilter("experience", scope), kinds);
+    const toMap = (rows = []) => new Map(rows.map((row) => [String(row._id), row.count]));
+    const counts = { categories: toMap(grouped.categories), hosts: toMap(grouped.hosts), locations: toMap(grouped.locations) };
 
     // Solo se presentan las listas pedidas (la tienda pide una por carrusel)
     const wanted = (kind, list) => (kinds.includes(kind) ? list() : []);

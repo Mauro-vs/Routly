@@ -340,7 +340,9 @@ const RESOURCES = [
     description:
       "Fecha concreta de una experiencia. sku (RTL-DEP-AAMMDD-XXXXX) lo genera el servidor y no cambia nunca; el slug sí sigue a la fecha. " +
       "guideBike es la moto del guía de ese día: la suya (guideBikeId) o, si no tiene, la de su experiencia. " +
-      "seatsLeft son las plazas libres: de momento, la capacidad, porque aún no hay reservas.",
+      "seatsBooked son las plazas reservadas: no se envían (las cambiarán las reservas) y capacity no puede bajar de ellas (409). " +
+      "seatsLeft son las libres (capacity - seatsBooked) e isFull, si no queda ninguna: una salida completa no es reservable ni cuenta para el precio desde. " +
+      "?full=true lista las completas; ?full=false, las que tienen plazas.",
     example: {
       _id: "6710a1b2c3d4e5f6a7b8c950",
       experienceId: "6710a1b2c3d4e5f6a7b8c940",
@@ -350,8 +352,10 @@ const RESOURCES = [
       capacity: 8,
       price: 89,
       state: "scheduled",
-      // Plazas libres: hoy, la capacidad (cuando haya reservas, la capacidad menos las reservadas)
-      seatsLeft: 8,
+      // Reservadas, libres (capacity - seatsBooked) y si está completa
+      seatsBooked: 5,
+      seatsLeft: 3,
+      isFull: false,
       sku: "RTL-DEP-261108-7QX2M",
       // Sin guideBikeId propio: hereda la de su experiencia
       guideBike: {
@@ -994,7 +998,8 @@ const SHOP_PARAM_DOCS = {
   category: "Slug de la categoría (la de su ruta). Si no existe, el Shop sale vacío",
   host: "Slug del anfitrión. Si no existe, el Shop sale vacío",
   location: "Slug de una ubicación, de origen o de destino de su ruta. Si no existe, el Shop sale vacío",
-  search: "Un trozo del título, sin distinguir mayúsculas: pir encuentra Pirineos",
+  search:
+    "Palabras del título o la descripción, con el índice de texto: sin distinguir mayúsculas ni acentos y con sus variantes (montana encuentra Montaña; rutas, ruta). Palabras enteras: pir no encuentra Pirineos. Sin sort, por relevancia",
   difficulty: "Dificultad de su ruta",
   language: "Idioma (código de dos letras)",
   priceMin: "Alguna de sus salidas reservables cuesta esto o más",
@@ -1096,7 +1101,7 @@ const SHOP_PATHS = {
     get: {
       summary: "Salidas reservables de una experiencia",
       description:
-        "Las activas, programadas y futuras, de la más próxima a la más lejana, con startAt, endAt, capacity, price y seatsLeft (las plazas libres).",
+        "Las activas, programadas y futuras, de la más próxima a la más lejana, con startAt, endAt, capacity, price, seatsBooked, seatsLeft (las plazas libres) e isFull. Las completas salen, marcadas, para enseñarlas sin dejar reservarlas.",
       tags: SHOP_TAGS,
       parameters: [slugPath],
       responses: {

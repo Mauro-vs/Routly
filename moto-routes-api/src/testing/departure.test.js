@@ -126,3 +126,33 @@ test("el precio tiene como mucho dos decimales y 100.000 €", async () => {
     "price must be less than or equal to 100000"
   );
 });
+
+test("plazas reservadas: no se envían, la capacidad no baja de ellas y las libres se calculan", async () => {
+  const created = await api.post("/departures", body({ startAt: fromNow(40 * DAY), endAt: fromNow(40 * DAY + 4 * HOUR), capacity: 8 }));
+  assert.equal(created.status, 201);
+  assert.deepEqual([created.body.seatsBooked, created.body.seatsLeft, created.body.isFull], [0, 8, false]);
+
+  // Las cambiarán las reservas, nunca el body
+  assert.equal(fieldMessage(await api.post("/departures", body({ seatsBooked: 2 })), "seatsBooked"), "seatsBooked is not allowed");
+  assert.equal(
+    fieldMessage(await api.patch(`/departures/${created.body._id}`, { seatsBooked: 2 }), "seatsBooked"),
+    "seatsBooked cannot be changed"
+  );
+
+  await Departure.updateOne({ _id: created.body._id }, { seatsBooked: 6 });
+  const { body: booked } = await api.get(`/departures/${created.body._id}`);
+  assert.deepEqual([booked.seatsBooked, booked.seatsLeft, booked.isFull], [6, 2, false]);
+
+  // No se puede dejar con menos plazas de las reservadas; con las justas, completa
+  const tooSmall = await api.patch(`/departures/${created.body._id}`, { capacity: 5 });
+  assert.equal(tooSmall.status, 409);
+  assert.equal(tooSmall.body.message, "capacity is lower than the seats already booked");
+  const { body: full } = await api.patch(`/departures/${created.body._id}`, { capacity: 6 });
+  assert.deepEqual([full.seatsLeft, full.isFull], [0, true]);
+
+  // ?full=true, las completas; ?full=false, las que tienen plazas
+  const ids = async (query) => (await api.get(`/departures?${query}`)).body.map((departure) => departure._id);
+  assert.ok((await ids("full=true")).includes(created.body._id));
+  assert.ok(!(await ids("full=false")).includes(created.body._id));
+  assert.ok((await ids("full=false")).includes(data.departure._id));
+});

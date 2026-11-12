@@ -46,11 +46,6 @@ export const routeRepository = {
     return Route.exists(filter);
   },
 
-  // La categoría y las ubicaciones de unas rutas: para las facetas del Home
-  findReferences(ids) {
-    return Route.find({ _id: { $in: ids } }).select("categoryId startLocationId endLocationId").lean();
-  },
-
   // Los ids que cumplen el filtro (sin los eliminados): para services/visibility.js
   findIds(filter) {
     return Route.distinct("_id", filter);
