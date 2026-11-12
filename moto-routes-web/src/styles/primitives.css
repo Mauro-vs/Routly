@@ -1,0 +1,92 @@
+/* Primitivas de la web pública: el contenedor, la banda y los botones. Las piezas de la
+   señalización (panel, placas, hito) y los controles (búsqueda, filtros) son componentes. */
+
+/* Contenido centrado, con el margen lateral de la web */
+.wrap {
+  width: 100%;
+  max-width: var(--layout-content-web);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* La banda verde oscura. Lo que va encima redefine sus colores (la regla de la banda) */
+.on-band {
+  background: var(--color-band);
+  color: var(--color-on-band);
+  --color-text: var(--color-on-band);
+  --color-text-muted: var(--color-on-band-muted);
+  --color-border: #2a4a3b;
+  --color-border-strong: #4d6e5e;
+}
+
+.on-band :focus-visible {
+  outline-color: var(--color-accent);
+}
+
+/* La acción principal: lima con el fondo inclinado en un pseudoelemento, así el foco sigue siendo
+   un rectángulo. Una por pantalla */
+.btn-primary {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 33px;
+  border: 0;
+  background: none;
+  color: var(--color-on-accent);
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--motion-ease);
+}
+
+/* La inclinación de 16° saca las esquinas unos 7 px por cada lado: se recoge dentro de la caja,
+   así el botón queda alineado con el margen del texto */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0 7px;
+  z-index: -1;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  transform: skewX(var(--slant));
+  transition: background var(--motion-fast);
+}
+
+.btn-primary:hover::before {
+  background: var(--color-accent-hover);
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* Botón secundario: borde fino, transparente */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+/* Cifras y títulos cortos inclinados (la regla del dorsal: nunca párrafos) */
+.slanted {
+  display: inline-block;
+  transform: skewX(var(--slant-text));
+}

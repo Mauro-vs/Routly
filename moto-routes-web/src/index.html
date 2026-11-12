@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Routly · salidas guiadas en moto</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Salidas guiadas en moto por carreteras elegidas una a una: montaña, costa, puertos y viñedos, con fecha, plazas y precio."
+    />
+    <!-- el color de la cabecera, que queda pegada al borde del navegador -->
+    <meta name="theme-color" content="#0c2419" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- antes de pintar: si no, cada carga parpadearía en claro. Ver ThemeService.
+         Misma clave que el panel: quien eligió un tema, lo tiene en las dos caras. -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem('routly.theme');
+        } catch (error) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

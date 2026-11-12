@@ -1,0 +1,144 @@
+/* Routly · variables de diseño, copiadas del panel (moto-routes-frontend/src/styles/tokens.css).
+   Si cambian allí, se cambian aquí: las dos caras comparten marca. Las de la web pública
+   (contenido más ancho, gutter) van al final, en su bloque. Reglas en DESIGN.md. */
+
+:root {
+  color-scheme: light;
+
+  /* marca: el lima no cambia con el tema, y sobre él siempre va texto oscuro */
+  --color-accent: #c6f04d;
+  --color-accent-hover: #b4e134;
+  --color-on-accent: #16260a;
+
+  /* acciones y selección sobre el fondo */
+  --color-primary: #14663f;
+  --color-primary-hover: #0f5233;
+  --color-primary-soft: #dcefe3;
+  --color-on-primary: #ffffff;
+
+  /* banda oscura de cada página y sidebar */
+  --color-band: #0c2419;
+  --color-on-band: #ffffff;
+  --color-on-band-muted: #b4c9bc;
+  --color-sidebar: #0c2419;
+  --color-sidebar-raised: #16382a;
+  --color-on-sidebar: #e8f3ec;
+  --color-on-sidebar-muted: #a8bfb2;
+
+  /* neutros, teñidos de verde */
+  --color-bg: #f1f4f0;
+  --color-surface: #fbfcfa;
+  --color-surface-2: #e7ede8;
+  --color-border: #c5d0c8;
+  --color-border-strong: #748379;
+  --color-text: #0f1a15;
+  --color-text-muted: #4c5d53;
+
+  /* estados */
+  --color-success: #14663f;
+  --color-success-bg: #dcefe3;
+  --color-warning: #7d4e00;
+  --color-warning-bg: #fcefcb;
+  --color-danger: #b3261e;
+  --color-danger-bg: #fbe3e0;
+
+  /* medidores: tramo encendido y tramo apagado */
+  --color-meter: #14663f;
+  --color-meter-track: #d3ddd6;
+
+  --font-sans: 'Onest Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 999px;
+
+  /* el ángulo de la R del logo: la firma del panel */
+  --slant: -16deg;
+  /* el de los títulos y las cifras: la mitad, para que se sigan leyendo bien */
+  --slant-text: -8deg;
+
+  --shadow-1: 0 1px 2px rgb(15 26 21 / 0.06);
+  --shadow-2: 0 10px 24px -12px rgb(15 26 21 / 0.28), 0 2px 6px rgb(15 26 21 / 0.08);
+  --shadow-3: 0 24px 48px -20px rgb(15 26 21 / 0.42), 0 6px 14px -6px rgb(15 26 21 / 0.16);
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --motion-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  /* para lo que se mueve de un sitio a otro sin entrar ni salir (la marca del menú) */
+  --motion-ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --layout-sidebar: 244px;
+  --layout-topbar: 56px;
+  --layout-content: 1180px;
+
+  --z-topbar: 5;
+  --z-drawer: 30;
+  --z-tooltip: 60;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-primary: #c6f04d;
+  --color-primary-hover: #d7f77c;
+  --color-primary-soft: #1d3019;
+  --color-on-primary: #16260a;
+
+  --color-band: #0f2a1e;
+  --color-sidebar: #07100b;
+  --color-sidebar-raised: #142a20;
+  --color-on-sidebar-muted: #a2b4a9;
+
+  --color-bg: #0b1310;
+  --color-surface: #111c17;
+  --color-surface-2: #1a2922;
+  --color-border: #263a31;
+  --color-border-strong: #66796e;
+  --color-text: #eaf3ed;
+  --color-text-muted: #9db2a6;
+
+  --color-success: #6fd49f;
+  --color-success-bg: #12301f;
+  --color-warning: #f2c14e;
+  --color-warning-bg: #33270b;
+  --color-danger: #ff8f80;
+  --color-danger-bg: #3a1714;
+
+  --color-meter: #c6f04d;
+  --color-meter-track: #263a31;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 10px 24px -12px rgb(0 0 0 / 0.7);
+  --shadow-3: 0 24px 48px -20px rgb(0 0 0 / 0.8);
+}
+
+/* Solo de la web pública */
+:root {
+  --layout-content-web: 1240px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --layout-header: 64px;
+  /* el panel de orientación y sus placas */
+  --sign: #14663f;
+  --on-sign: #ffffff;
+  --sign-rule: rgb(255 255 255 / 0.35);
+  --plate-ink: #0f1a15;
+  --plate-paper: #ffffff;
+}

@@ -1,0 +1,130 @@
+# Routly · web pública
+
+La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una experiencia**, donde un motero sin cuenta encuentra una salida guiada y elige fecha. Usa solo `/api/shop`, la tienda pública de la API (sin sesión). El panel de administración es otra aplicación, `moto-routes-frontend/`.
+
+> Estado: **fase 3 de 7**. Están la base (configuración, cliente de la API, cabecera, pie, tema) y los componentes reutilizables con sus specs. El Home, el Shop y el detalle se construyen en las fases 4, 5 y 6.
+
+## Arrancar
+
+Necesitas Node.js 20.19 o superior y la API en marcha en `http://localhost:3000` (ver `moto-routes-api/README.md`).
+
+```bash
+cd moto-routes-web
+npm install
+npm start
+```
+
+La web queda en **http://localhost:4300**. En desarrollo, `/api` llega a la API por `proxy.conf.json`, como en el panel.
+
+| Comando | Qué hace |
+|---|---|
+| `npm start` | Servidor de desarrollo en el puerto 4300 |
+| `npm test` | Los specs (Karma + Jasmine). Sin ventana: `npx ng test --watch=false --browsers=ChromeHeadless` |
+| `npm run build` | La build de producción, en `dist/` |
+| `npm run icons` | Regenera los iconos de `tools/generate-icons.mjs` |
+
+## Cómo está hecha
+
+Angular 20 como el panel: standalone, OnPush, signals y sin zone.js. TypeScript estricto, sin dependencias nuevas.
+
+```
+src/app/
+├── core/
+│   ├── api/            ShopApiService (con AbortSignal), los modelos de /api/shop y ApiError
+│   ├── interceptors/   el tiempo de espera de las peticiones
+│   └── services/       el tema y el título y la descripción de cada página (SEO)
+├── layout/             la cabecera y el pie
+├── shared/
+│   ├── ui/             componentes reutilizables, sin saber nada de experiencias
+│   └── utils/          formato de números, fechas y dinero
+└── features/           home, shop, experience y la página 404, cada una en su trozo
+```
+
+- **Una feature no importa de otra**, y `shared/` no sabe de negocio: sus componentes reciben datos y emiten eventos.
+- **Carga diferida por rutas:** cada pantalla es un trozo que se pide al entrar en ella.
+- **La URL manda:** filtros, búsqueda, página y salida elegida van en la URL, en español: `/experiencias?categoria=&anfitrion=&ubicacion=&buscar=&pagina=&orden=`.
+
+### Peticiones sin carreras
+
+`ShopApiService.get(path, params, signal)` devuelve una promesa y acepta un `AbortSignal`. Quien pide crea un `AbortController` por petición y, cuando llega una nueva, hace `abort()` de la anterior:
+
+- HttpClient no admite una señal, así que al abortar se cancela la suscripción; con `withFetch()` eso aborta el `fetch` de verdad.
+- La promesa se rechaza con un `AbortError`, que se distingue con `isAbortError()` y no se enseña como fallo.
+- Se pasa por HttpClient y no por `fetch` directamente para que siga valiendo el interceptor del tiempo de espera.
+
+La búsqueda espera 300 ms desde la última tecla, en un solo sitio: el componente `ui-search-box`.
+
+### Piezas copiadas del panel
+
+Los tokens (`styles/tokens.css`), el icono, la marca, el esqueleto, el formato de cifras y fechas, el tema y el tiempo de espera se copian de `moto-routes-frontend`, con una línea al principio que lo dice. **Si cambian allí, se cambian aquí.** El tema usa la misma clave (`routly.theme`): quien eligió oscuro lo tiene en las dos caras.
+
+## Componentes reutilizables (`shared/ui/`)
+
+Todos con `input()`, `output()` o `model()`, OnPush y su spec.
+
+### `ui-carousel`
+
+Carrusel horizontal. Cada hijo proyectado es una tarjeta; su ancho lo pone quien lo usa.
+
+```html
+<ui-carousel label="Tipos de carretera">
+  @for (category of categories(); track category._id) {
+    <a class="card" [routerLink]="['/experiencias']" [queryParams]="{ categoria: category.slug }">…</a>
+  }
+</ui-carousel>
+```
+
+- Con el dedo, scroll nativo con `scroll-snap` (inercia, se para a mitad). Con el ratón, arrastre 1:1 que al soltar sigue con su inercia hasta la tarjeta más cercana, y no cuenta como clic.
+- Botones "Anteriores" y "Siguientes" (casi una pantalla), que se desactivan en los extremos y desaparecen si no hay nada que desplazar. Con el teclado, ← y → pasan el foco a la tarjeta de al lado.
+- Es una región `aria-roledescription="carrusel"` con su nombre, y las tarjetas, una lista. Con movimiento reducido, los saltos son instantáneos.
+- Variables CSS: `--carousel-gap` (espacio entre tarjetas) y `--carousel-inset` (margen interior, para que las tarjetas salgan del borde con el contenido).
+
+### `ui-search-box`
+
+```html
+<ui-search-box label="Buscar experiencias" placeholder="costa, pirineo…"
+  hint="Busca palabras enteras" [value]="store.search()" (search)="store.setSearch($event)" />
+```
+
+Espera 300 ms (`SEARCH_DEBOUNCE_MS`) y emite el texto sin espacios de más, solo si cambia. Enter busca ya. El botón de borrar sale con texto, vacía, emite y devuelve el foco. El valor que llega de fuera (la URL) se enseña y no se vuelve a emitir.
+
+### `ui-filter-group`
+
+```html
+<ui-filter-group legend="Tipo de carretera" allLabel="Cualquiera"
+  [options]="[{ value: 'montana-1a2b', label: 'Montaña', count: 6 }]" [(value)]="categoria" />
+```
+
+Un filtro de una opción: radios con su leyenda, "todas" primero y cuántos resultados tiene cada opción. `value` es el elegido o `null`.
+
+### `ui-active-filters`
+
+```html
+<ui-active-filters [filters]="[{ key: 'categoria', label: 'Montaña' }]" (remove)="quitar($event)" (clear)="quitarTodos()" />
+```
+
+Los filtros puestos, cada uno con su botón de quitar, y "Quitar los filtros". Sin filtros no enseña nada.
+
+### `ui-pager`
+
+```html
+<ui-pager [page]="page()" [totalPages]="totalPages()" />
+```
+
+Cada página es un enlace (`?pagina=3`) que conserva el resto de parámetros; la primera no lleva parámetro. Con muchas páginas: la primera, la última y las vecinas de la actual (`pageItems`). Con una sola, no se enseña.
+
+### `ui-photo`
+
+```html
+<ui-photo [src]="experience.coverImage?.url ?? null" [seed]="experience.slug" alt="" [priority]="true" />
+```
+
+La foto llena su caja (la proporción la pone quien la usa con `aspect-ratio`). Sin url, o si no carga, el **paisaje de la marca**: sierras y una carretera en los verdes de la paleta, distinto para cada `seed` y siempre el mismo para la misma. Con `priority`, la imagen se pide enseguida (la primera de la página).
+
+### Copiados del panel
+
+`ui-icon` (Phosphor, solo los de `tools/generate-icons.mjs`), `ui-brand-mark` y `ui-skeleton`.
+
+## Diseño
+
+Dirección "Señales de carretera": la misma marca que el panel (lima, verde de pista, banda verde oscura, Onest y el ángulo de 16°) llevada a la señalización vertical. Las piezas y sus reglas están en `moto-routes-frontend/DESIGN.md` ("Superficie pública"), y los bocetos, en `design/bocetos-web/`.
