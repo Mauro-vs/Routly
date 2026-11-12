@@ -56,6 +56,8 @@ let nextId = 0;
   styles: `
     :host {
       display: grid;
+      /* minmax(0, ...): que el campo encoja con su columna, no al ancho del texto de ayuda */
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--space-1);
       min-width: 0;
     }

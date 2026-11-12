@@ -2,7 +2,7 @@
 
 La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una experiencia**, donde un motero sin cuenta encuentra una salida guiada y elige fecha. Usa solo `/api/shop`, la tienda pública de la API (sin sesión). El panel de administración es otra aplicación, `moto-routes-frontend/`.
 
-> Estado: **fase 4 de 7**. Están la base (configuración, cliente de la API, cabecera, pie, tema), los componentes reutilizables y el **Home**. El Shop y el detalle se construyen en las fases 5 y 6.
+> Estado: **fase 5 de 7**. Están la base (configuración, cliente de la API, cabecera, pie, tema), los componentes reutilizables, el **Home** y el **Shop**. El detalle se construye en la fase 6.
 
 ## El Home
 
@@ -11,6 +11,30 @@ La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una exper
 - `HomeStore` pide los tres carruseles y el total a la vez, con un `AbortController`: al salir de la página, lo pendiente se cancela. Con error, el panel lo explica y deja reintentar.
 - Composición lista + tarjeta: `app-place-rail` pinta un `ui-carousel` con un `app-place-card` por elemento. Un carril sin elementos no se pinta.
 - La cabecera va transparente sobre la foto solo en el Home.
+
+## El Shop
+
+`features/shop/`: `/experiencias`, con la URL como fuente de verdad.
+
+| URL | API | Qué es |
+|---|---|---|
+| `categoria`, `anfitrion`, `ubicacion` | `category`, `host`, `location` | Por slug, como los enlaces del Home |
+| `buscar` | `search` | Palabras enteras del título y la descripción |
+| `dificultad` | `difficulty` | `facil`, `media` o `dificil` |
+| `con-fechas=si` | `hasDepartures=true` | Solo las que tienen salidas reservables |
+| `orden` | `sort` | `proximas`, `precio`, `precio-desc`, `titulo`; sin orden, novedades (o relevancia si se busca) |
+| `pagina` | `page` | 12 por página |
+
+- `shop-query.ts` traduce la URL a los parámetros de la API, y lo que no vale en la URL se ignora.
+- `ShopStore` lee la URL (`sync`) cada vez que cambia: un filtro, atrás o un enlace del Home. Las acciones (filtrar, buscar, ordenar) no tocan el estado: escriben la URL y vuelven a la primera página.
+- Cada petición lleva su `AbortController`, y una nueva aborta la anterior: una respuesta vieja nunca pisa a la nueva, y lo abortado no se enseña como error. Mientras llega lo nuevo, lo anterior se ve atenuado; la primera vez, esqueletos.
+- Una página que ya no existe pasa a la última, con `replaceUrl`. Un slug que no existe sale como filtro "no encontrado".
+- En pantalla:
+  - el pórtico: tres placas con su desplegable (Carretera, Destino, Guía) y la búsqueda;
+  - debajo, cuántas hay (anunciado al lector de pantalla), la dificultad, "Solo con fechas", el orden y los filtros puestos;
+  - en el móvil, la búsqueda y una hoja con los filtros (`dialog`);
+  - estados de vacío (con "Quitar los filtros") y de error (con reintentar).
+- Lista + tarjeta: `app-experience-list` y `app-experience-card`, con el hito kilométrico sobre la foto.
 
 ## Arrancar
 
