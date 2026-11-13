@@ -211,6 +211,21 @@ const clean = (text: string) => text.replace('.', '');
       background: var(--color-accent);
       color: var(--color-on-accent);
       transform: skewX(var(--slant));
+      animation: stamp-in 220ms var(--motion-ease) both;
+    }
+
+    /* Como un sello: llega un poco más grande y se asienta */
+    @keyframes stamp-in {
+      from {
+        opacity: 0;
+        transform: skewX(var(--slant)) scale(1.35);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stamp--chosen {
+        animation: none;
+      }
     }
   `,
 })

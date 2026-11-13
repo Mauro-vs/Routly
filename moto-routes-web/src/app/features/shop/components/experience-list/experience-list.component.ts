@@ -28,7 +28,7 @@ import { ExperienceCardComponent } from '../experience-card/experience-card.comp
     } @else {
       <ul class="grid" [class.is-stale]="stale()">
         @for (experience of experiences(); track experience._id) {
-          <li><app-experience-card [experience]="experience" /></li>
+          <li class="enter" [style.--i]="$index"><app-experience-card [experience]="experience" /></li>
         }
       </ul>
     }
@@ -43,6 +43,33 @@ import { ExperienceCardComponent } from '../experience-card/experience-card.comp
 
     .grid.is-stale {
       opacity: 0.5;
+    }
+
+    /* Una tarjeta nueva (otra página, otro filtro) entra subiendo un poco, en cascada: se ve que el
+       resultado ha cambiado. Las que ya estaban no se vuelven a animar (track por _id) */
+    .enter {
+      animation: card-in 280ms var(--motion-ease) both;
+      animation-delay: calc(min(var(--i), 8) * 40ms);
+    }
+
+    @keyframes card-in {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .enter {
+        animation: card-fade 160ms linear both;
+        animation-delay: 0ms;
+      }
+
+      @keyframes card-fade {
+        from {
+          opacity: 0;
+        }
+      }
     }
 
     .ghost {

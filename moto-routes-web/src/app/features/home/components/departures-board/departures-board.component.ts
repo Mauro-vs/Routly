@@ -27,9 +27,9 @@ const WEEKDAY = new Intl.DateTimeFormat('es-ES', { weekday: 'short' });
         </a>
       </header>
       <ol class="rows">
-        @for (experience of experiences(); track experience._id) {
+        @for (experience of experiences(); track experience._id; let i = $index) {
           @if (experience.nextDepartureAt; as next) {
-            <li>
+            <li class="enter" [style.--i]="i">
               <a class="row" [routerLink]="['/experiencias', experience.slug]">
                 <span class="date num" aria-hidden="true">
                   <span class="weekday">{{ weekday(next) }}</span>
@@ -111,6 +111,30 @@ const WEEKDAY = new Intl.DateTimeFormat('es-ES', { weekday: 'short' });
 
     li + li {
       border-top: 1px solid rgb(255 255 255 / 0.12);
+    }
+
+    .enter {
+      animation: row-in 300ms var(--motion-ease) both;
+      animation-delay: calc(var(--i) * 60ms + 120ms);
+    }
+
+    @keyframes row-in {
+      from {
+        opacity: 0;
+        transform: translateX(-16px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .enter {
+        animation: row-fade 160ms linear both;
+      }
+
+      @keyframes row-fade {
+        from {
+          opacity: 0;
+        }
+      }
     }
 
     .row {
