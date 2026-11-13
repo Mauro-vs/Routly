@@ -5,6 +5,7 @@ import { PhotoComponent } from '../../shared/ui/photo/photo.component';
 import { sceneFor } from '../../shared/ui/photo/landscape';
 import { formatNumber } from '../../shared/utils/shop-format';
 import { PlaceItem, PlaceRailComponent } from './components/place-rail/place-rail.component';
+import { DeparturesBoardComponent } from './components/departures-board/departures-board.component';
 import { SignPanelComponent } from './components/sign-panel/sign-panel.component';
 import { HomeStore } from './home.store';
 
@@ -16,7 +17,7 @@ import { HomeStore } from './home.store';
  */
 @Component({
   selector: 'app-home-page',
-  imports: [PhotoComponent, SignPanelComponent, PlaceRailComponent],
+  imports: [DeparturesBoardComponent, PhotoComponent, SignPanelComponent, PlaceRailComponent],
   providers: [HomeStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -41,6 +42,11 @@ import { HomeStore } from './home.store';
     </section>
 
     @if (store.status() === 'ready') {
+      @if (store.upcoming().length > 0) {
+        <div class="board-band on-band">
+          <app-departures-board class="wrap" [experiences]="store.upcoming()" />
+        </div>
+      }
       <div class="wrap rails">
         @if (locations().length > 0) {
           <app-place-rail id="destinos" headingId="destinos-titulo" title="Destinos" allLabel="Todos los destinos" kind="town" [items]="locations()" />
@@ -149,6 +155,15 @@ import { HomeStore } from './home.store';
       margin: 0 auto;
       background: var(--plate-paper);
       opacity: 0.92;
+    }
+
+    /* La banda del tablón: el verde oscuro de la portada sigue un poco más, de lado a lado */
+    .board-band {
+      padding-block: var(--space-7);
+      background:
+        linear-gradient(to bottom, rgb(0 0 0 / 0.25), transparent 40%),
+        var(--color-band);
+      border-bottom: 1px solid var(--color-border);
     }
 
     .rails {

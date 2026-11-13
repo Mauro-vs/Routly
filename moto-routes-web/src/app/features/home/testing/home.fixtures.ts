@@ -1,6 +1,6 @@
 import { HttpTestingController } from '@angular/common/http/testing';
 
-import { ShopCategory, ShopHost, ShopLocation } from '../../../core/api/shop.models';
+import { ShopCategory, ShopExperience, ShopHost, ShopLocation } from '../../../core/api/shop.models';
 
 /** Datos de ejemplo del Home para los specs, con la forma de /api/shop. */
 
@@ -17,15 +17,25 @@ export const HOME_LOCATIONS: ShopLocation[] = [
   { _id: 'l1', slug: 'jaca-1', city: 'Jaca', region: 'Aragón', country: 'España', experienceCount: 2, coverImage: null },
 ];
 
-/** Responde las cuatro peticiones del Home (o las que se le den). */
+/** Responde las cinco peticiones del Home (o las que se le den). */
 export function flushHome(
   http: HttpTestingController,
-  { categories = HOME_CATEGORIES, hosts = HOME_HOSTS, locations = HOME_LOCATIONS, total = 12 } = {},
+  {
+    categories = HOME_CATEGORIES,
+    hosts = HOME_HOSTS,
+    locations = HOME_LOCATIONS,
+    total = 12,
+    upcoming = [] as ShopExperience[],
+  } = {},
 ): void {
   http.expectOne((req) => req.url === '/api/shop/categories').flush({ data: categories });
   http.expectOne((req) => req.url === '/api/shop/hosts').flush({ data: hosts });
   http.expectOne((req) => req.url === '/api/shop/locations').flush({ data: locations });
+  // El total (una página de uno) y el tablón de próximas salidas
   http
-    .expectOne((req) => req.url === '/api/shop/experiences')
+    .expectOne((req) => req.url === '/api/shop/experiences' && !req.params.has('hasDepartures'))
     .flush({ data: [], pagination: { total, page: 1, limit: 1, totalPages: total } });
+  http
+    .expectOne((req) => req.url === '/api/shop/experiences' && req.params.has('hasDepartures'))
+    .flush({ data: upcoming, pagination: { total: upcoming.length, page: 1, limit: 5, totalPages: 1 } });
 }
