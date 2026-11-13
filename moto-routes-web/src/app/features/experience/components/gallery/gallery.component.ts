@@ -45,6 +45,8 @@ import { SceneKind } from '../../../../shared/ui/photo/landscape';
 
     ui-photo {
       aspect-ratio: 16 / 9;
+      max-height: min(56vh, 520px);
+      width: 100%;
       border-radius: var(--radius-lg);
     }
 

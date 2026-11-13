@@ -5,11 +5,17 @@ import { formatPrice, formatTime, formatWeekdayDate, plural } from '../../../../
 
 let nextId = 0;
 
+const DAY = new Intl.DateTimeFormat('es-ES', { day: 'numeric' });
+const MONTH = new Intl.DateTimeFormat('es-ES', { month: 'short' });
+const WEEKDAY = new Intl.DateTimeFormat('es-ES', { weekday: 'short' });
+const clean = (text: string) => text.replace('.', '');
+
 /**
  * La elección de salida: un grupo de radios (con el teclado, las flechas cambian de salida), cada
- * una con forma de billete: la fecha, la hora de salida y de llegada, las plazas libres y el precio.
- * La elegida lleva el contorno sólido y el sello lima; las demás, el contorno discontinuo. Una
- * completa se ve, atenuada y con su sello, pero no se puede elegir.
+ * una con forma de billete. A la izquierda, la matriz con la fecha en grande; una perforación; y el
+ * cuerpo con la hora de salida y de llegada, las plazas libres y el precio. La elegida lleva el
+ * contorno sólido y el sello lima; las demás, el contorno discontinuo. Una completa se ve,
+ * atenuada y con su sello, pero no se puede elegir.
  */
 @Component({
   selector: 'app-departure-picker',
@@ -27,16 +33,21 @@ let nextId = 0;
             [disabled]="departure.isFull"
             (change)="select.emit(departure.slug)"
           />
-          <span class="date">
-            <strong>{{ weekdayDate(departure.startAt) }}</strong>
-            <span class="num">{{ time(departure.startAt) }} – {{ time(departure.endAt) }}</span>
+          <span class="stub num" aria-hidden="true">
+            <span class="weekday">{{ weekday(departure.startAt) }}</span>
+            <strong>{{ day(departure.startAt) }}</strong>
+            <span class="month">{{ month(departure.startAt) }}</span>
           </span>
-          <span class="seats num">
-            @if (departure.isFull) {
-              <span class="stamp stamp--full">Completa</span>
-            } @else {
-              {{ plural(departure.seatsLeft, 'plaza libre', 'plazas libres') }}
-            }
+          <span class="body">
+            <span class="sr-only">{{ weekdayDate(departure.startAt) }}, </span>
+            <span class="time num">{{ time(departure.startAt) }} <span class="arrow" aria-hidden="true">→</span> {{ time(departure.endAt) }}</span>
+            <span class="seats num">
+              @if (departure.isFull) {
+                <span class="stamp stamp--full">Completa</span>
+              } @else {
+                {{ plural(departure.seatsLeft, 'plaza libre', 'plazas libres') }}
+              }
+            </span>
           </span>
           <span class="price num">{{ price(departure.price) }}<span class="sr-only"> por persona</span></span>
           @if (departure.slug === selectedSlug()) {
@@ -52,80 +63,130 @@ let nextId = 0;
       gap: var(--space-3);
     }
 
+    /* El billete: la matriz, la perforación (una línea discontinua con dos muescas) y el cuerpo */
     .ticket {
+      --stub: 72px;
       position: relative;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      grid-template-areas: 'date price' 'seats price';
+      grid-template-columns: var(--stub) minmax(0, 1fr) auto;
       align-items: center;
-      gap: 2px var(--space-3);
-      min-height: 72px;
-      padding: var(--space-3) var(--space-4);
+      min-height: 84px;
       border: 2px dashed var(--color-border-strong);
       border-radius: var(--radius-lg);
       background: var(--color-surface);
       cursor: pointer;
       transition:
-        border-color var(--motion-fast),
-        background var(--motion-fast);
+        border-color var(--motion-fast) var(--motion-ease),
+        background-color var(--motion-fast) var(--motion-ease),
+        transform var(--motion-base) var(--motion-ease);
     }
 
-    .ticket:hover:not(.is-full) {
-      border-color: var(--color-primary);
+    .ticket::before,
+    .ticket::after {
+      content: '';
+      position: absolute;
+      left: calc(var(--stub) - 9px);
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      /* Del color de lo que hay detrás del billete: quien lo pone en un panel lo cambia */
+      background: var(--notch-bg, var(--color-bg));
     }
 
-    /* La elegida: contorno sólido y el sello lima */
+    .ticket::before {
+      top: -9px;
+    }
+
+    .ticket::after {
+      bottom: -9px;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .ticket:hover:not(.is-full) {
+        border-color: var(--color-primary);
+        transform: translateX(3px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ticket:hover:not(.is-full) {
+        transform: none;
+      }
+    }
+
+    /* La elegida: contorno sólido, un poco del color de la marca y el sello lima */
     .ticket.is-selected {
       border-style: solid;
       border-color: var(--color-primary);
-      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+      background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
     }
 
     .ticket:has(input:focus-visible) {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
+      outline: 3px solid var(--color-accent);
+      outline-offset: 3px;
     }
 
     .ticket.is-full {
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.55;
     }
 
-    .date {
-      grid-area: date;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0 var(--space-3);
-    }
-
-    .date strong {
-      display: inline-block;
-      font-size: 18px;
-      font-weight: 800;
-    }
-
-    /* "mar, 17 nov" → "Mar, 17 nov": solo la primera letra (el mes va en minúscula) */
-    .date strong::first-letter {
+    .stub {
+      display: grid;
+      justify-items: center;
+      align-self: stretch;
+      align-content: center;
+      border-right: 2px dashed var(--color-border-strong);
       text-transform: uppercase;
+      line-height: 1;
     }
 
-    .date span {
-      font-size: var(--text-sm);
+    .is-selected .stub {
+      border-right-color: var(--color-primary);
+    }
+
+    .weekday,
+    .month {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
       color: var(--color-text-muted);
     }
 
+    .stub strong {
+      margin: 3px 0;
+      font-size: 28px;
+      font-weight: 850;
+      letter-spacing: -0.03em;
+    }
+
+    .body {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+      padding: var(--space-3) var(--space-4);
+    }
+
+    .time {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .arrow {
+      color: var(--color-primary);
+    }
+
     .seats {
-      grid-area: seats;
       font-size: var(--text-sm);
       font-weight: 650;
+      color: var(--color-text-muted);
     }
 
     .price {
-      grid-area: price;
-      font-size: 22px;
+      padding-right: var(--space-4);
+      font-size: 24px;
       font-weight: 850;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
     }
 
     .stamp {
@@ -162,6 +223,9 @@ export class DeparturePickerComponent {
 
   protected readonly name = `departure-${nextId++}`;
   protected readonly weekdayDate = formatWeekdayDate;
+  protected readonly day = (iso: string) => DAY.format(new Date(iso));
+  protected readonly month = (iso: string) => clean(MONTH.format(new Date(iso)));
+  protected readonly weekday = (iso: string) => clean(WEEKDAY.format(new Date(iso)));
   protected readonly time = formatTime;
   protected readonly price = formatPrice;
   protected readonly plural = plural;

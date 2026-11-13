@@ -114,7 +114,12 @@ const LANGUAGES: Record<string, string> = {
             </div>
 
             <aside class="booking" aria-labelledby="salidas-titulo">
-              <h2 id="salidas-titulo">Elige una salida</h2>
+              <header class="booking-head">
+                <h2 id="salidas-titulo">Elige una salida</h2>
+                @if (experience.priceFrom !== null) {
+                  <p class="booking-from num">desde <strong>{{ price(experience.priceFrom) }}</strong></p>
+                }
+              </header>
               @if (store.departures().length > 0) {
                 <app-departure-picker
                   [departures]="store.departures()"
@@ -137,6 +142,20 @@ const LANGUAGES: Record<string, string> = {
                 <p class="no-dates">Aún no hay salidas programadas para esta experiencia. Vuelve pronto o mira otras salidas de {{ experience.host?.name ?? 'su anfitrión' }}.</p>
               }
             </aside>
+
+            <!-- En el móvil, la salida elegida y el botón siempre a la vista, abajo -->
+            @if (store.departures().length > 0) {
+              <div class="mobile-bar on-band" aria-hidden="true">
+                <p class="num">
+                  @if (store.selected(); as selected) {
+                    <strong>{{ shortDate(selected.startAt) }}</strong> · {{ price(selected.price) }}
+                  } @else {
+                    desde <strong>{{ price(experience.priceFrom ?? 0) }}</strong>
+                  }
+                </p>
+                <a class="btn-primary" href="#salidas-titulo" tabindex="-1">{{ store.selected() ? 'Ver la reserva' : 'Elegir fecha' }}</a>
+              </div>
+            }
           </div>
         }
       }
@@ -280,23 +299,88 @@ const LANGUAGES: Record<string, string> = {
     }
 
     /* Las salidas, pegadas al bajar en escritorio */
+    /* La taquilla: un panel con su cabecera de señal verde, fijo al bajar en escritorio */
     .booking {
+      --notch-bg: var(--color-surface);
       position: sticky;
       top: var(--space-5);
       display: grid;
       gap: var(--space-4);
+      padding: 0 var(--space-4) var(--space-4);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-2);
+      scroll-margin-top: var(--space-5);
+    }
+
+    .booking-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin: 0 calc(var(--space-4) * -1);
+      padding: var(--space-4);
+      background: var(--sign);
+      box-shadow: inset 0 0 0 3px var(--sign), inset 0 0 0 4px var(--sign-rule);
+      color: #ffffff;
     }
 
     .booking h2 {
       font-size: 22px;
-      font-weight: 800;
+      font-weight: 850;
       letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+
+    .booking-from {
+      font-size: var(--text-sm);
+      color: rgb(255 255 255 / 0.8);
+      white-space: nowrap;
+    }
+
+    .booking-from strong {
+      font-size: 20px;
+      font-weight: 850;
+      color: #ffffff;
     }
 
     .cta {
       display: grid;
       gap: var(--space-2);
-      padding-top: var(--space-2);
+      padding-top: var(--space-3);
+      border-top: 1px dashed var(--color-border-strong);
+    }
+
+    .mobile-bar {
+      display: none;
+    }
+
+    @media (max-width: 860px) {
+      .mobile-bar {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--sign-rule);
+        background: var(--color-band);
+        box-shadow: 0 -10px 24px -12px rgb(0 0 0 / 0.6);
+      }
+
+      .mobile-bar strong {
+        font-size: 18px;
+        font-weight: 850;
+      }
+
+      /* Que la barra no tape lo último de la página */
+      :host {
+        padding-bottom: 76px;
+      }
     }
 
     .summary {
