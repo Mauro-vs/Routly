@@ -209,40 +209,77 @@ Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza
 > [!NOTE]
 > Necesitas **Node.js 20.19 o superior** y **MongoDB** en marcha en local.
 
-**1. Clona el repositorio**
+### Arrancar todo con un comando
 
 ```bash
 git clone https://github.com/Mauro-vs/Routly.git
+cd Routly
 ```
 
-**2. Arranca la API** en `http://localhost:3000`
+```bash
+cp moto-routes-api/.env.example moto-routes-api/.env
+```
 
 ```bash
-cd Routly/moto-routes-api
-npm install
-cp .env.example .env
 npm run seed
+```
+
+```bash
 npm run dev
 ```
 
+`npm run dev` arranca la **API** (`http://localhost:3000`), el **panel** (`http://localhost:4200`) y la **web pública** (`http://localhost:4300`) en una sola terminal:
+
+- **Antes de arrancar comprueba** lo que suele fallar: la versión de Node, que MongoDB responde, que existe el `.env` de la API y que los puertos están libres. Si algo falla, dice qué y cómo arreglarlo, y no arranca nada.
+- **Instala solo** las dependencias (`npm install`) de las aplicaciones que aún no las tienen.
+- **Cada línea lleva su nombre** (`[api]`, `[panel]`, `[web]`) y **los errores salen en rojo**. Cuando las tres responden, enseña sus URL.
+- **Si una se cae**, sale un bloque rojo con su nombre y las últimas líneas del error, y las demás siguen.
+- **`Ctrl+C` lo para todo**, sin dejar procesos colgados. Los cambios en el código se recargan solos.
+
+`npm run seed` solo hace falta la primera vez, o para volver a los datos de ejemplo.
+
 > [!WARNING]
-> `npm run seed` vacía todas las colecciones y carga datos de ejemplo en todas. Úsalo solo en desarrollo.
+> `npm run seed` vacía todas las colecciones de la base de datos del `.env` de la API y carga los datos de ejemplo. Por eso pregunta antes de seguir. Úsalo solo en desarrollo.
 
-**3. Arranca el panel** en `http://localhost:4200`, en otra terminal
+| Comando (desde la raíz) | Qué hace |
+|---|---|
+| `npm run dev` | La API, el panel y la web a la vez |
+| `npm run dev -- api web` | Solo los que se digan (`api`, `panel`, `web`) |
+| `npm test` | Los tests de las tres, uno detrás de otro, con una tabla al final. Solo enseña lo que falla |
+| `npm test -- panel --verbose` | Los de una, con toda la salida |
+| `npm run check` | Lo de antes de un commit: compila el panel y la web y pasa todos los tests |
+| `npm run seed` | Los datos de ejemplo, después de confirmarlo (`-- --yes` para no preguntar) |
+
+Los scripts están en [`scripts/`](scripts) y solo usan Node: no hace falta instalar nada en la raíz.
+
+<details>
+<summary><b>Arrancar cada parte por separado</b></summary>
+
+**1. La API** en `http://localhost:3000`
 
 ```bash
-cd Routly/moto-routes-frontend
+cd moto-routes-api
+npm install
+npm run dev
+```
+
+**2. El panel** en `http://localhost:4200`, en otra terminal
+
+```bash
+cd moto-routes-dashboard
 npm install
 npm start
 ```
 
-**4. Arranca la web pública** en `http://localhost:4300`, en otra terminal
+**3. La web pública** en `http://localhost:4300`, en otra terminal
 
 ```bash
-cd Routly/moto-routes-web
+cd moto-routes-web
 npm install
 npm start
 ```
+
+</details>
 
 ## Hoja de ruta
 
