@@ -61,7 +61,7 @@ import { ShopStore } from './shop.store';
         <div class="tools">
           <label class="desktop-only select">
             <span class="sr-only">Dificultad</span>
-            <select [value]="store.query().difficulty ?? ''" (change)="store.setFilter('difficulty', $any($event.target).value || null)">
+            <select #difficulty [value]="store.query().difficulty ?? ''" (change)="store.setFilter('difficulty', difficulty.value || null)">
               <option value="">Cualquier dificultad</option>
               @for (level of difficulties; track level.value) {
                 <option [value]="level.value">{{ level.label }}</option>
@@ -69,12 +69,12 @@ import { ShopStore } from './shop.store';
             </select>
           </label>
           <label class="desktop-only check">
-            <input type="checkbox" [checked]="store.query().withDates" (change)="store.setWithDates($any($event.target).checked)" />
+            <input #withDates type="checkbox" [checked]="store.query().withDates" (change)="store.setWithDates(withDates.checked)" />
             Solo con fechas
           </label>
           <label class="select">
             <span class="sr-only">Ordenar</span>
-            <select [value]="store.query().sort ?? ''" (change)="store.setSort($any($event.target).value || null)">
+            <select #sort [value]="store.query().sort ?? ''" (change)="setSort(sort.value)">
               <option value="">{{ store.query().search ? 'Las que mejor encajan' : 'Novedades' }}</option>
               @for (sort of sorts; track sort.value) {
                 <option [value]="sort.value">{{ sort.label }}</option>
@@ -97,13 +97,18 @@ import { ShopStore } from './shop.store';
           @if (store.query().search) {
             <p>La búsqueda va por palabras enteras: prueba con «costa», «pirineo» o «viñedos».</p>
           } @else {
+            @if (store.activeFilters().length > 0) {
             <p>Prueba a quitar algún filtro para ver más salidas.</p>
+          } @else {
+            <p>Todavía no hay experiencias publicadas. Vuelve pronto: los anfitriones añaden salidas cada semana.</p>
+          }
           }
           @if (store.activeFilters().length > 0) {
             <button type="button" class="btn-primary" (click)="store.clearFilters()">Quitar los filtros</button>
           }
         </div>
       } @else {
+        <h2 class="sr-only">Resultados</h2>
         <app-experience-list
           [experiences]="store.experiences()"
           [skeleton]="!store.loadedOnce()"
@@ -335,6 +340,11 @@ export class ShopPageComponent {
   protected readonly sheetLabel = computed(() =>
     this.store.status() === 'loading' ? 'Buscando…' : `Ver ${plural(this.store.total(), 'experiencia', 'experiencias')}`,
   );
+
+  // Solo los órdenes que existen: el valor vacío es el de por defecto
+  protected setSort(value: string): void {
+    this.store.setSort(value in SORTS ? (value as SortKey) : null);
+  }
 
   constructor() {
     this.store.loadFacets();

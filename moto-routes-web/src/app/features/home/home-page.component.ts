@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { Router } from '@angular/router';
 
 import { PhotoComponent } from '../../shared/ui/photo/photo.component';
+import { formatNumber } from '../../shared/utils/shop-format';
 import { PlaceItem, PlaceRailComponent } from './components/place-rail/place-rail.component';
 import { SignPanelComponent } from './components/sign-panel/sign-panel.component';
 import { HomeStore } from './home.store';
@@ -28,10 +29,10 @@ import { HomeStore } from './home.store';
           (search)="search($event)"
           (retry)="store.load()"
         />
-        @if (store.total() !== null) {
-          <p class="milestone num">
+        @if (store.total(); as total) {
+          <p class="milestone num" [class.is-wide]="totalLabel().length > 4">
             <span class="cap" aria-hidden="true">Routly</span>
-            <span class="body"><strong>{{ store.total() }}</strong> {{ store.total() === 1 ? 'experiencia' : 'experiencias' }}</span>
+            <span class="body"><strong>{{ totalLabel() }}</strong> {{ total === 1 ? 'experiencia' : 'experiencias' }}</span>
             <span class="post" aria-hidden="true"></span>
           </p>
         }
@@ -136,6 +137,11 @@ import { HomeStore } from './home.store';
       text-transform: none;
     }
 
+    /* Con cinco cifras o más ("12.840") la cifra encoge para caber en el poste */
+    .milestone.is-wide .body strong {
+      font-size: 34px;
+    }
+
     .post {
       width: 22px;
       height: 64px;
@@ -170,6 +176,9 @@ import { HomeStore } from './home.store';
 export class HomePageComponent {
   protected readonly store = inject(HomeStore);
   private readonly router = inject(Router);
+
+  /** El total del hito, con su separador de miles en español */
+  protected readonly totalLabel = computed(() => formatNumber(this.store.total() ?? 0));
 
   protected readonly categories = computed<PlaceItem[]>(() =>
     this.store.categories().map((category) => ({

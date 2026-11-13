@@ -56,10 +56,14 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
   styles: `
     :host {
       display: block;
+      height: 100%;
     }
 
+    /* Tan alta como su celda de la rejilla, con el pie abajo (margin-top: auto en .bottom): la
+       próxima salida y el precio quedan a la misma altura en toda la fila */
     a {
-      display: grid;
+      display: flex;
+      flex-direction: column;
       gap: var(--space-2);
       height: 100%;
       color: inherit;
@@ -164,6 +168,8 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
       align-items: baseline;
       gap: var(--space-2);
       margin-top: auto;
+      /* El alto de la línea con precio: sin él (sin salidas) la raya queda a la misma altura */
+      min-height: 43px;
       padding-top: var(--space-3);
       border-top: 1px solid var(--color-border);
       font-size: var(--text-sm);

@@ -27,7 +27,12 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly es el **panel de administración** del catálogo y la **API** que lo sirve. La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas, imágenes y el garaje de motos de cada usuario), y el panel gestiona las nueve primeras.
+Hoy Routly tiene tres partes:
+- la **web pública**, donde un motero sin cuenta encuentra una salida guiada y elige fecha;
+- el **panel de administración** del catálogo;
+- la **API** que sirve a las dos.
+
+La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas, imágenes y el garaje de motos de cada usuario) y una tienda pública, `/api/shop`. El panel gestiona las colecciones; la web pública solo lee de la tienda.
 
 <table>
   <tr>
@@ -82,6 +87,31 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
 
 ## Capturas
 
+### La web pública
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/web-home.png" alt="Home de la web pública: el panel de orientación verde con los tipos de carretera sobre una carretera"></td>
+    <td width="50%"><img src="docs/screenshots/web-shop.png" alt="Shop filtrado por Costa, con el pórtico de filtros y las tarjetas con su hito kilométrico"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Home</b>: el panel de orientación es la navegación: cada tipo de carretera lleva al Shop filtrado</sub></td>
+    <td align="center"><sub><b>Shop</b>: los filtros, la búsqueda y la página van en la URL</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/web-detalle.png" alt="Detalle de una experiencia con el cartel de la ruta y las salidas como billetes"></td>
+    <td align="center"><img src="docs/screenshots/web-movil.jpg" alt="Shop en el móvil" width="260"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Detalle</b>: el cartel de la ruta y las salidas como billetes; la completa se ve, pero no se elige</sub></td>
+    <td align="center"><sub><b>En el móvil</b>: los filtros, en una hoja que sube desde abajo</sub></td>
+  </tr>
+</table>
+
+<sub>Las fotos del seed son de picsum; cuando no cargan, la web enseña el paisaje de la marca, que es lo que se ve en estas capturas.</sub>
+
+### El panel
+
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard con la cuenta atrás de la próxima salida, la agenda y el catálogo"></td>
@@ -121,16 +151,17 @@ Hoy Routly es el **panel de administración** del catálogo y la **API** que lo 
   <img src="https://skillicons.dev/icons?i=angular,ts,html,css,nodejs,express,mongodb,postman&theme=dark" alt="Angular, TypeScript, HTML, CSS, Node.js, Express, MongoDB y Postman">
 </p>
 
-Un monorepo con dos aplicaciones independientes que se comunican por HTTP y JSON:
+Un monorepo con tres aplicaciones independientes que se comunican por HTTP y JSON:
 
 ```mermaid
 flowchart LR
-    A["Panel de administración<br/>Angular 20"] -- "HTTP / JSON" --> B["API REST<br/>Express 5"]
+    W["Web pública<br/>Angular 20"] -- "/api/shop" --> B["API REST<br/>Express 5"]
+    A["Panel de administración<br/>Angular 20"] -- "HTTP / JSON" --> B
     B -- "Mongoose" --> C[("MongoDB")]
     B -. "/api/docs" .-> D["Swagger UI"]
     classDef app fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
     classDef data fill:#1b7a4e,stroke:#0c2419,color:#ffffff
-    class A,B app
+    class A,B,W app
     class C,D data
 ```
 
@@ -139,6 +170,11 @@ flowchart LR
     <th align="left">Parte</th>
     <th align="left">Tecnología</th>
     <th align="left">Lo que la hace especial</th>
+  </tr>
+  <tr>
+    <td><a href="moto-routes-web/README.md"><b>Web pública</b></a></td>
+    <td>Angular 20 sin zone.js, signals, TypeScript estricto</td>
+    <td>La URL como fuente de verdad, peticiones canceladas con <code>AbortController</code>, componentes reutilizables (carrusel, filtros, búsqueda, paginación) y la señalización de carretera como diseño</td>
   </tr>
   <tr>
     <td><a href="moto-routes-frontend/README.md"><b>Panel</b></a></td>
@@ -156,6 +192,8 @@ flowchart LR
 Routly/
 ├── moto-routes-api/        API REST (Node.js + Express + MongoDB)
 ├── moto-routes-frontend/   Panel de administración (Angular)
+├── moto-routes-web/        Web pública: Home, Shop y detalle (Angular)
+├── design/                 Bocetos de la web pública y el script del peor caso
 ├── docs/                   Demo, capturas e imágenes de los README
 └── DATABASE.md             Diseño de la base de datos completa
 ```
@@ -164,6 +202,7 @@ Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza
 
 - [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, validación y errores.
 - [`moto-routes-frontend/README.md`](moto-routes-frontend/README.md): flujo de datos, patrones de Angular, sistema de diseño y cómo añadir una entidad.
+- [`moto-routes-web/README.md`](moto-routes-web/README.md): la URL como estado, la cancelación de peticiones y cómo se usa cada componente reutilizable.
 
 ## Puesta en marcha
 
@@ -197,9 +236,17 @@ npm install
 npm start
 ```
 
+**4. Arranca la web pública** en `http://localhost:4300`, en otra terminal
+
+```bash
+cd Routly/moto-routes-web
+npm install
+npm start
+```
+
 ## Hoja de ruta
 
-Las nueve colecciones del panel están hechas de punta a punta: API, panel y tests. El garaje de motos ya está en la API, con sus tests; falta su pantalla en el panel. El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md), y las mejoras propuestas para la API, en [`NOTES.md`](NOTES.md).
+Las colecciones están hechas de punta a punta (API, panel y tests), y la web pública ya enseña el catálogo y deja elegir salida. Lo siguiente son las reservas: la API ya cuenta las plazas reservadas de cada salida y la web tiene preparado el botón y el servicio. El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md), y las mejoras propuestas para la API, en [`NOTES.md`](NOTES.md).
 
 | Estado | Bloque | Colecciones | Para qué |
 |:---:|---|---|---|
@@ -208,9 +255,11 @@ Las nueve colecciones del panel están hechas de punta a punta: API, panel y tes
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
-| ![en la API](https://img.shields.io/badge/en_la_API-3f7a5c?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
-| ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Acceso | - | Inicio de sesión: el panel ya tiene preparados el servicio, el interceptor y el guard |
-| ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `bookings`, `reviews` | Reservas y valoraciones |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Acceso | `users`, `roles` | Inicio de sesión con cookie de sesión; el panel solo para admin, y el perfil y el garaje para cada usuario |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Web pública | `/api/shop` | Home, Shop y detalle con la elección de salida |
+| ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección (diseño en `DATABASE.md`, sección 14) |
+| ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `reviews` | Valoraciones |
 
 ## Autor
 

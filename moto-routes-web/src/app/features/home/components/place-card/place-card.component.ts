@@ -34,8 +34,16 @@ export type PlateKind = 'town' | 'route' | 'guide';
       width: clamp(232px, 24vw, 290px);
     }
 
+    ui-photo {
+      flex: none;
+    }
+
+    /* Toda la tarjeta alta como la más alta de la fila (el carrusel las estira), y la placa
+       ocupa lo que sobre: con un nombre largo en una, las placas de las demás crecen con ella */
     a {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
       color: inherit;
       text-decoration: none;
       border-radius: var(--radius-lg);
@@ -57,6 +65,7 @@ export type PlateKind = 'town' | 'route' | 'guide';
     }
 
     .plate {
+      flex: 1;
       display: flex;
       align-items: baseline;
       justify-content: space-between;

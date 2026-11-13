@@ -160,7 +160,10 @@ export class CarouselComponent {
     afterNextRender(() => {
       const track = this.track().nativeElement;
       // Los elementos pueden cambiar (llegan de la API) y el ancho también (girar el móvil)
-      const mutations = new MutationObserver(() => this.update());
+      const mutations = new MutationObserver(() => {
+        this.markItems();
+        this.update();
+      });
       mutations.observe(track, { childList: true });
       const resize = new ResizeObserver(() => this.update());
       resize.observe(track);
@@ -168,16 +171,21 @@ export class CarouselComponent {
         mutations.disconnect();
         resize.disconnect();
       });
+      this.markItems();
       this.update();
     });
   }
 
-  /** Recalcula si se puede desplazar y hacia dónde, y marca cada hijo como elemento de la lista. */
-  protected update(): void {
-    const track = this.track().nativeElement;
-    for (const child of Array.from(track.children)) {
+  // Cada hijo, un elemento de la lista. Solo cuando cambian los hijos, no en cada scroll
+  private markItems(): void {
+    for (const child of Array.from(this.track().nativeElement.children)) {
       if (child.getAttribute('role') !== 'listitem') child.setAttribute('role', 'listitem');
     }
+  }
+
+  /** Recalcula si se puede desplazar y hacia dónde (al desplazar, al cambiar el ancho o los hijos). */
+  protected update(): void {
+    const track = this.track().nativeElement;
     const max = track.scrollWidth - track.clientWidth;
     this.scrollable.set(max > 1);
     this.atStart.set(track.scrollLeft <= 1);
@@ -214,6 +222,12 @@ export class CarouselComponent {
     let started = false;
 
     const move = (moveEvent: PointerEvent): void => {
+      // Se soltó fuera del carrusel antes de empezar a arrastrar (aún sin captura): se acaba aquí,
+      // o el siguiente paso del ratón por encima lo desplazaría sin el botón pulsado
+      if (moveEvent.buttons === 0) {
+        end();
+        return;
+      }
       const dx = moveEvent.clientX - startX;
       if (!started) {
         if (Math.abs(dx) < DRAG_THRESHOLD) return;

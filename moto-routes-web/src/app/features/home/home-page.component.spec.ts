@@ -57,6 +57,22 @@ describe('HomePageComponent', () => {
     expect(element.querySelector('.milestone')?.textContent).toContain('12');
   });
 
+  it('sin experiencias no hay hito (un poste con un 0 no dice nada)', async () => {
+    flushHome(http, { total: 0 });
+    await settle();
+
+    expect(element.querySelector('.milestone')).toBeNull();
+  });
+
+  it('con cinco cifras o más, el hito las separa y encoge la cifra para que quepa', async () => {
+    flushHome(http, { total: 12840 });
+    await settle();
+
+    const milestone = element.querySelector('.milestone') as HTMLElement;
+    expect(milestone.textContent).toContain('12.840');
+    expect(milestone.classList).toContain('is-wide');
+  });
+
   it('la búsqueda del panel lleva al Shop con la búsqueda puesta', async () => {
     flushHome(http);
     await settle();

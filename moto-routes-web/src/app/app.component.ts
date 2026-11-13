@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
@@ -58,6 +59,8 @@ export class AppComponent {
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       map((event) => event.urlAfterRedirects.split(/[?#]/)[0] === '/'),
     ),
-    { initialValue: false },
+    // Desde la primera pintura, con la dirección de entrada: si no, al cargar el Home la cabecera
+    // ocuparía su sitio y saltaría arriba al llegar la primera navegación
+    { initialValue: inject(Location).path().split(/[?#]/)[0] === '' },
   );
 }

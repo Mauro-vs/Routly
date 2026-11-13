@@ -32,7 +32,7 @@ import { GantryPlate } from '../shop-gantry/shop-gantry.component';
             />
           }
           <label class="switch">
-            <input type="checkbox" [checked]="withDates()" (change)="withDatesChange.emit($any($event.target).checked)" />
+            <input #dates type="checkbox" [checked]="withDates()" (change)="withDatesChange.emit(dates.checked)" />
             Solo las que tienen fechas
           </label>
         </div>

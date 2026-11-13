@@ -83,6 +83,11 @@ createServer((req, res) => {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("No encontrado");
     return;
   }
-  res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream", "Cache-Control": "no-store" });
+  // CORS abierto: la web en :4300 carga de aquí el script del peor caso (design/peor-caso/)
+  res.writeHead(200, {
+    "Content-Type": TYPES[extname(file)] ?? "application/octet-stream",
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*",
+  });
   createReadStream(file).pipe(res);
 }).listen(4311, () => console.log("Maquetas en http://localhost:4311/bocetos-web/"));

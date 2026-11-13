@@ -63,7 +63,7 @@ const LANGUAGES: Record<string, string> = {
           <div class="wrap">
             <button type="button" class="back" (click)="back()"><ui-icon name="arrow-left" /> Volver a las experiencias</button>
             @if (experience(); as experience) {
-              <h1>{{ experience.title }}</h1>
+              <h1 [class.is-long]="experience.title.length > 60">{{ experience.title }}</h1>
               <p class="sub">
                 @if (experience.route?.category; as category) {<span>{{ category.name }}</span>}
                 @if (experience.host; as host) {<span>con {{ host.name }}</span>}
@@ -176,6 +176,14 @@ const LANGUAGES: Record<string, string> = {
       font-weight: 850;
       letter-spacing: -0.04em;
       line-height: 0.98;
+    }
+
+    /* Un título largo (la API admite 120 caracteres) a 64 px ocupa cuatro líneas y saca la galería
+       de la primera pantalla: más pequeño y más ancho */
+    h1.is-long {
+      max-width: 32ch;
+      font-size: clamp(28px, 3.4vw, 42px);
+      line-height: 1.05;
     }
 
     .title-skeleton {
@@ -351,8 +359,9 @@ export class ExperiencePageComponent {
   private readonly meta = inject(PageMetaStrategy);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
-  // Si se llegó desde otra página de la web (el Shop, con sus filtros), atrás vuelve a ella tal cual
-  private readonly cameFromSite = !!this.router.lastSuccessfulNavigation?.previousNavigation;
+  // Si se llegó desde otra página de la web (el Shop, con sus filtros), atrás vuelve a ella tal cual.
+  // Se mira la navegación que está creando esta página: si tiene una anterior, se vino desde dentro
+  private readonly cameFromSite = !!this.router.getCurrentNavigation()?.previousNavigation;
 
   protected readonly experience = this.store.experience;
   protected readonly unavailable = BOOKING_UNAVAILABLE;

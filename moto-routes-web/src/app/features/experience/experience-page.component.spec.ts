@@ -44,6 +44,15 @@ describe('ExperiencePageComponent', () => {
     expect(TestBed.inject(Title).getTitle()).toBe('Calas de Mallorca en moto · Routly');
   });
 
+  it('un título largo (cerca del máximo de 120) va más pequeño; uno normal, no', async () => {
+    const normal = await open(`/experiencias/${DETAIL.slug}`);
+    expect(normal.querySelector('h1')?.classList).not.toContain('is-long');
+
+    const long = { ...DETAIL, slug: 'larga-1', title: 'Travesía completa de los Pirineos del Cantábrico al Mediterráneo por puertos de primera' };
+    const element = await open('/experiencias/larga-1', (http) => flushDetail(http, { detail: long }));
+    expect(element.querySelector('h1')?.classList).toContain('is-long');
+  });
+
   it('enseña la ruta, el anfitrión con enlace a sus experiencias y lo práctico', async () => {
     const element = await open(`/experiencias/${DETAIL.slug}`);
 

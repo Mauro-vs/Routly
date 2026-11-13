@@ -2,7 +2,7 @@
 
 La cara pública de Routly: el **Home**, el **Shop** y el **detalle de una experiencia**, donde un motero sin cuenta encuentra una salida guiada y elige fecha. Usa solo `/api/shop`, la tienda pública de la API (sin sesión). El panel de administración es otra aplicación, `moto-routes-frontend/`.
 
-> Estado: **fase 6 de 7**. Están la base, los componentes reutilizables, el **Home**, el **Shop** y el **detalle** con la elección de salida. Queda el pulido (fase 7).
+> Estado: **terminada** (fases 1 a 7). Home, Shop y detalle con la elección de salida, pulidos con el peor caso, accesibilidad y revisión de código. Lo siguiente es la reserva, que ya está preparada (ver "La reserva, preparada").
 
 ## El Home
 
@@ -106,7 +106,7 @@ La búsqueda espera 300 ms desde la última tecla, en un solo sitio: el componen
 
 ### Piezas copiadas del panel
 
-Los tokens (`styles/tokens.css`), el icono, la marca, el esqueleto, el formato de cifras y fechas, el tema y el tiempo de espera se copian de `moto-routes-frontend`, con una línea al principio que lo dice. **Si cambian allí, se cambian aquí.** El tema usa la misma clave (`routly.theme`): quien eligió oscuro lo tiene en las dos caras.
+Los tokens (`styles/tokens.css`), el icono, la marca, el esqueleto, el tema y el tiempo de espera se copian de `moto-routes-frontend`, con una línea al principio que lo dice. **Si cambian allí, se cambian aquí.** El tema usa la misma clave (`routly.theme`): quien eligió oscuro lo tiene en las dos caras.
 
 ## Componentes reutilizables (`shared/ui/`)
 
@@ -178,3 +178,19 @@ La foto llena su caja (la proporción la pone quien la usa con `aspect-ratio`). 
 ## Diseño
 
 Dirección "Señales de carretera": la misma marca que el panel (lima, verde de pista, banda verde oscura, Onest y el ángulo de 16°) llevada a la señalización vertical. Las piezas y sus reglas están en `moto-routes-frontend/DESIGN.md` ("Superficie pública"), y los bocetos, en `design/bocetos-web/`.
+
+## Calidad: cómo se ha comprobado
+
+- **Tests:** `npm test` (Karma + Jasmine), 91 specs. Cada componente reutilizable tiene el suyo. Los stores se prueban con la URL de verdad (`RouterTestingHarness`): de la URL al estado y vuelta, la espera de la búsqueda, el abort de la petición anterior, los errores y la página fuera de rango.
+- **El peor caso** (`design/peor-caso/worst-case.js`): un script de desarrollo que se inyecta en el navegador y deforma las respuestas de `/api/shop` con valores reales al límite de la API. Ejemplos:
+  - títulos de 120 caracteres y un nombre de pueblo galés de 58 letras;
+  - 1284 experiencias, precios de 100.000 €, una sola plaza y salidas completas;
+  - sin fotos, sin anfitrión y sin salidas.
+
+  Tiene también los modos `empty` y `one`. No toca la app y se quita recargando. Con él se comprobaron las tres pantallas a 320 y 1280 px.
+- **Contraste:** todas las combinaciones de color de la web pasan AA en los dos temas (la más justa, 5,66:1).
+- **Detector de impeccable** y revisión de código: sin hallazgos pendientes.
+
+## Las fotos
+
+Las fotos del seed son de picsum. Si no cargan (o el servidor no contesta nunca), `ui-photo` deja a la vista el paisaje de la marca que tiene siempre debajo, así que nunca hay un hueco. Las capturas de `docs/screenshots/web-*` están hechas así.
