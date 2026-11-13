@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { Router } from '@angular/router';
 
 import { PhotoComponent } from '../../shared/ui/photo/photo.component';
+import { sceneFor } from '../../shared/ui/photo/landscape';
 import { formatNumber } from '../../shared/utils/shop-format';
 import { PlaceItem, PlaceRailComponent } from './components/place-rail/place-rail.component';
 import { SignPanelComponent } from './components/sign-panel/sign-panel.component';
@@ -20,7 +21,7 @@ import { HomeStore } from './home.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="hero" [attr.aria-busy]="store.status() === 'loading'">
-      <ui-photo class="backdrop" [src]="store.cover()?.url ?? null" [seed]="store.cover()?.seed ?? 'routly'" alt="" [priority]="true" />
+      <ui-photo class="backdrop" [src]="store.cover()?.url ?? null" [seed]="store.cover()?.seed ?? 'routly'" scene="pass" alt="" [priority]="true" />
       <div class="wrap hero-body">
         <app-sign-panel
           [categories]="store.categories()"
@@ -187,6 +188,7 @@ export class HomePageComponent {
       count: category.experienceCount,
       photo: category.coverImage?.url ?? null,
       seed: category.slug,
+      scene: sceneFor(category.name),
       queryParams: { categoria: category.slug },
     })),
   );

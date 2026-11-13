@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BOOKING_UNAVAILABLE, BookingService } from '../../core/booking/booking.service';
 import { PageMetaStrategy } from '../../core/services/page-meta.strategy';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
+import { sceneFor } from '../../shared/ui/photo/landscape';
 import { PhotoComponent } from '../../shared/ui/photo/photo.component';
 import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
 import { formatHours, formatPrice, formatShortDate, plural } from '../../shared/utils/shop-format';
@@ -77,7 +78,7 @@ const LANGUAGES: Record<string, string> = {
 
         @if (experience(); as experience) {
           <div class="wrap gallery-wrap">
-            <app-gallery [images]="experience.images" [title]="experience.title" [seed]="experience.slug" />
+            <app-gallery [images]="experience.images" [title]="experience.title" [seed]="experience.slug" [scene]="sceneOf(experience.route?.category?.name)" />
           </div>
 
           <div class="wrap layout">
@@ -351,6 +352,8 @@ const LANGUAGES: Record<string, string> = {
   `,
 })
 export class ExperiencePageComponent {
+  /** El paisaje de la galería: el de su tipo de carretera */
+  protected readonly sceneOf = sceneFor;
   /** El :slug de la URL */
   readonly slug = input.required<string>();
 

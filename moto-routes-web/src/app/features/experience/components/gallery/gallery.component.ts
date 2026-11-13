@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ShopImage } from '../../../../core/api/shop.models';
 import { CarouselComponent } from '../../../../shared/ui/carousel/carousel.component';
 import { PhotoComponent } from '../../../../shared/ui/photo/photo.component';
+import { SceneKind } from '../../../../shared/ui/photo/landscape';
 
 /**
  * La galería del detalle: las fotos de la experiencia, por posición, en el carrusel (flechas,
@@ -17,13 +18,13 @@ import { PhotoComponent } from '../../../../shared/ui/photo/photo.component';
       <ui-carousel [label]="'Fotos de ' + title()">
         @for (image of images(); track image._id; let first = $first; let i = $index) {
           <figure class="slide" tabindex="0" [attr.aria-label]="'Foto ' + (i + 1) + ' de ' + images().length">
-            <ui-photo [src]="image.url" [alt]="image.alt || title()" [seed]="seed() + i" [priority]="first" />
+            <ui-photo [src]="image.url" [alt]="image.alt || title()" [seed]="seed() + i" [scene]="scene()" [priority]="first" />
           </figure>
         }
       </ui-carousel>
     } @else {
       <figure class="slide single">
-        <ui-photo [src]="null" [seed]="seed()" [alt]="'Sin fotos de ' + title() + ' todavía'" />
+        <ui-photo [src]="null" [seed]="seed()" [scene]="scene()" [alt]="'Sin fotos de ' + title() + ' todavía'" />
       </figure>
     }
   `,
@@ -67,4 +68,6 @@ export class GalleryComponent {
   readonly images = input.required<ShopImage[]>();
   readonly title = input.required<string>();
   readonly seed = input.required<string>();
+  /** El paisaje del tipo de carretera, para las fotos que no cargan */
+  readonly scene = input<SceneKind | null>(null);
 }

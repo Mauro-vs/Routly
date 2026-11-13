@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
 
 import { CarouselComponent } from '../../../../shared/ui/carousel/carousel.component';
+import { SceneKind } from '../../../../shared/ui/photo/landscape';
 import { PlaceCardComponent, PlateKind } from '../place-card/place-card.component';
 
 /** Lo que pinta una tarjeta: el carril no sabe si es una categoría, un destino o un anfitrión. */
@@ -11,6 +12,8 @@ export interface PlaceItem {
   count: number;
   photo: string | null;
   seed: string;
+  /** El paisaje si no hay foto; sin él, uno según la semilla */
+  scene?: SceneKind | null;
   queryParams: Params;
 }
 
@@ -34,6 +37,7 @@ export interface PlaceItem {
           [count]="item.count"
           [photo]="item.photo"
           [seed]="item.seed"
+          [scene]="item.scene ?? null"
           [kind]="kind()"
           [queryParams]="item.queryParams"
         />

@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { ShopExperience } from '../../../../core/api/shop.models';
 import { DifficultyComponent } from '../../../../shared/ui/difficulty/difficulty.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { sceneFor } from '../../../../shared/ui/photo/landscape';
 import { PhotoComponent } from '../../../../shared/ui/photo/photo.component';
 import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../../shared/utils/shop-format';
 
@@ -19,7 +20,7 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
   template: `
     <a [routerLink]="['/experiencias', experience().slug]">
       <div class="media">
-        <ui-photo [src]="experience().coverImage?.url ?? null" [seed]="experience().slug" alt="" />
+        <ui-photo [src]="experience().coverImage?.url ?? null" [seed]="experience().slug" [scene]="scene()" alt="" />
         @if (route()) {
           <span class="km num"><span class="cap" aria-hidden="true"></span><strong>{{ km() }}</strong> km</span>
         }
@@ -183,6 +184,8 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
 })
 export class ExperienceCardComponent {
   readonly experience = input.required<ShopExperience>();
+  /** El paisaje de su tipo de carretera, si la foto no está o no carga */
+  protected readonly scene = computed(() => sceneFor(this.experience().route?.category?.name));
 
   protected readonly route = computed(() => this.experience().route);
   protected readonly km = computed(() => formatKm(this.route()?.distance ?? 0));

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Params, RouterLink } from '@angular/router';
 
+import { SceneKind } from '../../../../shared/ui/photo/landscape';
 import { PhotoComponent } from '../../../../shared/ui/photo/photo.component';
 
 /**
@@ -21,7 +22,7 @@ export type PlateKind = 'town' | 'route' | 'guide';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a [routerLink]="['/experiencias']" [queryParams]="queryParams()">
-      <ui-photo [src]="photo()" [seed]="seed()" alt="" />
+      <ui-photo [src]="photo()" [seed]="seed()" [scene]="scene()" alt="" />
       <span class="plate" [class]="'plate plate--' + kind()">
         <span class="name">{{ name() }}</span>
         <span class="count num">{{ countLabel() }}</span>
@@ -119,6 +120,7 @@ export class PlaceCardComponent {
   readonly count = input.required<number>();
   readonly photo = input<string | null>(null);
   readonly seed = input.required<string>();
+  readonly scene = input<SceneKind | null>(null);
   readonly kind = input.required<PlateKind>();
   /** El filtro del Shop al que lleva: { categoria: 'montana-1a2b' } */
   readonly queryParams = input.required<Params>();
