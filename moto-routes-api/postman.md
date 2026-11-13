@@ -535,7 +535,7 @@ La tienda pública: el Home, el Shop y el detalle. Todas sin token (pestaña **A
 | **GET** `/api/shop/experiences?category=<slug de Viñedos>` | "Bodegas y viñedos de La Rioja" |
 | **GET** `/api/shop/experiences?host=<slug de Núria>` | Las 4 de Núria |
 | **GET** `/api/shop/experiences?location=<slug de Barcelona>` | Las que empiezan o acaban en Barcelona |
-| **GET** `/api/shop/experiences?search=costa` | Las tres de la Costa Brava; `?search=COST` encuentra lo mismo |
+| **GET** `/api/shop/experiences?search=costa` | Las tres de la Costa Brava, las que mejor encajan primero. Busca palabras enteras del título y la descripción, sin distinguir mayúsculas ni acentos (`?search=COSTA` encuentra lo mismo; `?search=cost`, no) |
 | **GET** `/api/shop/experiences?sort=priceFrom` | De la más barata a la más cara; "Sierra Nevada al atardecer" (sin salidas, `priceFrom: null`) la última |
 | **GET** `/api/shop/experiences?priceMax=100&language=es` | En español y con alguna salida por 100 € o menos |
 | **GET** `/api/shop/experiences?hasDepartures=true` | 11: todas menos la que no tiene salidas |
@@ -595,7 +595,7 @@ Response `201`:
 ```
 
 - `sku` y `slug` los genera el servidor. El SKU **no cambia nunca**; el slug sigue a `startAt`.
-- `seatsLeft` son las plazas libres. Mientras no haya reservas, es igual que `capacity`.
+- `seatsLeft` son las plazas libres: `capacity` menos `seatsBooked` (las reservadas, que no se envían). Con `seatsLeft: 0`, `isFull` es `true` y la salida no es reservable.
 - `state`: `scheduled` (por defecto), `cancelled` o `completed`. Es independiente de `status`.
 - `price` admite como mucho dos decimales.
 

@@ -7,12 +7,12 @@
   <img src="https://img.shields.io/badge/TypeScript-5.9_strict-1b7a4e?style=flat-square&labelColor=0c2419&logo=typescript&logoColor=c6f04d" alt="TypeScript 5.9 strict">
   <img src="https://img.shields.io/badge/zoneless-signals-1b7a4e?style=flat-square&labelColor=0c2419" alt="zoneless signals">
   <img src="https://img.shields.io/badge/AbortController-sin_carreras-1b7a4e?style=flat-square&labelColor=0c2419" alt="AbortController, sin carreras">
-  <img src="https://img.shields.io/badge/tests-91_Karma_%2B_Jasmine-1b7a4e?style=flat-square&labelColor=0c2419&logo=jasmine&logoColor=c6f04d" alt="91 tests con Karma y Jasmine">
+  <img src="https://img.shields.io/badge/tests-105_Karma_%2B_Jasmine-1b7a4e?style=flat-square&labelColor=0c2419&logo=jasmine&logoColor=c6f04d" alt="105 tests con Karma y Jasmine">
 </p>
 
 La cara pública de Routly, la plataforma de rutas en moto. Aquí un motero sin cuenta encuentra una salida guiada que le encaje (zona, tipo de carretera, anfitrión, fecha y precio) y la elige. Tiene tres pantallas: el **Home**, el **Shop** y el **detalle de una experiencia**.
 
-Está hecha con Angular 20 y lee solo de **`/api/shop`**, la tienda pública de [`moto-routes-api`](../moto-routes-api/README.md), que no pide sesión. El panel de administración es otra aplicación, [`moto-routes-frontend`](../moto-routes-frontend/README.md). La visión general del proyecto está en el [README de la raíz](../README.md).
+Está hecha con Angular 20 y lee solo de **`/api/shop`**, la tienda pública de [`moto-routes-api`](../moto-routes-api/README.md), que no pide sesión. El panel de administración es otra aplicación, [`moto-routes-dashboard`](../moto-routes-dashboard/README.md). La visión general del proyecto está en el [README de la raíz](../README.md).
 
 <img src="../docs/screenshots/web-home.png" alt="Home de la web pública: el panel de orientación verde con los tipos de carretera, la búsqueda y el hito con el total de experiencias, sobre una carretera" width="100%">
 
@@ -147,9 +147,9 @@ Reglas:
 
 | Ruta | Pantalla |
 |---|---|
-| `/` | **Home.** Una carretera a sangre y, encima, el panel de orientación: una fila por tipo de carretera (con cuántas experiencias tiene) que lleva al Shop filtrado, y la búsqueda. Debajo, tres carruseles: destinos, tipos de carretera y guías |
-| `/experiencias` | **Shop.** El pórtico de filtros (carretera, destino, guía) y la búsqueda; la dificultad, "Solo con fechas" y el orden; los filtros puestos, las tarjetas y la paginación. En el móvil, los filtros van en una hoja que sube desde abajo |
-| `/experiencias/:slug` | **Detalle.** La galería, el cartel de la ruta, lo práctico, el anfitrión y las salidas como billetes, con el botón "Reservar" preparado |
+| `/` | **Home.** Una carretera a sangre y, encima, el panel de orientación: una fila por tipo de carretera (con cuántas experiencias tiene) que lleva al Shop filtrado, y la búsqueda. Debajo, el tablón de próximas salidas (fecha, recorrido, hora y precio) y tres carruseles: destinos, tipos de carretera y guías |
+| `/experiencias` | **Shop.** El pórtico de filtros (carretera, destino, guía) y la búsqueda; el recuento y el orden; una franja con la dificultad, "Solo con fechas" y el slider de precio; los filtros puestos, las tarjetas (con la placa del tipo de carretera, la próxima salida y el precio) y la paginación. En el móvil, los filtros van en una hoja que sube desde abajo |
+| `/experiencias/:slug` | **Detalle.** La galería, el cartel de la ruta, lo práctico, el anfitrión y la taquilla: las salidas como billetes (matriz con la fecha, perforación, horario, plazas y precio) y el botón "Reservar" preparado. En el móvil, una barra fija abajo con la salida elegida |
 | `**` | Página no encontrada, con enlace a las experiencias |
 
 <table>
@@ -201,6 +201,7 @@ Los parámetros del Shop van en español y `shop-query.ts` los traduce a los de 
 | `buscar` | `search` | Palabras enteras del título y la descripción |
 | `dificultad` | `difficulty` | `facil`, `media` o `dificil` |
 | `con-fechas=si` | `hasDepartures=true` | Solo las que tienen salidas reservables |
+| `precioMin`, `precioMax` | `priceMin`, `priceMax` | El slider de precio, en euros (de 0 a 400, de 10 en 10). En los extremos no se envían: sin límite por ese lado |
 | `orden` | `sort` | `proximas`, `precio`, `precio-desc` o `titulo`. Sin orden, novedades (o las que mejor encajan, si se busca) |
 | `pagina` | `page` | 12 por página. La primera no lleva parámetro |
 | `salida` (en el detalle) | – | La salida elegida, por su slug |
@@ -355,14 +356,28 @@ Cada filtro con su botón de quitar ("Quitar el filtro Montaña") y "Quitar los 
 </details>
 
 <details>
+<summary><b><code>ui-price-range</code></b>: slider de precio con dos tiradores</summary>
+
+```html
+<ui-price-range [floor]="0" [ceiling]="400" [step]="10" [value]="{ min: 40, max: null }"
+                (valueChange)="setPrice($event.min, $event.max)" />
+```
+
+- Dos `input type="range"` nativos superpuestos: funcionan con el teclado y los lectores de pantalla ("Precio mínimo", "Precio máximo").
+- El texto de encima cambia mientras se arrastra ("Hasta 150 €", "40 € – 200 €"), pero solo avisa al soltar: no se pide una página por cada paso.
+- Los tiradores no se cruzan, y un extremo es "sin límite" (`null`).
+
+</details>
+
+<details>
 <summary><b><code>ui-photo</code></b>: foto con el paisaje de la marca debajo</summary>
 
 ```html
-<ui-photo [src]="experience.coverImage?.url ?? null" [seed]="experience.slug" alt="" [priority]="true" />
+<ui-photo [src]="experience.coverImage?.url ?? null" [seed]="experience.slug" [scene]="sceneFor(category.name)" alt="" [priority]="true" />
 ```
 
 - La foto llena su caja; la proporción la pone quien la usa con `aspect-ratio`.
-- Debajo siempre está el **paisaje de la marca** (sierras y una carretera en los verdes de la paleta), distinto para cada `seed` y siempre el mismo para la misma. La foto aparece encima cuando llega.
+- Debajo siempre está un **paisaje de la marca** (`landscape.ts`): una escena por tipo de carretera (`scene`: montaña con nieve, costa con su cabo y el mar, puertos en zigzag, viñedos con hileras de cepas, o una general) y una de cuatro luces (alba, mediodía, atardecer o noche con estrellas). Todo sale del `seed`: siempre el mismo dibujo para el mismo, y distinto entre tarjetas. La carretera oscura con su línea lima no cambia. `sceneFor()` saca la escena del nombre de la categoría. La foto aparece encima cuando llega.
 - Sin url, si la foto falla o si el servidor no contesta nunca, se queda el paisaje: nunca hay un hueco ni un icono roto.
 - Con `priority`, la imagen se pide enseguida (la primera de la página).
 
@@ -389,7 +404,7 @@ Después ya se puede usar con `<ui-icon name="nombre" />`. El nombre está tipad
 
 ## Sistema de diseño
 
-La misma marca que el panel, llevada a otra escena. El panel se lee como la instrumentación de una moto; la web, como la **señalización de la carretera**. La dirección ("Señales de carretera") se eligió entre tres bocetos (`design/bocetos-web/`). Sus piezas y reglas están en la sección "Superficie pública" de [`DESIGN.md`](../moto-routes-frontend/DESIGN.md).
+La misma marca que el panel, llevada a otra escena. El panel se lee como la instrumentación de una moto; la web, como la **señalización de la carretera**. La dirección ("Señales de carretera") se eligió entre tres bocetos (`design/bocetos-web/`). Sus piezas y reglas están en la sección "Superficie pública" de [`DESIGN.md`](../moto-routes-dashboard/DESIGN.md).
 
 | Archivo | Contenido |
 |---|---|
@@ -445,18 +460,20 @@ Nada desborda, las tarjetas de una fila quedan alineadas y no aparece ningún `u
 npx ng test --watch=false --browsers=ChromeHeadless
 ```
 
-91 tests en 19 specs, casi todos escritos antes que el código (TDD). Los stores y las páginas se prueban con la URL de verdad (`RouterTestingHarness`) y la API simulada (`HttpTestingController`).
+105 tests en 22 specs, casi todos escritos antes que el código (TDD). Los stores y las páginas se prueban con la URL de verdad (`RouterTestingHarness`) y la API simulada (`HttpTestingController`).
 
 | Spec | Qué prueba |
 |---|---|
 | `shop-api.service.spec.ts` | Los parámetros que viajan, el `ApiError`, y que abortar cancela la petición y rechaza con un `AbortError` |
-| `shop-query.spec.ts` | La URL en español a los parámetros de la API, cada orden, la relevancia al buscar y lo que se ignora |
+| `shop-query.spec.ts` | La URL en español a los parámetros de la API (también el precio), cada orden, la relevancia al buscar y lo que se ignora |
 | `shop.store.spec.ts` | La URL manda; al cambiarla antes de la respuesta, la anterior se aborta y solo se pinta la última; lo anterior sigue a la vista; errores y reintentar; la página fuera de rango; los filtros puestos y "no encontrado" |
 | `shop-page.component.spec.ts` | Esqueletos, el recuento anunciado, las tarjetas, el vacío, el error y la paginación |
-| `home.store.spec.ts`, `home-page.component.spec.ts` | Las cuatro peticiones a la vez, la portada, el panel y los carriles hacia el Shop filtrado, el carril vacío, el hito y el error |
+| `home.store.spec.ts`, `home-page.component.spec.ts` | Las cinco peticiones a la vez (con el tablón), la portada, el panel y los carriles hacia el Shop filtrado, el carril vacío, el hito y el error |
+| `departures-board.component.spec.ts` | El tablón: una fila por salida con su fecha, recorrido y precio, sin las que no tienen fecha, y "Ver todas" al Shop por fecha |
 | `experience.store.spec.ts`, `experience-page.component.spec.ts` | La salida elegida desde la URL (nunca una completa), elegir sin llenar el historial, el título de la pestaña, el botón "Reservar", sin salidas y no encontrada |
 | `page-meta.strategy.spec.ts` | Título y descripción por ruta; el detalle no se pisa al cambiar `?salida=` |
-| Componentes de `shared/ui` (6) | Carrusel, búsqueda (con reloj falso para la espera), filtro, filtros puestos, paginación y foto |
+| Componentes de `shared/ui` (7) | Carrusel, búsqueda (con reloj falso para la espera), filtro, filtros puestos, paginación, foto y el slider de precio (avisa al soltar, extremos sin límite, sin cruzarse) |
+| `landscape.spec.ts` | La escena de cada tipo de carretera, el mismo dibujo para la misma semilla, la variedad y la línea lima de la carretera |
 | `shop-format.spec.ts` | Precios con 0 o 2 decimales, fechas, horas y plurales |
 | `app.component.spec.ts`, cabecera y pie | La cabecera sobre la foto solo en el Home, saltar al contenido, el tema y los enlaces |
 
@@ -464,7 +481,7 @@ Además, la web pasó el detector de [impeccable](https://impeccable.style) (sin
 
 ## Limitaciones conocidas
 
-- **Las fotos del seed** son de picsum: si no cargan, se ve el paisaje de la marca, que es lo que salen en las capturas.
+- **Las fotos del seed** son de picsum (al azar, no son de motos): si no cargan, se ve el paisaje de la marca de su tipo de carretera, que es lo que sale en las capturas.
 - **La búsqueda va por palabras enteras** (el índice de texto de la API): "pir" no encuentra "Pirineos". La pista del campo y el estado vacío lo explican.
 - **No se puede reservar todavía:** la API no tiene `/api/bookings`. Ver [La reserva, preparada](#la-reserva-preparada).
 - **Sin sesión:** la web no enseña si hay sesión de admin ni enlaza al panel. Llegará con las reservas, que sí la piden.

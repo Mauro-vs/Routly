@@ -1,4 +1,4 @@
-// Copiado del panel (moto-routes-frontend). Si cambia allí, se cambia aquí.
+// Copiado del panel (moto-routes-dashboard). Si cambia allí, se cambia aquí.
 import { HttpContextToken, HttpInterceptorFn } from '@angular/common/http';
 import { timeout } from 'rxjs';
 

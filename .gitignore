@@ -1,8 +1,6 @@
 # --- Fuera del repositorio ---
 # Configuración local de Claude Code
 .claude/
-# Frontend antiguo, sustituido por moto-routes-frontend
-moto-routes-frontend-old/
 
 # --- Dependencias y compilados ---
 node_modules/
@@ -33,4 +31,4 @@ desktop.ini
 
 !README.md
 .code-review-graphignore
-moto-routes-frontend/PRODUCT.md
+moto-routes-dashboard/PRODUCT.md

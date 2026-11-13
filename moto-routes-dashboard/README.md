@@ -70,7 +70,7 @@ npm run dev
 **2. Panel** (`http://localhost:4200`)
 
 ```bash
-cd moto-routes-frontend
+cd moto-routes-dashboard
 npm install
 ```
 

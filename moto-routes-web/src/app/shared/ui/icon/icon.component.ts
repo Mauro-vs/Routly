@@ -1,4 +1,4 @@
-// Copiado del panel (moto-routes-frontend). Si cambia allí, se cambia aquí.
+// Copiado del panel (moto-routes-dashboard). Si cambia allí, se cambia aquí.
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import { ICONS, IconName } from './icons.generated';

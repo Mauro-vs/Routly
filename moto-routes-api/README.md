@@ -12,7 +12,7 @@
 
 API REST de Routly. Gestiona diez colecciones relacionadas entre sí: roles, usuarios, anfitriones, categorías, ubicaciones, rutas, experiencias, salidas, imágenes y motos (el garaje de cada usuario). Todas se crean, se consultan (también por slug), se editan, se activan o desactivan, se eliminan con borrado lógico y se restauran.
 
-Forma parte del monorepo de Routly. La visión general del proyecto está en el [README de la raíz](../README.md), el diseño campo a campo de la base de datos en [`DATABASE.md`](../DATABASE.md) y el panel que consume esta API en [`moto-routes-frontend`](../moto-routes-frontend/README.md).
+Forma parte del monorepo de Routly. La visión general del proyecto está en el [README de la raíz](../README.md), el diseño campo a campo de la base de datos en [`DATABASE.md`](../DATABASE.md) y el panel que consume esta API en [`moto-routes-dashboard`](../moto-routes-dashboard/README.md).
 
 ## Contenido
 

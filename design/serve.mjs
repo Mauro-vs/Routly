@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const root = resolve(here, "..");
 const MOUNTS = {
-  "/fonts/": join(root, "moto-routes-frontend/node_modules/@fontsource-variable/onest/files"),
+  "/fonts/": join(root, "moto-routes-dashboard/node_modules/@fontsource-variable/onest/files"),
   "/assets/": join(root, "docs/assets"),
   "/": here,
 };

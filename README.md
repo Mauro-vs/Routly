@@ -177,7 +177,7 @@ flowchart LR
     <td>La URL como fuente de verdad, peticiones canceladas con <code>AbortController</code>, componentes reutilizables (carrusel, filtros, búsqueda, paginación) y la señalización de carretera como diseño</td>
   </tr>
   <tr>
-    <td><a href="moto-routes-frontend/README.md"><b>Panel</b></a></td>
+    <td><a href="moto-routes-dashboard/README.md"><b>Panel</b></a></td>
     <td>Angular 20 sin zone.js, signals, TypeScript estricto</td>
     <td>Actualizaciones optimistas, carga diferida por secciones y un sistema de diseño propio en variables CSS</td>
   </tr>
@@ -191,17 +191,19 @@ flowchart LR
 ```
 Routly/
 ├── moto-routes-api/        API REST (Node.js + Express + MongoDB)
-├── moto-routes-frontend/   Panel de administración (Angular)
+├── moto-routes-dashboard/   Panel de administración (Angular)
 ├── moto-routes-web/        Web pública: Home, Shop y detalle (Angular)
 ├── design/                 Bocetos de la web pública y el script del peor caso
 ├── docs/                   Demo, capturas e imágenes de los README
+├── scripts/                npm run dev, test, check y seed para las tres partes a la vez
+├── package.json            Esos comandos (sin dependencias)
 └── DATABASE.md             Diseño de la base de datos completa
 ```
 
 Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza:
 
 - [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, validación y errores.
-- [`moto-routes-frontend/README.md`](moto-routes-frontend/README.md): flujo de datos, patrones de Angular, sistema de diseño y cómo añadir una entidad.
+- [`moto-routes-dashboard/README.md`](moto-routes-dashboard/README.md): flujo de datos, patrones de Angular, sistema de diseño y cómo añadir una entidad.
 - [`moto-routes-web/README.md`](moto-routes-web/README.md): la URL como estado, la cancelación de peticiones y cómo se usa cada componente reutilizable.
 
 ## Puesta en marcha
