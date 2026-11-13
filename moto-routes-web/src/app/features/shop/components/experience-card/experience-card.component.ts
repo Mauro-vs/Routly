@@ -21,37 +21,45 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
     <a [routerLink]="['/experiencias', experience().slug]">
       <div class="media">
         <ui-photo [src]="experience().coverImage?.url ?? null" [seed]="experience().slug" [scene]="scene()" alt="" />
+        @if (route()?.category; as category) {
+          <!-- El tipo de carretera, como una placa de señal: verde con su filete blanco -->
+          <span class="plate">{{ category.name }}</span>
+        }
         @if (route()) {
           <span class="km num"><span class="cap" aria-hidden="true"></span><strong>{{ km() }}</strong> km</span>
         }
       </div>
-      <h3>{{ experience().title }}</h3>
-      @if (route(); as route) {
-        <p class="where">
-          <span>{{ route.startLocation?.city }}</span>
-          @if (route.endLocation && route.endLocation.city !== route.startLocation?.city) {
-            <ui-icon name="arrow-right" class="to" /><span class="sr-only"> hasta </span><span>{{ route.endLocation.city }}</span>
+      <div class="body">
+        <h3>{{ experience().title }}</h3>
+        @if (route(); as route) {
+          <p class="where">
+            <span>{{ route.startLocation?.city }}</span>
+            @if (route.endLocation && route.endLocation.city !== route.startLocation?.city) {
+              <ui-icon name="arrow-right" class="to" /><span class="sr-only"> hasta </span><span>{{ route.endLocation.city }}</span>
+            }
+          </p>
+          <p class="meta">
+            <span class="num">{{ hours() }} de ruta</span>
+            <ui-difficulty [value]="route.difficulty" />
+            @if (experience().host; as host) {
+              <span class="host">con {{ host.name }}</span>
+            }
+          </p>
+        }
+        <div class="bottom">
+          @if (experience().nextDepartureAt; as next) {
+            <p class="next">
+              <span class="label">Próxima salida</span>
+              <strong class="num">{{ date(next) }}</strong>
+            </p>
+          } @else {
+            <p class="next none"><span class="label">Sin fechas por ahora</span></p>
           }
-        </p>
-        <p class="meta">
-          <span>{{ route.category?.name }}</span>
-          <span class="num">{{ hours() }} de ruta</span>
-          <ui-difficulty [value]="route.difficulty" />
-        </p>
-      }
-      @if (experience().host; as host) {
-        <p class="host">con {{ host.name }}</p>
-      }
-      <p class="bottom">
-        @if (experience().nextDepartureAt; as next) {
-          <span class="num">Próxima salida: <strong>{{ date(next) }}</strong></span>
-        } @else {
-          <span class="muted">Sin fechas por ahora</span>
-        }
-        @if (experience().priceFrom !== null) {
-          <span class="price num">desde <strong>{{ price() }}</strong></span>
-        }
-      </p>
+          @if (experience().priceFrom !== null) {
+            <p class="price"><span class="label">desde</span> <strong class="num">{{ price() }}</strong></p>
+          }
+        </div>
+      </div>
     </a>
   `,
   styles: `
@@ -60,26 +68,70 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
       height: 100%;
     }
 
-    /* Tan alta como su celda de la rejilla, con el pie abajo (margin-top: auto en .bottom): la
-       próxima salida y el precio quedan a la misma altura en toda la fila */
+    /* Una pieza: foto arriba, a sangre, y el texto en su panel. Tan alta como su celda, con el pie
+       abajo, así la fecha y el precio quedan a la misma altura en toda la fila */
     a {
       display: flex;
       flex-direction: column;
-      gap: var(--space-2);
       height: 100%;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
       color: inherit;
       text-decoration: none;
-      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-1);
+      transition:
+        transform var(--motion-base) var(--motion-ease),
+        box-shadow var(--motion-base) var(--motion-ease),
+        border-color var(--motion-base) var(--motion-ease);
+    }
+
+    a:focus-visible {
+      outline: 3px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      a:hover {
+        transform: translateY(-4px);
+        border-color: var(--color-border-strong);
+        box-shadow: var(--shadow-2);
+      }
+
+      a:hover ui-photo ::ng-deep img,
+      a:hover ui-photo ::ng-deep svg {
+        transform: scale(1.04);
+      }
+
+      a:hover h3 {
+        text-decoration: underline;
+        text-decoration-color: var(--color-accent);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+      }
+    }
+
+    a:active {
+      transform: translateY(-1px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      a,
+      a:hover,
+      ui-photo ::ng-deep img,
+      ui-photo ::ng-deep svg {
+        transform: none;
+        transition: border-color var(--motion-base) linear;
+      }
     }
 
     .media {
       position: relative;
-      margin-bottom: var(--space-2);
     }
 
     ui-photo {
       aspect-ratio: 4 / 3;
-      border-radius: var(--radius-lg);
     }
 
     ui-photo ::ng-deep img,
@@ -87,16 +139,28 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
       transition: transform var(--motion-slow) var(--motion-ease);
     }
 
-    a:hover ui-photo ::ng-deep img,
-    a:hover ui-photo ::ng-deep svg {
-      transform: scale(1.03);
+    /* La placa del tipo de carretera, arriba a la izquierda de la foto */
+    .plate {
+      position: absolute;
+      top: var(--space-3);
+      left: var(--space-3);
+      padding: 4px 9px;
+      border-radius: 4px;
+      background: var(--sign);
+      box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 3px var(--sign-rule), 0 4px 10px -4px rgb(0 0 0 / 0.6);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     /* El hito kilométrico, apoyado en el borde de la foto como un mojón en la cuneta */
     .km {
       position: absolute;
       right: var(--space-3);
-      bottom: -10px;
+      bottom: -14px;
+      z-index: 1;
       display: grid;
       justify-items: center;
       min-width: 64px;
@@ -127,11 +191,22 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
       text-transform: none;
     }
 
+    .body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-4) var(--space-4) 0;
+    }
+
     h3 {
-      font-size: 19px;
-      font-weight: 750;
+      /* Hueco a la derecha para el hito, que asoma por encima */
+      padding-right: 72px;
+      font-size: 20px;
+      font-weight: 800;
       letter-spacing: -0.02em;
       line-height: 1.2;
+      text-wrap: balance;
       overflow-wrap: anywhere;
     }
 
@@ -146,39 +221,65 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
 
     .to {
       font-size: 14px;
-      color: var(--color-text-muted);
+      color: var(--color-accent);
     }
 
     .meta {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--space-1) var(--space-4);
+      align-items: center;
+      gap: var(--space-1) var(--space-3);
       font-size: var(--text-sm);
       color: var(--color-text-muted);
     }
 
     .host {
-      font-size: var(--text-sm);
+      overflow-wrap: anywhere;
+    }
+
+    /* El pie: la próxima salida y el precio, lo que se compara entre tarjetas, en grande */
+    .bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: var(--space-3);
+      margin: auto calc(var(--space-4) * -1) 0;
+      margin-top: auto;
+      padding: var(--space-3) var(--space-4);
+      border-top: 1px dashed var(--color-border-strong);
+      background: var(--color-surface-2);
+    }
+
+    .label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       color: var(--color-text-muted);
     }
 
-    .bottom {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: var(--space-2);
-      margin-top: auto;
-      /* El alto de la línea con precio: sin él (sin salidas) la raya queda a la misma altura */
-      min-height: 43px;
-      padding-top: var(--space-3);
-      border-top: 1px solid var(--color-border);
+    .next strong {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .none .label {
+      text-transform: none;
+      letter-spacing: 0;
       font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    .price {
+      text-align: right;
     }
 
     .price strong {
-      font-size: 20px;
-      font-weight: 800;
+      font-size: 26px;
+      font-weight: 850;
+      letter-spacing: -0.03em;
+      line-height: 1;
     }
   `,
 })

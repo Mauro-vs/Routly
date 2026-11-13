@@ -60,8 +60,18 @@ import { ShopStore } from './shop.store';
     <div class="wrap body" [attr.aria-busy]="store.status() === 'loading'">
       <div class="bar">
         <p class="count num" role="status" aria-live="polite">{{ countLabel() }}</p>
-        <div class="tools">
-          <label class="desktop-only select">
+        <label class="select sort">
+          <span class="sort-label">Ordenar</span>
+          <select #sort [value]="store.query().sort ?? ''" (change)="setSort(sort.value)">
+            <option value="">{{ store.query().search ? 'Las que mejor encajan' : 'Novedades' }}</option>
+            @for (sort of sorts; track sort.value) {
+              <option [value]="sort.value">{{ sort.label }}</option>
+            }
+          </select>
+        </label>
+        <!-- Los filtros finos, en su propia franja: dificultad, fechas y precio -->
+        <div class="refine desktop-only" role="group" aria-label="Afinar la búsqueda">
+          <label class="select">
             <span class="sr-only">Dificultad</span>
             <select #difficulty [value]="store.query().difficulty ?? ''" (change)="store.setFilter('difficulty', difficulty.value || null)">
               <option value="">Cualquier dificultad</option>
@@ -70,27 +80,18 @@ import { ShopStore } from './shop.store';
               }
             </select>
           </label>
-          <label class="desktop-only check">
+          <label class="check">
             <input #withDates type="checkbox" [checked]="store.query().withDates" (change)="store.setWithDates(withDates.checked)" />
             Solo con fechas
           </label>
           <ui-price-range
-            class="desktop-only"
+            class="price"
             [floor]="priceRange.floor"
             [ceiling]="priceRange.ceiling"
             [step]="priceRange.step"
             [value]="price()"
             (valueChange)="store.setPrice($event.min, $event.max)"
           />
-          <label class="select">
-            <span class="sr-only">Ordenar</span>
-            <select #sort [value]="store.query().sort ?? ''" (change)="setSort(sort.value)">
-              <option value="">{{ store.query().search ? 'Las que mejor encajan' : 'Novedades' }}</option>
-              @for (sort of sorts; track sort.value) {
-                <option [value]="sort.value">{{ sort.label }}</option>
-              }
-            </select>
-          </label>
         </div>
         <ui-active-filters class="chips" [filters]="store.activeFilters()" (remove)="store.removeFilter($event)" (clear)="store.clearFilters()" />
       </div>
@@ -195,26 +196,49 @@ import { ShopStore } from './shop.store';
       padding-block: var(--space-5) var(--space-7);
     }
 
+    /* Arriba, el recuento y el orden; debajo, la franja de los filtros finos y los puestos */
     .bar {
       display: grid;
-      grid-template-columns: auto 1fr;
+      grid-template-columns: 1fr auto;
       align-items: center;
-      gap: var(--space-3) var(--space-4);
+      gap: var(--space-4);
       margin-bottom: var(--space-6);
     }
 
     .count {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.01em;
+      font-size: 24px;
+      font-weight: 850;
+      letter-spacing: -0.02em;
     }
 
-    .tools {
+    .sort {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .sort-label {
+      font-size: var(--text-sm);
+      font-weight: 650;
+      color: var(--color-text-muted);
+    }
+
+    .refine {
+      grid-column: 1 / -1;
       display: flex;
       flex-wrap: wrap;
-      justify-content: end;
       align-items: center;
-      gap: var(--space-3);
+      gap: var(--space-3) var(--space-6);
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+    }
+
+    .refine .price {
+      flex: 1 1 260px;
+      max-width: 420px;
+      margin-left: auto;
     }
 
     .chips {
