@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, output, viewChil
 
 import { FilterGroupComponent } from '../../../../shared/ui/filter-group/filter-group.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
+import { PriceRange, PriceRangeComponent } from '../../../../shared/ui/price-range/price-range.component';
+import { PRICE_RANGE } from '../../shop-query';
 import { FilterKey } from '../../shop.store';
 import { GantryPlate } from '../shop-gantry/shop-gantry.component';
 
@@ -12,7 +14,7 @@ import { GantryPlate } from '../shop-gantry/shop-gantry.component';
  */
 @Component({
   selector: 'app-filter-sheet',
-  imports: [FilterGroupComponent, IconComponent],
+  imports: [FilterGroupComponent, PriceRangeComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog #dialog aria-labelledby="filter-sheet-title" (click)="closeOnBackdrop($event)">
@@ -31,6 +33,14 @@ import { GantryPlate } from '../shop-gantry/shop-gantry.component';
               (valueChange)="filterChange.emit({ key: plate.key, value: $event })"
             />
           }
+          <ui-price-range
+            class="price"
+            [floor]="priceRange.floor"
+            [ceiling]="priceRange.ceiling"
+            [step]="priceRange.step"
+            [value]="price()"
+            (valueChange)="priceChange.emit($event)"
+          />
           <label class="switch">
             <input #dates type="checkbox" [checked]="withDates()" (change)="withDatesChange.emit(dates.checked)" />
             Solo las que tienen fechas
@@ -136,9 +146,12 @@ import { GantryPlate } from '../shop-gantry/shop-gantry.component';
 export class FilterSheetComponent {
   readonly plates = input.required<GantryPlate[]>();
   readonly withDates = input(false);
+  readonly price = input<PriceRange>({ min: null, max: null });
   readonly resultsLabel = input('Ver experiencias');
   readonly filterChange = output<{ key: FilterKey; value: string | null }>();
   readonly withDatesChange = output<boolean>();
+  readonly priceChange = output<PriceRange>();
+  protected readonly priceRange = PRICE_RANGE;
 
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 

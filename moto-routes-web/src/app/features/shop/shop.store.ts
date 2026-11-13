@@ -7,6 +7,14 @@ import { ShopCategory, ShopExperience, ShopHost, ShopLocation, ShopPage } from '
 import { ActiveFilter } from '../../shared/ui/active-filters/active-filters.component';
 import { DIFFICULTIES, EMPTY_QUERY, SortKey, ShopQuery, URL_PARAMS, parseShopQuery, toApiParams } from './shop-query';
 
+/** La etiqueta del precio en los filtros puestos: quitarla quita los dos límites */
+export const PRICE_FILTER = 'precio';
+
+export function priceLabel(min: number | null, max: number | null): string {
+  if (min !== null && max !== null) return `${min} € – ${max} €`;
+  return min !== null ? `Desde ${min} €` : `Hasta ${max} €`;
+}
+
 export type FilterKey = 'category' | 'host' | 'location' | 'difficulty';
 export type ShopStatus = 'loading' | 'ready' | 'error';
 
@@ -57,6 +65,7 @@ export class ShopStore {
     if (query.search) filters.push({ key: URL_PARAMS.search, label: `«${query.search}»` });
     if (query.difficulty) filters.push({ key: URL_PARAMS.difficulty, label: DIFFICULTIES[query.difficulty].label });
     if (query.withDates) filters.push({ key: URL_PARAMS.withDates, label: 'Con fechas' });
+    if (query.priceMin !== null || query.priceMax !== null) filters.push({ key: PRICE_FILTER, label: priceLabel(query.priceMin, query.priceMax) });
     return filters;
   });
 
@@ -105,13 +114,20 @@ export class ShopStore {
     this.navigate({ [URL_PARAMS.withDates]: on ? 'si' : null });
   }
 
+  /** El rango del slider de precio; null en un lado, sin límite por ese lado */
+  setPrice(min: number | null, max: number | null): void {
+    this.navigate({ [URL_PARAMS.priceMin]: min, [URL_PARAMS.priceMax]: max });
+  }
+
   setSort(sort: SortKey | null): void {
     this.navigate({ [URL_PARAMS.sort]: sort });
   }
 
   /** Quita un filtro puesto, por su parámetro de la URL */
   removeFilter(param: string): void {
-    this.navigate({ [param]: null });
+    // El precio son dos parámetros y una sola etiqueta
+    if (param === PRICE_FILTER) this.setPrice(null, null);
+    else this.navigate({ [param]: null });
   }
 
   /** Quita todos los filtros y la búsqueda; el orden se queda */

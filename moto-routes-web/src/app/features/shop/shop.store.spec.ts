@@ -107,7 +107,7 @@ describe('ShopStore', () => {
     expect(navigate).toHaveBeenCalledWith(
       [],
       jasmine.objectContaining({
-        queryParams: { categoria: null, anfitrion: null, ubicacion: null, buscar: null, dificultad: null, 'con-fechas': null, pagina: null },
+        queryParams: { categoria: null, anfitrion: null, ubicacion: null, buscar: null, dificultad: null, 'con-fechas': null, precioMin: null, precioMax: null, pagina: null },
         queryParamsHandling: 'merge',
       }),
     );

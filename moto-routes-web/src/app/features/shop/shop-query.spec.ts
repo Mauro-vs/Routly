@@ -50,4 +50,22 @@ describe('shop-query', () => {
     expect(parse({ categoria: 'No Vale' }).category).toBeNull();
     expect(parse({ 'con-fechas': 'quizas' }).withDates).toBeFalse();
   });
+
+  it('el precio del slider: precioMin y precioMax llegan a la API como priceMin y priceMax', () => {
+    expect(toApiParams(parse({ precioMin: '40', precioMax: '200' }))).toEqual(
+      jasmine.objectContaining({ priceMin: 40, priceMax: 200 }),
+    );
+    const onlyMax = toApiParams(parse({ precioMax: '150' }));
+    expect(onlyMax.priceMax).toBe(150);
+    expect(onlyMax.priceMin).toBeUndefined();
+  });
+
+  it('un precio que no vale, en un extremo o cruzado se ignora', () => {
+    expect(parse({ precioMin: 'barato' }).priceMin).toBeNull();
+    expect(parse({ precioMin: '12.5' }).priceMin).toBeNull();
+    // 0 y 400 son los extremos del slider: sin límite
+    expect(parse({ precioMin: '0', precioMax: '400' })).toEqual(jasmine.objectContaining({ priceMin: null, priceMax: null }));
+    // Cruzado, la API respondería 400: fuera los dos
+    expect(parse({ precioMin: '300', precioMax: '100' })).toEqual(jasmine.objectContaining({ priceMin: null, priceMax: null }));
+  });
 });

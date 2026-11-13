@@ -5,12 +5,13 @@ import { ActivatedRoute } from '@angular/router';
 import { ActiveFiltersComponent } from '../../shared/ui/active-filters/active-filters.component';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { PagerComponent } from '../../shared/ui/pager/pager.component';
+import { PriceRange, PriceRangeComponent } from '../../shared/ui/price-range/price-range.component';
 import { SearchBoxComponent } from '../../shared/ui/search-box/search-box.component';
 import { plural } from '../../shared/utils/shop-format';
 import { ExperienceListComponent } from './components/experience-list/experience-list.component';
 import { FilterSheetComponent } from './components/filter-sheet/filter-sheet.component';
 import { GantryPlate, ShopGantryComponent } from './components/shop-gantry/shop-gantry.component';
-import { DIFFICULTIES, SORTS, SortKey } from './shop-query';
+import { DIFFICULTIES, PRICE_RANGE, SORTS, SortKey } from './shop-query';
 import { ShopStore } from './shop.store';
 
 /**
@@ -28,6 +29,7 @@ import { ShopStore } from './shop.store';
     ActiveFiltersComponent,
     PagerComponent,
     SearchBoxComponent,
+    PriceRangeComponent,
     IconComponent,
   ],
   providers: [ShopStore],
@@ -72,6 +74,14 @@ import { ShopStore } from './shop.store';
             <input #withDates type="checkbox" [checked]="store.query().withDates" (change)="store.setWithDates(withDates.checked)" />
             Solo con fechas
           </label>
+          <ui-price-range
+            class="desktop-only"
+            [floor]="priceRange.floor"
+            [ceiling]="priceRange.ceiling"
+            [step]="priceRange.step"
+            [value]="price()"
+            (valueChange)="store.setPrice($event.min, $event.max)"
+          />
           <label class="select">
             <span class="sr-only">Ordenar</span>
             <select #sort [value]="store.query().sort ?? ''" (change)="setSort(sort.value)">
@@ -123,9 +133,11 @@ import { ShopStore } from './shop.store';
       #sheet
       [plates]="sheetPlates()"
       [withDates]="store.query().withDates"
+      [price]="price()"
       [resultsLabel]="sheetLabel()"
       (filterChange)="store.setFilter($event.key, $event.value)"
       (withDatesChange)="store.setWithDates($event)"
+      (priceChange)="store.setPrice($event.min, $event.max)"
     />
   `,
   styles: `
@@ -284,6 +296,9 @@ export class ShopPageComponent {
   protected readonly store = inject(ShopStore);
 
   protected readonly difficulties = Object.entries(DIFFICULTIES).map(([value, { label }]) => ({ value, label }));
+  protected readonly priceRange = PRICE_RANGE;
+  /** El rango del slider, desde la URL. Un computed: el mismo objeto mientras no cambie */
+  protected readonly price = computed<PriceRange>(() => ({ min: this.store.query().priceMin, max: this.store.query().priceMax }));
   protected readonly sorts = (Object.keys(SORTS) as SortKey[]).map((value) => ({ value, label: SORTS[value].label }));
 
   /** Las tres placas del pórtico: tipo de carretera, destino y guía */
