@@ -10,7 +10,8 @@ pública de la API (`/api/shop`), como cualquier visitante.
   El modelo se cambia en `AI_MODELS`, sin tocar código. Por defecto, modelos gratuitos (`:free`):
   la clave es gratis y no hace falta crédito, pero hay que activarlos una vez en
   [openrouter.ai/settings/privacy](https://openrouter.ai/settings/privacy) y tienen un límite de
-  peticiones al día.
+  peticiones al día. Como los gratuitos se retiran a menudo, el servidor mira el catálogo de
+  OpenRouter y cambia los que ya no existen por otros gratuitos con herramientas.
 - Mismo stack que la API: Node 20.19+, Express 5, Zod, helmet y express-rate-limit, en JS ESM.
 
 ## Arrancar

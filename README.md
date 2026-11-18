@@ -194,7 +194,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="moto-routes-ai/README.md"><b>Servidor de IA</b></a></td>
-    <td>Express 5, Zod 4, OpenRouter con modelos gratuitos (Llama 3.3 70B, con Mistral Small y Qwen 3 de reserva)</td>
+    <td>Express 5, Zod 4, OpenRouter con modelos gratuitos (Llama 3.3 70B y Mistral Small de reserva, cambiados solos si OpenRouter los retira)</td>
     <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
   </tr>
 </table>

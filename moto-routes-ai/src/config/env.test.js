@@ -11,7 +11,6 @@ describe("loadConfig", () => {
     assert.deepEqual(config.ai.models, [
       "meta-llama/llama-3.3-70b-instruct:free",
       "mistralai/mistral-small-3.2-24b-instruct:free",
-      "qwen/qwen3-235b-a22b:free",
     ]);
   });
 

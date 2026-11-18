@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { completion } from "../testing/fixtures.js";
 import { fakeFetch } from "../testing/helpers.js";
-import { createOpenRouterClient } from "./openrouter.js";
+import { createOpenRouterClient, pickModels } from "./openrouter.js";
 
 const OPENROUTER = "POST openrouter.ai/api/v1/chat/completions";
 
@@ -55,12 +55,93 @@ describe("createOpenRouterClient", () => {
     } finally {
       console.error = original;
     }
-    const busy = client(() => ({ status: 429, body: {} }));
-    await assert.rejects(busy.openRouter.complete({ messages: [] }), { status: 503 });
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      const busy = client(() => ({ status: 429, body: {} }));
+      await assert.rejects(busy.openRouter.complete({ messages: [] }), { status: 503 });
+    } finally {
+      console.warn = warn;
+    }
   });
 
   it("un 200 con un error dentro también es un fallo", async () => {
     const { openRouter } = client(() => ({ body: { error: { code: 502, message: "Provider returned error" } } }));
     await assert.rejects(openRouter.complete({ messages: [] }), { status: 502 });
+  });
+});
+
+const free = (id, { tools = true, context = 128_000 } = {}) => ({
+  id,
+  context_length: context,
+  pricing: { prompt: "0", completion: "0" },
+  supported_parameters: tools ? ["tools", "temperature"] : ["temperature"],
+});
+
+describe("pickModels", () => {
+  const catalog = [
+    free("meta-llama/llama-3.3-70b-instruct:free"),
+    free("qwen/qwen3.7-plus:free", { context: 256_000 }),
+    free("sin/herramientas:free", { tools: false, context: 1_000_000 }),
+    free("openrouter/free", { context: 2_000_000 }),
+    { id: "google/gemini-2.5-flash", context_length: 1_000_000, pricing: { prompt: "0.0000003", completion: "0.0000025" }, supported_parameters: ["tools"] },
+  ];
+
+  it("deja los que existen, en su orden", () => {
+    assert.deepEqual(pickModels(["meta-llama/llama-3.3-70b-instruct:free"], catalog), ["meta-llama/llama-3.3-70b-instruct:free"]);
+  });
+
+  it("cambia los gratuitos retirados por otros gratuitos con herramientas, los de más contexto primero", () => {
+    assert.deepEqual(pickModels(["qwen/qwen3-235b-a22b:free", "meta-llama/llama-3.3-70b-instruct:free"], catalog), [
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "qwen/qwen3.7-plus:free",
+    ]);
+  });
+
+  it("los de pago no se cambian por otros: solo se quitan los que no existen", () => {
+    assert.deepEqual(pickModels(["google/gemini-2.5-flash", "x-ai/no-existe"], catalog), ["google/gemini-2.5-flash"]);
+  });
+});
+
+describe("createOpenRouterClient con checkModels", () => {
+  it("mira el catálogo una vez y manda solo los modelos que existen", async () => {
+    const original = console.warn;
+    console.warn = () => {};
+    try {
+      const fetch = fakeFetch({
+        "GET openrouter.ai/api/v1/models": () => ({ body: { data: [free("meta-llama/llama-3.3-70b-instruct:free"), free("qwen/qwen3.7-plus:free")] } }),
+        [OPENROUTER]: () => ({ body: completion("Hola", "qwen/qwen3.7-plus:free") }),
+      });
+      const openRouter = createOpenRouterClient({
+        apiKey: "sk-or-test",
+        baseUrl: "https://openrouter.ai/api/v1",
+        models: ["qwen/qwen3-235b-a22b:free", "meta-llama/llama-3.3-70b-instruct:free"],
+        timeoutMs: 1000,
+        maxTokens: 500,
+        siteUrl: "http://localhost:4300",
+        checkModels: true,
+        fetch,
+      });
+      await openRouter.complete({ messages: [{ role: "user", content: "Hola" }] });
+      await openRouter.complete({ messages: [{ role: "user", content: "Otra" }] });
+
+      assert.equal(fetch.calls.filter((call) => call.key === "GET openrouter.ai/api/v1/models").length, 1);
+      const sent = JSON.parse(fetch.calls.at(-1).init.body);
+      assert.deepEqual(sent.models, ["meta-llama/llama-3.3-70b-instruct:free", "qwen/qwen3.7-plus:free"]);
+    } finally {
+      console.warn = original;
+    }
+  });
+
+  it("si no puede mirar el catálogo, usa AI_MODELS tal cual", async () => {
+    const original = console.warn;
+    console.warn = () => {};
+    try {
+      const { fetch, openRouter } = client(() => ({ body: completion("Hola") }), { checkModels: true });
+      await openRouter.complete({ messages: [{ role: "user", content: "Hola" }] });
+      assert.deepEqual(JSON.parse(fetch.calls.at(-1).init.body).models, ["google/gemini-2.5-flash", "x-ai/grok-4-fast"]);
+    } finally {
+      console.warn = original;
+    }
   });
 });

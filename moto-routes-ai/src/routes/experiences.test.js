@@ -131,10 +131,39 @@ describe("GET /ai/experiences/:slug/stops", () => {
     assert.equal(body.data.end, null);
   });
 
-  it("si OpenStreetMap está saturado, 502", async () => {
-    server = await startApp({ fetch: fakeFetch(handlers({ "POST overpass-api.de/api/interpreter": () => ({ status: 429, body: {} }) })) });
-    const { status, body } = await server.request("/ai/experiences/pirineo-en-moto/stops");
-    assert.equal(status, 502);
-    assert.equal(body.message, "OpenStreetMap is not available right now");
+  it("si el servidor principal de Overpass está saturado, se pregunta al de reserva", async () => {
+    const original = console.warn;
+    console.warn = () => {};
+    try {
+      server = await startApp({
+        fetch: fakeFetch(
+          handlers({
+            "POST overpass-api.de/api/interpreter": () => ({ status: 429, body: {} }),
+            "POST overpass.private.coffee/api/interpreter": () => ({ body: overpassBody }),
+          }),
+        ),
+      });
+      const { status, body } = await server.request("/ai/experiences/pirineo-en-moto/stops");
+      assert.equal(status, 200);
+      assert.ok(body.data.start.food.length > 0);
+    } finally {
+      console.warn = original;
+    }
+  });
+
+  it("si los dos servidores de OpenStreetMap fallan, 502", async () => {
+    const original = console.warn;
+    console.warn = () => {};
+    try {
+      const busy = () => ({ status: 429, body: {} });
+      server = await startApp({
+        fetch: fakeFetch(handlers({ "POST overpass-api.de/api/interpreter": busy, "POST overpass.private.coffee/api/interpreter": busy })),
+      });
+      const { status, body } = await server.request("/ai/experiences/pirineo-en-moto/stops");
+      assert.equal(status, 502);
+      assert.equal(body.message, "OpenStreetMap is not available right now");
+    } finally {
+      console.warn = original;
+    }
   });
 });

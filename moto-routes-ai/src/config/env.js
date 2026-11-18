@@ -8,8 +8,10 @@ import { z } from "zod";
  */
 
 // Gratuitos (los ":free" de OpenRouter) y con herramientas, que el chat las necesita. Tienen
-// límite de peticiones al día: la caché de 24 h de los textos ayuda a no llegar
-const DEFAULT_MODELS = "meta-llama/llama-3.3-70b-instruct:free,mistralai/mistral-small-3.2-24b-instruct:free,qwen/qwen3-235b-a22b:free";
+// límite de peticiones al día: la caché de 24 h de los textos ayuda a no llegar. Los gratuitos
+// cambian a menudo: al arrancar se comprueban en el catálogo y los retirados se cambian por otros
+// gratuitos con herramientas (clients/openrouter.js)
+const DEFAULT_MODELS = "meta-llama/llama-3.3-70b-instruct:free,mistralai/mistral-small-3.2-24b-instruct:free";
 
 const milliseconds = (fallback) => z.coerce.number().int().min(100).max(120_000).default(fallback);
 const url = (fallback) =>
@@ -75,6 +77,8 @@ export function loadConfig(env = process.env) {
       timeoutMs: config.AI_TIMEOUT_MS,
       maxTokens: config.AI_MAX_TOKENS,
       siteUrl: config.SITE_URL,
+      // Comprobar los modelos en el catálogo de OpenRouter (en los tests no: no hay red)
+      checkModels: config.NODE_ENV !== "test",
     }),
   });
 }
