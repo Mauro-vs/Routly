@@ -36,6 +36,26 @@ const ICONS = [
   // tema
   'sun',
   'moon',
+  // Routly IA (moto-routes-ai): el bloque del detalle y el chat
+  'sparkle',
+  'chat-circle-dots',
+  'paper-plane-right',
+  'stop-circle',
+  'question',
+  'backpack',
+  'fork-knife',
+  'gas-pump',
+  'binoculars',
+  // el tiempo
+  'cloud',
+  'cloud-sun',
+  'cloud-rain',
+  'cloud-snow',
+  'cloud-lightning',
+  'cloud-fog',
+  'drop',
+  'wind',
+  'thermometer-simple',
 ];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

@@ -6,8 +6,11 @@ import { Title } from '@angular/platform-browser';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { AiApiService } from '../../core/ai/ai-api.service';
 import { ExperiencePageComponent } from './experience-page.component';
 import { DETAIL, flushDetail } from './testing/experience.fixtures';
+
+const pending = (): Promise<never> => new Promise<never>(() => undefined);
 
 describe('ExperiencePageComponent', () => {
   let http: HttpTestingController;
@@ -20,6 +23,8 @@ describe('ExperiencePageComponent', () => {
         provideRouter([{ path: 'experiencias/:slug', component: ExperiencePageComponent }], withComponentInputBinding()),
         provideHttpClient(),
         provideHttpClientTesting(),
+        // El bloque Routly IA tiene sus propios tests: aquí sus peticiones no acaban nunca
+        { provide: AiApiService, useValue: { insights: pending, weather: pending, stops: pending } },
       ],
     });
     http = TestBed.inject(HttpTestingController);

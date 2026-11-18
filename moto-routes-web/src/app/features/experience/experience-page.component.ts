@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { AiChatContextService } from '../../core/ai/ai-chat-context.service';
 import { BOOKING_UNAVAILABLE, BookingService } from '../../core/booking/booking.service';
 import { PageMetaStrategy } from '../../core/services/page-meta.strategy';
 import { IconComponent } from '../../shared/ui/icon/icon.component';
@@ -10,6 +11,7 @@ import { sceneFor } from '../../shared/ui/photo/landscape';
 import { PhotoComponent } from '../../shared/ui/photo/photo.component';
 import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
 import { formatHours, formatPrice, formatShortDate, plural } from '../../shared/utils/shop-format';
+import { AiInsightsComponent } from './components/ai-insights/ai-insights.component';
 import { DeparturePickerComponent } from './components/departure-picker/departure-picker.component';
 import { GalleryComponent } from './components/gallery/gallery.component';
 import { RouteSignComponent } from './components/route-sign/route-sign.component';
@@ -36,7 +38,16 @@ const LANGUAGES: Record<string, string> = {
  */
 @Component({
   selector: 'app-experience-page',
-  imports: [RouterLink, GalleryComponent, RouteSignComponent, DeparturePickerComponent, PhotoComponent, SkeletonComponent, IconComponent],
+  imports: [
+    RouterLink,
+    GalleryComponent,
+    RouteSignComponent,
+    DeparturePickerComponent,
+    PhotoComponent,
+    SkeletonComponent,
+    IconComponent,
+    AiInsightsComponent,
+  ],
   providers: [ExperienceStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -100,6 +111,9 @@ const LANGUAGES: Record<string, string> = {
                   <div><dt><ui-icon name="motorcycle" /> Moto del guía</dt><dd>{{ bike.brand }} {{ bike.model }}@if (bike.version) { {{ bike.version }}}</dd></div>
                 }
               </dl>
+
+              <!-- Routly IA: resumen, el tiempo de las salidas, paradas, qué llevar y preguntas -->
+              <app-ai-insights [slug]="experience.slug" />
 
               @if (experience.host; as host) {
                 <section class="host" aria-labelledby="anfitrion-titulo">
@@ -459,6 +473,14 @@ export class ExperiencePageComponent {
 
   constructor() {
     effect(() => void this.store.load(this.slug()));
+
+    // El asistente (en el armazón) sabe de qué experiencia se habla mientras se ve su ficha
+    const chat = inject(AiChatContextService);
+    effect(() => {
+      const experience = this.experience();
+      chat.set(experience ? { slug: experience.slug, title: experience.title } : null);
+    });
+    inject(DestroyRef).onDestroy(() => chat.set(null));
 
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())

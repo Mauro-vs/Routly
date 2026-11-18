@@ -4,22 +4,24 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
+import { AiChatComponent } from './layout/ai-chat/ai-chat.component';
 import { SiteFooterComponent } from './layout/site-footer/site-footer.component';
 import { SiteHeaderComponent } from './layout/site-header/site-header.component';
 
 /**
  * El armazón de la web: saltar al contenido, la cabecera, la página y el pie. En el Home la cabecera
- * va transparente, sobre la foto.
+ * va transparente, sobre la foto. El asistente (Routly IA) flota encima, en todas las páginas.
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, SiteHeaderComponent, SiteFooterComponent],
+  imports: [RouterOutlet, SiteHeaderComponent, SiteFooterComponent, AiChatComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="skip" href="#contenido">Saltar al contenido</a>
     <app-site-header [overlay]="isHome()" />
     <main id="contenido" tabindex="-1"><router-outlet /></main>
     <app-site-footer />
+    <app-ai-chat />
   `,
   styles: `
     :host {

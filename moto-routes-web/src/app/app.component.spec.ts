@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { Component, provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -13,6 +14,8 @@ describe('AppComponent', () => {
       imports: [AppComponent],
       providers: [
         provideZonelessChangeDetection(),
+        // El asistente flotante (AiApiService) usa HttpClient
+        provideHttpClient(),
         provideRouter([
           { path: '', component: PageStubComponent },
           { path: 'experiencias', component: PageStubComponent },
