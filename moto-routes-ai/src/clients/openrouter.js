@@ -36,7 +36,14 @@ export function createOpenRouterClient({ apiKey, baseUrl, models, timeoutMs, max
   // Un fallo de OpenRouter: sin crédito o con la clave mal, es un error de configuración nuestro;
   // saturado (429), que se intente más tarde. Nunca se devuelve su mensaje tal cual al cliente
   function failure(status, detail) {
-    if (status === 429) return createError("The AI is busy right now, please try again in a moment", 503);
+    if (status === 429) {
+      console.warn("[OpenRouter] HTTP 429: too many requests (free models have a daily limit, it resets every day)");
+      return createError("The AI is busy right now, please try again in a moment", 503);
+    }
+    // Un modelo que ya no existe, o los gratuitos sin activar en https://openrouter.ai/settings/privacy
+    if (status === 404) {
+      console.error(`[OpenRouter] HTTP 404: check AI_MODELS and, for ":free" models, your privacy settings${detail ? ` (${detail})` : ""}`);
+    }
     if (status === 401 || status === 402 || status === 403) {
       console.error(`[OpenRouter] HTTP ${status}: check OPENROUTER_API_KEY and your credits${detail ? ` (${detail})` : ""}`);
     }

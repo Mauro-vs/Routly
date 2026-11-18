@@ -7,7 +7,10 @@ pública de la API (`/api/shop`), como cualquier visitante.
 - Puerto **3001**. Todo cuelga de `/ai` (la API, de `/api`): el proxy de la web, y el futuro API
   gateway, solo tienen que mandar cada prefijo a su servidor.
 - IA con [OpenRouter](https://openrouter.ai): una sola clave para Gemini, Grok, Claude, GPT...
-  El modelo se cambia en `AI_MODELS`, sin tocar código.
+  El modelo se cambia en `AI_MODELS`, sin tocar código. Por defecto, modelos gratuitos (`:free`):
+  la clave es gratis y no hace falta crédito, pero hay que activarlos una vez en
+  [openrouter.ai/settings/privacy](https://openrouter.ai/settings/privacy) y tienen un límite de
+  peticiones al día.
 - Mismo stack que la API: Node 20.19+, Express 5, Zod, helmet y express-rate-limit, en JS ESM.
 
 ## Arrancar

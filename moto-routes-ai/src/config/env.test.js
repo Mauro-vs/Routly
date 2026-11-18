@@ -8,7 +8,11 @@ describe("loadConfig", () => {
     assert.equal(config.port, 3001);
     assert.equal(config.routlyApiUrl, "http://localhost:3000/api");
     assert.equal(config.ai.apiKey, null);
-    assert.deepEqual(config.ai.models, ["google/gemini-2.5-flash", "x-ai/grok-4-fast"]);
+    assert.deepEqual(config.ai.models, [
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "mistralai/mistral-small-3.2-24b-instruct:free",
+      "qwen/qwen3-235b-a22b:free",
+    ]);
   });
 
   it("lee la lista de modelos y quita la barra final de las URL", () => {

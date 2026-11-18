@@ -194,7 +194,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="moto-routes-ai/README.md"><b>Servidor de IA</b></a></td>
-    <td>Express 5, Zod 4, OpenRouter (Gemini 2.5 Flash, con Grok 4 Fast de reserva)</td>
+    <td>Express 5, Zod 4, OpenRouter con modelos gratuitos (Llama 3.3 70B, con Mistral Small y Qwen 3 de reserva)</td>
     <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
   </tr>
 </table>
@@ -236,7 +236,7 @@ cp moto-routes-api/.env.example moto-routes-api/.env
 cp moto-routes-ai/.env.example moto-routes-ai/.env
 ```
 
-En `moto-routes-ai/.env` va la clave de OpenRouter (`OPENROUTER_API_KEY`). Sin ella todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
+En `moto-routes-ai/.env` va la clave de OpenRouter (`OPENROUTER_API_KEY`), que es gratis: se crea en [openrouter.ai/keys](https://openrouter.ai/keys) y los modelos que usa Routly son los gratuitos, sin meter crédito. Hay que activarlos una vez en [openrouter.ai/settings/privacy](https://openrouter.ai/settings/privacy). Sin clave todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
 
 ```bash
 npm run seed

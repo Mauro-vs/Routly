@@ -7,7 +7,9 @@ import { z } from "zod";
  * tiempo y las paradas) sigue funcionando.
  */
 
-const DEFAULT_MODELS = "google/gemini-2.5-flash,x-ai/grok-4-fast";
+// Gratuitos (los ":free" de OpenRouter) y con herramientas, que el chat las necesita. Tienen
+// límite de peticiones al día: la caché de 24 h de los textos ayuda a no llegar
+const DEFAULT_MODELS = "meta-llama/llama-3.3-70b-instruct:free,mistralai/mistral-small-3.2-24b-instruct:free,qwen/qwen3-235b-a22b:free";
 
 const milliseconds = (fallback) => z.coerce.number().int().min(100).max(120_000).default(fallback);
 const url = (fallback) =>
