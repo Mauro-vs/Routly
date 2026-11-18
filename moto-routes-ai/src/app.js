@@ -6,8 +6,10 @@ import { createRoutlyClient } from "./clients/routly.js";
 import { createWeatherClient } from "./clients/weather.js";
 import { helmetMiddleware } from "./config/helmet.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import { chatRouter } from "./routes/chat.routes.js";
 import { experiencesRouter } from "./routes/experiences.routes.js";
 import { createCatalogService } from "./services/catalog.service.js";
+import { createChatService } from "./services/chat.service.js";
 import { createInsightsService } from "./services/insights.service.js";
 import { createPlacesService } from "./services/places.service.js";
 import { createStopsService } from "./services/stops.service.js";
@@ -42,6 +44,8 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
     stops,
     insights: createInsightsService({ catalog, weather, stops, openRouter: clients.openRouter }),
   };
+  // El chatbot usa las herramientas, que tiran de los demás services y de la API
+  services.chat = createChatService({ openRouter: clients.openRouter, services: { ...services, routly: clients.routly } });
 
   const app = express();
   // Detrás de un proxy (o del API gateway): la IP del cliente para el límite de peticiones
@@ -63,6 +67,7 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   const ai = express.Router();
   app.use("/ai", ai);
   ai.use("/experiences", experiencesRouter(services));
+  ai.use("/chat", chatRouter(services));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

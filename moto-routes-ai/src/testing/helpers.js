@@ -64,3 +64,39 @@ export async function startApp({ config = testConfig(), fetch } = {}) {
 
 /** El host de la API en los tests (ROUTLY_API_URL por defecto). */
 export const API = "localhost:3000/api/shop";
+
+/**
+ * Una respuesta de OpenRouter con streaming: cada trozo es el delta de un chunk ({ content } o
+ * { tool_calls }), y se manda como "data: {...}" hasta el [DONE]. Los trozos se parten a propósito
+ * por la mitad para comprobar que se juntan bien.
+ */
+export function sseResponse(deltas, { model = "google/gemini-2.5-flash" } = {}) {
+  const lines = deltas.map((delta) =>
+    typeof delta === "string" && delta.startsWith(":")
+      ? `${delta}\n\n`
+      : `data: ${JSON.stringify(delta.error ? delta : { model, choices: [{ index: 0, delta }] })}\n\n`,
+  );
+  const text = `${lines.join("")}data: [DONE]\n\n`;
+  const half = Math.floor(text.length / 2);
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(text.slice(0, half)));
+      controller.enqueue(encoder.encode(text.slice(half)));
+      controller.close();
+    },
+  });
+  return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
+/** Los eventos de un streaming SSE de /ai/chat, como [{ event, data }]. */
+export function parseEvents(text) {
+  return text
+    .split("\n\n")
+    .filter(Boolean)
+    .map((block) => {
+      const event = /^event: (.+)$/m.exec(block)?.[1];
+      const data = /^data: (.+)$/m.exec(block)?.[1];
+      return { event, data: data ? JSON.parse(data) : null };
+    });
+}
