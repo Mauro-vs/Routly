@@ -11,7 +11,7 @@ const IS_WINDOWS = process.platform === "win32";
 
 // ---------- Los servicios ----------
 
-/** Las tres aplicaciones del monorepo. `ready` es la URL que responde cuando ya están en marcha. */
+/** Las aplicaciones del monorepo. `ready` es la URL que responde cuando ya están en marcha. */
 export const SERVICES = {
   api: {
     label: "api",
@@ -20,6 +20,15 @@ export const SERVICES = {
     port: 3000,
     ready: "http://localhost:3000/health",
     color: 36,
+  },
+  // El servidor de IA: sin base de datos, lee la tienda de la API (/api/shop)
+  ai: {
+    label: "ai",
+    dir: "moto-routes-ai",
+    dev: "npm run dev",
+    port: 3001,
+    ready: "http://localhost:3001/health",
+    color: 34,
   },
   panel: {
     label: "panel",

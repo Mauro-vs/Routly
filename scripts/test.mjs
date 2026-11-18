@@ -1,6 +1,7 @@
-// npm test: los tests de la API, el panel y la web, uno detrás de otro, y una tabla al final.
+// npm test: los tests de la API, el servidor de IA, el panel y la web, uno detrás de otro, y una
+// tabla al final.
 //
-//   npm test                    los tres
+//   npm test                    todos
 //   npm test -- api web         solo esos
 //   npm test -- --verbose       con toda la salida
 //
@@ -26,7 +27,8 @@ import {
 } from "./lib.mjs";
 
 const KARMA = "npx ng test --watch=false --browsers=ChromeHeadless";
-const COMMANDS = { api: "npm test", panel: KARMA, web: KARMA };
+// Los del servidor de IA no necesitan red ni MongoDB: usan un fetch falso
+const COMMANDS = { api: "npm test", ai: "npm test", panel: KARMA, web: KARMA };
 
 const args = process.argv.slice(2);
 const verbose = args.includes("--verbose");
@@ -41,7 +43,8 @@ const selected = (names.length > 0 ? names : Object.keys(SERVICES)).map((name) =
 // Cuántos tests han pasado y fallado, leídos de la salida de node:test o de Karma
 function countsOf(output) {
   const text = output.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "");
-  const nodeTotal = /ℹ tests (\d+)[\s\S]*?ℹ pass (\d+)[\s\S]*?ℹ fail (\d+)/.exec(text);
+  // node:test: "ℹ tests 47" con el reporter spec; "# tests 47" con TAP (cuando la salida no es una terminal)
+  const nodeTotal = /[ℹ#] tests (\d+)[\s\S]*?[ℹ#] pass (\d+)[\s\S]*?[ℹ#] fail (\d+)/.exec(text);
   if (nodeTotal) return { total: +nodeTotal[1], passed: +nodeTotal[2], failed: +nodeTotal[3] };
   // Karma: "TOTAL: 482 SUCCESS" o "TOTAL: 2 FAILED, 469 SUCCESS"
   const karma = /TOTAL: (?:(\d+) FAILED, )?(\d+) SUCCESS/.exec(text);

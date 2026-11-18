@@ -1,6 +1,6 @@
-// npm run dev: la API, el panel y la web en una sola terminal.
+// npm run dev: la API, el servidor de IA, el panel y la web en una sola terminal.
 //
-//   npm run dev               las tres
+//   npm run dev               todos
 //   npm run dev -- api web    solo esas
 //
 // Antes de arrancar comprueba lo que suele fallar (Node, MongoDB, el .env, las dependencias y los
@@ -62,6 +62,19 @@ if (selected.includes(SERVICES.api)) {
 
   if (existsSync(path.join(dirOf(SERVICES.api), ".env"))) ok("moto-routes-api/.env existe");
   else problems.push('Falta moto-routes-api/.env. Copia la plantilla: copy moto-routes-api\\.env.example moto-routes-api\\.env');
+}
+
+// El servidor de IA arranca sin .env: el tiempo y las paradas funcionan, y los textos y el chat
+// esperan a que haya una clave de OpenRouter. Se avisa, pero no para nada.
+if (selected.includes(SERVICES.ai)) {
+  if (existsSync(path.join(dirOf(SERVICES.ai), ".env"))) ok("moto-routes-ai/.env existe");
+  else
+    info(
+      yellow(
+        "moto-routes-ai no tiene .env: arranca, pero sin los textos de la IA ni el chat. Copia la plantilla (copy moto-routes-ai\\.env.example moto-routes-ai\\.env) y pon tu OPENROUTER_API_KEY.",
+      ),
+    );
+  if (!selected.includes(SERVICES.api)) info(yellow("El servidor de IA lee la API (http://localhost:3000): si no la tienes arrancada, sus respuestas fallarán."));
 }
 
 for (const service of selected) {
@@ -162,6 +175,7 @@ async function waitReady(service) {
 
 const LINKS = {
   api: ["API", "http://localhost:3000/api", "Swagger: http://localhost:3000/api/docs"],
+  ai: ["IA", "http://localhost:3001/health", "La web lo usa en /ai"],
   panel: ["Panel", "http://localhost:4200", "admin@routly.dev (contraseña del seed)"],
   web: ["Web", "http://localhost:4300", "Home, Shop y detalle"],
 };

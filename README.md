@@ -27,12 +27,15 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly tiene tres partes:
+Hoy Routly tiene cuatro partes:
 - la **web pública**, donde un motero sin cuenta encuentra una salida guiada y elige fecha;
 - el **panel de administración** del catálogo;
-- la **API** que sirve a las dos.
+- la **API** que sirve a las dos;
+- el **servidor de IA**, que añade a la web el bloque Routly IA del detalle y el asistente.
 
 La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas, imágenes y el garaje de motos de cada usuario) y una tienda pública, `/api/shop`. El panel gestiona las colecciones; la web pública solo lee de la tienda.
+
+El servidor de IA no toca la base de datos: lee la misma tienda y la completa con datos reales. En el detalle de cada experiencia, el bloque **Routly IA** enseña un resumen y para quién es, el tiempo en las fechas de salida (Open-Meteo), dónde comer, repostar y parar a mirar (OpenStreetMap), qué llevar y preguntas frecuentes. El **asistente** flotante responde en streaming con los datos de Routly y, en el detalle, sabe de qué experiencia se habla. La IA solo redacta: los sitios y los datos no se los inventa.
 
 <table>
   <tr>
@@ -151,18 +154,21 @@ La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catál
   <img src="https://skillicons.dev/icons?i=angular,ts,html,css,nodejs,express,mongodb,postman&theme=dark" alt="Angular, TypeScript, HTML, CSS, Node.js, Express, MongoDB y Postman">
 </p>
 
-Un monorepo con tres aplicaciones independientes que se comunican por HTTP y JSON:
+Un monorepo con cuatro aplicaciones independientes que se comunican por HTTP y JSON:
 
 ```mermaid
 flowchart LR
     W["Web pública<br/>Angular 20"] -- "/api/shop" --> B["API REST<br/>Express 5"]
+    W -- "/ai" --> I["Servidor de IA<br/>Express 5"]
+    I -- "/api/shop" --> B
+    I -. "tiempo, paradas y textos" .-> E["Open-Meteo, OpenStreetMap<br/>y OpenRouter"]
     A["Panel de administración<br/>Angular 20"] -- "HTTP / JSON" --> B
     B -- "Mongoose" --> C[("MongoDB")]
     B -. "/api/docs" .-> D["Swagger UI"]
     classDef app fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
     classDef data fill:#1b7a4e,stroke:#0c2419,color:#ffffff
-    class A,B,W app
-    class C,D data
+    class A,B,W,I app
+    class C,D,E data
 ```
 
 <table>
@@ -186,16 +192,22 @@ flowchart LR
     <td>Express 5, Mongoose 9 con relaciones y <code>populate</code>, Zod 4</td>
     <td>Arquitectura por capas, validación antes del controlador, borrado lógico reutilizable y un único formato de error</td>
   </tr>
+  <tr>
+    <td><a href="moto-routes-ai/README.md"><b>Servidor de IA</b></a></td>
+    <td>Express 5, Zod 4, OpenRouter (Gemini 2.5 Flash, con Grok 4 Fast de reserva)</td>
+    <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
+  </tr>
 </table>
 
 ```
 Routly/
 ├── moto-routes-api/        API REST (Node.js + Express + MongoDB)
+├── moto-routes-ai/         Servidor de IA: bloque Routly IA y asistente (Node.js + Express)
 ├── moto-routes-dashboard/   Panel de administración (Angular)
 ├── moto-routes-web/        Web pública: Home, Shop y detalle (Angular)
 ├── design/                 Bocetos de la web pública y el script del peor caso
 ├── docs/                   Demo, capturas e imágenes de los README
-├── scripts/                npm run dev, test, check y seed para las tres partes a la vez
+├── scripts/                npm run dev, test, check y seed para todas las partes a la vez
 ├── package.json            Esos comandos (sin dependencias)
 └── DATABASE.md             Diseño de la base de datos completa
 ```
@@ -203,6 +215,7 @@ Routly/
 Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza:
 
 - [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, validación y errores.
+- [`moto-routes-ai/README.md`](moto-routes-ai/README.md): endpoints de la IA, el asistente y sus herramientas, y de dónde sale cada dato.
 - [`moto-routes-dashboard/README.md`](moto-routes-dashboard/README.md): flujo de datos, patrones de Angular, sistema de diseño y cómo añadir una entidad.
 - [`moto-routes-web/README.md`](moto-routes-web/README.md): la URL como estado, la cancelación de peticiones y cómo se usa cada componente reutilizable.
 
@@ -220,7 +233,10 @@ cd Routly
 
 ```bash
 cp moto-routes-api/.env.example moto-routes-api/.env
+cp moto-routes-ai/.env.example moto-routes-ai/.env
 ```
+
+En `moto-routes-ai/.env` va la clave de OpenRouter (`OPENROUTER_API_KEY`). Sin ella todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
 
 ```bash
 npm run seed
@@ -230,11 +246,11 @@ npm run seed
 npm run dev
 ```
 
-`npm run dev` arranca la **API** (`http://localhost:3000`), el **panel** (`http://localhost:4200`) y la **web pública** (`http://localhost:4300`) en una sola terminal:
+`npm run dev` arranca la **API** (`http://localhost:3000`), el **servidor de IA** (`http://localhost:3001`), el **panel** (`http://localhost:4200`) y la **web pública** (`http://localhost:4300`) en una sola terminal:
 
 - **Antes de arrancar comprueba** lo que suele fallar: la versión de Node, que MongoDB responde, que existe el `.env` de la API y que los puertos están libres. Si algo falla, dice qué y cómo arreglarlo, y no arranca nada.
 - **Instala solo** las dependencias (`npm install`) de las aplicaciones que aún no las tienen.
-- **Cada línea lleva su nombre** (`[api]`, `[panel]`, `[web]`) y **los errores salen en rojo**. Cuando las tres responden, enseña sus URL.
+- **Cada línea lleva su nombre** (`[api]`, `[ai]`, `[panel]`, `[web]`) y **los errores salen en rojo**. Cuando todas responden, enseña sus URL.
 - **Si una se cae**, sale un bloque rojo con su nombre y las últimas líneas del error, y las demás siguen.
 - **`Ctrl+C` lo para todo**, sin dejar procesos colgados. Los cambios en el código se recargan solos.
 
@@ -245,9 +261,9 @@ npm run dev
 
 | Comando (desde la raíz) | Qué hace |
 |---|---|
-| `npm run dev` | La API, el panel y la web a la vez |
-| `npm run dev -- api web` | Solo los que se digan (`api`, `panel`, `web`) |
-| `npm test` | Los tests de las tres, uno detrás de otro, con una tabla al final. Solo enseña lo que falla |
+| `npm run dev` | La API, el servidor de IA, el panel y la web a la vez |
+| `npm run dev -- api ai web` | Solo los que se digan (`api`, `ai`, `panel`, `web`) |
+| `npm test` | Los tests de todas, uno detrás de otro, con una tabla al final. Solo enseña lo que falla |
 | `npm test -- panel --verbose` | Los de una, con toda la salida |
 | `npm run check` | Lo de antes de un commit: compila el panel y la web y pasa todos los tests |
 | `npm run seed` | Los datos de ejemplo, después de confirmarlo (`-- --yes` para no preguntar) |
@@ -265,7 +281,15 @@ npm install
 npm run dev
 ```
 
-**2. El panel** en `http://localhost:4200`, en otra terminal
+**2. El servidor de IA** en `http://localhost:3001`, en otra terminal
+
+```bash
+cd moto-routes-ai
+npm install
+npm run dev
+```
+
+**3. El panel** en `http://localhost:4200`, en otra terminal
 
 ```bash
 cd moto-routes-dashboard
@@ -273,7 +297,7 @@ npm install
 npm start
 ```
 
-**3. La web pública** en `http://localhost:4300`, en otra terminal
+**4. La web pública** en `http://localhost:4300`, en otra terminal
 
 ```bash
 cd moto-routes-web
@@ -297,6 +321,7 @@ Las colecciones están hechas de punta a punta (API, panel y tests), y la web p�
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Acceso | `users`, `roles` | Inicio de sesión con cookie de sesión; el panel solo para admin, y el perfil y el garaje para cada usuario |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Web pública | `/api/shop` | Home, Shop y detalle con la elección de salida |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Routly IA | `/ai` | El bloque Routly IA del detalle (resumen, tiempo, paradas, qué llevar y preguntas) y el asistente, en un servidor aparte sin base de datos |
 | ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección (diseño en `DATABASE.md`, sección 14) |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `reviews` | Valoraciones |
 
