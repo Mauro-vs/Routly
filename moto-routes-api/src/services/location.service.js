@@ -27,8 +27,9 @@ function toDocument({ latitude, longitude, ...data }) {
   return { ...data, coordinates: { type: "Point", coordinates: [longitude, latitude] } };
 }
 
-// Y se devuelven otra vez como latitude y longitude
-function toResponse(location) {
+// Y se devuelven otra vez como latitude y longitude. También la usan las ubicaciones de la ruta de
+// una experiencia (experience.service.js)
+export function toResponse(location) {
   if (!location) return location;
   const { coordinates, ...data } = location;
   if (!coordinates) return data;

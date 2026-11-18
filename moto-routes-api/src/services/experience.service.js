@@ -13,7 +13,7 @@ import { categoryService } from "./category.service.js";
 import { departureService } from "./departure.service.js";
 import { hostService } from "./host.service.js";
 import { imageService } from "./image.service.js";
-import { locationService } from "./location.service.js";
+import { locationService, toResponse as presentLocation } from "./location.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
@@ -79,10 +79,21 @@ async function withDepartureSummary(experiences) {
   });
 }
 
+// Las ubicaciones de su ruta con latitude y longitude, como las da /api/locations (y no como el
+// punto GeoJSON que se guarda)
+function withPlaceCoordinates(experience) {
+  const { route } = experience;
+  if (!route) return experience;
+  return {
+    ...experience,
+    route: { ...route, startLocation: presentLocation(route.startLocation), endLocation: presentLocation(route.endLocation) },
+  };
+}
+
 // Lo que se enseña de una experiencia además de lo suyo: la moto del guía, la foto principal, el
 // precio "desde" y la próxima fecha
 async function present(experiences, scope) {
-  const withBikes = await withGuideBikes(experiences, scope);
+  const withBikes = await withGuideBikes(experiences.map(withPlaceCoordinates), scope);
   return withDepartureSummary(await imageService.attachCovers("experience", withBikes));
 }
 

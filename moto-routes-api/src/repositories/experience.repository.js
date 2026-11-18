@@ -6,14 +6,16 @@ import { reservable } from "./departure.repository.js";
 
 // La ruta con lo que enseñan la tarjeta y el detalle de una experiencia en la web pública: sus km,
 // horas y dificultad, su categoría y sus dos ubicaciones (la ubicación de una experiencia es la de
-// su ruta). Todo en el mismo populate: una consulta por colección, no por experiencia.
+// su ruta). Todo en el mismo populate: una consulta por colección, no por experiencia. Las
+// coordenadas de las ubicaciones salen como latitude y longitude (experience.service.js): con ellas
+// el servidor de IA (moto-routes-ai) busca el tiempo y las paradas de la ruta.
 const ROUTE_SUMMARY = {
   path: "route",
   select: "title slug distance duration difficulty categoryId startLocationId endLocationId",
   populate: [
     { path: "category", select: "name slug" },
-    { path: "startLocation", select: "city region country slug" },
-    { path: "endLocation", select: "city region country slug" },
+    { path: "startLocation", select: "city region country slug coordinates" },
+    { path: "endLocation", select: "city region country slug coordinates" },
   ],
 };
 

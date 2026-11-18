@@ -222,6 +222,16 @@ describe("el detalle", () => {
     assert.deepEqual(experience.images.map((image) => image.alt), ["Primera", "Segunda"]);
   });
 
+  test("las ubicaciones de su ruta traen latitude y longitude, no el punto GeoJSON", async () => {
+    // Las usa el servidor de IA (moto-routes-ai) para el tiempo y las paradas
+    await api.patch(`/locations/${tarragona._id}`, { latitude: 41.1189, longitude: 1.2445 });
+    const { endLocation } = (await shop(`/experiences/${costaExperience.slug}`)).body.data.route;
+
+    assert.equal(endLocation.latitude, 41.1189);
+    assert.equal(endLocation.longitude, 1.2445);
+    assert.equal(endLocation.coordinates, undefined);
+  });
+
   test("una experiencia que no existe o no se ve es un 404", async () => {
     assert.equal((await shop("/experiences/no-existe")).status, 404);
 

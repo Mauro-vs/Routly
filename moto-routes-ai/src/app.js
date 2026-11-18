@@ -1,8 +1,15 @@
 import express from "express";
 import morgan from "morgan";
+import { createOverpassClient } from "./clients/overpass.js";
 import { createRoutlyClient } from "./clients/routly.js";
+import { createWeatherClient } from "./clients/weather.js";
 import { helmetMiddleware } from "./config/helmet.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
+import { experiencesRouter } from "./routes/experiences.routes.js";
+import { createCatalogService } from "./services/catalog.service.js";
+import { createPlacesService } from "./services/places.service.js";
+import { createStopsService } from "./services/stops.service.js";
+import { createWeatherService } from "./services/weather.service.js";
 
 /**
  * Monta el servidor de IA. La usan server.js (que solo arranca) y los tests, así que los tests
@@ -13,8 +20,21 @@ import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
  */
 export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   const isProduction = config.env === "production";
+  const upstream = { fetch: fetchImpl, timeoutMs: config.upstreamTimeoutMs };
   const clients = {
-    routly: createRoutlyClient({ baseUrl: config.routlyApiUrl, fetch: fetchImpl, timeoutMs: config.upstreamTimeoutMs }),
+    routly: createRoutlyClient({ baseUrl: config.routlyApiUrl, ...upstream }),
+    weather: createWeatherClient(upstream),
+    overpass: createOverpassClient(upstream),
+  };
+
+  // Los services, cada uno con lo que necesita (sin variables globales: cada app tiene su caché)
+  const catalog = createCatalogService({ routly: clients.routly });
+  const places = createPlacesService({ weather: clients.weather });
+  const services = {
+    catalog,
+    places,
+    weather: createWeatherService({ catalog, places, weather: clients.weather }),
+    stops: createStopsService({ catalog, places, overpass: clients.overpass }),
   };
 
   const app = express();
@@ -36,10 +56,11 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   // futuro API gateway) solo tiene que mandar cada prefijo a su servidor
   const ai = express.Router();
   app.use("/ai", ai);
+  ai.use("/experiences", experiencesRouter(services));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
 
-  app.locals.clients = clients;
+  app.locals.services = services;
   return app;
 }
