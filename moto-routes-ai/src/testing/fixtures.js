@@ -90,3 +90,24 @@ export const overpassBody = {
     { type: "node", id: 6, lat: 42.57, lon: -0.55, tags: { shop: "bakery", name: "No es una parada" } },
   ],
 };
+
+// Una respuesta buena de la IA para el bloque Routly IA
+export const insightsAnswer = {
+  summary: "Un día de puertos en el Pirineo aragonés con un guía local.",
+  highlights: ["Curvas enlazadas en el Valle de Tena", "Paradas en pueblos de piedra", "Grupo de 8 como mucho"],
+  idealFor: { level: "Piloto con algo de experiencia en montaña.", rider: "Para quien disfruta de las curvas.", bike: "Una trail o una naked; carnet A." },
+  packing: ["Chaqueta impermeable", "Guantes de media estación", "Capa térmica", "Agua"],
+  faq: [
+    { question: "¿Cuántos km son?", answer: "180 km, unas 5 horas conduciendo." },
+    { question: "¿Dónde se sale?", answer: "De la gasolinera de la entrada de Jaca." },
+    { question: "¿Cuánto cuesta?", answer: "Desde 120 euros por persona." },
+  ],
+};
+
+/** El cuerpo de una respuesta de OpenRouter (sin streaming) con ese texto. */
+export const completion = (content, model = "google/gemini-2.5-flash") => ({
+  id: "gen-1",
+  model,
+  choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
+  usage: { prompt_tokens: 900, completion_tokens: 400, total_tokens: 1300 },
+});

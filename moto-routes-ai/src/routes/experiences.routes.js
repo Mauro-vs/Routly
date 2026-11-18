@@ -8,12 +8,17 @@ import { slugParamSchema } from "../schemas/common.schema.js";
  * Público (sin sesión), como la tienda. Cada pieza va en su endpoint: la web las pide a la vez y,
  * si una falla, las demás se ven igual.
  */
-export function experiencesRouter({ weather, stops }) {
+export function experiencesRouter({ weather, stops, insights }) {
   const router = Router();
   // Lo que se pide al abrir un detalle: unas pocas por visita. Con la caché casi nunca llega fuera
   router.use(createLimiter({ limit: 60, windowMs: 15 * 60 * 1000 }));
 
   const bySlug = validate({ params: slugParamSchema });
+
+  // Los textos IA: resumen, para quién es, qué llevar y preguntas frecuentes
+  router.get("/:slug/insights", bySlug, async (req, res) => {
+    res.json({ data: await insights.forExperience(req.params.slug) });
+  });
 
   router.get("/:slug/weather", bySlug, async (req, res) => {
     res.json({ data: await weather.forExperience(req.params.slug) });

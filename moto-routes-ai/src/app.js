@@ -1,5 +1,6 @@
 import express from "express";
 import morgan from "morgan";
+import { createOpenRouterClient } from "./clients/openrouter.js";
 import { createOverpassClient } from "./clients/overpass.js";
 import { createRoutlyClient } from "./clients/routly.js";
 import { createWeatherClient } from "./clients/weather.js";
@@ -7,6 +8,7 @@ import { helmetMiddleware } from "./config/helmet.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { experiencesRouter } from "./routes/experiences.routes.js";
 import { createCatalogService } from "./services/catalog.service.js";
+import { createInsightsService } from "./services/insights.service.js";
 import { createPlacesService } from "./services/places.service.js";
 import { createStopsService } from "./services/stops.service.js";
 import { createWeatherService } from "./services/weather.service.js";
@@ -25,16 +27,20 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
     routly: createRoutlyClient({ baseUrl: config.routlyApiUrl, ...upstream }),
     weather: createWeatherClient(upstream),
     overpass: createOverpassClient(upstream),
+    openRouter: createOpenRouterClient({ ...config.ai, fetch: fetchImpl }),
   };
 
   // Los services, cada uno con lo que necesita (sin variables globales: cada app tiene su caché)
   const catalog = createCatalogService({ routly: clients.routly });
   const places = createPlacesService({ weather: clients.weather });
+  const weather = createWeatherService({ catalog, places, weather: clients.weather });
+  const stops = createStopsService({ catalog, places, overpass: clients.overpass });
   const services = {
     catalog,
     places,
-    weather: createWeatherService({ catalog, places, weather: clients.weather }),
-    stops: createStopsService({ catalog, places, overpass: clients.overpass }),
+    weather,
+    stops,
+    insights: createInsightsService({ catalog, weather, stops, openRouter: clients.openRouter }),
   };
 
   const app = express();

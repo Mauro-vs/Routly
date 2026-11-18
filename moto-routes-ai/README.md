@@ -30,11 +30,18 @@ Públicos y sin sesión, como la tienda. Responden `{ data }` y los errores con 
 | Método y ruta | Qué devuelve | IA |
 | --- | --- | --- |
 | `GET /health` | `{ ok, ai }`: `ai` es `false` si falta la clave de OpenRouter | No |
+| `GET /ai/experiences/:slug/insights` | Los textos IA del detalle: `summary`, `highlights`, `idealFor { level, rider, bike }`, `packing` y `faq [{ question, answer }]`, con el `model` que los ha escrito, `generatedAt` y `basedOn { weather, stops }`. Una sola llamada a la IA, que responde JSON comprobado con Zod (si no vale, se pide otra vez; a la segunda, 502). Sin clave, 503 | Sí |
 | `GET /ai/experiences/:slug/weather` | El tiempo de las próximas salidas en el punto de salida ([Open-Meteo](https://open-meteo.com)): previsión si es dentro de 16 días (`kind: "forecast"`) y, si no, lo que hizo esos días el año pasado (`kind: "reference"`). Cada día con su texto, icono y avisos (`rain`, `cold`, `heat`, `wind`, `storm`) | No |
 | `GET /ai/experiences/:slug/stops` | Dónde comer, gasolineras y miradores cerca de la salida y de la llegada ([OpenStreetMap](https://www.openstreetmap.org)), 5 de cada, con distancia y enlace al mapa. En una ruta circular, `end` es `null` | No |
 
 Las coordenadas salen del detalle de la API. Si una ubicación no las tiene, se busca la ciudad en el
 geocodificador de Open-Meteo. La previsión se guarda 1 hora, el histórico y las paradas 7 días.
+
+Los textos IA se escriben con los datos de la API, el tiempo y las paradas (si el tiempo o
+OpenStreetMap fallan, se escriben sin ellos) y se guardan 24 horas. La clave de la caché lleva un hash
+de los datos: si cambias la descripción en el panel, la siguiente visita los vuelve a escribir. Así, mil
+visitas a una ficha cuestan una sola llamada a la IA. El prompt está en `src/prompts/insights.prompt.js`:
+la IA solo redacta con los datos que se le pasan y no se inventa sitios, precios ni servicios.
 
 ## Estructura
 
@@ -45,6 +52,7 @@ src/
   config/env.js        la configuración del .env, comprobada con Zod
   clients/             los servicios de fuera, cada uno con su fetch y su tiempo máximo:
     routly.js          la API de Routly (solo /api/shop)
+    openrouter.js      OpenRouter: la IA (con los modelos de reserva de AI_MODELS)
     weather.js         Open-Meteo: previsión, histórico y geocodificador
     overpass.js        OpenStreetMap: sitios cerca de un punto
   services/
@@ -53,10 +61,13 @@ src/
     places.service.js  las coordenadas de una ubicación (o las busca)
     weather.service.js el tiempo de las salidas; weatherCodes.js traduce los códigos
     stops.service.js   las paradas de la ruta
+    facts.js           los datos que se le pasan a la IA, resumidos
+    insights.service.js los textos IA del detalle
+  prompts/             las instrucciones de la IA
   routes/              los endpoints de /ai
   schemas/             los esquemas de Zod de las peticiones
   middlewares/         errores (mismo formato que la API), validación y límites por IP
-  utils/               errores HTTP y peticiones JSON con tiempo máximo
+  utils/               errores HTTP, peticiones JSON con tiempo máximo, distancias y el JSON de la IA
   testing/             un fetch falso, la app en un puerto libre y datos de ejemplo
 ```
 
