@@ -15,7 +15,8 @@ import { LOADING, Piece } from './piece';
 const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo hará en la próxima salida?'];
 
 /**
- * El bloque "Routly IA" del detalle: lo que hay que saber de la experiencia, en cinco piezas.
+ * Lo que la IA añade al detalle, en cinco piezas con el mismo estilo que el resto de la ficha (sin
+ * tarjeta ni cartel propio: una marca pequeña en lo escrito con IA y una nota al final).
  *
  * - Resumen y para quién es, qué llevar y preguntas frecuentes: textos escritos por la IA con los
  *   datos de la experiencia (GET /ai/experiences/:slug/insights). Llevan la etiqueta de IA.
@@ -30,29 +31,22 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
   imports: [IconComponent, SkeletonComponent, AiWeatherComponent, AiStopsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="ai" aria-labelledby="ia-titulo">
-      <header class="ai-head">
-        <p class="badge"><ui-icon name="sparkle" /> Routly IA</p>
-        <h2 id="ia-titulo">Lo que tienes que saber</h2>
-        <p class="note">
-          Los textos con <ui-icon name="sparkle" class="inline-icon" /> los escribe una IA con los datos de esta experiencia.
-          El tiempo viene de Open-Meteo y las paradas, de OpenStreetMap.
-        </p>
-      </header>
-
-      <!-- 1. Resumen y para quién es -->
+    <div class="ai">
+      <!-- 1. Resumen y para quién es (IA) -->
       @switch (insights().status) {
         @case ('loading') {
-          <div class="block" aria-busy="true" aria-label="Escribiendo el resumen">
+          <section class="block" aria-labelledby="ia-resumen" aria-busy="true">
+            <h2 id="ia-resumen">En pocas palabras</h2>
             <ui-skeleton height="18px" width="90%" />
-            <ui-skeleton height="18px" width="75%" />
-            <ui-skeleton height="18px" width="60%" />
-          </div>
+            <ui-skeleton height="18px" width="70%" />
+            <p class="muted small">Preparando el resumen…</p>
+          </section>
         }
         @case ('ready') {
           @if (insights().data; as data) {
-            <div class="block">
-              <p class="summary"><ui-icon name="sparkle" class="ai-mark" /> {{ data.summary }}</p>
+            <section class="block" aria-labelledby="ia-resumen">
+              <h2 id="ia-resumen">En pocas palabras <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
+              <p class="summary">{{ data.summary }}</p>
               <ul class="highlights">
                 @for (highlight of data.highlights; track $index) {
                   <li><ui-icon name="check" /> {{ highlight }}</li>
@@ -63,15 +57,12 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
                 <div><dt>Para quién</dt><dd>{{ data.idealFor.rider }}</dd></div>
                 <div><dt>Moto y carnet</dt><dd>{{ data.idealFor.bike }}</dd></div>
               </dl>
-            </div>
+            </section>
           }
         }
-        @case ('unavailable') {
-          <p class="muted">Los textos de la IA no están disponibles ahora mismo.</p>
-        }
         @case ('error') {
-          <p class="muted" role="status">
-            No se han podido escribir los textos de la IA.
+          <p class="muted small" role="status">
+            No hemos podido preparar el resumen.
             <button type="button" class="link" (click)="loadInsights()">Reintentar</button>
           </p>
         }
@@ -84,9 +75,9 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
       <app-ai-stops [piece]="stops()" />
 
       @if (insights().data; as data) {
-        <!-- 4. Qué llevar -->
+        <!-- 4. Qué llevar (IA) -->
         <section class="block" aria-labelledby="ia-llevar">
-          <h3 id="ia-llevar"><ui-icon name="backpack" /> Qué llevar <ui-icon name="sparkle" class="ai-mark" /></h3>
+          <h2 id="ia-llevar">Qué llevar <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
           <ul class="packing">
             @for (item of data.packing; track $index) {
               <li>{{ item }}</li>
@@ -94,9 +85,9 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
           </ul>
         </section>
 
-        <!-- 5. Preguntas frecuentes -->
+        <!-- 5. Preguntas frecuentes (IA) -->
         <section class="block" aria-labelledby="ia-preguntas">
-          <h3 id="ia-preguntas"><ui-icon name="question" /> Preguntas frecuentes <ui-icon name="sparkle" class="ai-mark" /></h3>
+          <h2 id="ia-preguntas">Preguntas frecuentes <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
           <div class="faq">
             @for (item of data.faq; track $index) {
               <details>
@@ -109,67 +100,37 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
       }
 
       <footer class="ai-foot">
-        <div class="ask">
-          <button type="button" class="btn-ghost" (click)="chat.ask()"><ui-icon name="chat-circle-dots" /> Pregúntale al asistente</button>
+        <p class="ask">
+          ¿Te queda alguna duda?
+          <button type="button" class="link" (click)="chat.ask()">Pregúntale al asistente</button>
           @for (question of questions; track question) {
             <button type="button" class="chip" (click)="chat.ask(question)">{{ question }}</button>
           }
-        </div>
-        @if (insights().data; as data) {
-          <p class="muted small">Textos escritos por {{ data.model }} el {{ shortDate(data.generatedAt) }}. Pueden contener errores: los datos de la ficha mandan.</p>
-        }
+        </p>
+        <p class="muted small">
+          <ui-icon name="sparkle" class="ai-mark" /> Escrito con IA a partir de los datos de la ficha@if (insights().data; as data) { ({{ shortDate(data.generatedAt) }})}: si algo no cuadra, mandan los datos de arriba.
+          El tiempo es de Open-Meteo y las paradas, de OpenStreetMap.
+        </p>
       </footer>
-    </section>
+    </div>
   `,
   styles: `
     :host {
       display: block;
     }
 
+    /* Como el resto del detalle: secciones seguidas, sin tarjeta propia */
     .ai {
       display: grid;
       gap: var(--space-6);
-      padding: var(--space-5);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg);
-      background: var(--color-surface);
-    }
-
-    .ai-head {
-      display: grid;
-      gap: var(--space-2);
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-1);
-      justify-self: start;
-      padding: 2px var(--space-2);
-      border-radius: var(--radius-pill);
-      background: var(--color-primary-soft);
-      color: var(--color-primary);
-      font-size: var(--text-xs);
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
     }
 
     h2 {
-      font-size: 24px;
-      font-weight: 850;
-      letter-spacing: -0.02em;
-    }
-
-    h3 {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
+      letter-spacing: -0.01em;
     }
 
-    .note,
     .muted {
       color: var(--color-text-muted);
     }
@@ -178,10 +139,11 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
       font-size: var(--text-sm);
     }
 
-    .inline-icon,
+    /* La marca de "escrito con IA": pequeña y sin color, para no quitar protagonismo */
     .ai-mark {
-      vertical-align: -0.125em;
-      color: var(--color-primary);
+      font-size: 0.8em;
+      vertical-align: 0.05em;
+      color: var(--color-text-muted);
     }
 
     .block {
@@ -191,16 +153,18 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
 
     .summary {
       max-width: 65ch;
-      font-size: 17px;
       line-height: 1.6;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
     }
 
     .highlights {
       display: grid;
       gap: var(--space-2);
-      margin: 0;
-      padding: 0;
-      list-style: none;
     }
 
     .highlights li {
@@ -218,21 +182,12 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
     .ideal {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: var(--space-3);
+      gap: var(--space-3) var(--space-6);
       margin: 0;
     }
 
-    .ideal div {
-      padding: var(--space-3);
-      border-radius: var(--radius-md);
-      background: var(--color-surface-2);
-    }
-
     dt {
-      font-size: var(--text-xs);
-      font-weight: 750;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-size: var(--text-sm);
       color: var(--color-text-muted);
     }
 
@@ -288,9 +243,9 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
 
     .ai-foot {
       display: grid;
-      gap: var(--space-3);
+      gap: var(--space-2);
       padding-top: var(--space-4);
-      border-top: 1px dashed var(--color-border-strong);
+      border-top: 1px solid var(--color-border);
     }
 
     .ask {
@@ -301,11 +256,11 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
     }
 
     .chip {
-      min-height: 36px;
+      min-height: 32px;
       padding: 0 var(--space-3);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-pill);
-      background: var(--color-surface-2);
+      background: none;
       color: var(--color-text);
       font: inherit;
       font-size: var(--text-sm);
@@ -325,12 +280,6 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
       font-weight: 700;
       text-decoration: underline;
       cursor: pointer;
-    }
-
-    @media (max-width: 560px) {
-      .ai {
-        padding: var(--space-4);
-      }
     }
   `,
 })

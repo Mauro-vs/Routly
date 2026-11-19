@@ -10,10 +10,21 @@ const DAY = 24 * 60 * 60 * 1000;
 /** Las salidas que se le pasan a la IA (las más próximas). */
 const DEPARTURES_FOR_AI = 4;
 
-// Si el tiempo cambia un poco no hace falta volver a escribir los textos: solo si cambian los avisos
-// o la temperatura en saltos de 5 grados (para lo que hay que llevar)
-const weatherSignature = (weather) =>
-  weather?.map((departure) => [departure.avisos, Math.round((departure.minima ?? 0) / 5), Math.round((departure.maxima ?? 0) / 5)]);
+/**
+ * Cuánto se espera al tiempo y a las paradas antes de escribir. OpenStreetMap puede tardar 20 s o
+ * más: no se le espera. La petición sigue y se guarda en su caché, y la web los pide aparte.
+ */
+export const EXTRAS_BUDGET_MS = 3000;
+
+// Lo que llegue antes del tiempo dado; si no, null (sin cortar la petición, que sigue y se cachea)
+function within(promise, ms) {
+  let timer;
+  const late = new Promise((resolve) => {
+    timer = setTimeout(resolve, ms, null);
+    timer.unref?.();
+  });
+  return Promise.race([promise.catch(() => null), late]).finally(() => clearTimeout(timer));
+}
 
 /**
  * Los textos IA del detalle: resumen, puntos fuertes, para quién es, qué llevar y preguntas
@@ -33,12 +44,15 @@ export function createInsightsService({ catalog, weather, stops, openRouter, now
       { role: "system", content: INSIGHTS_SYSTEM },
       { role: "user", content: insightsUserMessage(facts) },
     ];
-    // Dos intentos: a veces un modelo se deja una clave o se pasa de largo
+    // Dos intentos: a veces un modelo se deja una clave. Sin response_format: muchos modelos
+    // gratuitos no lo admiten y OpenRouter respondería 404; el prompt ya pide solo JSON
     for (let attempt = 1; attempt <= 2; attempt++) {
-      const answer = await openRouter.complete({ messages, responseFormat: { type: "json_object" }, temperature: 0.5 });
+      const answer = await openRouter.complete({ messages, temperature: 0.5 });
       const parsed = insightsSchema.safeParse(extractJson(answer.content));
       if (parsed.success) return { ...parsed.data, model: answer.model };
-      console.warn(`[insights] ${answer.model} answered invalid JSON (attempt ${attempt})`);
+      // Un trozo de lo que ha contestado, para ver qué ha fallado (nunca llega al cliente)
+      const preview = String(answer.content ?? "").replace(/\s+/g, " ").slice(0, 160);
+      console.warn(`[insights] ${answer.model} answered invalid JSON (attempt ${attempt}): ${preview || "(empty)"}`);
     }
     throw createError("The AI returned an invalid answer, please try again later", 502);
   }
@@ -48,26 +62,29 @@ export function createInsightsService({ catalog, weather, stops, openRouter, now
       if (!openRouter.enabled) throw aiUnavailable();
 
       const [experience, departures] = await Promise.all([catalog.experience(slug), catalog.departures(slug)]);
-      // El tiempo y las paradas son un extra: si fallan, se escribe sin ellos
-      const [weatherData, stopsData] = await Promise.all([
-        weather.forExperience(slug).catch(() => null),
-        stops.forExperience(slug).catch(() => null),
-      ]);
-
-      const facts = {
+      const base = {
         experiencia: experienceFacts(experience),
         salidas: departureFacts(departures.slice(0, DEPARTURES_FOR_AI)),
-        tiempo: weatherFacts(weatherData),
-        paradas: stopsFacts(stopsData),
       };
-      const { tiempo, ...stable } = facts;
-      const key = `${slug}:${shortHash({ ...stable, tiempo: weatherSignature(tiempo) })}`;
+      // La clave solo depende de la experiencia y sus salidas: que el tiempo o las paradas lleguen o no
+      // a tiempo no obliga a volver a escribir. Si ya está escrito, ni se les espera
+      const key = `${slug}:${shortHash(base)}`;
+      const cached = cache.get(key);
+      if (cached) return cached;
 
-      return cache.wrap(key, async () => ({
-        ...(await generate(facts)),
-        generatedAt: new Date(now()).toISOString(),
-        basedOn: { weather: Boolean(weatherData), stops: Boolean(stopsData) },
-      }));
+      return cache.wrap(key, async () => {
+        // El tiempo y las paradas son un extra: si fallan o tardan, se escribe sin ellos
+        const [weatherData, stopsData] = await Promise.all([
+          within(weather.forExperience(slug), EXTRAS_BUDGET_MS),
+          within(stops.forExperience(slug), EXTRAS_BUDGET_MS),
+        ]);
+        const facts = { ...base, tiempo: weatherFacts(weatherData), paradas: stopsFacts(stopsData) };
+        return {
+          ...(await generate(facts)),
+          generatedAt: new Date(now()).toISOString(),
+          basedOn: { weather: Boolean(weatherData), stops: Boolean(stopsData) },
+        };
+      });
     },
   };
 }

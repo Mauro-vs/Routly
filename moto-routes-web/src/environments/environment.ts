@@ -9,5 +9,5 @@ export const environment = {
   /** URL base del servidor de IA (moto-routes-ai), sin barra final. Va por el mismo origen, como /api. */
   aiUrl: '/ai',
   /** Lo que se espera a los textos IA: escribirlos lleva más que una consulta normal. */
-  aiTimeout: 45_000,
+  aiTimeout: 75_000,
 };

@@ -6,12 +6,10 @@ pública de la API (`/api/shop`), como cualquier visitante.
 
 - Puerto **3001**. Todo cuelga de `/ai` (la API, de `/api`): el proxy de la web, y el futuro API
   gateway, solo tienen que mandar cada prefijo a su servidor.
-- IA con [OpenRouter](https://openrouter.ai): una sola clave para Gemini, Grok, Claude, GPT...
-  El modelo se cambia en `AI_MODELS`, sin tocar código. Por defecto, modelos gratuitos (`:free`):
-  la clave es gratis y no hace falta crédito, pero hay que activarlos una vez en
-  [openrouter.ai/settings/privacy](https://openrouter.ai/settings/privacy) y tienen un límite de
-  peticiones al día. Como los gratuitos se retiran a menudo, el servidor mira el catálogo de
-  OpenRouter y cambia los que ya no existen por otros gratuitos con herramientas.
+- IA gratuita con [Groq](https://console.groq.com) (GPT-OSS 120B, y Qwen de reserva):
+  sin tarjeta y muy rápida. Cualquier API compatible con la de OpenAI vale igual: con
+  `AI_PROVIDER` se cambia a Gemini (Google AI Studio) u OpenRouter, y con `AI_MODELS`, los
+  modelos, sin tocar código. Si un modelo está saturado (429) o falla, se prueba el siguiente.
 - Mismo stack que la API: Node 20.19+, Express 5, Zod, helmet y express-rate-limit, en JS ESM.
 
 ## Arrancar
@@ -23,7 +21,7 @@ copy .env.example .env      # en Linux o macOS: cp .env.example .env
 npm run dev
 ```
 
-Sin `OPENROUTER_API_KEY` arranca igual: `GET /health` responde `{ "ok": true, "ai": false }` y lo
+Sin `AI_API_KEY` arranca igual: `GET /health` responde `{ "ok": true, "ai": false }` y lo
 que usa IA responde 503. La API de Routly tiene que estar en marcha (`ROUTLY_API_URL`).
 
 ## Endpoints
@@ -33,7 +31,7 @@ Públicos y sin sesión, como la tienda. Responden `{ data }` y los errores con 
 
 | Método y ruta | Qué devuelve | IA |
 | --- | --- | --- |
-| `GET /health` | `{ ok, ai }`: `ai` es `false` si falta la clave de OpenRouter | No |
+| `GET /health` | `{ ok, ai }`: `ai` es `false` si falta la clave de la IA | No |
 | `GET /ai/experiences/:slug/insights` | Los textos IA del detalle: `summary`, `highlights`, `idealFor { level, rider, bike }`, `packing` y `faq [{ question, answer }]`, con el `model` que los ha escrito, `generatedAt` y `basedOn { weather, stops }`. Una sola llamada a la IA, que responde JSON comprobado con Zod (si no vale, se pide otra vez; a la segunda, 502). Sin clave, 503 | Sí |
 | `GET /ai/experiences/:slug/weather` | El tiempo de las próximas salidas en el punto de salida ([Open-Meteo](https://open-meteo.com)): previsión si es dentro de 16 días (`kind: "forecast"`) y, si no, lo que hizo esos días el año pasado (`kind: "reference"`). Cada día con su texto, icono y avisos (`rain`, `cold`, `heat`, `wind`, `storm`) | No |
 | `GET /ai/experiences/:slug/stops` | Dónde comer, gasolineras y miradores cerca de la salida y de la llegada ([OpenStreetMap](https://www.openstreetmap.org)), 5 de cada, con distancia y enlace al mapa. En una ruta circular, `end` es `null` | No |
@@ -82,7 +80,7 @@ src/
   config/env.js        la configuración del .env, comprobada con Zod
   clients/             los servicios de fuera, cada uno con su fetch y su tiempo máximo:
     routly.js          la API de Routly (solo /api/shop)
-    openrouter.js      OpenRouter: la IA (con los modelos de reserva de AI_MODELS)
+    openrouter.js      La IA: Groq, Gemini u OpenRouter (con los modelos de reserva de AI_MODELS)
     weather.js         Open-Meteo: previsión, histórico y geocodificador
     overpass.js        OpenStreetMap: sitios cerca de un punto
   services/

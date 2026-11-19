@@ -16,6 +16,6 @@ const app = createApp({ config });
 app.listen(config.port, () => {
   console.log(`AI server running on http://localhost:${config.port}`);
   console.log(`  Routly API: ${config.routlyApiUrl}`);
-  if (config.ai.apiKey) console.log(`  AI models: ${config.ai.models.join(", ")}`);
-  else console.warn("  OPENROUTER_API_KEY is empty: the AI texts and the chat will answer 503 (weather and stops still work)");
+  if (config.ai.apiKey) console.log(`  AI: ${config.ai.label} (${config.ai.models.join(", ")})`);
+  else console.warn(`  No API key for ${config.ai.label} (AI_API_KEY): the AI texts and the chat will answer 503 (weather and stops still work)`);
 });

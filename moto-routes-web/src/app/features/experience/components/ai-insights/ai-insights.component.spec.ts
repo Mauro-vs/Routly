@@ -78,7 +78,7 @@ describe('AiInsightsComponent', () => {
     expect(text(element)).toContain('Can Joan');
     expect(text(element)).toContain('Bañador');
     expect(text(element)).toContain('¿Hay que llevar moto?');
-    expect(text(element)).toContain('google/gemini-2.5-flash');
+    expect(text(element)).toContain('Escrito con IA a partir de los datos de la ficha');
   });
 
   it('sin IA configurada (503) no salen los textos, pero sí el tiempo y las paradas', async () => {
@@ -87,7 +87,8 @@ describe('AiInsightsComponent', () => {
     api.stops.and.resolveTo(STOPS);
     const { element } = await render();
 
-    expect(text(element)).toContain('no están disponibles');
+    // Sin aviso: la ficha sigue como si no hubiera IA
+    expect(element.querySelector('#ia-resumen')).toBeNull();
     expect(element.querySelector('#ia-llevar')).toBeNull();
     expect(element.querySelector('#ia-preguntas')).toBeNull();
     expect(text(element)).toContain('Lluvia débil');

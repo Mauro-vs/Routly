@@ -161,7 +161,7 @@ flowchart LR
     W["Web pública<br/>Angular 20"] -- "/api/shop" --> B["API REST<br/>Express 5"]
     W -- "/ai" --> I["Servidor de IA<br/>Express 5"]
     I -- "/api/shop" --> B
-    I -. "tiempo, paradas y textos" .-> E["Open-Meteo, OpenStreetMap<br/>y OpenRouter"]
+    I -. "tiempo, paradas y textos" .-> E["Open-Meteo, OpenStreetMap<br/>y Groq"]
     A["Panel de administración<br/>Angular 20"] -- "HTTP / JSON" --> B
     B -- "Mongoose" --> C[("MongoDB")]
     B -. "/api/docs" .-> D["Swagger UI"]
@@ -194,7 +194,7 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="moto-routes-ai/README.md"><b>Servidor de IA</b></a></td>
-    <td>Express 5, Zod 4, OpenRouter con modelos gratuitos (Llama 3.3 70B y Mistral Small de reserva, cambiados solos si OpenRouter los retira)</td>
+    <td>Express 5, Zod 4, IA gratuita con Groq (GPT-OSS 120B), cambiable a Gemini u OpenRouter desde el <code>.env</code></td>
     <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
   </tr>
 </table>
@@ -236,7 +236,7 @@ cp moto-routes-api/.env.example moto-routes-api/.env
 cp moto-routes-ai/.env.example moto-routes-ai/.env
 ```
 
-En `moto-routes-ai/.env` va la clave de OpenRouter (`OPENROUTER_API_KEY`), que es gratis: se crea en [openrouter.ai/keys](https://openrouter.ai/keys) y los modelos que usa Routly son los gratuitos, sin meter crédito. Hay que activarlos una vez en [openrouter.ai/settings/privacy](https://openrouter.ai/settings/privacy). Sin clave todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
+En `moto-routes-ai/.env` va la clave de la IA (`AI_API_KEY`), que es gratis y sin tarjeta: se crea en [console.groq.com/keys](https://console.groq.com/keys). Sin clave todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
 
 ```bash
 npm run seed

@@ -156,12 +156,22 @@ describe("GET /ai/experiences/:slug/stops", () => {
     console.warn = () => {};
     try {
       const busy = () => ({ status: 429, body: {} });
-      server = await startApp({
-        fetch: fakeFetch(handlers({ "POST overpass-api.de/api/interpreter": busy, "POST overpass.private.coffee/api/interpreter": busy })),
-      });
+      const fetch = fakeFetch(
+        handlers({
+          "POST overpass-api.de/api/interpreter": busy,
+          "POST overpass.private.coffee/api/interpreter": busy,
+          "POST overpass.kumi.systems/api/interpreter": busy,
+        }),
+      );
+      server = await startApp({ fetch });
       const { status, body } = await server.request("/ai/experiences/pirineo-en-moto/stops");
       assert.equal(status, 502);
       assert.equal(body.message, "OpenStreetMap is not available right now");
+
+      // Durante un rato se da por caído: la siguiente falla enseguida, sin volver a preguntar
+      const calls = fetch.calls.length;
+      assert.equal((await server.request("/ai/experiences/pirineo-en-moto/stops")).status, 502);
+      assert.equal(fetch.calls.filter((call) => call.key.includes("overpass")).length, fetch.calls.slice(0, calls).filter((call) => call.key.includes("overpass")).length);
     } finally {
       console.warn = original;
     }

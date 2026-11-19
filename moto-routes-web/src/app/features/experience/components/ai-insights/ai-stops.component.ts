@@ -25,7 +25,7 @@ const FOOD_KINDS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="block" aria-labelledby="ia-paradas">
-      <h3 id="ia-paradas"><ui-icon name="map-pin" /> Paradas en la ruta</h3>
+      <h2 id="ia-paradas">Paradas en la ruta</h2>
       @switch (piece().status) {
         @case ('loading') {
           <ui-skeleton height="120px" aria-hidden="true" />
@@ -75,12 +75,10 @@ const FOOD_KINDS: Record<string, string> = {
       gap: var(--space-3);
     }
 
-    h3 {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: 18px;
+    h2 {
+      font-size: 20px;
       font-weight: 800;
+      letter-spacing: -0.01em;
     }
 
     ul {

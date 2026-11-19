@@ -3,15 +3,42 @@ import { z } from "zod";
 /*
  * La configuración del servidor de IA, leída del entorno (.env) y comprobada con Zod al arrancar:
  * mejor fallar aquí que en la primera petición. Todo tiene un valor por defecto que vale en
- * desarrollo salvo OPENROUTER_API_KEY: sin ella el servidor arranca igual, y lo que no usa IA (el
- * tiempo y las paradas) sigue funcionando.
+ * desarrollo salvo la clave de la IA (AI_API_KEY): sin ella el servidor arranca igual, y lo que no
+ * usa IA (el tiempo y las paradas) sigue funcionando.
  */
 
-// Gratuitos (los ":free" de OpenRouter) y con herramientas, que el chat las necesita. Tienen
-// límite de peticiones al día: la caché de 24 h de los textos ayuda a no llegar. Los gratuitos
-// cambian a menudo: al arrancar se comprueban en el catálogo y los retirados se cambian por otros
-// gratuitos con herramientas (clients/openrouter.js)
-const DEFAULT_MODELS = "meta-llama/llama-3.3-70b-instruct:free,mistralai/mistral-small-3.2-24b-instruct:free";
+/*
+ * Los proveedores de IA que se pueden usar: todos hablan la API de OpenAI (/chat/completions), así
+ * que solo cambian la URL y los nombres de los modelos. Los modelos por defecto son gratuitos y
+ * admiten herramientas (el chat las necesita); el primero es el principal y el resto, de reserva.
+ * - groq: gratis con límites por minuto y por día, y muy rápido. https://console.groq.com/keys
+ * - gemini: Google AI Studio, gratis con límites. https://aistudio.google.com/apikey
+ * - openrouter: los ":free", que cambian a menudo (se comprueban en su catálogo al arrancar).
+ */
+export const AI_PROVIDERS = Object.freeze({
+  groq: { label: "Groq", baseUrl: "https://api.groq.com/openai/v1", models: "openai/gpt-oss-120b,qwen/qwen3.8-27b" },
+  gemini: {
+    label: "Gemini",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    models: "gemini-2.5-flash,gemini-2.5-flash-lite",
+  },
+  openrouter: {
+    label: "OpenRouter",
+    baseUrl: "https://openrouter.ai/api/v1",
+    models: "meta-llama/llama-3.3-70b-instruct:free,mistralai/mistral-small-3.2-24b-instruct:free",
+  },
+});
+
+const optionalText = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => value || null);
+const modelList = (value) =>
+  value
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
 
 const milliseconds = (fallback) => z.coerce.number().int().min(100).max(120_000).default(fallback);
 const url = (fallback) =>
@@ -32,24 +59,20 @@ const envSchema = z.object({
   // Lo que se espera a la API, a Open-Meteo y a OpenStreetMap
   UPSTREAM_TIMEOUT_MS: milliseconds(10_000),
 
-  // OpenRouter: https://openrouter.ai/keys. Vacía = sin IA (503 en lo que la necesita)
-  OPENROUTER_API_KEY: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || null),
-  OPENROUTER_URL: url("https://openrouter.ai/api/v1"),
-  // Modelos separados por comas: el primero es el principal y el resto, los de reserva
+  // El proveedor de IA (arriba) y su clave. Sin clave = sin IA (503 en lo que la necesita)
+  AI_PROVIDER: z.enum(Object.keys(AI_PROVIDERS)).default("groq"),
+  AI_API_KEY: optionalText,
+  // La clave de antes, para OpenRouter: sigue valiendo si no hay AI_API_KEY
+  OPENROUTER_API_KEY: optionalText,
+  // Otra URL compatible con OpenAI, si hace falta (por defecto, la del proveedor)
+  AI_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
+  // Modelos separados por comas: el primero es el principal y el resto, los de reserva. Vacío = los
+  // del proveedor
   AI_MODELS: z
     .string()
-    .default(DEFAULT_MODELS)
-    .transform((value) =>
-      value
-        .split(",")
-        .map((model) => model.trim())
-        .filter(Boolean),
-    )
-    .pipe(z.array(z.string().regex(/^[\w.-]+\/[\w.:-]+$/, "must look like vendor/model")).min(1)),
+    .optional()
+    .transform((value) => (value ? modelList(value) : null))
+    .pipe(z.array(z.string().regex(/^[\w.:/-]+$/, "must be model names separated by commas")).min(1).nullable()),
   AI_TIMEOUT_MS: milliseconds(30_000),
   AI_MAX_TOKENS: z.coerce.number().int().min(100).max(8000).default(1200),
   // Cabeceras de atribución de OpenRouter (salen en sus estadísticas)
@@ -64,6 +87,7 @@ export function loadConfig(env = process.env) {
     throw new Error(`Invalid configuration in .env:\n  ${problems.join("\n  ")}`);
   }
   const config = result.data;
+  const provider = AI_PROVIDERS[config.AI_PROVIDER];
   return Object.freeze({
     env: config.NODE_ENV,
     port: config.PORT,
@@ -71,14 +95,16 @@ export function loadConfig(env = process.env) {
     routlyApiUrl: config.ROUTLY_API_URL,
     upstreamTimeoutMs: config.UPSTREAM_TIMEOUT_MS,
     ai: Object.freeze({
-      apiKey: config.OPENROUTER_API_KEY,
-      baseUrl: config.OPENROUTER_URL,
-      models: Object.freeze(config.AI_MODELS),
+      provider: config.AI_PROVIDER,
+      label: provider.label,
+      apiKey: config.AI_API_KEY ?? (config.AI_PROVIDER === "openrouter" ? config.OPENROUTER_API_KEY : null),
+      baseUrl: (config.AI_BASE_URL ?? provider.baseUrl).replace(/\/+$/, ""),
+      models: Object.freeze(config.AI_MODELS ?? modelList(provider.models)),
       timeoutMs: config.AI_TIMEOUT_MS,
       maxTokens: config.AI_MAX_TOKENS,
       siteUrl: config.SITE_URL,
       // Comprobar los modelos en el catálogo de OpenRouter (en los tests no: no hay red)
-      checkModels: config.NODE_ENV !== "test",
+      checkModels: config.AI_PROVIDER === "openrouter" && config.NODE_ENV !== "test",
     }),
   });
 }

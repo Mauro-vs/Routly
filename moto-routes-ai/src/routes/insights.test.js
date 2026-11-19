@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it, mock } from "node:test";
 import { OPEN_METEO } from "../clients/weather.js";
+import { EXTRAS_BUDGET_MS } from "../services/insights.service.js";
 import { API, fakeFetch, startApp, testConfig } from "../testing/helpers.js";
 import {
   NOW,
@@ -72,6 +73,20 @@ describe("GET /ai/experiences/:slug/insights", () => {
     assert.equal(aiCalls(fetch).length, 1);
   });
 
+  it("ya escritos, salen de la caché sin esperar al tiempo ni a OpenStreetMap", async () => {
+    let slow = false;
+    const fetch = await start({ "POST overpass-api.de/api/interpreter": () => (slow ? new Promise(() => {}) : { body: overpassBody }) });
+    await insights();
+    slow = true;
+    const before = fetch.calls.length;
+    const started = performance.now();
+    const { status } = await insights();
+    assert.equal(status, 200);
+    assert.ok(performance.now() - started < 500);
+    // Solo la experiencia y sus salidas (en su caché de un minuto): nada fuera
+    assert.equal(fetch.calls.length, before);
+  });
+
   it("si la experiencia cambia, se vuelven a escribir", async () => {
     let description = "Primera versión";
     const fetch = await start({
@@ -90,6 +105,38 @@ describe("GET /ai/experiences/:slug/insights", () => {
     const { status, body } = await insights();
     assert.equal(status, 200);
     assert.deepEqual(body.data.basedOn, { weather: false, stops: true });
+  });
+
+  it("no espera a OpenStreetMap si tarda: escribe sin las paradas", async () => {
+    // Overpass no contesta nunca: los textos salen igual, a los pocos segundos
+    await start({ "POST overpass-api.de/api/interpreter": () => new Promise(() => {}) });
+    const started = performance.now();
+    const { status, body } = await insights();
+
+    assert.equal(status, 200);
+    assert.equal(body.data.basedOn.stops, false);
+    assert.ok(performance.now() - started < EXTRAS_BUDGET_MS + 1500);
+  });
+
+  it("si la IA se pasa de largo, se recorta en vez de pedirlo otra vez", async () => {
+    const long = {
+      ...insightsAnswer,
+      highlights: Array.from({ length: 9 }, (_, index) => `Punto ${index + 1}`),
+      packing: [...insightsAnswer.packing, "x".repeat(300)],
+    };
+    const fetch = await start({ [OPENROUTER]: () => ({ body: completion(JSON.stringify(long)) }) });
+    const { status, body } = await insights();
+
+    assert.equal(status, 200);
+    assert.equal(aiCalls(fetch).length, 1);
+    assert.equal(body.data.highlights.length, 6);
+    assert.ok(body.data.packing.every((item) => item.length <= 120));
+  });
+
+  it("no pide response_format (muchos modelos gratuitos no lo admiten)", async () => {
+    const fetch = await start();
+    await insights();
+    assert.equal(JSON.parse(aiCalls(fetch)[0].init.body).response_format, undefined);
   });
 
   it("si la IA responde algo que no vale, lo pide otra vez", async () => {

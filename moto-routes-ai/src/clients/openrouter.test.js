@@ -145,3 +145,63 @@ describe("createOpenRouterClient con checkModels", () => {
     }
   });
 });
+
+describe("createOpenRouterClient con otro proveedor (Groq, Gemini)", () => {
+  const GROQ = "POST api.groq.com/openai/v1/chat/completions";
+  const groq = (handler) => {
+    const fetch = fakeFetch({ [GROQ]: handler });
+    const ai = createOpenRouterClient({
+      provider: "groq",
+      label: "Groq",
+      apiKey: "gsk_test",
+      baseUrl: "https://api.groq.com/openai/v1",
+      models: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+      timeoutMs: 1000,
+      maxTokens: 500,
+      siteUrl: "http://localhost:4300",
+      fetch,
+    });
+    return { fetch, ai };
+  };
+
+  it("manda un solo modelo, sin la lista de OpenRouter ni sus cabeceras", async () => {
+    const { fetch, ai } = groq(() => ({ body: completion("Hola", "llama-3.3-70b-versatile") }));
+    const answer = await ai.complete({ messages: [{ role: "user", content: "Hola" }] });
+
+    assert.equal(answer.content, "Hola");
+    const sent = JSON.parse(fetch.calls[0].init.body);
+    assert.equal(sent.model, "llama-3.3-70b-versatile");
+    assert.equal(sent.models, undefined);
+    assert.equal(fetch.calls[0].init.headers["x-title"], undefined);
+  });
+
+  it("si el principal está saturado (429), prueba con el de reserva", async () => {
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      const { fetch, ai } = groq((_url, init) =>
+        JSON.parse(init.body).model === "llama-3.3-70b-versatile"
+          ? { status: 429, body: { error: { message: "Rate limit reached" } } }
+          : { body: completion("Hola", "llama-3.1-8b-instant") },
+      );
+      const answer = await ai.complete({ messages: [{ role: "user", content: "Hola" }] });
+
+      assert.equal(answer.model, "llama-3.1-8b-instant");
+      assert.equal(fetch.calls.length, 2);
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  it("con la clave mal no prueba otro modelo: 502", async () => {
+    const error = console.error;
+    console.error = () => {};
+    try {
+      const { fetch, ai } = groq(() => ({ status: 401, body: { error: { message: "Invalid API Key" } } }));
+      await assert.rejects(ai.complete({ messages: [] }), { status: 502, message: "Groq is not available right now" });
+      assert.equal(fetch.calls.length, 1);
+    } finally {
+      console.error = error;
+    }
+  });
+});

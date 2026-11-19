@@ -8,10 +8,11 @@ import { requestJson } from "../utils/http.js";
  */
 const SERVICE = "OpenStreetMap";
 export const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
-// Otro servidor de Overpass con los mismos datos, por si el principal va saturado
-export const OVERPASS_MIRROR = "https://overpass.private.coffee/api/interpreter";
-// Overpass tarda: la consulta tiene 25 s de margen ([timeout:25]), más que el resto de servicios
-const MIN_TIMEOUT_MS = 25_000;
+// Otros servidores de Overpass con los mismos datos, por si el principal va saturado
+export const OVERPASS_MIRRORS = ["https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+// Overpass tarda más que el resto de servicios; si un servidor no responde en este tiempo, se pasa
+// al siguiente (sano responde en 1-5 s)
+const MIN_TIMEOUT_MS = 15_000;
 const USER_AGENT = "Routly/1.0 (proyecto educativo de 2º DAW; moto-routes-ai)";
 
 /** Cuánto alrededor del punto se busca cada cosa, en metros. */
@@ -20,7 +21,7 @@ export const STOP_RADIUS = Object.freeze({ food: 3000, fuel: 8000, viewpoint: 15
 // Una sola consulta por punto: comida con nombre, gasolineras y miradores
 function query({ latitude, longitude }) {
   const around = (meters) => `(around:${meters},${latitude},${longitude})`;
-  return `[out:json][timeout:25];
+  return `[out:json][timeout:15];
 (
   nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub)$"]["name"]${around(STOP_RADIUS.food)};
   nwr["amenity"="fuel"]${around(STOP_RADIUS.fuel)};
@@ -29,8 +30,13 @@ function query({ latitude, longitude }) {
 out center tags 300;`;
 }
 
-export function createOverpassClient({ fetch: fetchImpl, timeoutMs, urls = [OVERPASS_URL, OVERPASS_MIRROR] }) {
+/** Si fallan todos los servidores, cuánto tiempo se da por caído sin volver a preguntar. */
+export const DOWN_FOR_MS = 2 * 60 * 1000;
+
+export function createOverpassClient({ fetch: fetchImpl, timeoutMs, urls = [OVERPASS_URL, ...OVERPASS_MIRRORS], now = Date.now }) {
   const wait = Math.max(timeoutMs, MIN_TIMEOUT_MS);
+  // Con todos los servidores caídos, cada petición tardaría medio minuto en fallar: un rato sin preguntar
+  let downUntil = 0;
 
   async function ask(url, point) {
     const { status, body } = await requestJson(fetchImpl, url, {
@@ -48,6 +54,7 @@ export function createOverpassClient({ fetch: fetchImpl, timeoutMs, urls = [OVER
   return {
     /** Los elementos de OpenStreetMap cerca del punto: { type, id, lat, lon, tags }. */
     async around(point) {
+      if (now() < downUntil) throw upstreamError(SERVICE, { status: 503 });
       let body;
       for (const [index, url] of urls.entries()) {
         try {
@@ -55,7 +62,10 @@ export function createOverpassClient({ fetch: fetchImpl, timeoutMs, urls = [OVER
           break;
         } catch (error) {
           // Saturado o sin respuesta: se prueba el siguiente servidor; si era el último, el error
-          if (index === urls.length - 1) throw error;
+          if (index === urls.length - 1) {
+            downUntil = now() + DOWN_FOR_MS;
+            throw error;
+          }
           console.warn(`[OpenStreetMap] ${new URL(url).host} failed (${error.message}), trying ${new URL(urls[index + 1]).host}`);
         }
       }

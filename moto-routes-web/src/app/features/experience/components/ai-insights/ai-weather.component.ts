@@ -38,7 +38,7 @@ const WARNINGS: Record<WeatherWarning, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="block" aria-labelledby="ia-tiempo">
-      <h3 id="ia-tiempo"><ui-icon name="cloud-sun" /> El tiempo en tus fechas</h3>
+      <h2 id="ia-tiempo">El tiempo en tus fechas</h2>
       @switch (piece().status) {
         @case ('loading') {
           <ui-skeleton height="96px" aria-hidden="true" />
@@ -105,12 +105,10 @@ const WARNINGS: Record<WeatherWarning, string> = {
       gap: var(--space-3);
     }
 
-    h3 {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: 18px;
+    h2 {
+      font-size: 20px;
       font-weight: 800;
+      letter-spacing: -0.01em;
     }
 
     ul {

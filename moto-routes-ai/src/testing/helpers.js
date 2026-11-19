@@ -3,9 +3,12 @@ import { loadConfig } from "../config/env.js";
 
 process.env.NODE_ENV ??= "test";
 
-/** La configuración de los tests: la de por defecto, con clave de OpenRouter salvo que se diga. */
+/**
+ * La configuración de los tests: la de por defecto con OpenRouter y una clave, salvo que se diga
+ * (los fetch falsos responden en openrouter.ai; el cliente es el mismo para los demás proveedores).
+ */
 export function testConfig(overrides = {}) {
-  return loadConfig({ NODE_ENV: "test", OPENROUTER_API_KEY: "sk-or-test", ...overrides });
+  return loadConfig({ NODE_ENV: "test", AI_PROVIDER: "openrouter", OPENROUTER_API_KEY: "sk-or-test", ...overrides });
 }
 
 /**
