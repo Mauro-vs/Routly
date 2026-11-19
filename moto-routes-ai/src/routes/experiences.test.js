@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it, mock } from "node:test";
 import { OPEN_METEO } from "../clients/weather.js";
 import { API, fakeFetch, startApp } from "../testing/helpers.js";
-import { NOW, archiveBody, departures, experience, forecastBody, geocodingBody, overpassBody } from "../testing/fixtures.js";
+import { NOW, archiveBody, departures, experience, forecastBody, geocodingBody, overpassBody, photonBody } from "../testing/fixtures.js";
 
 const host = (url) => new URL(url).host + new URL(url).pathname;
+const PHOTON = "GET photon.komoot.io/reverse";
+// Photon caído: las paradas salen de Overpass
+const photonDown = { [PHOTON]: () => ({ status: 503, body: {} }) };
 
 function handlers(overrides = {}) {
   return {
@@ -15,6 +18,7 @@ function handlers(overrides = {}) {
     [`GET ${host(OPEN_METEO.forecast)}`]: () => ({ body: forecastBody() }),
     [`GET ${host(OPEN_METEO.archive)}`]: (url) => ({ body: archiveBody(url) }),
     [`GET ${host(OPEN_METEO.geocoding)}`]: () => ({ body: geocodingBody }),
+    [PHOTON]: (url) => ({ body: photonBody(url) }),
     "POST overpass-api.de/api/interpreter": () => ({ body: overpassBody }),
     ...overrides,
   };
@@ -95,9 +99,33 @@ describe("GET /ai/experiences/:slug/stops", () => {
   let server;
   afterEach(() => server?.close());
 
-  it("comida, gasolineras y miradores cerca de la salida y de la llegada", async () => {
+  it("comida, gasolineras y miradores cerca de la salida y de la llegada, de Photon", async () => {
     const fetch = fakeFetch(handlers());
     server = await startApp({ fetch });
+    const { status, body } = await server.request("/ai/experiences/pirineo-en-moto/stops");
+
+    assert.equal(status, 200);
+    const { start } = body.data;
+    // Con nombre primero; el bar también cuenta como sitio de comer
+    assert.deepEqual(start.food.map((stop) => stop.name), ["Casa Fau", "Bar Lo Fogaril", "Café Pirineo", null]);
+    assert.deepEqual(start.fuel.map((stop) => stop.name), ["Repsol"]);
+    assert.deepEqual(start.viewpoints.map((stop) => stop.name), ["Mirador de la Peña Oroel"]);
+
+    // Una consulta por tipo y punto (salida y llegada), cada una con sus etiquetas y su radio
+    const photon = fetch.calls.filter((call) => call.key === PHOTON);
+    assert.equal(photon.length, 6);
+    const fuel = photon.find((call) => call.url.searchParams.get("osm_tag") === "amenity:fuel");
+    assert.equal(fuel.url.searchParams.get("radius"), "8");
+    assert.match(fuel.init.headers["user-agent"], /Routly/);
+    assert.equal(fetch.calls.filter((call) => call.key.startsWith("POST overpass")).length, 0);
+  });
+
+  it("si Photon falla, de Overpass: comida, gasolineras y miradores", async (t) => {
+    const original = console.warn;
+    console.warn = () => {};
+    const fetch = fakeFetch(handlers(photonDown));
+    server = await startApp({ fetch });
+    t.after(() => (console.warn = original));
     const { status, body } = await server.request("/ai/experiences/pirineo-en-moto/stops");
 
     assert.equal(status, 200);
@@ -138,6 +166,7 @@ describe("GET /ai/experiences/:slug/stops", () => {
       server = await startApp({
         fetch: fakeFetch(
           handlers({
+            ...photonDown,
             "POST overpass-api.de/api/interpreter": () => ({ status: 429, body: {} }),
             "POST overpass.private.coffee/api/interpreter": () => ({ body: overpassBody }),
           }),
@@ -151,13 +180,14 @@ describe("GET /ai/experiences/:slug/stops", () => {
     }
   });
 
-  it("si los dos servidores de OpenStreetMap fallan, 502", async () => {
+  it("si Photon y los servidores de Overpass fallan, 502", async () => {
     const original = console.warn;
     console.warn = () => {};
     try {
       const busy = () => ({ status: 429, body: {} });
       const fetch = fakeFetch(
         handlers({
+          ...photonDown,
           "POST overpass-api.de/api/interpreter": busy,
           "POST overpass.private.coffee/api/interpreter": busy,
           "POST overpass.kumi.systems/api/interpreter": busy,

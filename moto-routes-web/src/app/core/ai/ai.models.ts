@@ -80,6 +80,46 @@ export interface AiStops {
   source: { name: string; url: string; attribution: string };
 }
 
+export type AiPlaceKind = 'food' | 'viewpoint' | 'fuel';
+
+/** Un sitio a lo largo del recorrido: dónde comer, un mirador o una gasolinera */
+export interface AiRoutePlace {
+  kind: AiPlaceKind;
+  /** Puede faltar en un mirador o una gasolinera */
+  name: string | null;
+  /** restaurant o cafe (solo los de comer) */
+  category: string | null;
+  cuisine: string[];
+  openingHours: string | null;
+  website: string | null;
+  latitude: number;
+  longitude: number;
+  /** Lo lejos que queda del recorrido, en línea recta */
+  distanceKm: number;
+  /** Por dónde del recorrido cae: 0 es la salida y 1, la llegada */
+  position: number;
+  url: string;
+}
+
+export interface AiRouteMap {
+  start: AiPlace;
+  /** null si la ruta es circular */
+  end: AiPlace | null;
+  waypoints: { name: string | null; latitude: number; longitude: number }[];
+  /** El recorrido, en [lat, lon]. null: ruta circular sin puntos de paso (solo la salida) */
+  line: [number, number][] | null;
+  /** false: OSRM no ha respondido y la línea une los puntos en recto */
+  routed: boolean;
+  distanceKm: number | null;
+  durationH: number | null;
+  /** null mientras se buscan (loading) o si no se han podido buscar (unavailable) */
+  places: AiRoutePlace[] | null;
+  placesStatus: 'ok' | 'loading' | 'unavailable';
+  /** A cuántos km del recorrido se busca cada tipo */
+  placesRadiusKm: Record<AiPlaceKind, number>;
+  sources: { map: { name: string; url: string; attribution: string }; route: { name: string; url: string } };
+}
+
 /** Un mensaje del chat, como lo manda la web (el servidor solo admite estos dos papeles). */
 export interface ChatMessage {
   role: 'user' | 'assistant';

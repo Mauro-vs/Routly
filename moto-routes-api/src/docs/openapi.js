@@ -234,7 +234,8 @@ const RESOURCES = [
     female: true,
     create: createRouteSchema,
     update: updateRouteSchema,
-    description: "Cada ruta trae su categoría, su origen, su destino y su imagen principal.",
+    description:
+      "Cada ruta trae su categoría, su origen, su destino y su imagen principal. waypoints (opcional, hasta 20) son los puntos por los que pasa, en orden, para dibujar el recorrido en un mapa; null en un PATCH los quita.",
     example: {
       _id: "6abfc9f47a7195ca59df38e9",
       title: "Caminos de Mallorca",
@@ -248,6 +249,10 @@ const RESOURCES = [
       startLocation: { _id: "6710a1b2c3d4e5f6a7b8c921", city: "Palma", region: "Islas Baleares", country: "España", slug: "palma-b8c921", latitude: 39.5696, longitude: 2.6502 },
       endLocationId: "6710a1b2c3d4e5f6a7b8c920",
       endLocation: { _id: "6710a1b2c3d4e5f6a7b8c920", city: "Sóller", region: "Islas Baleares", country: "España", slug: "soller-b8c920", latitude: 39.7667, longitude: 2.7152 },
+      waypoints: [
+        { name: "Valldemossa", latitude: 39.7105, longitude: 2.6224 },
+        { name: "Deià", latitude: 39.748, longitude: 2.649 },
+      ],
       coverImage: { _id: "6710a1b2c3d4e5f6a7b8c991", url: "https://picsum.photos/seed/caminos/1200/800", alt: "Caminos de Mallorca, foto 1" },
       slug: "caminos-de-mallorca-df38e9",
     },

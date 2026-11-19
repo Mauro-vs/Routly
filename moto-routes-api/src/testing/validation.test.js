@@ -79,6 +79,24 @@ test("distancia y duración son mayores que 0 y tienen máximo", async () => {
   assert.equal(fieldMessage(await api.post("/routes", routeBody({ title: "V" })), "title"), "title must be at least 2 characters");
 });
 
+test("los puntos de paso: en orden, con coordenadas válidas; null en un PATCH los quita", async () => {
+  const waypoints = [
+    { name: "Valldemossa", latitude: 39.7105, longitude: 2.6224 },
+    { latitude: 39.748, longitude: 2.649 },
+  ];
+  const created = await api.post("/routes", routeBody({ title: "Con puntos de paso", waypoints }));
+  assert.equal(created.status, 201);
+  assert.deepEqual(created.body.waypoints, waypoints);
+
+  assert.equal(fieldMessage(await api.post("/routes", routeBody({ waypoints: [{ latitude: 91, longitude: 0 }] })), "waypoints.0.latitude"), "waypoints.0.latitude must be less than or equal to 90");
+  const tooMany = Array.from({ length: 21 }, () => ({ latitude: 40, longitude: -3 }));
+  assert.equal((await api.post("/routes", routeBody({ waypoints: tooMany }))).status, 400);
+
+  const cleared = await api.patch(`/routes/${created.body._id}`, { waypoints: null });
+  assert.equal(cleared.status, 200);
+  assert.equal(cleared.body.waypoints, undefined);
+});
+
 test("la contraseña necesita una letra y un número", async () => {
   const base = { name: "Eva", email: "eva@example.com" };
   for (const password of ["solotexto", "12345678"]) {

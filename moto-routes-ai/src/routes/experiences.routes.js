@@ -8,7 +8,7 @@ import { slugParamSchema } from "../schemas/common.schema.js";
  * Público (sin sesión), como la tienda. Cada pieza va en su endpoint: la web las pide a la vez y,
  * si una falla, las demás se ven igual.
  */
-export function experiencesRouter({ weather, stops, insights }) {
+export function experiencesRouter({ weather, stops, routeMap, insights }) {
   const router = Router();
   // Lo que se pide al abrir un detalle: unas pocas por visita. Con la caché casi nunca llega fuera
   router.use(createLimiter({ limit: 60, windowMs: 15 * 60 * 1000 }));
@@ -26,6 +26,11 @@ export function experiencesRouter({ weather, stops, insights }) {
 
   router.get("/:slug/stops", bySlug, async (req, res) => {
     res.json({ data: await stops.forExperience(req.params.slug) });
+  });
+
+  // El mapa: el recorrido por carretera y los restaurantes que hay a lo largo
+  router.get("/:slug/route", bySlug, async (req, res) => {
+    res.json({ data: await routeMap.forExperience(req.params.slug) });
   });
 
   return router;

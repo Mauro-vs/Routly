@@ -1,7 +1,9 @@
 import express from "express";
 import morgan from "morgan";
 import { createOpenRouterClient } from "./clients/openrouter.js";
+import { createOsrmClient } from "./clients/osrm.js";
 import { createOverpassClient } from "./clients/overpass.js";
+import { createPhotonClient } from "./clients/photon.js";
 import { createRoutlyClient } from "./clients/routly.js";
 import { createWeatherClient } from "./clients/weather.js";
 import { helmetMiddleware } from "./config/helmet.js";
@@ -12,6 +14,8 @@ import { createCatalogService } from "./services/catalog.service.js";
 import { createChatService } from "./services/chat.service.js";
 import { createInsightsService } from "./services/insights.service.js";
 import { createPlacesService } from "./services/places.service.js";
+import { createPoisService } from "./services/pois.service.js";
+import { createRouteMapService } from "./services/routeMap.service.js";
 import { createStopsService } from "./services/stops.service.js";
 import { createWeatherService } from "./services/weather.service.js";
 
@@ -29,6 +33,8 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
     routly: createRoutlyClient({ baseUrl: config.routlyApiUrl, ...upstream }),
     weather: createWeatherClient(upstream),
     overpass: createOverpassClient(upstream),
+    osrm: createOsrmClient(upstream),
+    photon: createPhotonClient(upstream),
     openRouter: createOpenRouterClient({ ...config.ai, fetch: fetchImpl }),
   };
 
@@ -36,12 +42,14 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   const catalog = createCatalogService({ routly: clients.routly });
   const places = createPlacesService({ weather: clients.weather });
   const weather = createWeatherService({ catalog, places, weather: clients.weather });
-  const stops = createStopsService({ catalog, places, overpass: clients.overpass });
+  const pois = createPoisService({ photon: clients.photon, overpass: clients.overpass });
+  const stops = createStopsService({ catalog, places, pois });
   const services = {
     catalog,
     places,
     weather,
     stops,
+    routeMap: createRouteMapService({ catalog, places, osrm: clients.osrm, pois }),
     insights: createInsightsService({ catalog, weather, stops, openRouter: clients.openRouter }),
   };
   // El chatbot usa las herramientas, que tiran de los demás services y de la API

@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, WritableSignal, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, WritableSignal, effect, inject, input, signal, untracked } from '@angular/core';
 
 import { AiApiService, AiError } from '../../../../core/ai/ai-api.service';
 import { AiChatContextService } from '../../../../core/ai/ai-chat-context.service';
-import { AiInsights, AiStops, AiWeather } from '../../../../core/ai/ai.models';
+import { AiInsights, AiRouteMap, AiStops, AiWeather } from '../../../../core/ai/ai.models';
 import { isAbortError } from '../../../../core/api/api-error';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { SkeletonComponent } from '../../../../shared/ui/skeleton/skeleton.component';
 import { formatShortDate } from '../../../../shared/utils/shop-format';
+import { AiRouteMapComponent } from './ai-route-map.component';
 import { AiStopsComponent } from './ai-stops.component';
 import { AiWeatherComponent } from './ai-weather.component';
 import { LOADING, Piece } from './piece';
@@ -14,21 +15,25 @@ import { LOADING, Piece } from './piece';
 /** Preguntas de ejemplo para el asistente, debajo del bloque */
 const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo hará en la próxima salida?'];
 
+/** Cuántas veces se vuelve a pedir el mapa mientras se buscan los sitios, y cada cuánto. */
+export const ROUTE_RETRIES = 3;
+export const ROUTE_RETRY_MS = 8000;
+
 /**
  * Lo que la IA añade al detalle, en cinco piezas con el mismo estilo que el resto de la ficha (sin
  * tarjeta ni cartel propio: una marca pequeña en lo escrito con IA y una nota al final).
  *
  * - Resumen y para quién es, qué llevar y preguntas frecuentes: textos escritos por la IA con los
  *   datos de la experiencia (GET /ai/experiences/:slug/insights). Llevan la etiqueta de IA.
- * - El tiempo de las fechas de salida (Open-Meteo) y las paradas (OpenStreetMap): datos reales,
- *   no IA.
+ * - El mapa del recorrido con dónde comer, miradores y gasolineras (OSRM y OpenStreetMap), el tiempo de
+ *   las fechas de salida (Open-Meteo) y las paradas (OpenStreetMap): datos reales, no IA.
  *
- * Las tres peticiones van a la vez y cada pieza enseña lo suyo: si no hay IA configurada (503),
- * los textos no salen, y el tiempo y las paradas sí.
+ * Las cuatro peticiones van a la vez y cada pieza enseña lo suyo: si no hay IA configurada (503),
+ * los textos no salen, y el mapa, el tiempo y las paradas sí.
  */
 @Component({
   selector: 'app-ai-insights',
-  imports: [IconComponent, SkeletonComponent, AiWeatherComponent, AiStopsComponent],
+  imports: [IconComponent, SkeletonComponent, AiWeatherComponent, AiStopsComponent, AiRouteMapComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ai">
@@ -68,14 +73,17 @@ const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo
         }
       }
 
-      <!-- 2. El tiempo en las fechas de salida (Open-Meteo) -->
+      <!-- 2. El recorrido en el mapa, con dónde comer, miradores y gasolineras (OSRM y OpenStreetMap) -->
+      <app-ai-route-map [piece]="routeMap()" />
+
+      <!-- 3. El tiempo en las fechas de salida (Open-Meteo) -->
       <app-ai-weather [piece]="weather()" />
 
-      <!-- 3. Paradas en la ruta (OpenStreetMap) -->
+      <!-- 4. Paradas en la salida y la llegada (OpenStreetMap) -->
       <app-ai-stops [piece]="stops()" />
 
       @if (insights().data; as data) {
-        <!-- 4. Qué llevar (IA) -->
+        <!-- 5. Qué llevar (IA) -->
         <section class="block" aria-labelledby="ia-llevar">
           <h2 id="ia-llevar">Qué llevar <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
           <ul class="packing">
@@ -294,13 +302,18 @@ export class AiInsightsComponent {
   protected readonly insights = signal<Piece<AiInsights>>(LOADING);
   protected readonly weather = signal<Piece<AiWeather>>(LOADING);
   protected readonly stops = signal<Piece<AiStops>>(LOADING);
+  protected readonly routeMap = signal<Piece<AiRouteMap>>(LOADING);
 
   protected readonly questions = QUESTIONS;
   protected readonly shortDate = formatShortDate;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
-    effect(() => this.load(this.slug()));
+    // Solo depende del slug: lo que lee load() (las piezas) no vuelve a lanzar el efecto
+    effect(() => {
+      const slug = this.slug();
+      untracked(() => this.load(slug));
+    });
   }
 
   private load(slug: string): void {
@@ -310,6 +323,33 @@ export class AiInsightsComponent {
     void this.fetch(this.insights, () => this.api.insights(slug, signal), signal);
     void this.fetch(this.weather, () => this.api.weather(slug, signal), signal);
     void this.fetch(this.stops, () => this.api.stops(slug, signal), signal);
+    this.routeMap.set(LOADING);
+    void this.loadRouteMap(slug, signal, ROUTE_RETRIES);
+  }
+
+  /**
+   * El mapa sale en cuanto está el recorrido. Si los sitios aún se están buscando, se vuelve
+   * a pedir unos segundos después (el servidor sigue buscándolos y los guarda), sin quitar el mapa.
+   */
+  private async loadRouteMap(slug: string, signal: AbortSignal, retriesLeft: number): Promise<void> {
+    try {
+      const data = await this.api.routeMap(slug, signal);
+      const giveUp = data.placesStatus === 'loading' && retriesLeft === 0;
+      this.routeMap.set({ status: 'ready', data: giveUp ? { ...data, placesStatus: 'unavailable' } : data });
+      if (data.placesStatus === 'loading' && retriesLeft > 0) {
+        const timer = setTimeout(() => void this.loadRouteMap(slug, signal, retriesLeft - 1), ROUTE_RETRY_MS);
+        signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
+      }
+    } catch (error) {
+      if (isAbortError(error) || signal.aborted) return;
+      const current = this.routeMap();
+      // Si ya había mapa, se queda; solo faltan los sitios
+      if (current.status === 'ready' && current.data) {
+        this.routeMap.set({ status: 'ready', data: { ...current.data, placesStatus: 'unavailable' } });
+        return;
+      }
+      this.routeMap.set({ status: 'error', data: null });
+    }
   }
 
   protected loadInsights(): void {

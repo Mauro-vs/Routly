@@ -1,5 +1,7 @@
 /* Hoja global. Los estilos propios de cada componente viven junto a él. */
 @import '@fontsource-variable/onest/wght.css';
+/* El mapa del detalle (Leaflet): sus estilos base */
+@import 'leaflet/dist/leaflet.css';
 
 @import './styles/tokens.css';
 @import './styles/base.css';

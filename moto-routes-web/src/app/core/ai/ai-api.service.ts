@@ -4,7 +4,7 @@ import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { REQUEST_TIMEOUT } from '../interceptors/timeout.interceptor';
 import { abortError, toApiError } from '../api/api-error';
-import { AiInsights, AiStops, AiWeather, ChatEvent, ChatMessage } from './ai.models';
+import { AiInsights, AiRouteMap, AiStops, AiWeather, ChatEvent, ChatMessage } from './ai.models';
 
 /** Un fallo del servidor de IA: 503 es "no hay IA configurada" (la web lo esconde sin alarmar). */
 export class AiError extends Error {
@@ -52,6 +52,11 @@ export class AiApiService {
 
   stops(slug: string, signal?: AbortSignal): Promise<AiStops> {
     return this.get<AiStops>(`/experiences/${encodeURIComponent(slug)}/stops`, signal);
+  }
+
+  /** El recorrido por carretera y los restaurantes que hay a lo largo, para el mapa. */
+  routeMap(slug: string, signal?: AbortSignal): Promise<AiRouteMap> {
+    return this.get<AiRouteMap>(`/experiences/${encodeURIComponent(slug)}/route`, signal);
   }
 
   private get<T>(path: string, signal?: AbortSignal): Promise<T> {

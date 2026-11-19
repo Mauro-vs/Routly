@@ -4,6 +4,7 @@ import { aiUnavailable, createError } from "../utils/errors.js";
 import { extractJson, shortHash } from "../utils/json.js";
 import { createCache } from "./cache.js";
 import { departureFacts, experienceFacts, stopsFacts, weatherFacts } from "./facts.js";
+import { within } from "../utils/async.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -15,16 +16,6 @@ const DEPARTURES_FOR_AI = 4;
  * más: no se le espera. La petición sigue y se guarda en su caché, y la web los pide aparte.
  */
 export const EXTRAS_BUDGET_MS = 3000;
-
-// Lo que llegue antes del tiempo dado; si no, null (sin cortar la petición, que sigue y se cachea)
-function within(promise, ms) {
-  let timer;
-  const late = new Promise((resolve) => {
-    timer = setTimeout(resolve, ms, null);
-    timer.unref?.();
-  });
-  return Promise.race([promise.catch(() => null), late]).finally(() => clearTimeout(timer));
-}
 
 /**
  * Los textos IA del detalle: resumen, puntos fuertes, para quién es, qué llevar y preguntas

@@ -46,15 +46,16 @@ function nearest(stops, kind) {
 
 /**
  * Paradas reales cerca de la salida y de la llegada de una experiencia: dónde comer, gasolineras y
- * miradores, de OpenStreetMap. No usa IA. Se guardan 7 días por punto (redondeado a ~1 km).
+ * miradores, de OpenStreetMap (Photon y, si falla, Overpass: services/pois.service.js). No usa IA.
+ * Se guardan 7 días por punto (redondeado a ~1 km).
  *
  * En una ruta circular (o si salida y llegada están a menos de 500 m) solo viene start.
  */
-export function createStopsService({ catalog, places, overpass }) {
+export function createStopsService({ catalog, places, pois }) {
   const cache = createCache({ ttlMs: WEEK, max: 500 });
 
   async function around(place) {
-    const elements = await cache.wrap(pointKey(place), () => overpass.around(place));
+    const elements = await cache.wrap(pointKey(place), () => pois.around(place));
     const stops = elements.map((element) => toStop(element, place)).filter(Boolean);
     return { place, food: nearest(stops, "food"), fuel: nearest(stops, "fuel"), viewpoints: nearest(stops, "viewpoint") };
   }

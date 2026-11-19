@@ -13,11 +13,24 @@ export const ROUTE_LIMITS = Object.freeze({
   descriptionMax: 500,
   distanceMax: 5000,
   durationMax: 240,
+  // Puntos de paso: los pueblos o puertos por los que va, en orden, para dibujar el recorrido
+  waypointsMax: 20,
+  waypointNameMax: 80,
 });
 
 export const ROUTE_DIFFICULTIES = Object.freeze(["easy", "medium", "hard"]);
 // Su nivel, para ordenar por dificultad (sort=difficulty): como texto saldría easy, hard, medium
 export const DIFFICULTY_LEVELS = Object.freeze({ easy: 1, medium: 2, hard: 3 });
+
+// Un punto de paso: dónde está (grados) y, si se quiere, cómo se llama. Sin _id: va dentro de la ruta
+const waypointSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, maxlength: ROUTE_LIMITS.waypointNameMax },
+    latitude: { type: Number, required: true, min: -90, max: 90 },
+    longitude: { type: Number, required: true, min: -180, max: 180 },
+  },
+  { _id: false }
+);
 
 const routeSchema = new mongoose.Schema(
   {
@@ -38,6 +51,16 @@ const routeSchema = new mongoose.Schema(
     startLocationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location", required: true, index: true },
     // Puede ser la misma que el origen: ruta circular
     endLocationId: { type: mongoose.Schema.Types.ObjectId, ref: "Location", required: true, index: true },
+    // Por dónde pasa entre el origen y el destino, en orden (opcional). Sin ellos, el mapa solo puede
+    // unir origen y destino, y una ruta circular no tiene recorrido que dibujar
+    waypoints: {
+      type: [waypointSchema],
+      default: undefined,
+      validate: {
+        validator: (points) => !points || points.length <= ROUTE_LIMITS.waypointsMax,
+        message: `a route has at most ${ROUTE_LIMITS.waypointsMax} waypoints`,
+      },
+    },
   },
   { timestamps: true }
 );

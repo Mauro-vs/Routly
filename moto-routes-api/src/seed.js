@@ -123,6 +123,14 @@ const ROUTES = [
     category: "Costa",
     from: "Barcelona",
     to: "Barcelona",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "Mataró", latitude: 41.5381, longitude: 2.4445 },
+      { name: "Lloret de Mar", latitude: 41.6995, longitude: 2.8466 },
+      { name: "Tossa de Mar", latitude: 41.7197, longitude: 2.932 },
+      { name: "Sant Feliu de Guíxols", latitude: 41.7807, longitude: 3.0283 },
+      { name: "Llagostera", latitude: 41.827, longitude: 2.893 },
+    ],
     images: 2,
   },
   {
@@ -134,6 +142,14 @@ const ROUTES = [
     category: "Montaña",
     from: "Huesca",
     to: "Lleida",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "Jaca", latitude: 42.57, longitude: -0.549 },
+      { name: "Biescas", latitude: 42.626, longitude: -0.317 },
+      { name: "Broto", latitude: 42.604, longitude: -0.123 },
+      { name: "Aínsa", latitude: 42.418, longitude: 0.139 },
+      { name: "Benabarre", latitude: 42.108, longitude: 0.482 },
+    ],
     images: 2,
   },
   {
@@ -145,6 +161,12 @@ const ROUTES = [
     category: "Viñedos",
     from: "Logroño",
     to: "Haro",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "Fuenmayor", latitude: 42.4669, longitude: -2.5617 },
+      { name: "Cenicero", latitude: 42.481, longitude: -2.643 },
+      { name: "Briones", latitude: 42.5434, longitude: -2.7848 },
+    ],
     images: 1,
     state: "inactive",
   },
@@ -157,6 +179,13 @@ const ROUTES = [
     category: "Puertos",
     from: "Granada",
     to: "Granada",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "Monachil", latitude: 37.1333, longitude: -3.537 },
+      { name: "Pradollano", latitude: 37.0947, longitude: -3.3967 },
+      { name: "Dúrcal", latitude: 36.9881, longitude: -3.5655 },
+      { name: "Lanjarón", latitude: 36.9187, longitude: -3.4813 },
+    ],
     images: 1,
   },
   {
@@ -168,6 +197,14 @@ const ROUTES = [
     category: "Montaña",
     from: "Palma",
     to: "Sóller",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "Andratx", latitude: 39.575, longitude: 2.42 },
+      { name: "Estellencs", latitude: 39.653, longitude: 2.481 },
+      { name: "Banyalbufar", latitude: 39.687, longitude: 2.513 },
+      { name: "Valldemossa", latitude: 39.7105, longitude: 2.6224 },
+      { name: "Deià", latitude: 39.748, longitude: 2.649 },
+    ],
     images: 2,
   },
   {
@@ -179,6 +216,10 @@ const ROUTES = [
     category: "Montaña",
     from: "Panes",
     to: "Potes",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "La Hermida", latitude: 43.256, longitude: -4.614 },
+    ],
     images: 1,
     state: "deleted",
   },
@@ -191,6 +232,13 @@ const ROUTES = [
     category: "Viñedos",
     from: "Logroño",
     to: "Haro",
+    // Por dónde pasa, en orden: el mapa del detalle dibuja el recorrido por carretera
+    waypoints: [
+      { name: "Navarrete", latitude: 42.429, longitude: -2.562 },
+      { name: "Cenicero", latitude: 42.481, longitude: -2.643 },
+      { name: "San Asensio", latitude: 42.497, longitude: -2.748 },
+      { name: "Briones", latitude: 42.5434, longitude: -2.7848 },
+    ],
     images: 2,
   },
 ];

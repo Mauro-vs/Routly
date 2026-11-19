@@ -12,10 +12,11 @@ import {
   forecastBody,
   geocodingBody,
   insightsAnswer,
-  overpassBody,
+  photonBody,
 } from "../testing/fixtures.js";
 
 const OPENROUTER = "POST openrouter.ai/api/v1/chat/completions";
+const PHOTON = "GET photon.komoot.io/reverse";
 const host = (url) => new URL(url).host + new URL(url).pathname;
 
 function handlers(overrides = {}) {
@@ -25,7 +26,7 @@ function handlers(overrides = {}) {
     [`GET ${host(OPEN_METEO.forecast)}`]: () => ({ body: forecastBody() }),
     [`GET ${host(OPEN_METEO.archive)}`]: (url) => ({ body: archiveBody(url) }),
     [`GET ${host(OPEN_METEO.geocoding)}`]: () => ({ body: geocodingBody }),
-    "POST overpass-api.de/api/interpreter": () => ({ body: overpassBody }),
+    [PHOTON]: (url) => ({ body: photonBody(url) }),
     [OPENROUTER]: () => ({ body: completion(JSON.stringify(insightsAnswer)) }),
     ...overrides,
   };
@@ -75,7 +76,7 @@ describe("GET /ai/experiences/:slug/insights", () => {
 
   it("ya escritos, salen de la caché sin esperar al tiempo ni a OpenStreetMap", async () => {
     let slow = false;
-    const fetch = await start({ "POST overpass-api.de/api/interpreter": () => (slow ? new Promise(() => {}) : { body: overpassBody }) });
+    const fetch = await start({ [PHOTON]: (url) => (slow ? new Promise(() => {}) : { body: photonBody(url) }) });
     await insights();
     slow = true;
     const before = fetch.calls.length;
@@ -108,8 +109,8 @@ describe("GET /ai/experiences/:slug/insights", () => {
   });
 
   it("no espera a OpenStreetMap si tarda: escribe sin las paradas", async () => {
-    // Overpass no contesta nunca: los textos salen igual, a los pocos segundos
-    await start({ "POST overpass-api.de/api/interpreter": () => new Promise(() => {}) });
+    // OpenStreetMap no contesta nunca: los textos salen igual, a los pocos segundos
+    await start({ [PHOTON]: () => new Promise(() => {}) });
     const started = performance.now();
     const { status, body } = await insights();
 

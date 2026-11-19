@@ -232,6 +232,13 @@ describe("el detalle", () => {
     assert.equal(endLocation.coordinates, undefined);
   });
 
+  test("su ruta trae los puntos de paso, para dibujar el recorrido en el mapa", async () => {
+    const waypoints = [{ name: "Salou", latitude: 41.0764, longitude: 1.1416 }];
+    await api.patch(`/routes/${costaExperience.routeId}`, { waypoints });
+    const { route } = (await shop(`/experiences/${costaExperience.slug}`)).body.data;
+    assert.deepEqual(route.waypoints, waypoints);
+  });
+
   test("una experiencia que no existe o no se ve es un 404", async () => {
     assert.equal((await shop("/experiences/no-existe")).status, 404);
 

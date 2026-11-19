@@ -34,7 +34,8 @@ Públicos y sin sesión, como la tienda. Responden `{ data }` y los errores con 
 | `GET /health` | `{ ok, ai }`: `ai` es `false` si falta la clave de la IA | No |
 | `GET /ai/experiences/:slug/insights` | Los textos IA del detalle: `summary`, `highlights`, `idealFor { level, rider, bike }`, `packing` y `faq [{ question, answer }]`, con el `model` que los ha escrito, `generatedAt` y `basedOn { weather, stops }`. Una sola llamada a la IA, que responde JSON comprobado con Zod (si no vale, se pide otra vez; a la segunda, 502). Sin clave, 503 | Sí |
 | `GET /ai/experiences/:slug/weather` | El tiempo de las próximas salidas en el punto de salida ([Open-Meteo](https://open-meteo.com)): previsión si es dentro de 16 días (`kind: "forecast"`) y, si no, lo que hizo esos días el año pasado (`kind: "reference"`). Cada día con su texto, icono y avisos (`rain`, `cold`, `heat`, `wind`, `storm`) | No |
-| `GET /ai/experiences/:slug/stops` | Dónde comer, gasolineras y miradores cerca de la salida y de la llegada ([OpenStreetMap](https://www.openstreetmap.org)), 5 de cada, con distancia y enlace al mapa. En una ruta circular, `end` es `null` | No |
+| `GET /ai/experiences/:slug/stops` | Dónde comer, gasolineras y miradores cerca de la salida y de la llegada ([OpenStreetMap](https://www.openstreetmap.org), por [Photon](https://photon.komoot.io) y, si falla, Overpass), 5 de cada, con distancia y enlace al mapa. En una ruta circular, `end` es `null` | No |
+| `GET /ai/experiences/:slug/route` | El mapa del detalle: el recorrido por carretera ([OSRM](https://project-osrm.org)) desde la salida, por los `waypoints` de la ruta y hasta la llegada (`line` en `[lat, lon]`, `distanceKm`, `durationH`), y lo que hay a lo largo (`places`, cada uno con su `kind`): dónde comer a menos de 1,5 km, miradores a menos de 3 y gasolineras a menos de 2, repartidos por el recorrido. Si OSRM falla, la línea une los puntos en recto (`routed: false`). A los sitios se les espera 6 s: si tardan más, `places: null` y `placesStatus: "loading"` (la búsqueda sigue y la web vuelve a pedirlo); si fallan, `"unavailable"`. Una ruta circular sin puntos de paso no tiene `line`. El recorrido se guarda 30 días y los sitios 7 | No |
 
 | `POST /ai/chat` | El chatbot, en streaming (`text/event-stream`). Body: `{ messages: [{ role: "user" \| "assistant", content }], experienceSlug? }`, 20 mensajes de 2.000 caracteres como mucho y el último del usuario. Eventos: `tool { name, label }`, `delta { text }`, `done { model }` y `error { message }` | Sí |
 
@@ -82,13 +83,17 @@ src/
     routly.js          la API de Routly (solo /api/shop)
     openrouter.js      La IA: Groq, Gemini u OpenRouter (con los modelos de reserva de AI_MODELS)
     weather.js         Open-Meteo: previsión, histórico y geocodificador
-    overpass.js        OpenStreetMap: sitios cerca de un punto
+    photon.js          Photon: los sitios de un tipo más cercanos a un punto (OpenStreetMap, rápido)
+    overpass.js        Overpass: lo mismo, de reserva (más lento, con horario y cocina)
+    osrm.js            OSRM: el recorrido por carretera entre varios puntos
   services/
     cache.js           caché en memoria con caducidad
     catalog.service.js la experiencia y sus salidas (un minuto en caché)
     places.service.js  las coordenadas de una ubicación (o las busca)
     weather.service.js el tiempo de las salidas; weatherCodes.js traduce los códigos
     stops.service.js   las paradas de la ruta
+    pois.service.js    de dónde salen los sitios: Photon y, si falla, Overpass
+    routeMap.service.js el mapa: recorrido y sitios a lo largo
     facts.js           los datos que se le pasan a la IA, resumidos
     insights.service.js los textos IA del detalle
     chat.service.js    el bucle del agente del chatbot

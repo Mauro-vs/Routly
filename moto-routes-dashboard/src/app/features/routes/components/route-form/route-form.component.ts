@@ -1,5 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 
 import { ApiError } from '../../../../core/models/api-error.model';
 import { Category } from '../../../../core/models/category.model';
@@ -11,6 +18,8 @@ import {
   Route,
   RouteDifficulty,
   RoutePayload,
+  formatWaypoints,
+  parseWaypoints,
 } from '../../../../core/models/route.model';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
@@ -18,6 +27,12 @@ import { IconComponent } from '../../../../shared/components/icon/icon.component
 import { EntityForm, editedText, optionalText } from '../../../../shared/forms/entity-form';
 import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
 import { minTrimmed, notBlank, positive } from '../../../../shared/utils/validators';
+
+/** Los puntos de paso se escriben como texto: el error dice en qué línea falla. */
+function waypointsText(control: AbstractControl): ValidationErrors | null {
+  const result = parseWaypoints(String(control.value ?? ''));
+  return result.ok ? null : { waypoints: { line: result.line, reason: result.reason } };
+}
 
 // Los mismos criterios que src/schemas/route.schema.js en la API.
 function createRouteForm() {
@@ -44,6 +59,7 @@ function createRouteForm() {
       positive,
       Validators.max(ROUTE_LIMITS.duration),
     ]),
+    waypoints: new FormControl('', { nonNullable: true, validators: [waypointsText] }),
   });
 }
 
@@ -68,6 +84,13 @@ export class RouteFormComponent extends EntityForm<Route, RoutePayload, RouteCon
   readonly optionsLoading = input(false);
 
   protected readonly limits = ROUTE_LIMITS;
+  protected override readonly errorMessages = {
+    waypoints: (detail: Record<string, unknown>) => {
+      const line = Number(detail['line']);
+      const reason = String(detail['reason']);
+      return line > 0 ? `Línea ${line}: ${reason}.` : `Puedes poner ${reason}.`;
+    },
+  };
   protected readonly difficulties = DIFFICULTIES.map((value) => ({
     value,
     label: DIFFICULTY_LABELS[value],
@@ -120,6 +143,7 @@ export class RouteFormComponent extends EntityForm<Route, RoutePayload, RouteCon
       difficulty: route?.difficulty ?? null,
       distance: route?.distance ?? null,
       duration: route?.duration ?? null,
+      waypoints: formatWaypoints(route?.waypoints),
     });
   }
 
@@ -128,6 +152,9 @@ export class RouteFormComponent extends EntityForm<Route, RoutePayload, RouteCon
     const { difficulty, distance, duration } = value;
     // Con el formulario válido estos tres campos tienen valor; la comprobación es para el tipo.
     if (difficulty === null || distance === null || duration === null) return null;
+    const parsed = parseWaypoints(value.waypoints);
+    if (!parsed.ok) return null;
+    const { waypoints } = parsed;
 
     return {
       title: value.title.trim(),
@@ -138,6 +165,7 @@ export class RouteFormComponent extends EntityForm<Route, RoutePayload, RouteCon
       difficulty,
       distance,
       duration,
+      ...(waypoints.length > 0 && { waypoints }),
     };
   }
 
@@ -145,7 +173,10 @@ export class RouteFormComponent extends EntityForm<Route, RoutePayload, RouteCon
     const payload = this.toPayload();
     if (!payload) return null;
     const description = editedText(this.form.controls.description.value, this.record()?.description);
-    return { ...payload, description };
+    // Vaciar el campo quita los puntos que tenía; si no tenía, no se envía nada.
+    const hadWaypoints = (this.record()?.waypoints?.length ?? 0) > 0;
+    const waypoints = payload.waypoints ?? (hadWaypoints ? null : undefined);
+    return { ...payload, description, waypoints };
   }
 
   // La dirección (slug) sale del título: un 409 por slug repetido se pinta en el título.

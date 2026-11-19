@@ -77,4 +77,29 @@ describe('RouteFormComponent', () => {
       },
     ]);
   });
+
+  it('los puntos de paso se escriben uno por línea y se envían en orden', async () => {
+    const form = await render();
+    form.type('distance', '45');
+    form.type('duration', '2');
+    form.type('waypoints', 'Valldemossa, 39.7105, 2.6224\n\n39.748, 2.649');
+    await form.submit();
+
+    const [submit] = form.saved as { payload: { waypoints?: unknown } }[];
+    expect(submit.payload.waypoints).toEqual([
+      { name: 'Valldemossa', latitude: 39.7105, longitude: 2.6224 },
+      { latitude: 39.748, longitude: 2.649 },
+    ]);
+  });
+
+  it('un punto de paso mal escrito dice en qué línea', async () => {
+    const form = await render();
+    form.type('distance', '45');
+    form.type('duration', '2');
+    form.type('waypoints', 'Deià, 39.748, 2.649\nSóller, 95, 2.7');
+    await form.submit();
+
+    expect(form.saved).toEqual([]);
+    expect(form.element.textContent).toContain('Línea 2: la latitud va de -90 a 90.');
+  });
 });

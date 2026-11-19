@@ -11,7 +11,7 @@ import { reservable } from "./departure.repository.js";
 // el servidor de IA (moto-routes-ai) busca el tiempo y las paradas de la ruta.
 const ROUTE_SUMMARY = {
   path: "route",
-  select: "title slug distance duration difficulty categoryId startLocationId endLocationId",
+  select: "title slug distance duration difficulty categoryId startLocationId endLocationId waypoints",
   populate: [
     { path: "category", select: "name slug" },
     { path: "startLocation", select: "city region country slug coordinates" },

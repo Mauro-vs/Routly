@@ -111,3 +111,23 @@ export const completion = (content, model = "google/gemini-2.5-flash") => ({
   choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content } }],
   usage: { prompt_tokens: 900, completion_tokens: 400, total_tokens: 1300 },
 });
+
+// Lo que devuelve el reverse de Photon cerca de Jaca: responde según los osm_tag que se le piden
+const photonPlaces = [
+  { osm_type: "N", osm_id: 11, osm_key: "amenity", osm_value: "restaurant", name: "Casa Fau", lat: 42.571, lon: -0.551 },
+  { osm_type: "W", osm_id: 12, osm_key: "amenity", osm_value: "cafe", name: "Café Pirineo", lat: 42.6, lon: -0.4 },
+  { osm_type: "N", osm_id: 13, osm_key: "amenity", osm_value: "restaurant", lat: 42.572, lon: -0.552 },
+  { osm_type: "N", osm_id: 14, osm_key: "amenity", osm_value: "fuel", name: "Repsol", lat: 42.58, lon: -0.56 },
+  { osm_type: "N", osm_id: 15, osm_key: "tourism", osm_value: "viewpoint", name: "Mirador de la Peña Oroel", lat: 42.62, lon: -0.33 },
+  { osm_type: "N", osm_id: 16, osm_key: "amenity", osm_value: "bar", name: "Bar Lo Fogaril", lat: 42.5705, lon: -0.5505 },
+];
+
+export function photonBody(url) {
+  const wanted = new Set(url.searchParams.getAll("osm_tag"));
+  return {
+    type: "FeatureCollection",
+    features: photonPlaces
+      .filter((place) => wanted.has(`${place.osm_key}:${place.osm_value}`))
+      .map(({ lat, lon, ...properties }) => ({ type: "Feature", geometry: { type: "Point", coordinates: [lon, lat] }, properties })),
+  };
+}

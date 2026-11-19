@@ -3,6 +3,13 @@ import { ROUTE_DIFFICULTIES, ROUTE_LIMITS as LIMITS } from "../models/route.mode
 import { atLeast, atMost, defineListQuery, equals, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, clearable, objectIdSchema } from "./common.schema.js";
 
+// Un punto de paso: { name?, latitude, longitude }
+const waypointSchema = z.strictObject({
+  name: z.string().trim().min(1).max(LIMITS.waypointNameMax).optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
 const routeFields = z.strictObject({
   title: z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax),
   description: z.string().trim().max(LIMITS.descriptionMax).optional(),
@@ -14,12 +21,14 @@ const routeFields = z.strictObject({
   startLocationId: objectIdSchema,
   // Puede ser igual que startLocationId: ruta circular
   endLocationId: objectIdSchema,
+  // Por dónde pasa, en orden (opcional): para dibujar el recorrido en el mapa
+  waypoints: z.array(waypointSchema).max(LIMITS.waypointsMax).optional(),
 });
 
 export const createRouteSchema = routeFields;
 
 export const updateRouteSchema = routeFields.partial().extend({
-  ...clearable(routeFields, "description"),
+  ...clearable(routeFields, "description", "waypoints"),
   ...cannotChange("_id", "slug"),
 });
 

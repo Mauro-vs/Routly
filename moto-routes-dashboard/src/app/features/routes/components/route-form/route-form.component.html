@@ -99,4 +99,21 @@
       </div>
     </ui-form-field>
   </div>
+
+  <ui-form-field
+    label="Puntos de paso"
+    [optional]="true"
+    hint="Uno por línea, en orden: «Nombre, latitud, longitud». Con ellos el mapa de la web dibuja el recorrido."
+    [error]="errorOf('waypoints')"
+  >
+    <textarea
+      uiInput
+      rows="4"
+      name="waypoints"
+      formControlName="waypoints"
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="Valldemossa, 39.7105, 2.6224"
+    ></textarea>
+  </ui-form-field>
 </form>

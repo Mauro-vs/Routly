@@ -30,6 +30,35 @@ function query({ latitude, longitude }) {
 out center tags 300;`;
 }
 
+/** A cuántos metros del recorrido se buscan restaurantes en el mapa. */
+export const LINE_RADIUS = 1500;
+
+// Dónde comer con nombre, miradores y gasolineras a lo largo de una línea (around con varios
+// puntos: la línea que los une)
+function lineQuery(points) {
+  const coords = points.map(({ latitude, longitude }) => `${latitude},${longitude}`).join(",");
+  const around = (meters) => `(around:${meters},${coords})`;
+  return `[out:json][timeout:20];
+(
+  nwr["amenity"~"^(restaurant|cafe)$"]["name"]${around(LINE_RADIUS)};
+  nwr["tourism"="viewpoint"]${around(3000)};
+  nwr["amenity"="fuel"]${around(2000)};
+);
+out center tags 400;`;
+}
+
+const toElements = (body) =>
+  (body.elements ?? [])
+    .map((element) => ({
+      type: element.type,
+      id: element.id,
+      // Las vías y relaciones traen el centro (out center); los nodos, su punto
+      lat: element.lat ?? element.center?.lat,
+      lon: element.lon ?? element.center?.lon,
+      tags: element.tags ?? {},
+    }))
+    .filter((element) => Number.isFinite(element.lat) && Number.isFinite(element.lon));
+
 /** Si fallan todos los servidores, cuánto tiempo se da por caído sin volver a preguntar. */
 export const DOWN_FOR_MS = 2 * 60 * 1000;
 
@@ -38,47 +67,40 @@ export function createOverpassClient({ fetch: fetchImpl, timeoutMs, urls = [OVER
   // Con todos los servidores caídos, cada petición tardaría medio minuto en fallar: un rato sin preguntar
   let downUntil = 0;
 
-  async function ask(url, point) {
+  async function ask(url, data) {
     const { status, body } = await requestJson(fetchImpl, url, {
       service: SERVICE,
       timeoutMs: wait,
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": USER_AGENT },
-      body: new URLSearchParams({ data: query(point) }).toString(),
+      body: new URLSearchParams({ data }).toString(),
     });
     // 429 y 504 son habituales en Overpass cuando está cargado
     if (status !== 200 || !body) throw upstreamError(SERVICE, { status });
     return body;
   }
 
+  // Cada servidor por orden: si uno va saturado o no responde, el siguiente; si era el último, el error
+  async function run(data) {
+    if (now() < downUntil) throw upstreamError(SERVICE, { status: 503 });
+    for (const [index, url] of urls.entries()) {
+      try {
+        return toElements(await ask(url, data));
+      } catch (error) {
+        if (index === urls.length - 1) {
+          downUntil = now() + DOWN_FOR_MS;
+          throw error;
+        }
+        console.warn(`[OpenStreetMap] ${new URL(url).host} failed (${error.message}), trying ${new URL(urls[index + 1]).host}`);
+      }
+    }
+  }
+
   return {
     /** Los elementos de OpenStreetMap cerca del punto: { type, id, lat, lon, tags }. */
-    async around(point) {
-      if (now() < downUntil) throw upstreamError(SERVICE, { status: 503 });
-      let body;
-      for (const [index, url] of urls.entries()) {
-        try {
-          body = await ask(url, point);
-          break;
-        } catch (error) {
-          // Saturado o sin respuesta: se prueba el siguiente servidor; si era el último, el error
-          if (index === urls.length - 1) {
-            downUntil = now() + DOWN_FOR_MS;
-            throw error;
-          }
-          console.warn(`[OpenStreetMap] ${new URL(url).host} failed (${error.message}), trying ${new URL(urls[index + 1]).host}`);
-        }
-      }
-      return (body.elements ?? [])
-        .map((element) => ({
-          type: element.type,
-          id: element.id,
-          // Las vías y relaciones traen el centro (out center); los nodos, su punto
-          lat: element.lat ?? element.center?.lat,
-          lon: element.lon ?? element.center?.lon,
-          tags: element.tags ?? {},
-        }))
-        .filter((element) => Number.isFinite(element.lat) && Number.isFinite(element.lon));
-    },
+    around: (point) => run(query(point)),
+
+    /** Dónde comer (a menos de LINE_RADIUS), miradores y gasolineras a lo largo de la línea que une points. */
+    alongLine: (points) => run(lineQuery(points)),
   };
 }
