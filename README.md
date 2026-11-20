@@ -8,16 +8,18 @@
   <img src="https://img.shields.io/badge/Node.js-20+-1b7a4e?style=flat-square&logo=nodedotjs&logoColor=c6f04d&labelColor=0c2419" alt="Node.js 20 o superior">
   <img src="https://img.shields.io/badge/Express-5-1b7a4e?style=flat-square&logo=express&logoColor=c6f04d&labelColor=0c2419" alt="Express 5">
   <img src="https://img.shields.io/badge/MongoDB-Mongoose_9-1b7a4e?style=flat-square&logo=mongodb&logoColor=c6f04d&labelColor=0c2419" alt="MongoDB con Mongoose 9">
+  <img src="https://img.shields.io/badge/JWT-RS256_+_JWKS-1b7a4e?style=flat-square&logo=jsonwebtokens&logoColor=c6f04d&labelColor=0c2419" alt="JWT RS256 con JWKS">
+  <img src="https://img.shields.io/badge/tests-1024-1b7a4e?style=flat-square&labelColor=0c2419" alt="1024 tests">
   <img src="https://img.shields.io/badge/licencia-MIT-1b7a4e?style=flat-square&labelColor=0c2419" alt="Licencia MIT">
 </p>
 
 <p align="center">
-  <a href="#míralo-en-marcha"><b>Demo</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#lo-que-ya-funciona"><b>Funciones</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#cómo-está-hecho"><b>Arquitectura</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#puesta-en-marcha"><b>Arrancar</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#hoja-de-ruta"><b>Hoja de ruta</b></a>
+  <a href="#míralo-en-marcha"><b>Demo</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#lo-que-ya-funciona"><b>Funciones</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#cómo-está-hecho"><b>Arquitectura</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#preparado-para-la-api-gateway"><b>API gateway</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#puesta-en-marcha"><b>Arrancar</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#hoja-de-ruta"><b>Hoja de ruta</b></a>
 </p>
 
-Routly reúne las mejores carreteras para ir en moto en un catálogo cuidado. Cada ruta tiene la misma información: origen, destino, distancia, duración y dificultad. El siguiente paso son las salidas en grupo organizadas por anfitriones locales.
+Routly reúne las mejores carreteras para ir en moto en un catálogo cuidado y las convierte en **salidas guiadas** por anfitriones locales: eliges la ruta, la fecha y te apuntas. Cada ruta tiene la misma información (origen, destino, distancia, duración y dificultad) y cada salida, sus plazas, su precio y su moto guía.
 
-Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y tracks sueltos. Routly las ordena para que elegir una sea cuestión de segundos.
+Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y tracks sueltos. Routly las ordena para que elegir una sea cuestión de segundos, y una IA que solo trabaja con datos reales te cuenta qué tiempo hará, dónde parar y qué llevar.
 
 ## Míralo en marcha
 
@@ -27,64 +29,75 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly tiene cinco partes:
-- la **web pública**, donde un motero sin cuenta encuentra una salida guiada y elige fecha;
-- el **panel de administración** del catálogo;
-- la **API** que sirve a las dos;
-- el **servicio de auth**, que inicia y renueva las sesiones y firma los tokens;
-- el **servidor de IA**, que añade a la web el bloque Routly IA del detalle y el asistente.
+Routly son **cinco aplicaciones** que se hablan por HTTP y JSON. Cada una vive en su carpeta, con su puerto, su prefijo y sus tests:
 
-La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas, imágenes y el garaje de motos de cada usuario) y una tienda pública, `/api/shop`. El panel gestiona las colecciones; la web pública solo lee de la tienda.
-
-El servidor de IA no toca la base de datos: lee la misma tienda y la completa con datos reales. En el detalle de cada experiencia, el bloque **Routly IA** enseña un resumen y para quién es, el tiempo en las fechas de salida (Open-Meteo), dónde comer, repostar y parar a mirar (OpenStreetMap), qué llevar y preguntas frecuentes. El **asistente** flotante responde en streaming con los datos de Routly y, en el detalle, sabe de qué experiencia se habla. La IA solo redacta: los sitios y los datos no se los inventa.
+| | Aplicación | Puerto | Prefijo | Para qué |
+|:---:|---|:---:|---|---|
+| <img src="docs/assets/icon-search.svg" width="28" alt=""> | [**Web pública**](moto-routes-web/README.md) | 4300 | | Un motero sin cuenta encuentra una salida guiada, ve el recorrido en el mapa y elige fecha |
+| <img src="docs/assets/icon-chart.svg" width="28" alt=""> | [**Panel**](moto-routes-dashboard/README.md) | 4200 | | Los administradores gestionan el catálogo, las salidas, los usuarios y las imágenes |
+| <img src="docs/assets/icon-docs.svg" width="28" alt=""> | [**API**](moto-routes-api/README.md) | 3000 | `/api` | Las diez colecciones, los permisos de cada rol y la tienda pública (`/api/shop`) |
+| <img src="docs/assets/icon-lock.svg" width="28" alt=""> | [**Auth**](moto-routes-auth/README.md) | 3002 | `/auth` | Inicia, renueva y cierra las sesiones, y es el único que firma los tokens |
+| <img src="docs/assets/icon-sparkle.svg" width="28" alt=""> | [**IA**](moto-routes-ai/README.md) | 3001 | `/ai` | El bloque Routly IA del detalle, el mapa del recorrido y el asistente |
 
 <table>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/assets/icon-catalog.svg" width="44" alt=""><br>
-      <b>Nueve colecciones, un mismo patrón</b><br>
-      Rutas, categorías, ubicaciones, experiencias, salidas, usuarios, anfitriones, roles e imágenes: cada una con listado, detalle, formulario y papelera, y las relaciones enlazadas entre sí.
+      <b>Diez colecciones, un mismo patrón</b><br>
+      Rutas, categorías, ubicaciones, experiencias, salidas, usuarios, anfitriones, roles, imágenes y el garaje de motos: cada una con listado, detalle, formulario y papelera, y las relaciones enlazadas entre sí.
     </td>
     <td width="50%" valign="top">
+      <img src="docs/assets/icon-lock.svg" width="44" alt=""><br>
+      <b>Sesión segura en un servicio propio</b><br>
+      Tokens RS256 de 15 minutos en cookies <code>httpOnly</code> y un refresh de 7 días que cambia en cada uso. Si alguien reutiliza uno copiado, se cierran todas las sesiones de ese usuario.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="docs/assets/icon-sparkle.svg" width="44" alt=""><br>
+      <b>Routly IA, con datos reales</b><br>
+      Resumen y para quién es cada salida, el tiempo en sus fechas (Open-Meteo), qué llevar y preguntas frecuentes, y un asistente que responde en streaming. La IA solo redacta: no se inventa sitios ni datos.
+    </td>
+    <td valign="top">
+      <img src="docs/assets/icon-map.svg" width="44" alt=""><br>
+      <b>El recorrido en el mapa</b><br>
+      La ruta por carretera de verdad (OSRM), con dónde comer, repostar y parar a mirar a lo largo del camino (OpenStreetMap), filtrable por tipo y kilómetro a kilómetro.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
       <img src="docs/assets/icon-toggle.svg" width="44" alt=""><br>
       <b>Activar y desactivar al instante</b><br>
       Un interruptor oculta cualquier registro sin borrarlo. El cambio se ve en el momento y, si el servidor falla, vuelve atrás solo.
     </td>
-  </tr>
-  <tr>
     <td valign="top">
       <img src="docs/assets/icon-trash.svg" width="44" alt=""><br>
       <b>Papelera con vuelta atrás</b><br>
       Nada se borra para siempre. Lo eliminado se puede restaurar como activo o inactivo, o deshacer justo después.
     </td>
-    <td valign="top">
-      <img src="docs/assets/icon-search.svg" width="44" alt=""><br>
-      <b>Galería de imágenes</b><br>
-      Cada ruta, usuario, anfitrión, experiencia, categoría y ubicación tiene su galería: añadir por URL, elegir la principal, ordenar y desactivar.
-    </td>
   </tr>
   <tr>
-    <td valign="top">
-      <img src="docs/assets/icon-chart.svg" width="44" alt=""><br>
-      <b>Dashboard</b><br>
-      Kilómetros, rutas activas, próximas salidas con sus plazas y precio medio, salidas por mes y reparto por categoría y dificultad, de un vistazo.
-    </td>
     <td valign="top">
       <img src="docs/assets/icon-errors.svg" width="44" alt=""><br>
       <b>Errores que se entienden</b><br>
       Los datos no válidos se señalan junto al campo. Los fallos de red o del servidor se explican, sin pantallas en blanco.
     </td>
-  </tr>
-  <tr>
     <td valign="top">
       <img src="docs/assets/icon-mobile.svg" width="44" alt=""><br>
       <b>Accesible y responsive</b><br>
-      Contraste AA, uso completo con teclado y menú lateral desplegable en el móvil.
+      Contraste AA, uso completo con teclado, menú lateral desplegable en el móvil y filtros de la web en una hoja que sube desde abajo.
     </td>
+  </tr>
+  <tr>
     <td valign="top">
       <img src="docs/assets/icon-docs.svg" width="44" alt=""><br>
       <b>API completa y documentada</b><br>
-      Nueve colecciones relacionadas, con papelera en todas. Sus 99 endpoints se pueden probar desde Swagger, en <code>/api/docs</code>.
+      Más de 120 endpoints, todos en Swagger (<code>/api/docs</code>, y los de la sesión en <code>/auth/docs</code>), con un mismo formato de error y la validación antes del controlador.
+    </td>
+    <td valign="top">
+      <img src="docs/assets/icon-gateway.svg" width="44" alt=""><br>
+      <b>Lista para una API gateway</b><br>
+      Cada servicio con su prefijo, tokens que cualquiera comprueba con la clave pública y todo pensado para ir detrás de un proxy. <a href="#preparado-para-la-api-gateway">Cómo está montado</a>.
     </td>
   </tr>
 </table>
@@ -155,25 +168,41 @@ El servidor de IA no toca la base de datos: lee la misma tienda y la completa co
   <img src="https://skillicons.dev/icons?i=angular,ts,html,css,nodejs,express,mongodb,postman&theme=dark" alt="Angular, TypeScript, HTML, CSS, Node.js, Express, MongoDB y Postman">
 </p>
 
-Un monorepo con cinco aplicaciones independientes que se comunican por HTTP y JSON:
+Un monorepo con cinco aplicaciones independientes. Los dos frontales llaman siempre a su propio origen (`/api`, `/auth`, `/ai`), y un proxy reparte cada prefijo a su servicio:
 
 ```mermaid
 flowchart LR
-    W["Web pública<br/>Angular 20"] -- "/api/shop" --> B["API REST<br/>Express 5"]
-    W -- "/ai" --> I["Servidor de IA<br/>Express 5"]
+    W["Web pública<br/>Angular 20 · 4300"]
+    A["Panel<br/>Angular 20 · 4200"]
+    P{{"Proxy<br/>/api · /auth · /ai"}}
+    B["API REST<br/>Express 5 · 3000"]
+    U["Auth<br/>Express 5 · 3002"]
+    I["IA<br/>Express 5 · 3001"]
+    C[("MongoDB<br/>moto_routes")]
+    E["Open-Meteo, OSRM,<br/>OpenStreetMap y Groq"]
+
+    W --> P
+    A --> P
+    P -- "/api" --> B
+    P -- "/auth" --> U
+    P -- "/ai" --> I
     I -- "/api/shop" --> B
-    I -. "tiempo, paradas y textos" .-> E["Open-Meteo, OpenStreetMap<br/>y Groq"]
-    A["Panel de administración<br/>Angular 20"] -- "HTTP / JSON" --> B
-    A -- "/auth: login y refresh" --> U["Servicio de auth<br/>Express 5"]
-    B -. "JWKS (clave pública)" .-> U
-    B -- "Mongoose" --> C[("MongoDB")]
+    B -. "JWKS: clave pública" .-> U
+    B -- "Mongoose" --> C
     U -- "Mongoose" --> C
-    B -. "/api/docs" .-> D["Swagger UI"]
+    I -.-> E
+
+    classDef front fill:#c6f04d,stroke:#0c2419,color:#0c2419,stroke-width:2px
     classDef app fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
-    classDef data fill:#1b7a4e,stroke:#0c2419,color:#ffffff
-    class A,B,W,I,U app
-    class C,D,E data
+    classDef edge fill:#1b7a4e,stroke:#c6f04d,color:#ffffff,stroke-width:2px
+    classDef data fill:#e8f3ec,stroke:#1b7a4e,color:#0c2419
+    class W,A front
+    class B,U,I app
+    class P edge
+    class C,E data
 ```
+
+Hoy ese proxy es el de `ng serve` en desarrollo (`proxy.conf.json` de cada frontal) y un Nginx o Caddy en producción. Mañana será la [API gateway](#preparado-para-la-api-gateway), sin tocar los frontales.
 
 <table>
   <tr>
@@ -183,57 +212,127 @@ flowchart LR
   </tr>
   <tr>
     <td><a href="moto-routes-web/README.md"><b>Web pública</b></a></td>
-    <td>Angular 20 sin zone.js, signals, TypeScript estricto</td>
+    <td>Angular 20 sin zone.js, signals, TypeScript estricto, Leaflet</td>
     <td>La URL como fuente de verdad, peticiones canceladas con <code>AbortController</code>, componentes reutilizables (carrusel, filtros, búsqueda, paginación) y la señalización de carretera como diseño</td>
   </tr>
   <tr>
     <td><a href="moto-routes-dashboard/README.md"><b>Panel</b></a></td>
     <td>Angular 20 sin zone.js, signals, TypeScript estricto</td>
-    <td>Actualizaciones optimistas, carga diferida por secciones y un sistema de diseño propio en variables CSS</td>
+    <td>Actualizaciones optimistas, carga diferida por secciones, un sistema de diseño propio en variables CSS y la sesión que se renueva sola sin que se note</td>
   </tr>
   <tr>
     <td><a href="moto-routes-api/README.md"><b>API</b></a></td>
-    <td>Express 5, Mongoose 9 con relaciones y <code>populate</code>, Zod 4</td>
-    <td>Arquitectura por capas, validación antes del controlador, borrado lógico reutilizable y un único formato de error</td>
+    <td>Express 5, Mongoose 9 con relaciones y <code>populate</code>, Zod 4, <code>jose</code></td>
+    <td>Arquitectura por capas, validación antes del controlador, borrado lógico reutilizable, permisos por rol y por propiedad, y un único formato de error</td>
   </tr>
   <tr>
-    <td><a href="moto-routes-auth/README.md"><b>Servicio de auth</b></a></td>
+    <td><a href="moto-routes-auth/README.md"><b>Auth</b></a></td>
     <td>Express 5, Zod 4, <code>jose</code> (JWT RS256 y JWKS), Argon2id</td>
-    <td>Solo él tiene la clave privada: la API comprueba los tokens con la pública. Token de acceso de 15 minutos y refresh rotatorio de 7 días en cookies <code>httpOnly</code>, con detección de reutilización, límite de intentos y protección CSRF</td>
+    <td>Solo él tiene la clave privada: los demás comprueban los tokens con la pública. Refresh rotatorio con detección de reutilización, límite de intentos y protección CSRF</td>
   </tr>
   <tr>
-    <td><a href="moto-routes-ai/README.md"><b>Servidor de IA</b></a></td>
+    <td><a href="moto-routes-ai/README.md"><b>IA</b></a></td>
     <td>Express 5, Zod 4, IA gratuita con Groq (GPT-OSS 120B), cambiable a Gemini u OpenRouter desde el <code>.env</code></td>
     <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
   </tr>
 </table>
 
+### Cómo viaja una sesión
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant N as Navegador
+    participant U as Auth
+    participant B as API
+    N->>U: POST /auth/login
+    U-->>N: Cookies httpOnly: routly_session (15 min) y routly_refresh (7 días, solo /auth)
+    N->>B: GET /api/... con la cookie
+    B->>B: Comprueba la firma (JWKS), el usuario, el rol y la propiedad
+    B-->>N: 200
+    Note over N,B: A los 15 minutos
+    N->>B: GET /api/...
+    B-->>N: 401 TOKEN_EXPIRED
+    N->>U: POST /auth/refresh
+    U-->>N: Cookies nuevas (el refresh anterior ya no sirve)
+    N->>B: Repite la petición: 200
+```
+
+La API nunca ve una contraseña ni una clave con la que pueda fabricar tokens: solo los comprueba. El panel guarda en `localStorage` hasta cuándo dura la sesión, nunca el token.
+
 ```
 Routly/
-├── moto-routes-api/        API REST (Node.js + Express + MongoDB)
-├── moto-routes-auth/       Servicio de auth: login, refresh y JWKS (Node.js + Express), puerto 3002
-├── moto-routes-ai/         Servidor de IA: bloque Routly IA y asistente (Node.js + Express)
-├── moto-routes-dashboard/   Panel de administración (Angular)
-├── moto-routes-web/        Web pública: Home, Shop y detalle (Angular)
+├── moto-routes-web/        Web pública: Home, Shop y detalle con el mapa (Angular)
+├── moto-routes-dashboard/  Panel de administración (Angular)
+├── moto-routes-api/        API REST: colecciones, permisos y tienda (Node.js + Express + MongoDB)
+├── moto-routes-auth/       Auth: login, refresh y JWKS (Node.js + Express + MongoDB)
+├── moto-routes-ai/         IA: bloque Routly IA, mapa y asistente (Node.js + Express)
 ├── design/                 Bocetos de la web pública y el script del peor caso
 ├── docs/                   Demo, capturas e imágenes de los README
 ├── scripts/                npm run dev, test, check y seed para todas las partes a la vez
-├── package.json            Esos comandos (sin dependencias)
-└── DATABASE.md             Diseño de la base de datos completa
+└── package.json            Esos comandos (sin dependencias)
 ```
 
 Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza:
 
-- [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, validación y errores.
-- [`moto-routes-auth/README.md`](moto-routes-auth/README.md): el flujo de la sesión, las claves y su rotación, y las medidas de seguridad.
-- [`moto-routes-ai/README.md`](moto-routes-ai/README.md): endpoints de la IA, el asistente y sus herramientas, y de dónde sale cada dato.
-- [`moto-routes-dashboard/README.md`](moto-routes-dashboard/README.md): flujo de datos, patrones de Angular, sistema de diseño y cómo añadir una entidad.
 - [`moto-routes-web/README.md`](moto-routes-web/README.md): la URL como estado, la cancelación de peticiones y cómo se usa cada componente reutilizable.
+- [`moto-routes-dashboard/README.md`](moto-routes-dashboard/README.md): flujo de datos, patrones de Angular, la sesión, el sistema de diseño y cómo añadir una entidad.
+- [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, permisos, validación y errores.
+- [`moto-routes-auth/README.md`](moto-routes-auth/README.md): el flujo de la sesión, las claves y su rotación, y las medidas de seguridad.
+- [`moto-routes-ai/README.md`](moto-routes-ai/README.md): endpoints de la IA, el mapa, el asistente y sus herramientas, y de dónde sale cada dato.
+
+## Preparado para la API gateway
+
+La siguiente pieza es una **API gateway**: una sola puerta de entrada que reciba todo el tráfico, termine el HTTPS y reparta cada petición a su servicio. No está hecha todavía, pero el resto ya está montado para que entre sin tocar ni los frontales ni la lógica de los servicios.
+
+```mermaid
+flowchart LR
+    N["Navegador<br/>web y panel"] -- "HTTPS<br/>un solo dominio" --> G{{"API gateway"}}
+    G -- "/api" --> B["API · 3000"]
+    G -- "/auth" --> U["Auth · 3002"]
+    G -- "/ai" --> I["IA · 3001"]
+    G -. "JWKS (caché)" .-> U
+    B -. "JWKS (caché)" .-> U
+    subgraph red["Red interna: solo la gateway llega a los servicios"]
+        B
+        U
+        I
+    end
+    classDef gw fill:#c6f04d,stroke:#0c2419,color:#0c2419,stroke-width:2px
+    classDef app fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
+    classDef client fill:#e8f3ec,stroke:#1b7a4e,color:#0c2419
+    class G gw
+    class B,U,I app
+    class N client
+    style red fill:#f4f9f1,stroke:#1b7a4e,stroke-dasharray:4 4,color:#0c2419
+```
+
+### Lo que ya está listo
+
+| Pieza | Cómo está hoy | Por qué le sirve a la gateway |
+|---|---|---|
+| **Un prefijo por servicio** | `/api` (API), `/auth` (auth) y `/ai` (IA), cada uno con su `/health` | La gateway enruta por prefijo, sin reescribir rutas, y sabe si cada servicio está vivo |
+| **Los frontales no saben de puertos** | La web y el panel llaman a `/api`, `/auth` y `/ai` en su mismo origen. En desarrollo los reparte `proxy.conf.json`, que hace ya de gateway | Montarla solo cambia a quién apunta el proxy: ni una línea de Angular |
+| **Tokens que cualquiera comprueba** | Auth firma con RS256 y publica la clave pública en `/auth/.well-known/jwks.json`, con `kid`, emisor (`routly-auth`) y audiencia (`routly`) | La gateway puede rechazar un token malo en la puerta con el mismo JWKS, sin secretos compartidos ni llamar a auth en cada petición |
+| **Rotar la clave sin cortes** | `JWT_PREVIOUS_PUBLIC_KEY_FILE` sigue publicando la clave anterior mientras viven sus tokens | La gateway y la API recogen la nueva sola: el `kid` del token dice cuál usar |
+| **Cookies pensadas para un solo dominio** | `routly_session` con `Path=/` y `routly_refresh` con `Path=/auth`, `SameSite=Strict`, y `__Secure-` con HTTPS | Detrás de la gateway todo es el mismo origen: el refresh solo viaja a auth |
+| **Detrás de un proxy** | `TRUST_PROXY` en la API, auth y la IA: leen la IP, el protocolo y el host de `X-Forwarded-*` | El límite de intentos cuenta la IP real y la comprobación CSRF del `Origin` sigue funcionando |
+| **Orígenes permitidos** | `CORS_ORIGIN` en la API y en auth | Con todo en un dominio no hace falta CORS; si un frontal va aparte, se configura en un sitio |
+| **La API no se fía de nadie** | Comprueba ella misma cada token, el usuario, el rol y la propiedad | Si alguien llega a la API saltándose la gateway, no gana nada |
+
+### Qué hará la gateway
+
+1. **Ser la única entrada**: HTTPS, un solo dominio y los servicios en una red interna, sin puertos abiertos fuera.
+2. **Enrutar por prefijo**: `/api` → 3000, `/auth` → 3002, `/ai` → 3001, y servir la web y el panel.
+3. **Comprobar el token en la puerta** con el JWKS de auth, para cortar antes lo que no lleva sesión válida. La API lo seguirá comprobando (cuesta microsegundos) y seguirá decidiendo los permisos.
+4. **Límites y logs comunes**: un límite de peticiones global y un registro de todo el tráfico en un solo sitio, sin cabeceras `Cookie` ni `Authorization`.
+
+Al montarla, cada servicio solo necesita `TRUST_PROXY=1`, `COOKIE_SECURE=true` y, en la API, `AUTH_JWKS_URL` apuntando a auth por la red interna.
 
 ## Puesta en marcha
 
 > [!NOTE]
-> Necesitas **Node.js 20.19 o superior** y **MongoDB** en marcha en local.
+> Necesitas **Node.js 20.19 o superior** y **MongoDB** en marcha en local. Nada más: los scripts de la raíz solo usan Node.
 
 ### Arrancar todo con un comando
 
@@ -331,20 +430,21 @@ npm start
 
 ## Hoja de ruta
 
-Las colecciones están hechas de punta a punta (API, panel y tests), y la web pública ya enseña el catálogo y deja elegir salida. Lo siguiente son las reservas: la API ya cuenta las plazas reservadas de cada salida y la web tiene preparado el botón y el servicio. El diseño completo, campo a campo, está en [`DATABASE.md`](DATABASE.md), y las mejoras propuestas para la API, en [`NOTES.md`](NOTES.md).
+El catálogo está hecho de punta a punta (API, panel y tests), la web pública ya enseña las salidas con su mapa y su IA, y la sesión vive en su propio servicio. Lo siguiente es la API gateway y, después, las reservas: la API ya cuenta las plazas reservadas de cada salida y la web tiene preparado el botón y el servicio.
 
-| Estado | Bloque | Colecciones | Para qué |
+| Estado | Bloque | Dónde | Para qué |
 |:---:|---|---|---|
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Rutas | `routes` | Catálogo de rutas, con categoría, origen, destino y portada |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Rutas | `routes` | Catálogo de rutas, con categoría, origen, destino, puntos de paso y portada |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Catálogo | `categories`, `locations` | Tipos de ruta y ubicaciones con coordenadas |
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Cuentas | `roles`, `users`, `hosts` | Administradores, riders y anfitriones con perfil público |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Cuentas | `roles`, `users`, `profiles`, `hosts` | Administradores, riders y anfitriones con perfil público |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Acceso | `users`, `roles` | Servicio de auth propio (RS256 + JWKS) con sesión en cookies y refresh rotatorio; el panel solo para admin, y el perfil y el garaje para cada usuario |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Web pública | `/api/shop` | Home, Shop y detalle con la elección de salida |
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Routly IA | `/ai` | El bloque Routly IA del detalle (resumen, tiempo, paradas, qué llevar y preguntas) y el asistente, en un servidor aparte sin base de datos |
-| ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección (diseño en `DATABASE.md`, sección 14) |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Routly IA | `/ai` | El bloque Routly IA del detalle, el mapa del recorrido y el asistente, en un servidor aparte sin base de datos |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Auth | `/auth`, `sessions` | Servicio propio con RS256 + JWKS, cookies `httpOnly` y refresh rotatorio; el panel solo para admin, y el perfil y el garaje para cada usuario |
+| ![siguiente](https://img.shields.io/badge/siguiente-c6f04d?style=flat-square&labelColor=0c2419) | API gateway | | Una sola entrada para todo, con HTTPS, enrutado por prefijo y el token comprobado en la puerta ([cómo está preparada](#preparado-para-la-api-gateway)) |
+| ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `reviews` | Valoraciones |
 
 ## Autor
