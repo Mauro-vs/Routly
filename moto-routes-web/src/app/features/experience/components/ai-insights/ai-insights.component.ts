@@ -16,7 +16,7 @@ import { LOADING, Piece } from './piece';
 const QUESTIONS = ['¿Vale para alguien que lleva poco en moto?', '¿Qué tiempo hará en la próxima salida?'];
 
 /** Cuántas veces se vuelve a pedir el mapa mientras se buscan los sitios, y cada cuánto. */
-export const ROUTE_RETRIES = 3;
+export const ROUTE_RETRIES = 5;
 export const ROUTE_RETRY_MS = 8000;
 
 /**

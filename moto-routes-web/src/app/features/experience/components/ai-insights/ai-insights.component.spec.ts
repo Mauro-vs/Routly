@@ -163,19 +163,35 @@ describe('AiInsightsComponent', () => {
 
     expect(api.routeMap).toHaveBeenCalledWith('calas-de-mallorca', jasmine.any(AbortSignal));
     expect(text(element.querySelector('.trip'))).toBe('Palma → Valldemossa → Sóller · 61 km por carretera, unas 1,1 h sin paradas');
-    expect(text(element.querySelector('.list summary'))).toBe('Ver en lista (1 sitio para comer y 2 miradores)');
-    expect(text(element.querySelector('.groups'))).toContain("Ca'n Pedro");
-    // Un mirador sin nombre sale como «Mirador»
-    const names = Array.from(element.querySelectorAll('.places a'), (link) => text(link));
+    // Un filtro por tipo, con cuántos hay; sin gasolineras, no sale ese filtro
+    const chips = Array.from(element.querySelectorAll('.filters .chip'), (chip) => text(chip));
+    expect(chips).toEqual(['Dónde comer1', 'Miradores2']);
+    // Tarjetas en el orden del recorrido, con el km; un mirador sin nombre sale como «Mirador»
+    const names = Array.from(element.querySelectorAll('.card .name'), (name) => text(name));
     expect(names).toEqual(["Ca'n Pedro", 'Mirador de Ses Puntes', 'Mirador']);
-    expect(text(element.querySelector('.legend'))).toContain('Miradores');
-    expect(text(element.querySelector('.legend'))).not.toContain('Gasolineras');
+    expect(text(element.querySelector('.card .muted'))).toBe('Km 31 · Restaurante · a 0,3 km');
 
     const map = await untilMap(fixture, element);
     expect(map).not.toBeNull();
-    // La línea (con su borde) y seis puntos: tres sitios, el punto de paso, la llegada y la salida
-    expect(map!.querySelectorAll('path.leaflet-interactive').length).toBe(7);
+    // Un pin con icono por sitio, y el recorrido y sus puntos dibujados aparte
+    expect(map!.querySelectorAll('.pin').length).toBe(3);
     expect(text(map!.querySelector('.leaflet-control-attribution'))).toContain('OSRM');
+  });
+
+  it('el filtro quita un tipo de sitio del mapa y de las tarjetas', async () => {
+    api.insights.and.resolveTo(INSIGHTS);
+    api.weather.and.resolveTo(WEATHER);
+    api.stops.and.resolveTo(STOPS);
+    const { fixture, element } = await render();
+    const map = await untilMap(fixture, element);
+
+    const viewpoints = element.querySelectorAll<HTMLButtonElement>('.filters .chip')[1];
+    viewpoints.click();
+    await fixture.whenStable();
+
+    expect(viewpoints.getAttribute('aria-pressed')).toBe('false');
+    expect(Array.from(element.querySelectorAll('.card .name'), (name) => text(name))).toEqual(["Ca'n Pedro"]);
+    expect(map!.querySelectorAll('.pin').length).toBe(1);
   });
 
   it('mientras se buscan los sitios, el mapa sale igual y lo dice', async () => {
@@ -187,7 +203,7 @@ describe('AiInsightsComponent', () => {
 
     expect(text(element)).toContain('Buscando dónde comer, miradores y gasolineras a lo largo del recorrido…');
     expect(element.querySelector('.map')).not.toBeNull();
-    expect(element.querySelector('.list')).toBeNull();
+    expect(element.querySelector('.cards')).toBeNull();
   });
 
   it('si OSRM no responde, avisa de que la línea va en recto', async () => {

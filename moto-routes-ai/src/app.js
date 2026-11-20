@@ -1,6 +1,7 @@
 import express from "express";
 import morgan from "morgan";
 import { createOpenRouterClient } from "./clients/openrouter.js";
+import { createGeoapifyClient } from "./clients/geoapify.js";
 import { createOsrmClient } from "./clients/osrm.js";
 import { createOverpassClient } from "./clients/overpass.js";
 import { createPhotonClient } from "./clients/photon.js";
@@ -35,6 +36,7 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
     overpass: createOverpassClient(upstream),
     osrm: createOsrmClient(upstream),
     photon: createPhotonClient(upstream),
+    geoapify: createGeoapifyClient({ ...upstream, apiKey: config.geoapifyApiKey }),
     openRouter: createOpenRouterClient({ ...config.ai, fetch: fetchImpl }),
   };
 
@@ -42,14 +44,14 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   const catalog = createCatalogService({ routly: clients.routly });
   const places = createPlacesService({ weather: clients.weather });
   const weather = createWeatherService({ catalog, places, weather: clients.weather });
-  const pois = createPoisService({ photon: clients.photon, overpass: clients.overpass });
+  const pois = createPoisService({ geoapify: clients.geoapify, photon: clients.photon, overpass: clients.overpass });
   const stops = createStopsService({ catalog, places, pois });
   const services = {
     catalog,
     places,
     weather,
     stops,
-    routeMap: createRouteMapService({ catalog, places, osrm: clients.osrm, pois }),
+    routeMap: createRouteMapService({ catalog, places, osrm: clients.osrm, pois, geoapify: clients.geoapify.enabled }),
     insights: createInsightsService({ catalog, weather, stops, openRouter: clients.openRouter }),
   };
   // El chatbot usa las herramientas, que tiran de los demás services y de la API

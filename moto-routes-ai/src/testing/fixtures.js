@@ -131,3 +131,24 @@ export function photonBody(url) {
       .map(({ lat, lon, ...properties }) => ({ type: "Feature", geometry: { type: "Point", coordinates: [lon, lat] }, properties })),
   };
 }
+
+// Lo que devuelve Geoapify Places cerca de Jaca: responde según las categorías que se le piden
+const geoapifyPlaces = [
+  { category: "catering.restaurant", raw: { osm_type: "n", osm_id: 21, name: "Casa Fau", amenity: "restaurant", cuisine: "regional", opening_hours: "Mo-Su 13:00-16:00" }, lat: 42.571, lon: -0.551 },
+  { category: "tourism.attraction.viewpoint", raw: { osm_type: "w", osm_id: 22, tourism: "viewpoint" }, lat: 42.6, lon: -0.4 },
+  { category: "service.vehicle.fuel", raw: { osm_type: "n", osm_id: 23, amenity: "fuel", brand: "Repsol" }, lat: 42.58, lon: -0.56 },
+];
+
+export function geoapifyBody(url) {
+  const wanted = url.searchParams.get("categories").split(",");
+  return {
+    type: "FeatureCollection",
+    features: geoapifyPlaces
+      .filter((place) => wanted.some((category) => place.category === category || place.category.startsWith(`${category}.`)))
+      .map(({ category, raw, lat, lon }) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lon, lat] },
+        properties: { name: raw.name, lat, lon, categories: [category.split(".")[0], category], datasource: { sourcename: "openstreetmap", raw } },
+      })),
+  };
+}

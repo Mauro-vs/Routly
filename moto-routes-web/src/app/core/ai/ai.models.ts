@@ -117,7 +117,12 @@ export interface AiRouteMap {
   placesStatus: 'ok' | 'loading' | 'unavailable';
   /** A cuántos km del recorrido se busca cada tipo */
   placesRadiusKm: Record<AiPlaceKind, number>;
-  sources: { map: { name: string; url: string; attribution: string }; route: { name: string; url: string } };
+  sources: {
+    map: { name: string; url: string; attribution: string };
+    route: { name: string; url: string };
+    /** Solo si los sitios salen de Geoapify, que pide que se le cite */
+    places?: { name: string; url: string };
+  };
 }
 
 /** Un mensaje del chat, como lo manda la web (el servidor solo admite estos dos papeles). */

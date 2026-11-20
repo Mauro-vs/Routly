@@ -74,6 +74,8 @@ const envSchema = z.object({
     .transform((value) => (value ? modelList(value) : null))
     .pipe(z.array(z.string().regex(/^[\w.:/-]+$/, "must be model names separated by commas")).min(1).nullable()),
   AI_TIMEOUT_MS: milliseconds(30_000),
+  // Opcional: la clave gratuita de Geoapify (sitios de OpenStreetMap, más fiable que Photon y Overpass)
+  GEOAPIFY_API_KEY: optionalText,
   AI_MAX_TOKENS: z.coerce.number().int().min(100).max(8000).default(1200),
   // Cabeceras de atribución de OpenRouter (salen en sus estadísticas)
   SITE_URL: url("http://localhost:4300"),
@@ -94,6 +96,7 @@ export function loadConfig(env = process.env) {
     trustProxy: config.TRUST_PROXY,
     routlyApiUrl: config.ROUTLY_API_URL,
     upstreamTimeoutMs: config.UPSTREAM_TIMEOUT_MS,
+    geoapifyApiKey: config.GEOAPIFY_API_KEY ?? null,
     ai: Object.freeze({
       provider: config.AI_PROVIDER,
       label: provider.label,

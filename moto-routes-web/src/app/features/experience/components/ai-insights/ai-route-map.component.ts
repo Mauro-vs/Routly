@@ -7,15 +7,16 @@ import {
   effect,
   inject,
   input,
+  signal,
   viewChild,
 } from '@angular/core';
 import type * as Leaflet from 'leaflet';
 
 import { AiPlaceKind, AiRouteMap, AiRoutePlace } from '../../../../core/ai/ai.models';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
-import { IconName } from '../../../../shared/ui/icon/icons.generated';
+import { ICONS, IconName } from '../../../../shared/ui/icon/icons.generated';
 import { SkeletonComponent } from '../../../../shared/ui/skeleton/skeleton.component';
-import { formatHours, formatNumber, plural } from '../../../../shared/utils/shop-format';
+import { formatHours, formatNumber } from '../../../../shared/utils/shop-format';
 import { Piece } from './piece';
 
 /** Las teselas del mapa: las de OpenStreetMap, gratis para un uso moderado con su atribución. */
@@ -23,19 +24,21 @@ const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 const CATEGORIES: Record<string, string> = { restaurant: 'Restaurante', cafe: 'Cafetería' };
 
-/** Cómo se enseña cada tipo de sitio: en la leyenda, en la lista y en el mapa */
-const KINDS: Record<AiPlaceKind, { title: string; legend: string; unnamed: string; icon: IconName; fill: string; stroke: string }> = {
-  food: { title: 'Dónde comer', legend: 'Dónde comer', unnamed: 'Restaurante', icon: 'fork-knife', fill: '#f97316', stroke: '#9a3412' },
-  viewpoint: { title: 'Miradores', legend: 'Miradores', unnamed: 'Mirador', icon: 'binoculars', fill: '#3b82f6', stroke: '#1e3a8a' },
-  fuel: { title: 'Gasolineras', legend: 'Gasolineras', unnamed: 'Gasolinera', icon: 'gas-pump', fill: '#facc15', stroke: '#854d0e' },
+/** Cómo se enseña cada tipo de sitio: en los filtros, en las tarjetas y en el mapa */
+const KINDS: Record<AiPlaceKind, { title: string; unnamed: string; icon: IconName; fill: string }> = {
+  food: { title: 'Dónde comer', unnamed: 'Restaurante', icon: 'fork-knife', fill: '#ea580c' },
+  viewpoint: { title: 'Miradores', unnamed: 'Mirador', icon: 'binoculars', fill: '#2563eb' },
+  fuel: { title: 'Gasolineras', unnamed: 'Gasolinera', icon: 'gas-pump', fill: '#ca8a04' },
 };
 const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
 
 /**
  * El mapa del detalle (GET /ai/experiences/:slug/route): el recorrido por carretera desde la salida,
  * por los puntos de paso, hasta la llegada, y lo que hay a lo largo: dónde comer, miradores y
- * gasolineras. No es IA: el
- * recorrido es de OSRM y los sitios, de OpenStreetMap.
+ * gasolineras. No es IA: el recorrido es de OSRM y los sitios, de OpenStreetMap.
+ *
+ * Arriba, un filtro por tipo (con cuántos hay); en el mapa, un pin con el icono de cada sitio; y debajo,
+ * los sitios en tarjetas en el orden del recorrido (km a km): al pulsar una, el mapa va a ese sitio.
  *
  * Leaflet se carga al pintar el mapa (import dinámico), así no pesa en el resto de la web. Todo lo
  * de OpenStreetMap se mete en el mapa como texto, nunca como HTML.
@@ -54,17 +57,29 @@ const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
         @case ('ready') {
           @if (piece().data; as data) {
             <p class="trip">{{ trip(data) }}@if (length(data); as length) {<span class="muted num"> · {{ length }}</span>}</p>
+            @if (groups().length > 0) {
+              <div class="filters" role="group" aria-label="Qué enseñar en el mapa">
+                @for (group of groups(); track group.kind) {
+                  <button
+                    type="button"
+                    class="chip"
+                    [style.--kind]="group.fill"
+                    [attr.aria-pressed]="!hidden().has(group.kind)"
+                    (click)="toggle(group.kind)"
+                  >
+                    <span class="badge"><ui-icon [name]="group.icon" /></span>{{ group.title }}<span class="num">{{ group.places.length }}</span>
+                  </button>
+                }
+              </div>
+            }
             <div #map class="map" role="region" aria-label="Mapa del recorrido con dónde comer, miradores y gasolineras"></div>
             <ul class="legend small muted">
-              <li><span class="dot dot--start"></span>Salida@if (!data.end) { y llegada}</li>
+              <li><span class="dot"></span>Salida@if (!data.end) { y llegada}</li>
               @if (data.waypoints.length > 0) {
                 <li><span class="dot dot--waypoint"></span>Puntos de paso</li>
               }
               @if (data.end) {
                 <li><span class="dot dot--end"></span>Llegada</li>
-              }
-              @for (group of groups(); track group.kind) {
-                <li><span class="dot" [style.background]="group.fill" [style.border-color]="group.stroke"></span>{{ group.legend }}</li>
               }
             </ul>
             @if (!data.routed && data.line) {
@@ -81,24 +96,17 @@ const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
                 @if (groups().length === 0) {
                   <p class="small muted">No hay sitios en el mapa cerca del recorrido.</p>
                 } @else {
-                  <details class="list">
-                    <summary><ui-icon name="list" /> Ver en lista ({{ summary() }})</summary>
-                    <div class="groups">
-                      @for (group of groups(); track group.kind) {
-                        <div class="group">
-                          <p class="group-title"><ui-icon [name]="group.icon" /> {{ group.title }}</p>
-                          <ul class="places">
-                            @for (place of group.places; track place.url) {
-                              <li>
-                                <a [href]="place.url" target="_blank" rel="noopener noreferrer">{{ place.name ?? group.unnamed }}</a>
-                                <span class="small muted num">{{ detail(place) }}</span>
-                              </li>
-                            }
-                          </ul>
-                        </div>
-                      }
-                    </div>
-                  </details>
+                  <ol class="cards" aria-label="Sitios en el orden del recorrido">
+                    @for (place of shown(); track place.url) {
+                      <li>
+                        <button type="button" class="card" [style.--kind]="kinds[place.kind].fill" (click)="focus(place)">
+                          <span class="badge"><ui-icon [name]="kinds[place.kind].icon" /></span>
+                          <span class="name">{{ place.name ?? kinds[place.kind].unnamed }}</span>
+                          <span class="small muted num">{{ where(place, data) }}</span>
+                        </button>
+                      </li>
+                    }
+                  </ol>
                 }
               }
             }
@@ -111,10 +119,7 @@ const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
     </section>
   `,
   styles: `
-    :host {
-      display: block;
-    }
-
+    :host,
     .block {
       display: grid;
       gap: var(--space-3);
@@ -123,7 +128,6 @@ const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
     h2 {
       font-size: 20px;
       font-weight: 800;
-      letter-spacing: -0.01em;
     }
 
     .muted {
@@ -134,31 +138,69 @@ const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
       font-size: var(--text-sm);
     }
 
-    .trip {
+    .trip,
+    .name {
       font-weight: 650;
     }
 
     .map {
-      height: 360px;
+      height: 380px;
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      /* Leaflet pone sus capas con z-index altos: que no tapen la cabecera ni el chat */
       isolation: isolate;
-      z-index: 0;
       background: var(--color-surface-2);
     }
 
-    ul {
+    ul,
+    ol {
       margin: 0;
       padding: 0;
       list-style: none;
     }
 
+    .filters,
     .legend {
       display: flex;
       flex-wrap: wrap;
       gap: var(--space-2) var(--space-4);
+    }
+
+    .filters {
+      gap: var(--space-2);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 4px 12px 4px 4px;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      background: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .chip[aria-pressed='false'] {
+      opacity: 0.5;
+    }
+
+    .chip .num {
+      color: var(--color-text-muted);
+    }
+
+    .badge {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      flex: none;
+      border-radius: 50%;
+      background: var(--kind);
+      color: #fff;
     }
 
     .legend li {
@@ -184,61 +226,59 @@ const KIND_ORDER: AiPlaceKind[] = ['food', 'viewpoint', 'fuel'];
       background: var(--color-text);
     }
 
+    .cards {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(200px, 240px);
+      gap: var(--space-3);
+      overflow-x: auto;
+      padding-bottom: var(--space-2);
+      scroll-snap-type: x proximity;
+    }
 
-    .list summary {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      color: var(--color-primary);
-      font-weight: 700;
+    .card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2px var(--space-2);
+      width: 100%;
+      height: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-top: 4px solid var(--kind);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      text-align: left;
       cursor: pointer;
+      scroll-snap-align: start;
     }
 
-    .groups {
+    .card .badge {
+      grid-row: span 2;
+    }
+
+    /* Lo de dentro del mapa (pines y globos) lo crea Leaflet: ::ng-deep para llegar */
+    :host ::ng-deep .pin {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: var(--space-4);
-      margin-top: var(--space-3);
+      place-items: center;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      background: var(--kind);
+      box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
     }
 
-    .group-title {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-weight: 750;
+    :host ::ng-deep .pin svg {
+      width: 15px;
+      fill: #fff;
     }
 
-    .places {
-      display: grid;
-      gap: var(--space-2);
-      margin-top: var(--space-2);
-    }
-
-    .places li {
-      display: grid;
-    }
-
-    a {
-      color: var(--color-primary);
-      font-weight: 650;
-    }
-
-    /* Lo de dentro del mapa (los globos de cada sitio) lo crea Leaflet: ::ng-deep para llegar */
     :host ::ng-deep .leaflet-popup-content {
       display: grid;
       gap: 2px;
       margin: 10px 14px;
       font: inherit;
       font-size: var(--text-sm);
-    }
-
-    :host ::ng-deep .leaflet-popup-content strong {
-      font-size: var(--text-base);
-    }
-
-    :host ::ng-deep .leaflet-popup-content a {
-      color: var(--color-primary);
-      font-weight: 650;
     }
   `,
 })
@@ -250,10 +290,17 @@ export class AiRouteMapComponent {
   private map: Leaflet.Map | null = null;
   private mapOn: HTMLElement | null = null;
   private layers: Leaflet.LayerGroup | null = null;
+  /** Una capa por tipo, para enseñarla o quitarla con el filtro */
+  private kindLayers = new Map<AiPlaceKind, Leaflet.LayerGroup>();
+  /** El pin de cada sitio (por su url), para ir a él desde su tarjeta */
+  private markers = new Map<string, Leaflet.Marker>();
   private drawing = 0;
 
-  protected readonly plural = plural;
-  /** Los sitios por tipo, en el orden del recorrido; solo los tipos que tienen alguno */
+  protected readonly kinds = KINDS;
+  /** Los tipos que el filtro ha quitado */
+  protected readonly hidden = signal<ReadonlySet<AiPlaceKind>>(new Set());
+
+  /** Los sitios por tipo; solo los tipos que tienen alguno */
   protected readonly groups = computed(() => {
     const places = this.piece().data?.places ?? [];
     return KIND_ORDER.map((kind) => ({ kind, ...KINDS[kind], places: places.filter((place) => place.kind === kind) })).filter(
@@ -261,15 +308,10 @@ export class AiRouteMapComponent {
     );
   });
 
-  /** "12 para comer, 3 miradores y 2 gasolineras" */
-  protected readonly summary = computed(() => {
-    const words: Record<AiPlaceKind, [string, string]> = {
-      food: ['sitio para comer', 'sitios para comer'],
-      viewpoint: ['mirador', 'miradores'],
-      fuel: ['gasolinera', 'gasolineras'],
-    };
-    const parts = this.groups().map((group) => plural(group.places.length, ...words[group.kind]));
-    return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}` : (parts[0] ?? '');
+  /** Los sitios de los tipos que se enseñan, en el orden del recorrido */
+  protected readonly shown = computed(() => {
+    const hidden = this.hidden();
+    return (this.piece().data?.places ?? []).filter((place) => !hidden.has(place.kind));
   });
 
   constructor() {
@@ -278,7 +320,26 @@ export class AiRouteMapComponent {
       const element = this.mapElement()?.nativeElement;
       if (data && element) void this.draw(element, data);
     });
+    // El filtro solo quita o pone capas: no vuelve a pintar el mapa
+    effect(() => this.applyFilter(this.hidden()));
     inject(DestroyRef).onDestroy(() => this.removeMap());
+  }
+
+  protected toggle(kind: AiPlaceKind): void {
+    this.hidden.update((hidden) => {
+      const next = new Set(hidden);
+      if (!next.delete(kind)) next.add(kind);
+      return next;
+    });
+  }
+
+  /** Lleva el mapa al sitio de la tarjeta y abre su globo */
+  protected focus(place: AiRoutePlace): void {
+    const marker = this.markers.get(place.url);
+    if (!this.map || !marker) return;
+    this.map.flyTo(marker.getLatLng(), Math.max(this.map.getZoom(), 14), { duration: 0.6 });
+    marker.openPopup();
+    this.mapElement()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   /** "Jaca → Biescas → Sabiñánigo": por dónde pasa, en orden */
@@ -295,10 +356,19 @@ export class AiRouteMapComponent {
     return `${formatNumber(Math.round(data.distanceKm))} km por carretera${hours}`;
   }
 
-  /** "Restaurante · spanish · a 0,4 km del recorrido" */
-  protected detail(place: AiRoutePlace): string {
-    const category = place.category ? CATEGORIES[place.category] ?? null : null;
-    return [category, place.cuisine[0] ?? null, `a ${formatNumber(place.distanceKm)} km del recorrido`].filter(Boolean).join(' · ');
+  /** "Km 34 · Restaurante · a 0,4 km": por dónde cae y lo lejos que queda de la carretera */
+  protected where(place: AiRoutePlace, data: AiRouteMap): string {
+    const km = data.distanceKm !== null && data.line ? `Km ${Math.round(place.position * data.distanceKm)}` : null;
+    const category = place.category ? (CATEGORIES[place.category] ?? null) : null;
+    return [km, category, `a ${formatNumber(place.distanceKm)} km`].filter(Boolean).join(' · ');
+  }
+
+  private applyFilter(hidden: ReadonlySet<AiPlaceKind>): void {
+    if (!this.map) return;
+    for (const [kind, layer] of this.kindLayers) {
+      if (hidden.has(kind)) layer.remove();
+      else layer.addTo(this.map);
+    }
   }
 
   private async draw(element: HTMLElement, data: AiRouteMap): Promise<void> {
@@ -313,7 +383,11 @@ export class AiRouteMapComponent {
       this.map = L.map(element, { scrollWheelZoom: false, zoomSnap: 0.5 });
       L.tileLayer(TILES, {
         maxZoom: 18,
-        attribution: `<a href="${data.sources.map.url}" target="_blank" rel="noopener">${data.sources.map.attribution}</a> · recorrido de <a href="${data.sources.route.url}" target="_blank" rel="noopener">${data.sources.route.name}</a>`,
+        attribution: [
+          `<a href="${data.sources.map.url}" target="_blank" rel="noopener">${data.sources.map.attribution}</a>`,
+          `recorrido de <a href="${data.sources.route.url}" target="_blank" rel="noopener">${data.sources.route.name}</a>`,
+          ...(data.sources.places ? [`sitios de <a href="${data.sources.places.url}" target="_blank" rel="noopener">${data.sources.places.name}</a>`] : []),
+        ].join(' · '),
       }).addTo(this.map);
       this.layers = L.layerGroup().addTo(this.map);
       this.mapOn = element;
@@ -321,6 +395,9 @@ export class AiRouteMapComponent {
     const map = this.map!;
     const layers = this.layers!;
     layers.clearLayers();
+    for (const layer of this.kindLayers.values()) layer.remove();
+    this.kindLayers.clear();
+    this.markers.clear();
 
     const styles = getComputedStyle(this.host.nativeElement);
     const color = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
@@ -335,20 +412,11 @@ export class AiRouteMapComponent {
       L.polyline(data.line, { color: primary, weight: 5, dashArray: data.routed ? undefined : '8 8' }).addTo(layers);
     }
 
-    for (const place of data.places ?? []) {
-      const kind = KINDS[place.kind];
-      L.circleMarker([place.latitude, place.longitude], { radius: 6, color: kind.stroke, weight: 2, fillColor: kind.fill, fillOpacity: 1 })
-        .bindPopup(() => this.popup(place))
-        .bindTooltip(place.name ?? kind.unnamed, { direction: 'top', offset: [0, -6] })
-        .addTo(layers);
-    }
-
     for (const point of data.waypoints) {
       const marker = L.circleMarker([point.latitude, point.longitude], { radius: 6, color: primary, weight: 3, fillColor: surface, fillOpacity: 1 });
       if (point.name) marker.bindTooltip(point.name, { direction: 'top', offset: [0, -6] });
       marker.addTo(layers);
     }
-
     if (data.end) {
       L.circleMarker([data.end.latitude, data.end.longitude], { radius: 8, color: surface, weight: 3, fillColor: text, fillOpacity: 1 })
         .bindTooltip(`Llegada: ${data.end.city}`, { direction: 'top', offset: [0, -8] })
@@ -357,6 +425,29 @@ export class AiRouteMapComponent {
     L.circleMarker(start, { radius: 8, color: surface, weight: 3, fillColor: primary, fillOpacity: 1 })
       .bindTooltip(data.end ? `Salida: ${data.start.city}` : `Salida y llegada: ${data.start.city}`, { direction: 'top', offset: [0, -8] })
       .addTo(layers);
+
+    // Los sitios, encima del recorrido: un pin redondo con el icono de su tipo
+    const icons = new Map(
+      KIND_ORDER.map((kind) => [
+        kind,
+        L.divIcon({
+          className: '',
+          html: `<span class="pin" style="--kind:${KINDS[kind].fill};width:28px;height:28px"><svg viewBox="0 0 256 256"><path d="${ICONS[KINDS[kind].icon]}"/></svg></span>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -14],
+        }),
+      ]),
+    );
+    for (const place of data.places ?? []) {
+      let layer = this.kindLayers.get(place.kind);
+      if (!layer) this.kindLayers.set(place.kind, (layer = L.layerGroup()));
+      const marker = L.marker([place.latitude, place.longitude], { icon: icons.get(place.kind), title: place.name ?? KINDS[place.kind].unnamed })
+        .bindPopup(() => this.popup(place, data))
+        .addTo(layer);
+      this.markers.set(place.url, marker);
+    }
+    this.applyFilter(this.hidden());
 
     // El encuadre solo la primera vez: si luego llegan los sitios, no se mueve lo que se mira
     if (firstTime) {
@@ -367,7 +458,7 @@ export class AiRouteMapComponent {
   }
 
   // El globo de un sitio, hecho con nodos de texto (los nombres vienen de OpenStreetMap)
-  private popup(place: AiRoutePlace): HTMLElement {
+  private popup(place: AiRoutePlace, data: AiRouteMap): HTMLElement {
     const box = document.createElement('div');
     const line = (tag: string, value: string) => {
       const node = document.createElement(tag);
@@ -376,7 +467,7 @@ export class AiRouteMapComponent {
       return node;
     };
     line('strong', place.name ?? KINDS[place.kind].unnamed);
-    line('span', this.detail(place));
+    line('span', [this.where(place, data), place.cuisine[0]].filter(Boolean).join(' · '));
     if (place.openingHours) line('span', `Horario: ${place.openingHours}`);
     const link = line('a', 'Ver en OpenStreetMap') as HTMLAnchorElement;
     link.href = place.url;
@@ -390,6 +481,8 @@ export class AiRouteMapComponent {
     this.map = null;
     this.mapOn = null;
     this.layers = null;
+    this.kindLayers.clear();
+    this.markers.clear();
   }
 }
 

@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { OPEN_METEO } from "../clients/weather.js";
 import { PLACES_BUDGET_MS } from "../services/routeMap.service.js";
-import { API, fakeFetch, startApp } from "../testing/helpers.js";
-import { experience, geocodingBody, jaca, overpassBody, photonBody } from "../testing/fixtures.js";
+import { API, fakeFetch, startApp, testConfig } from "../testing/helpers.js";
+import { experience, geoapifyBody, geocodingBody, jaca, overpassBody, photonBody } from "../testing/fixtures.js";
 
 const OVERPASS = "POST overpass-api.de/api/interpreter";
 const PHOTON = "GET photon.komoot.io/reverse";
+const GEOAPIFY = "GET api.geoapify.com/v2/places";
 const host = (url) => new URL(url).host + new URL(url).pathname;
 
 // La ruta del recorrido: Jaca → Biescas (punto de paso) → Sabiñánigo
@@ -56,9 +57,9 @@ describe("GET /ai/experiences/:slug/route", () => {
   let server;
   afterEach(() => server?.close());
 
-  async function start({ data, overrides, osrm } = {}) {
+  async function start({ data, overrides, osrm, config } = {}) {
     const fetch = withOsrm(fakeFetch(handlers(data, overrides)), osrm);
-    server = await startApp({ fetch });
+    server = await startApp({ fetch, config });
     return fetch;
   }
 
@@ -97,6 +98,25 @@ describe("GET /ai/experiences/:slug/route", () => {
     assert.equal(fetch.calls.filter((call) => call.key === OVERPASS).length, 0);
   });
 
+  it("con clave de Geoapify, los sitios salen de Geoapify (con horario y cocina) y no de Photon", async () => {
+    const fetch = await start({
+      config: testConfig({ GEOAPIFY_API_KEY: "geo-test" }),
+      overrides: { [GEOAPIFY]: (url) => ({ body: geoapifyBody(url) }) },
+    });
+    const { body } = await server.request("/ai/experiences/pirineo-en-moto/route");
+
+    assert.equal(body.data.placesStatus, "ok");
+    assert.deepEqual(
+      body.data.places.map((place) => `${place.kind}:${place.name ?? "-"}`),
+      ["food:Casa Fau", "fuel:Repsol", "viewpoint:-"],
+    );
+    assert.equal(body.data.places[0].openingHours, "Mo-Su 13:00-16:00");
+    assert.deepEqual(body.data.places[0].cuisine, ["regional"]);
+    assert.equal(fetch.calls.filter((call) => call.key === PHOTON).length, 0);
+    assert.ok(fetch.calls.some((call) => call.key === GEOAPIFY));
+    assert.equal(body.data.sources.places.name, "Geoapify");
+  });
+
   it("si Photon falla, busca en Overpass a lo largo de la línea", async () => {
     const original = console.warn;
     console.warn = () => {};
@@ -107,7 +127,8 @@ describe("GET /ai/experiences/:slug/route", () => {
       assert.ok(body.data.places.some((place) => place.name === "Casa Fau"));
       assert.ok(body.data.places.some((place) => place.kind === "fuel"));
       const query = new URLSearchParams(fetch.calls.find((call) => call.key === OVERPASS).init.body).get("data");
-      assert.match(query, /around:1500,42\.57,-0\.55,42\.6,-0\.4,/);
+      assert.match(query, /around:2500,42\.57,-0\.55\);/);
+      assert.match(query, /\.viewpoint out center tags/);
       assert.match(query, /tourism"="viewpoint/);
     } finally {
       console.warn = original;

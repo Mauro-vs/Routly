@@ -21,6 +21,8 @@ const SOURCES = Object.freeze({
   map: { name: "OpenStreetMap", url: "https://www.openstreetmap.org/copyright", attribution: "© OpenStreetMap contributors" },
   route: { name: "OSRM", url: "https://project-osrm.org" },
 });
+// Geoapify pide que se le cite si se usa su plan gratuito
+const GEOAPIFY_SOURCE = Object.freeze({ name: "Geoapify", url: "https://www.geoapify.com" });
 
 // El tipo de cada sitio según su etiqueta de OpenStreetMap, o null si no es de los que se enseñan
 function kindOf(tags) {
@@ -87,7 +89,8 @@ function spread(places, max) {
  * - Si los sitios tardan, places es null y placesStatus "loading"; si fallan, "unavailable". El
  *   recorrido se guarda 30 días y los sitios 7.
  */
-export function createRouteMapService({ catalog, places, osrm, pois }) {
+export function createRouteMapService({ catalog, places, osrm, pois, geoapify = false }) {
+  const sources = geoapify ? { ...SOURCES, places: GEOAPIFY_SOURCE } : SOURCES;
   const routes = createCache({ ttlMs: 30 * DAY, max: 300 });
   const found = createCache({ ttlMs: 7 * DAY, max: 300 });
 
@@ -160,7 +163,7 @@ export function createRouteMapService({ catalog, places, osrm, pois }) {
         places: result?.list ?? null,
         placesStatus: result?.list ? "ok" : result?.failed ? "unavailable" : "loading",
         placesRadiusKm: PLACES_RADIUS_KM,
-        sources: SOURCES,
+        sources,
       };
     },
   };
