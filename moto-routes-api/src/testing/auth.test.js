@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import jwt from "jsonwebtoken";
+import { RevokedToken } from "../models/revokedToken.model.js";
 import { DAY, TEST_PASSWORD, fromNow, seedBasics, startApi } from "./app.js";
+import { signTestToken } from "./tokens.js";
 
 const NEED_LOGIN = "Authentication required";
 const NO_PERMISSION = "You do not have permission to access this resource";
@@ -71,13 +72,35 @@ test("cabecera con otro formato: 401 TOKEN_INVALID", async () => {
   assert.notEqual((await withHeader(`bearer ${api.token}`)).status, 401);
 });
 
+// El payload de un token (sin comprobarlo): para firmar otro igual con algo cambiado
+const claimsOf = (token) => JSON.parse(Buffer.from(token.split(".")[1], "base64url"));
+
 test("token caducado: 401 TOKEN_EXPIRED", async () => {
-  const { sub, tv } = jwt.decode(ana.token);
-  const expired = jwt.sign({ sub, role: "host", tv, exp: Math.floor(Date.now() / 1000) - 5 }, process.env.JWT_SECRET);
+  const { sub, tv } = claimsOf(ana.token);
+  const expired = await signTestToken({ _id: sub, role: "host", tokenVersion: tv }, { expiresIn: -60 });
 
   const response = await api.as(expired).patch(`/experiences/${data.experience._id}`, { duration: 6 });
   assert.equal(response.status, 401);
   assert.equal(response.body.code, "TOKEN_EXPIRED");
+});
+
+test("un token cerrado con el logout del servicio de auth (lista negra) deja de servir", async () => {
+  const closed = await api.loginAs("ana@example.com");
+  const { jti, sub, exp } = claimsOf(closed.token);
+  assert.equal((await closed.get("/profile/me")).status, 200);
+
+  await RevokedToken.create({ jti, userId: sub, expiresAt: new Date(exp * 1000) });
+  const response = await closed.get("/profile/me");
+  assert.equal(response.status, 401);
+  assert.equal(response.body.code, "TOKEN_INVALID");
+  // Las demás sesiones de Ana siguen abiertas
+  assert.equal((await ana.get("/profile/me")).status, 200);
+});
+
+test("el rol del token no cuenta: un rider con un token que dice admin sigue siendo rider", async () => {
+  const { sub, tv } = claimsOf(marta.token);
+  const forged = await signTestToken({ _id: sub, role: "admin", tokenVersion: tv });
+  assert.equal((await api.as(forged).get("/routes/deleted")).status, 403);
 });
 
 test("usuario desactivado o eliminado: su token deja de servir, también al reactivarlo", async () => {
@@ -199,7 +222,7 @@ test("imágenes: las de sus experiencias y su perfil sí; las de una ruta, no", 
   assert.equal((await luis.patch(`/images/${own.body._id}`, { alt: "Mía" })).status, 403);
   assert.equal((await ana.patch(`/images/${own.body._id}`, { alt: "Mía" })).status, 200);
   // Cada usuario, su propia foto; la de otro, no; un rider, nada más
-  const martaId = (await marta.get("/auth/me")).body._id;
+  const martaId = (await marta.get("/profile/me")).body._id;
   assert.equal((await marta.post("/images", image("user", martaId))).status, 201);
   assert.equal((await marta.post("/images", image("user", luisData.user._id))).status, 403);
   assert.equal((await marta.post("/images", image("experience", data.experience._id))).status, 403);

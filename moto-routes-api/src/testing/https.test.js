@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { ADMIN_EMAIL, TEST_PASSWORD, startApi } from "./app.js";
+import { startApi } from "./app.js";
 
 // La API como en producción con HTTPS: detrás de un proxy (TRUST_PROXY=1) que termina el
 // HTTPS, y con la cookie Secure. Cada archivo de test es su propio proceso: estas variables
@@ -26,45 +26,26 @@ const send = (method, path, { headers = {}, body } = {}) =>
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-async function login() {
-  const response = await send("POST", "/auth/login", { body: { email: ADMIN_EMAIL, password: TEST_PASSWORD } });
-  const line = response.headers.getSetCookie().find((cookie) => cookie.startsWith(`${COOKIE}=`));
-  return { line, cookie: line?.split(";")[0] };
-}
+const cookie = () => `${COOKIE}=${api.token}`;
 
-test("con Secure, la cookie se llama __Secure-routly_session y lleva Secure", async () => {
-  const { line } = await login();
+test("con Secure, la sesión es la cookie __Secure-routly_session; sin el prefijo ya no cuenta", async () => {
+  assert.equal((await send("GET", "/profile/me", { headers: { cookie: cookie() } })).status, 200);
 
-  assert.ok(line, "sin cookie __Secure-routly_session");
-  assert.match(line, /; Secure/);
-  assert.match(line, /HttpOnly/);
-  assert.match(line, /Path=\/api/);
-});
-
-test("esa cookie es la sesión; una con el nombre sin prefijo ya no cuenta", async () => {
-  const { cookie } = await login();
-
-  assert.equal((await send("GET", "/auth/me", { headers: { cookie } })).status, 200);
-
-  const withoutPrefix = cookie.replace(COOKIE, "routly_session");
-  assert.equal((await send("GET", "/auth/me", { headers: { cookie: withoutPrefix } })).status, 401);
+  const withoutPrefix = cookie().replace(COOKIE, "routly_session");
+  assert.equal((await send("GET", "/profile/me", { headers: { cookie: withoutPrefix } })).status, 401);
 });
 
 test("detrás del proxy, un POST desde la propia web (https) pasa la comprobación del Origin", async () => {
-  const { cookie } = await login();
-
   const response = await send("POST", "/categories", {
-    headers: { cookie, origin: "https://routly.example" },
+    headers: { cookie: cookie(), origin: "https://routly.example" },
     body: { name: "Desde la web" },
   });
   assert.equal(response.status, 201);
 });
 
 test("detrás del proxy, desde otra web sigue siendo un 403", async () => {
-  const { cookie } = await login();
-
   const response = await send("POST", "/categories", {
-    headers: { cookie, origin: "https://otra-web.example" },
+    headers: { cookie: cookie(), origin: "https://otra-web.example" },
     body: { name: "Desde fuera" },
   });
   assert.equal(response.status, 403);

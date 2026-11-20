@@ -187,22 +187,20 @@ test("no se restaura un anfitrión cuyo usuario ya no tiene el rol host", async 
 
 // ---------- rol inactivo ----------
 
-test("con un rol desactivado no se inicia sesión y los tokens dejan de servir", async () => {
+test("con un rol desactivado los tokens dejan de servir, y vuelven al reactivarlo", async () => {
   const role = (await api.post("/roles", { name: "guia", label: "Guía local" })).body;
   await api.post("/users", { name: "Guía", email: "guia@example.com", password: TEST_PASSWORD, roleId: role._id });
   const guide = await api.loginAs("guia@example.com");
-  assert.equal((await guide.get("/auth/me")).status, 200);
+  assert.equal((await guide.get("/profile/me")).status, 200);
 
+  // (El login, que es del servicio de auth, tampoco le deja entrar: lo prueba moto-routes-auth)
   await api.patch(`/roles/${role._id}/active`, { isActive: false });
-  const me = await guide.get("/auth/me");
+  const me = await guide.get("/profile/me");
   assert.equal(me.status, 401);
   assert.equal(me.body.code, "TOKEN_INVALID");
-  const login = await api.anonymous.post("/auth/login", { email: "guia@example.com", password: TEST_PASSWORD });
-  assert.equal(login.status, 401);
-  assert.equal(login.body.message, "Invalid email or password");
 
   await api.patch(`/roles/${role._id}/active`, { isActive: true });
-  assert.equal((await guide.get("/auth/me")).status, 200);
+  assert.equal((await guide.get("/profile/me")).status, 200);
 });
 
 // ---------- visibilidad pública: lo que cuelga de un padre inactivo ----------

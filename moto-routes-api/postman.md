@@ -26,34 +26,27 @@ Response `200`:
 
 ## Autenticación (JWT)
 
-Casi todas las escrituras piden sesión. Primero se hace login y después se envía el token en cada petición.
+Casi todas las escrituras piden sesión. El login **no está en la API**: lo hace el servicio de auth (`moto-routes-auth`, puerto 3002, base `http://localhost:3002/auth`). Se hace login allí y después se envía el token a la API en cada petición. La colección de auth (registro, refresh, logout, cambio de contraseña) está en el README de `moto-routes-auth`.
 
-### 1. Login
+### 1. Login (en auth)
 
-**POST** `/api/auth/login`
+**POST** `http://localhost:3002/auth/login`
 
 ```json
 { "email": "admin@routly.dev", "password": "routly-dev-1234" }
 ```
 
-Response `200`:
+Response `200` (fuera de producción el token también va en el body, para Postman y Swagger):
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ii4uLiJ9...",
   "tokenType": "Bearer",
-  "expiresIn": 604800,
-  "user": {
-    "_id": "6ad647681b0b769e10cbcc81",
-    "name": "Admin Routly",
-    "email": "admin@routly.dev",
-    "role": { "_id": "6ad647681b0b769e10cbcc7b", "name": "admin", "label": "Administrador" },
-    "profile": { "_id": "6ad647681b0b769e10cbcc82", "userId": "6ad647681b0b769e10cbcc81", "updatedBy": "6ad647681b0b769e10cbcc81" },
-    "coverImage": { "_id": "6ad647691b0b769e10cbccbd", "url": "https://picsum.photos/seed/admin-routly-cbcc81/400/400", "alt": "Foto de perfil de Admin Routly" }
-  }
+  "expiresIn": 900,
+  "user": { "id": "6ad647681b0b769e10cbcc81", "name": "Admin Routly", "email": "admin@routly.dev", "role": "admin" }
 }
 ```
 
-`expiresIn` son los segundos que dura el token (`JWT_EXPIRES_IN`).
+El token es RS256 y dura 15 minutos (`expiresIn: 900`). Además deja las cookies `routly_session` y `routly_refresh`. Cuando caduque, vuelve a hacer login o llama a **POST** `http://localhost:3002/auth/refresh` (con la cookie `routly_refresh`, que Postman guarda solo).
 
 Usuarios del seed, todos con la contraseña `routly-dev-1234`:
 
@@ -78,36 +71,17 @@ Es lo mismo que añadir la cabecera:
 Authorization: Bearer <token>
 ```
 
-### Registro
+Para probar el logout: haz login dos veces (dos tokens), llama a **POST** `http://localhost:3002/auth/logout` con el primero y repite **GET** `/api/profile/me` con cada uno. El primero da `401` con `"code": "TOKEN_INVALID"`; el segundo sigue funcionando.
 
-**POST** `/api/auth/register` (sin token)
-
-```json
-{ "name": "Rider Nuevo", "email": "nuevo@routly.dev", "password": "clave1234" }
-```
-
-Response `201`: lo mismo que el login. Siempre con el rol `rider` y con su perfil vacío. Si se envía `roleId`: 400 `roleId is not allowed`.
-
-### Sesión
-
-| Petición | Qué hace | Éxito |
-|---|---|---|
-| **GET** `/api/auth/me` | El usuario de la sesión, con su rol y su perfil | 200 |
-| **POST** `/api/auth/logout` | Cierra **esta** sesión: el token va a la lista negra y deja de servir al momento | 204 |
-| **POST** `/api/auth/logout-all` | Cierra **todas** las sesiones: todos los tokens del usuario dejan de servir | 204 |
-
-Para probar el logout: haz login dos veces (dos tokens), llama a `/api/auth/logout` con el primero y repite `/api/auth/me` con cada uno. El primero da `401` con `"code": "TOKEN_INVALID"`; el segundo sigue funcionando. El cliente, además, borra el token.
-
-### Errores de autenticación
+### Errores de autenticación (en la API)
 
 | Caso | Respuesta |
 |---|---|
 | Sin token en un endpoint que lo pide | 401 `Authentication required` |
 | Token caducado | 401 `Authentication required`, con `"code": "TOKEN_EXPIRED"` |
-| Token manipulado, de otro formato, cerrado con logout, de un usuario desactivado o eliminado, o de antes de cambiar la contraseña | 401 `Authentication required`, con `"code": "TOKEN_INVALID"` |
-| Login con correo inexistente, contraseña mal o cuenta inactiva | 401 `Invalid email or password` (el mismo en los tres casos) |
+| Token manipulado, de otro formato o de otra clave, cerrado con logout, de un usuario desactivado o eliminado, o de antes de cambiar la contraseña | 401 `Authentication required`, con `"code": "TOKEN_INVALID"` |
 | Con sesión, pero sin el rol o sin ser el dueño | 403 `You do not have permission to access this resource` |
-| Más de 10 logins fallidos (o 10 registros) en 15 minutos desde la misma IP | 429 `Too many attempts, please try again later` |
+| El servicio de auth está apagado y la API aún no tiene su clave pública | 503 `Authentication service unavailable` |
 
 ```json
 { "statusCode": 401, "error": "Unauthorized", "message": "Authentication required", "code": "TOKEN_EXPIRED" }
@@ -162,18 +136,7 @@ El perfil pertenece al usuario: se crea con él, se elimina y se restaura con é
 - El rol, el estado y la contraseña no se cambian aquí: 400 `roleId cannot be changed`, `status cannot be changed`, `password cannot be changed`.
 - Cada cambio guarda quién lo hizo (`profile.updatedBy`) y actualiza el `updatedAt` del usuario.
 
-**PATCH** `/api/profile/me/password`
-
-```json
-{ "currentPassword": "routly-dev-1234", "newPassword": "otra-clave-5678" }
-```
-
-Response `200`: una sesión nueva (`token`, `user`...). Los tokens anteriores dejan de servir, también en otros dispositivos.
-
-| Caso | Respuesta |
-|---|---|
-| `currentPassword` incorrecta | 400 en `currentPassword`: `currentPassword is incorrect` |
-| `newPassword` igual a la actual | 400 en `newPassword`: `newPassword must be different from currentPassword` |
+El cambio de contraseña ya no está en la API: es **PATCH** `http://localhost:3002/auth/password` en el servicio de auth, con `{ "currentPassword", "newPassword" }`. Devuelve una sesión nueva y cierra las demás. `/api/profile/me/password` responde 404.
 
 **GET** y **PATCH** `/api/profile/:userId`: lo mismo para un usuario concreto. Solo el propio usuario o un admin; otro usuario, 403.
 

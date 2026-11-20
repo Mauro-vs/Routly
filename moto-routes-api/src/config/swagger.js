@@ -12,8 +12,9 @@ const options = {
         "API REST de Routly, la plataforma de rutas en moto: roles, usuarios, anfitriones, " +
         "categorías, ubicaciones, rutas, experiencias, salidas e imágenes. Todas las " +
         "colecciones se activan, se desactivan y tienen papelera (soft delete).\n\n" +
-        "Autenticación con JWT: POST /api/auth/login devuelve el token, que se envía en " +
-        "Authorization: Bearer <token> (botón Authorize). Los endpoints con candado lo piden; " +
+        "Autenticación con JWT: el login es del servicio de auth (POST /auth/login, puerto 3002), " +
+        "que firma el token con RS256. Se envía en Authorization: Bearer <token> (botón Authorize) " +
+        "o en la cookie de sesión del panel. Los endpoints con candado lo piden; " +
         "su descripción dice quién puede usarlos: cualquier sesión, solo admin, o admin y el dueño.",
     },
     servers: [

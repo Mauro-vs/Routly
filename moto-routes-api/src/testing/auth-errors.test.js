@@ -3,7 +3,6 @@ import { after, before, test } from "node:test";
 import express from "express";
 import { authorizeOwnership, authorizeRoles } from "../middlewares/authorize.js";
 import { errorHandler } from "../middlewares/errorHandler.js";
-import { createAuthLimiter } from "../middlewares/rateLimit.js";
 import { canAccessUserResource } from "../utils/access.js";
 import { forbidden, unauthorized } from "../utils/errors.js";
 
@@ -35,14 +34,6 @@ before(async () => {
     "/users/:id",
     authorizeOwnership((req) => USERS[req.params.id], canAccessUserResource, "User"),
     (req, res) => res.json({ ok: true })
-  );
-  // El límite de intentos, con 2 en vez de 10 y sin saltarse en los tests
-  app.post("/login", createAuthLimiter({ limit: 2, skip: () => false }), (req, res) => res.json({ ok: true }));
-  // Como el del login: solo cuentan los fallos (aquí, ?ok=0)
-  app.post(
-    "/login-failures",
-    createAuthLimiter({ limit: 2, skip: () => false, onlyFailures: true }),
-    (req, res) => res.status(req.query.ok === "1" ? 200 : 401).json({})
   );
   app.use(errorHandler);
 
@@ -104,27 +95,4 @@ test("authorizeOwnership: el dueño y el admin pasan; otro, 403; si no existe, 4
   assert.equal((await fetch(`${base}/users/u1`, as({ id: "u2", role: "rider" }))).status, 403);
   assert.equal((await fetch(`${base}/users/u1`, as({ id: "u9", role: "admin" }))).status, 200);
   assert.equal((await fetch(`${base}/users/u7`, as({ id: "u9", role: "admin" }))).status, 404);
-});
-
-test("límite de intentos: a partir del tercero, 429 con el formato de error de siempre", async () => {
-  assert.equal((await fetch(`${base}/login`, { method: "POST" })).status, 200);
-  assert.equal((await fetch(`${base}/login`, { method: "POST" })).status, 200);
-
-  const blocked = await fetch(`${base}/login`, { method: "POST" });
-  assert.equal(blocked.status, 429);
-  assert.ok(blocked.headers.get("ratelimit"));
-  assert.deepEqual(await blocked.json(), {
-    statusCode: 429,
-    error: "Too Many Requests",
-    message: "Too many attempts, please try again later",
-  });
-});
-
-test("en el login solo cuentan los intentos fallidos", async () => {
-  const post = (ok) => fetch(`${base}/login-failures?ok=${ok}`, { method: "POST" });
-
-  for (let i = 0; i < 5; i++) assert.equal((await post(1)).status, 200);
-  assert.equal((await post(0)).status, 401);
-  assert.equal((await post(0)).status, 401);
-  assert.equal((await post(0)).status, 429);
 });

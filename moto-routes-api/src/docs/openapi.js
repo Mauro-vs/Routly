@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { cookieConfigFrom } from "../config/cookies.js";
-import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 import { bikeListQuery, createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
 import { categoryListQuery, createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
 import {
@@ -21,7 +20,6 @@ import { createRoleSchema, roleListQuery, updateRoleSchema } from "../schemas/ro
 import { createRouteSchema, routeListQuery, updateRouteSchema } from "../schemas/route.schema.js";
 import { SHOP_DEFAULT_SORT, SHOP_LIMIT, SHOP_SORT, shopExperiencesQuery } from "../schemas/shop.schema.js";
 import {
-  changePasswordSchema,
   createUserSchema,
   updateOwnUserSchema,
   updateUserSchema,
@@ -544,7 +542,6 @@ const SESSION_COOKIE = cookieConfigFrom().name;
 const bearer = [{ bearerAuth: [] }, { cookieAuth: [] }];
 const unauthorized = { $ref: "#/components/responses/Unauthorized" };
 const forbidden = { $ref: "#/components/responses/Forbidden" };
-const tooManyRequests = { $ref: "#/components/responses/TooManyRequests" };
 
 /**
  * Añade a una operación el candado (bearerAuth o cookieAuth), quién puede usarla y sus 401 y 403.
@@ -787,90 +784,12 @@ function crudPaths(resource) {
   return { ...paths, ...resource.extraPaths?.(ref) };
 }
 
-// ---------- Auth y profile: no siguen el patrón de las colecciones ----------
+// ---------- Profile: no sigue el patrón de las colecciones ----------
+// El registro, el login, el logout y el cambio de contraseña son del servicio de auth
+// (moto-routes-auth, http://localhost:3002/auth/docs)
 
 const userRef = { $ref: "#/components/schemas/User" };
-const sessionRef = { $ref: "#/components/schemas/Session" };
 const userIdParam = { ...idParam, name: "userId", description: "ID del usuario (ObjectId)" };
-
-const AUTH_PATHS = {
-  "/api/auth/register": {
-    post: {
-      summary: "Registrarse",
-      description:
-        "Alta pública: siempre con el rol rider (roleId no se acepta) y con su perfil vacío. Devuelve la sesión y deja la cookie, como el login. Como mucho 10 altas cada 15 minutos por IP.",
-      tags: ["Auth"],
-      requestBody: body("RegisterInput"),
-      responses: {
-        201: ok("Registrado, con la sesión iniciada", sessionRef),
-        400: error("Datos no válidos, o roleId (is not allowed)"),
-        409: error("Email repetido"),
-        429: tooManyRequests,
-      },
-    },
-  },
-  "/api/auth/login": {
-    post: {
-      summary: "Iniciar sesión",
-      description:
-        `Devuelve el JWT y el usuario con su rol y su perfil, y deja el mismo token en la cookie httpOnly ${SESSION_COOKIE} (la que usa el panel). El mismo 401 si el correo no existe, la contraseña no coincide o la cuenta está inactiva. Como mucho 10 intentos fallidos cada 15 minutos por IP.`,
-      tags: ["Auth"],
-      requestBody: body("LoginInput"),
-      responses: {
-        200: {
-          ...ok("Sesión iniciada", sessionRef),
-          headers: {
-            "Set-Cookie": {
-              description: `${SESSION_COOKIE}=<token>; Max-Age=<expiresIn>; Path=/api; HttpOnly; SameSite=Strict (o Lax, COOKIE_SAMESITE) y, con COOKIE_SECURE, Secure`,
-              schema: { type: "string" },
-            },
-          },
-        },
-        400: error("Falta el email o la contraseña"),
-        401: {
-          description: "Credenciales no válidas",
-          content: {
-            "application/json": {
-              schema: errorRef,
-              example: { statusCode: 401, error: "Unauthorized", message: "Invalid email or password" },
-            },
-          },
-        },
-        429: tooManyRequests,
-      },
-    },
-  },
-  "/api/auth/me": {
-    get: secured(
-      { summary: "Usuario de la sesión", description: "Con su rol y su perfil.", tags: ["Auth"], responses: { 200: ok("Usuario", userRef) } },
-      "user"
-    ),
-  },
-  "/api/auth/logout": {
-    post: secured(
-      {
-        summary: "Cerrar sesión",
-        description:
-          "Cierra esta sesión: el token pasa a la lista negra y deja de servir al momento, aunque no haya caducado. Las sesiones de otros dispositivos siguen abiertas. Borra la cookie de sesión; si se usa la cabecera, el cliente borra el token.",
-        tags: ["Auth"],
-        responses: { 204: { description: "Sesión cerrada" } },
-      },
-      "user"
-    ),
-  },
-  "/api/auth/logout-all": {
-    post: secured(
-      {
-        summary: "Cerrar todas las sesiones",
-        description:
-          "Invalida todos los tokens del usuario (sube su tokenVersion), también el de esta petición, en todos los dispositivos, y borra la cookie de sesión. Para cerrar solo esta sesión: POST /api/auth/logout.",
-        tags: ["Auth"],
-        responses: { 204: { description: "Sesiones cerradas" } },
-      },
-      "user"
-    ),
-  },
-};
 
 const profileUpdate = (who) => ({
   summary: `Editar ${who}`,
@@ -904,22 +823,6 @@ const PROFILE_PATHS = {
       "user"
     ),
   },
-  "/api/profile/me/password": {
-    patch: secured(
-      {
-        summary: "Cambiar mi contraseña",
-        description:
-          "Pide la actual. Cierra todas las sesiones y devuelve una nueva (y su cookie) para seguir en esta. Una contraseña actual incorrecta es un 400 en currentPassword, no un 401: la sesión sigue siendo válida.",
-        tags: ["Profile"],
-        requestBody: body("ChangePasswordInput"),
-        responses: {
-          200: ok("Contraseña cambiada, con la sesión nueva", sessionRef),
-          400: error("currentPassword incorrecta, o newPassword no válida o igual a la actual"),
-        },
-      },
-      "user"
-    ),
-  },
   "/api/profile/{userId}": {
     get: secured(
       {
@@ -946,7 +849,6 @@ const PROFILE_PATHS = {
 const ERROR_EXAMPLES = {
   401: { statusCode: 401, error: "Unauthorized", message: "Authentication required", code: "TOKEN_EXPIRED" },
   403: { statusCode: 403, error: "Forbidden", message: "You do not have permission to access this resource" },
-  429: { statusCode: 429, error: "Too Many Requests", message: "Too many attempts, please try again later" },
 };
 
 const errorExample = (description, example) => ({
@@ -962,14 +864,14 @@ export const apiComponents = {
       scheme: "bearer",
       bearerFormat: "JWT",
       description:
-        "El token de POST /api/auth/login (o /register). En Swagger UI: botón Authorize y pegar solo el token, sin \"Bearer\". Si llegan la cabecera y la cookie, manda la cabecera.",
+        "Un token de acceso del servicio de auth (POST /auth/login en http://localhost:3002/auth/docs: fuera de producción viene en el body). Lo firma con RS256 y la API lo comprueba con su clave pública (JWKS). Dura 15 minutos. En Swagger UI: botón Authorize y pegar solo el token, sin \"Bearer\". Si llegan la cabecera y la cookie, manda la cabecera.",
     },
     cookieAuth: {
       type: "apiKey",
       in: "cookie",
       name: SESSION_COOKIE,
       description:
-        "La sesión del panel: el login la deja puesta (httpOnly, SameSite=Strict, Path=/api) y el navegador la manda sola. En Swagger UI basta con ejecutar POST /api/auth/login. Con la cookie, un POST o PATCH con cabecera Origin de otra web es un 403 (Request origin not allowed).",
+        "La sesión del panel: la pone el servicio de auth al hacer login (httpOnly, SameSite=Strict, Path=/) y el navegador la manda sola. Al caducar, el panel la renueva con POST /auth/refresh. Con la cookie, un POST o PATCH con cabecera Origin de otra web es un 403 (Request origin not allowed).",
     },
   },
   responses: {
@@ -986,7 +888,6 @@ export const apiComponents = {
       },
     },
     Forbidden: errorExample("Hay sesión, pero el rol o la propiedad del recurso no lo permiten", ERROR_EXAMPLES[403]),
-    TooManyRequests: errorExample("Demasiados intentos desde esta IP: hay que esperar", ERROR_EXAMPLES[429]),
   },
 };
 
@@ -1119,7 +1020,6 @@ const SHOP_PATHS = {
 };
 
 export const apiTags = [
-  { name: "Auth", description: "Registro, login (JWT) y sesión. Ver el botón Authorize." },
   { name: "Profile", description: "El usuario de la sesión y su perfil. El perfil pertenece al usuario: nace, se elimina y se restaura con él." },
   ...RESOURCES.map(({ tag, description }) => ({ name: tag, ...(description && { description }) })),
   {
@@ -1130,22 +1030,10 @@ export const apiTags = [
   },
 ];
 
-export const apiPaths = Object.assign({}, AUTH_PATHS, PROFILE_PATHS, ...RESOURCES.map(crudPaths), SHOP_PATHS);
+export const apiPaths = Object.assign({}, PROFILE_PATHS, ...RESOURCES.map(crudPaths), SHOP_PATHS);
 
 export const apiSchemas = {
-  Session: {
-    type: "object",
-    example: {
-      token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzEwYTFiMmMzZDRlNWY2YTdiOGM5MTAiLCJyb2xlIjoiaG9zdCJ9.firma",
-      tokenType: "Bearer",
-      expiresIn: 604800,
-      user: { ...RESOURCES.find((resource) => resource.path === "users").example, ...COMMON_FIELDS },
-    },
-  },
-  RegisterInput: fromZod(registerSchema),
-  LoginInput: fromZod(loginSchema),
   UpdateOwnUserInput: fromZod(updateOwnUserSchema),
-  ChangePasswordInput: fromZod(changePasswordSchema),
   ...Object.fromEntries(
     RESOURCES.flatMap(({ schema, create, update, example }) => [
       [schema, { type: "object", example: { ...example, ...COMMON_FIELDS } }],

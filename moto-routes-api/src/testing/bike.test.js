@@ -17,7 +17,7 @@ before(async () => {
   await api.post("/users", { name: "Luis Gómez", email: "luis@example.com", password: TEST_PASSWORD, roleId: data.rider._id });
   marta = await api.loginAs("marta@example.com");
   luis = await api.loginAs("luis@example.com");
-  martaId = (await marta.get("/auth/me")).body._id;
+  martaId = (await marta.get("/profile/me")).body._id;
 });
 after(() => api?.stop());
 
@@ -37,7 +37,7 @@ test("crear una moto: es de quien la crea, la primera es la principal y el carne
   const response = await rider.post("/bikes", MT07);
 
   assert.equal(response.status, 201);
-  assert.equal(response.body.userId, (await rider.get("/auth/me")).body._id);
+  assert.equal(response.body.userId, (await rider.get("/profile/me")).body._id);
   assert.equal(response.body.isPrimary, true);
   assert.equal(response.body.isPublic, true);
   assert.equal(response.body.license, "A");
@@ -184,7 +184,7 @@ test("en público solo las motos públicas y activas; el dueño las ve todas en 
 
 test("un usuario desactivado: sus motos y sus fotos desaparecen del público", async () => {
   const rider = await freshRider("desactivada@example.com");
-  const user = (await rider.get("/auth/me")).body;
+  const user = (await rider.get("/profile/me")).body;
   const bike = (await rider.post("/bikes", MT07)).body;
   const image = (await rider.post("/images", { ownerType: "bike", ownerId: bike._id, url: "https://x.dev/z.jpg" })).body;
 
@@ -198,7 +198,7 @@ test("un usuario desactivado: sus motos y sus fotos desaparecen del público", a
 
 test("eliminar un usuario se lleva su garaje y las fotos; restaurarlo lo devuelve", async () => {
   const rider = await freshRider("cascada@example.com");
-  const user = (await rider.get("/auth/me")).body;
+  const user = (await rider.get("/profile/me")).body;
   const bike = (await rider.post("/bikes", MT07)).body;
   await rider.post("/images", { ownerType: "bike", ownerId: bike._id, url: "https://x.dev/c.jpg" });
 

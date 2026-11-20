@@ -136,6 +136,10 @@ function normalizeError(err) {
     return { statusCode: err.status, message: err.message, details: err.details, code };
   }
 
+  // Un servicio del que depende la API no responde (el JWKS del servicio de auth): el cliente
+  // puede reintentar, y no debe cerrar la sesión como con un 401
+  if (err?.status === 503) return { statusCode: 503, message: err.message };
+
   return { statusCode: 500, message: "Internal server error" };
 }
 

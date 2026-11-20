@@ -11,7 +11,6 @@ import { morganMiddleware } from "./config/morgan.js";
 import { applyTrustProxy } from "./config/proxy.js";
 import { swaggerSpec } from "./config/swagger.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
-import authRoutes from "./routes/auth.routes.js";
 import bikeRoutes from "./routes/bike.routes.js";
 import shopRoutes from "./routes/shop.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
@@ -26,8 +25,8 @@ import routeRoutes from "./routes/route.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import { visibilityCache } from "./services/visibility.js";
 
-// Sin un JWT_SECRET válido, o con la cookie mal configurada, no se arranca: mejor fallar
-// aquí que en el primer login
+// Sin una AUTH_JWKS_URL válida (la clave pública del servicio de auth), o con la cookie mal
+// configurada, no se arranca: mejor fallar aquí que en la primera petición
 loadAuthConfig();
 loadCookieConfig();
 
@@ -56,7 +55,6 @@ app.use(
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, { swaggerOptions: { persistAuthorization: true } })
 );
-app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
@@ -80,6 +78,7 @@ connectDB()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`  Tokens checked with ${loadAuthConfig().jwksUrl}`);
     });
   })
   .catch((err) => {

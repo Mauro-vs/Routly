@@ -4,8 +4,8 @@ import { hostRepository } from "../repositories/host.repository.js";
 import { roleRepository } from "../repositories/role.repository.js";
 import { profileRepository } from "../repositories/profile.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
-import { conflict, fieldError, notFound } from "../utils/errors.js";
-import { hashPassword, verifyPassword } from "../utils/passwd.js";
+import { conflict, notFound } from "../utils/errors.js";
+import { hashPassword } from "../utils/passwd.js";
 import { userListQuery } from "../schemas/user.schema.js";
 import { findList } from "../utils/listQuery.js";
 import { bikeService } from "./bike.service.js";
@@ -179,16 +179,6 @@ export const userService = {
 
     console.warn(`User ${id} had no profile: created on update`);
     await profileService.createFor(id, profile, actorId);
-  },
-
-  // El propio usuario, con su contraseña actual. Cierra el resto de sesiones (tokenVersion)
-  async changePassword(id, { currentPassword, newPassword }) {
-    const user = await userRepository.findPasswordHash(id);
-    if (!user) throw notFound("User");
-    if (!(await verifyPassword(user.passwordHash, currentPassword))) {
-      throw fieldError("currentPassword", "currentPassword is incorrect");
-    }
-    return userService.update(id, { password: newPassword }, { id: String(id) });
   },
 
   // Si ya tiene ese estado, se devuelve tal cual: no se escribe ni cambia updatedAt

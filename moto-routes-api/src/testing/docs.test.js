@@ -34,13 +34,12 @@ test("cada operación de Swagger con candado pide token, y las demás no", async
   }
 });
 
-test("los 401, 403 y 429 documentados usan los mensajes exactos de la API", () => {
+test("los 401 y 403 documentados usan los mensajes exactos de la API", () => {
   const { responses } = swaggerSpec.components;
   const example = (name) => responses[name].content["application/json"].example.message;
 
   assert.equal(example("Unauthorized"), "Authentication required");
   assert.equal(example("Forbidden"), "You do not have permission to access this resource");
-  assert.equal(example("TooManyRequests"), "Too many attempts, please try again later");
   assert.deepEqual(swaggerSpec.components.securitySchemes.bearerAuth, {
     ...swaggerSpec.components.securitySchemes.bearerAuth,
     type: "http",

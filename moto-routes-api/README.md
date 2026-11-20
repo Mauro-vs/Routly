@@ -35,9 +35,8 @@ JavaScript moderno sobre **Node.js**, con módulos ES (`"type": "module"` en `pa
 | [Express](https://expressjs.com) | 5.2 | Servidor HTTP y enrutado |
 | [Mongoose](https://mongoosejs.com) | 9.10 | Modelos sobre MongoDB, relaciones con `ref` y `populate`, validación de segundo nivel, hooks y plugins |
 | [Zod](https://zod.dev) | 4.6 | Validación y limpieza de `params`, `query` y `body` antes del controlador. También genera los esquemas de Swagger |
-| [argon2](https://github.com/ranisalt/node-argon2) | 0.45 | Hash de las contraseñas con Argon2id |
-| [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) | 9.0 | Firma y verificación de los JWT (HS256) |
-| [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) | 8.7 | Límite de intentos en el login y el registro |
+| [argon2](https://github.com/ranisalt/node-argon2) | 0.45 | Hash de las contraseñas con Argon2id (al crear o editar usuarios desde el panel) |
+| [jose](https://github.com/panva/jose) | 6.2 | Verificación de los JWT RS256 con la clave pública del JWKS del servicio de auth |
 | [Helmet](https://helmetjs.github.io) | 8.3 | Cabeceras de seguridad |
 | [cors](https://github.com/expressjs/cors) | 2.8 | Orígenes y métodos permitidos |
 | [Morgan](https://github.com/expressjs/morgan) | 1.12 | Logs HTTP en consola y en archivo |
@@ -65,30 +64,26 @@ NODE_ENV=development
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/moto_routes
 CORS_ORIGIN=http://localhost:4200
-JWT_SECRET=<secreto largo y aleatorio>
-JWT_EXPIRES_IN=7d
+AUTH_JWKS_URL=http://localhost:3002/auth/.well-known/jwks.json
+# JWT_ISSUER=routly-auth
+# JWT_AUDIENCE=routly
 TRUST_PROXY=0
 # COOKIE_SECURE=true
-# COOKIE_SAMESITE=strict
 ```
 
-`JWT_SECRET` es obligatorio: sin él el servidor no arranca. Firma los tokens (HS256) y en producción tiene que tener al menos 32 caracteres. Para generar uno:
+La API no firma tokens ni inicia sesiones: eso lo hace el servicio de auth (`moto-routes-auth`, puerto 3002). La API solo comprueba los tokens RS256 que firma auth, con la clave pública que este publica en su JWKS.
 
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-```
+`AUTH_JWKS_URL` es la URL de ese JWKS. Fuera de producción, si no se define, `http://localhost:3002/auth/.well-known/jwks.json`; en producción es obligatoria. Solo admite `http` y `https`. La API la descarga la primera vez que llega un token y la guarda 10 minutos; si llega un token con un `kid` que no conoce (auth ha rotado la clave), la vuelve a pedir, como mucho cada 30 segundos.
 
-`JWT_EXPIRES_IN` es la caducidad de los tokens: un texto como `1h` o `7d`, o un número de segundos. Si no se define, `1h`. En producción se recomienda `1h`.
+`JWT_ISSUER` y `JWT_AUDIENCE` son el emisor y la audiencia que tiene que traer el token. Por defecto `routly-auth` y `routly`, los mismos que usa auth.
 
 `CORS_ORIGIN` es la lista de orígenes (separados por comas) que pueden llamar a la API. CORS solo la usa con `NODE_ENV=production` (con credenciales, para la cookie de sesión): en desarrollo se acepta cualquier origen y, en producción, si no se define, no se acepta ninguno. La comprobación CSRF de la cookie la usa siempre, y fuera de producción acepta además cualquier `localhost`.
 
-`TRUST_PROXY` es el número de proxies que hay delante de la API (Nginx, Caddy, el de un PaaS). Por defecto `0`, también en producción. Con uno delante, `1`: así Express ve la IP, el protocolo y el host del cliente (`X-Forwarded-*`), y no los del proxy. Ponerlo sin que haya proxy dejaría a cualquiera inventarse su IP y saltarse el límite de intentos del login.
+`TRUST_PROXY` es el número de proxies que hay delante de la API (Nginx, Caddy, el de un PaaS). Por defecto `0`, también en producción. Con uno delante, `1`: así Express ve la IP, el protocolo y el host del cliente (`X-Forwarded-*`), y no los del proxy. Ponerlo sin que haya proxy dejaría a cualquiera inventarse su IP. El límite de intentos del login está ahora en el servicio de auth, que tiene su propio `TRUST_PROXY`.
 
-`COOKIE_SECURE` (`true` o `false`) decide si la cookie de sesión lleva `Secure`. Sin definir, `true` en producción y `false` fuera. Con `Secure`, la cookie pasa a llamarse `__Secure-routly_session`.
+`COOKIE_SECURE` (`true` o `false`) dice cómo se llama la cookie de sesión que pone el servicio de auth: con `Secure`, `__Secure-routly_session`. Sin definir, `true` en producción y `false` fuera. Tiene que valer lo mismo que en auth. La API solo lee la cookie: no la pone ni la borra.
 
-`COOKIE_SAMESITE` es `strict` (por defecto) o `lax`. `none` no se admite: haría falta un token CSRF.
-
-Un valor no válido en cualquiera de estas tres variables para el servidor al arrancar, con el nombre de la variable en el error.
+Un valor no válido en `AUTH_JWKS_URL`, `TRUST_PROXY` o `COOKIE_SECURE` para el servidor al arrancar, con el nombre de la variable en el error.
 
 `NODE_ENV` puede ser `development` o `production` y cambia el comportamiento de Helmet y Morgan (ver abajo), y el valor por defecto de `COOKIE_SECURE`.
 
@@ -115,24 +110,26 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 
 ### Tests
 
-`npm test` ejecuta 257 tests con `node:test`:
+`npm test` ejecuta los tests con `node:test`:
 
 | Archivo | Qué prueba |
 |---|---|
 | `src/utils/sku.test.js` | Formato del SKU, fecha del alta en hora de Madrid y alfabeto sin caracteres ambiguos |
 | `src/utils/passwd.test.js` | Hash Argon2id con los parámetros de OWASP, contraseña correcta e incorrecta, hash mal formado y `needsRehash` |
-| `src/utils/jwt.test.js` | Firma HS256 y payload, `jti` único, sin token, caducado, firma alterada, algoritmo `none`, otro secreto, HS512 y payload incompleto |
+| `src/utils/jwt.test.js` | Verificación RS256 con el JWKS: token válido, sin token, caducado, firma alterada, otra clave, `kid` desconocido, algoritmo `none` y HS256, emisor y audiencia, y payload incompleto |
+| `src/utils/jwt-unavailable.test.js` | Si el JWKS de auth no responde, 503 y no 401 |
+| `src/config/auth.test.js` | `AUTH_JWKS_URL`, `JWT_ISSUER` y `JWT_AUDIENCE`: valores por defecto, obligatoria en producción y URLs no válidas |
 | `src/utils/access.test.js` | Las funciones de ABAC sin base de datos: dueño, otro usuario, admin, cadena host → experiencia → salida e imágenes |
-| `src/testing/auth-errors.test.js` | Formato exacto de los 401 y 403, `WWW-Authenticate`, `authorizeRoles`, `authorizeOwnership` y el límite de intentos (429) |
-| `src/testing/auth.test.js` | `authenticate` (sin token, otro formato, caducado, desactivado, eliminado, `tokenVersion`, rol leído al momento), cada fila de la matriz y ABAC con dos anfitriones |
-| `src/testing/profile.test.js` | Registro, login, rehash, `me`, `logout` (lista negra), `logout-all`, `/api/profile`, cambio de contraseña, ciclo de vida del perfil y reglas de los admins |
+| `src/testing/auth-errors.test.js` | Formato exacto de los 401 y 403, `WWW-Authenticate`, `authorizeRoles` y `authorizeOwnership` |
+| `src/testing/auth.test.js` | `authenticate` (sin token, otro formato, caducado, `jti` en la lista negra, desactivado, eliminado, `tokenVersion`, rol leído al momento aunque el token diga otro), cada fila de la matriz y ABAC con dos anfitriones |
+| `src/testing/profile.test.js` | `/api/profile`, que el cambio de contraseña ya no está en la API (404), ciclo de vida del perfil y reglas de los admins |
 | `src/testing/bike.test.js` | El garaje: alta y ficha, carnet calculado, límites, modificaciones, moto principal, 10 por usuario, ABAC, fotos, visibilidad, cascada con el usuario y la moto del guía (herencia, 409 si está en uso, cambio de anfitrión y `check:integrity`) |
 | `src/testing/integrity.test.js` | Integridad referencial: carreras sin transacciones (0 huérfanos), cascadas que fallan, galería de un dueño eliminado, restaurar un host sin rol, rol inactivo, visibilidad pública y `check:integrity` |
-| `src/config/cookies.test.js` | La configuración de la cookie: valores por defecto, producción, `COOKIE_SECURE` y `COOKIE_SAMESITE`, el prefijo `__Secure-` y los valores que paran el arranque |
-| `src/config/proxy.test.js` | `TRUST_PROXY`: por defecto, valores no válidos y el límite de intentos real con y sin proxy de confianza (una IP inventada no lo salta) |
-| `src/testing/https.test.js` | Como en producción detrás de un proxy HTTPS: la cookie `__Secure-` con `Secure`, el nombre sin prefijo ya no cuenta y la comprobación del `Origin` con `X-Forwarded-Proto` y `-Host` |
+| `src/config/cookies.test.js` | El nombre de la cookie: valores por defecto, producción, `COOKIE_SECURE`, el prefijo `__Secure-` y los valores que paran el arranque |
+| `src/config/proxy.test.js` | `TRUST_PROXY`: por defecto, valores no válidos y la IP y el protocolo que ve Express con y sin proxy de confianza (una IP inventada no cuela) |
+| `src/testing/https.test.js` | Como en producción detrás de un proxy HTTPS: solo cuenta la cookie `__Secure-`, el nombre sin prefijo no y la comprobación del `Origin` con `X-Forwarded-Proto` y `-Host` |
 | `src/testing/list-query.test.js` | Los query params de los listados: `q` (también en plural y sin sesión), `status`, `sort`, `page` y `limit` con sus cabeceras (páginas sin repetir ni saltarse nada, el total de lo filtrado), los filtros de cada colección combinados, los rangos cruzados, los parámetros que no existen y, con `explain()`, que las consultas usan un índice y no recorren la colección |
-| `src/testing/cookie.test.js` | La cookie de sesión: opciones, login, registro, `me`, prioridad de la cabecera, cookie mal formada, `logout`, `logout-all`, cambio de contraseña, GET públicos con una cookie vieja y la comprobación del `Origin` (CSRF) |
+| `src/testing/cookie.test.js` | La cookie de sesión que pone auth: la API la lee, prioridad de la cabecera, cookie mal formada, la API nunca manda `Set-Cookie`, GET públicos con una cookie caducada y la comprobación del `Origin` (CSRF) |
 | `src/testing/docs.test.js` | Que cada operación de Swagger con candado pide token y las demás no, los mensajes documentados y que cada listado documenta justo los query params que acepta |
 | `src/testing/public.test.js` | Lo que usa la tienda en `/api/experiences` y `/api/departures`: los filtros de experiencias por su ruta y por sus salidas, `priceFrom` y `nextDepartureAt`, sus órdenes, las fotos de categorías y ubicaciones, el anfitrión del detalle, `seatsLeft`, los índices con `explain()` y el número de consultas |
 | `src/testing/shop.test.js` | La tienda (`/api/shop`): los carruseles (solo lo que tiene experiencias, con cuántas), el Shop en `{ data, pagination }` con sus filtros por slug, la búsqueda con el índice de texto y por relevancia, el orden por precio con un filtro por slug, un slug que no existe, los 400, la misma vista con sesión de admin, el detalle con su galería, las salidas reservables, una salida completa y el número de consultas |
@@ -141,7 +138,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
 | `src/testing/validation.test.js` | Campos de más, `status` en el PATCH, vaciar con `null`, región vacía, límites, contraseña, idioma, `https`, etiqueta de rol, 413, respuestas iguales al GET y 404 frente a 400 |
 
-Los de `src/testing/` son de integración: levantan la API real (routers, services y modelos, con `src/testing/app.js`) sobre una base de datos temporal `routly_test_*` que se borra al terminar. Necesitan **MongoDB en marcha** en `mongodb://localhost:27017`, o en la URI de la variable `MONGODB_TEST_URI`. No tocan la base de datos de `MONGODB_URI`.
+Los tokens de los tests los firma `src/testing/tokens.js` con un par de claves RSA de prueba, así que no hace falta tener el servicio de auth en marcha. Los de `src/testing/` son de integración: levantan la API real (routers, services y modelos, con `src/testing/app.js`) sobre una base de datos temporal `routly_test_*` que se borra al terminar. Necesitan **MongoDB en marcha** en `mongodb://localhost:27017`, o en la URI de la variable `MONGODB_TEST_URI`. No tocan la base de datos de `MONGODB_URI`.
 
 Con el servidor en marcha, la documentación interactiva está en `http://localhost:3000/api/docs` y la comprobación de estado en `http://localhost:3000/health`.
 
@@ -262,11 +259,11 @@ Si algo falla en cualquier punto (Zod, el service o Mongoose), el error llega a 
 2. `cors`: orígenes permitidos y métodos `GET`, `POST` y `PATCH`.
 3. `morgan`: logs.
 4. `express.json({ limit: "50kb" })`: lee el body (más grande, 413).
-5. `GET /health`, `/api/docs`, `/api/auth`, `/api/profile` y los routers de las diez colecciones. Dentro de cada router, en cada ruta: `authenticate` y el rol (`adminOnly`, `hostOrAdmin`), después `validate()` y después el controlador. La propiedad la comprueba el service.
+5. `GET /health`, `/api/docs`, `/api/profile` y los routers de las diez colecciones. Dentro de cada router, en cada ruta: `authenticate` y el rol (`adminOnly`, `hostOrAdmin`), después `validate()` y después el controlador. La propiedad la comprueba el service.
 6. `notFoundHandler`: 404 para cualquier otra URL.
 7. `errorHandler`: siempre el último.
 
-Antes de nada, `loadAuthConfig()` comprueba `JWT_SECRET` y `JWT_EXPIRES_IN`: si falta el secreto o no es válido, el servidor no arranca. El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista. Si falla, el proceso termina con un error.
+Antes de nada, `loadAuthConfig()` comprueba `AUTH_JWKS_URL`, `JWT_ISSUER` y `JWT_AUDIENCE`: si en producción falta la URL o alguna no es válida, el servidor no arranca. El JWKS no se descarga al arrancar sino con el primer token, así que la API arranca aunque auth aún no esté en marcha. El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista. Si falla, el proceso termina con un error.
 
 ## Estructura del proyecto
 
@@ -276,16 +273,16 @@ Antes de nada, `loadAuthConfig()` comprueba `JWT_SECRET` y `JWT_EXPIRES_IN`: si 
 ```
 src/
 ├── config/
-│   ├── auth.js                    JWT_SECRET y JWT_EXPIRES_IN (comprobados al arrancar)
+│   ├── auth.js                    AUTH_JWKS_URL, emisor y audiencia; el JWKS remoto de auth
 │   ├── db.js                      Conexión a MongoDB
-│   ├── cookies.js                 COOKIE_SECURE y COOKIE_SAMESITE de la cookie de sesión
+│   ├── cookies.js                 COOKIE_SECURE: el nombre de la cookie de sesión
 │   ├── cors.js                    Orígenes, métodos y cabeceras de la paginación
 │   ├── helmet.js                  Cabeceras de seguridad
 │   ├── morgan.js                  Logs en consola y en logs/
 │   ├── proxy.js                   TRUST_PROXY: cuántos proxies hay delante
 │   └── swagger.js                 Definición OpenAPI
 ├── models/
-│   ├── revokedToken.model.js      Lista negra del logout (jti, con índice TTL)
+│   ├── revokedToken.model.js      Lista negra del logout (la escribe auth; la API solo la lee)
 │   ├── <recurso>.model.js         Uno por colección: role, user, profile, host, category,
 │   │                              location, route, experience, departure, image, bike. Exporta sus límites
 │   ├── imageOwners.js             Colecciones que pueden tener imágenes
@@ -298,23 +295,21 @@ src/
 │       └── slug.plugin.js         slug único
 ├── schemas/
 │   ├── <recurso>.schema.js        Esquemas de Zod de cada colección (body y los query params de su
-│   │                              listado), auth.schema.js (registro y login) y shop.schema.js
+│   │                              listado) y shop.schema.js
 │   │                              (los query params de la tienda)
 │   └── common.schema.js           Piezas comunes (:id, :slug, cannotChange, clearable...)
 ├── repositories/<recurso>.repository.js
 ├── services/
 │   ├── visibility.js              Qué se ve en público (lo que cuelga de un padre inactivo, no)
 │   ├── integrity.service.js       La comprobación de npm run check:integrity
-│   ├── <recurso>.service.js       También auth.service.js (login, registro, sesión),
-│   │                              profile.service.js (solo lo usa user.service.js) y
+│   ├── <recurso>.service.js       También profile.service.js (solo lo usa user.service.js) y
 │   │                              shop.service.js (la tienda: usa los de cada colección)
 │   └── references.js              Comprobaciones entre colecciones, doble comprobación y cascadas
-├── controllers/<recurso>.controller.js   Más auth, profile y shop
-├── routes/<recurso>.routes.js           Más auth (/api/auth), profile (/api/profile) y shop (/api/shop)
+├── controllers/<recurso>.controller.js   Más profile y shop
+├── routes/<recurso>.routes.js           Más profile (/api/profile) y shop (/api/shop)
 ├── middlewares/
-│   ├── authenticate.js            JWT → req.user (401)
+│   ├── authenticate.js            JWT RS256 → req.user (401, o 503 si auth no responde)
 │   ├── authorize.js               Roles (authorizeRoles, isAdmin) y propiedad (authorizeOwnership)
-│   ├── rateLimit.js               Límite de intentos del login y el registro (429)
 │   ├── validate.js                Aplica los esquemas de Zod (params, query y body)
 │   └── errorHandler.js            404 y formato común de errores
 ├── docs/openapi.js                Documentación de todos los endpoints
@@ -501,19 +496,13 @@ Además:
 | GET | `/api/departures/sku/:sku` | Una salida por su SKU (también en minúsculas) | 200 |
 | GET | `/api/shop/...` | La tienda pública: los carruseles del Home, el Shop y el detalle ([la parte pública](#la-parte-pública)) | 200 |
 
-Autenticación y perfil (quién puede usar cada endpoint: [matriz de permisos](#roles-y-matriz-de-permisos)):
+El registro, el login, el logout, la renovación de la sesión y el cambio de contraseña están en el servicio de auth (`/auth/*`, puerto 3002; ver su README). Perfil (quién puede usar cada endpoint: [matriz de permisos](#roles-y-matriz-de-permisos)):
 
 | Método | Ruta | Descripción | Éxito |
 |--------|------|-------------|-------|
-| POST | `/api/auth/register` | Alta pública (rider), con la sesión iniciada | 201 |
-| POST | `/api/auth/login` | Iniciar sesión: `{ token, tokenType, expiresIn, user }` | 200 |
-| GET | `/api/auth/me` | El usuario de la sesión, con su rol y su perfil | 200 |
-| POST | `/api/auth/logout` | Cerrar esta sesión: el token va a la lista negra | 204 |
-| POST | `/api/auth/logout-all` | Cerrar todas las sesiones | 204 |
 | GET | `/api/profile/me` | Mi usuario con mi perfil | 200 |
 | GET | `/api/profile/me/bikes` | Mi garaje: todas mis motos, también las privadas e inactivas | 200 |
 | PATCH | `/api/profile/me` | Editar `name`, `email` y `profile` | 200 |
-| PATCH | `/api/profile/me/password` | Cambiar la contraseña (devuelve una sesión nueva) | 200 |
 | GET | `/api/profile/:userId` | Usuario con su perfil (el propio usuario o el admin) | 200 |
 | PATCH | `/api/profile/:userId` | Editar un usuario y su perfil (el propio usuario o el admin) | 200 |
 
@@ -854,7 +843,7 @@ Todas las respuestas de error tienen el mismo formato:
 | Restaurar algo que no está eliminado, o con una referencia eliminada | 409 |
 | Valor único repetido (email, nombre, etiqueta de rol, lugar, slug...). Si lo tiene un documento de la papelera, el mensaje acaba en `in the trash` | 409 |
 | Un admin que se quita el rol, se desactiva o se elimina a sí mismo, o el último admin activo | 409 |
-| Demasiados intentos de login o de registro: `Too many attempts, please try again later` | 429 |
+| El JWKS del servicio de auth no responde y no hay clave en caché: `Authentication service unavailable` | 503 |
 | Error inesperado | 500 |
 
 > [!NOTE]
@@ -862,80 +851,68 @@ Todas las respuestas de error tienen el mismo formato:
 
 ## Autenticación y autorización
 
-La API usa **JWT** para saber quién llama (autenticación), **roles** para saber qué puede hacer (RBAC) y la **propiedad del recurso** para saber sobre qué (ABAC).
+La API usa **JWT** para saber quién llama (autenticación), **roles** para saber qué puede hacer (RBAC) y la **propiedad del recurso** para saber sobre qué (ABAC). Los tokens no los firma la API: los firma el **servicio de auth** (`moto-routes-auth`, puerto 3002) con su clave privada RSA, y la API los comprueba con la clave pública que auth publica en su JWKS. Así la API no guarda ningún secreto con el que se pueda fabricar un token.
 
 ### El flujo
 
 ```mermaid
 sequenceDiagram
     participant C as Cliente
-    participant A as API
-    C->>A: POST /api/auth/login { email, password }
-    A->>A: verifyPassword (Argon2id) y createToken (HS256)
-    A-->>C: { token, tokenType: "Bearer", expiresIn, user }<br/>Set-Cookie: routly_session=<token>; HttpOnly
+    participant Au as Auth (3002)
+    participant A as API (3000)
+    C->>Au: POST /auth/login { email, password }
+    Au-->>C: { user }<br/>Set-Cookie: routly_session=<token RS256, 15 min>; routly_refresh=<opaco, 7 d>
     C->>A: PATCH /api/experiences/:id<br/>Cookie: routly_session=<token> (o Authorization: Bearer <token>)
-    A->>A: authenticate: firma, caducidad, usuario activo, tokenVersion
-    A->>A: authorizeRoles: ¿host o admin?
-    A->>A: service: ¿la experiencia es suya? (ABAC)
-    A-->>C: 200, o 401 / 403
+    A->>Au: GET /auth/.well-known/jwks.json (la primera vez; caché 10 min)
+    A->>A: authenticate: firma RS256, iss, aud, caducidad, lista negra, usuario activo, tokenVersion
+    A->>A: authorizeRoles y service (ABAC)
+    A-->>C: 200, o 401 TOKEN_EXPIRED / 403
+    C->>Au: POST /auth/refresh (al recibir TOKEN_EXPIRED)
+    Au-->>C: cookies nuevas
 ```
 
-1. `POST /api/auth/login` (o `/register`) devuelve el token y el usuario con su rol y su perfil, y deja el mismo token en la cookie `routly_session`.
+1. El login, el registro, el logout, la renovación (`/auth/refresh`) y el cambio de contraseña están en auth (ver el README de `moto-routes-auth`). La API no tiene ninguno de esos endpoints.
 2. En cada petición, el token llega de una de dos formas:
-   - **la cookie**, que el navegador manda sola: es lo que usa el panel (ver "La cookie de sesión");
+   - **la cookie** `routly_session`, que el navegador manda sola: es lo que usa el panel (ver "La cookie de sesión");
    - **la cabecera** `Authorization: Bearer <token>`: Swagger, Postman y los tests. Si llegan las dos, manda la cabecera.
-3. Al caducar (`JWT_EXPIRES_IN`) se vuelve a iniciar sesión: no hay refresh token. `POST /api/auth/logout` cierra esta sesión (lista negra) y `POST /api/auth/logout-all`, todas.
+3. El token dura 15 minutos. Al caducar, la API responde `401` con `"code": "TOKEN_EXPIRED"` y el cliente pide uno nuevo a `POST /auth/refresh`. Cualquier otro token que no sirve da `"code": "TOKEN_INVALID"`.
 
 | Pieza | Archivo | Qué hace |
 |---|---|---|
-| Contraseñas | `utils/passwd.js` | `hashPassword`, `verifyPassword` y `needsRehash` con Argon2id |
-| Token | `utils/jwt.js` | `createToken({ sub, email, role, tv })` y `verifyToken` (solo HS256) |
-| Configuración | `config/auth.js` | `JWT_SECRET` y `JWT_EXPIRES_IN`: sin secreto, el servidor no arranca |
-| Cookie de sesión | `utils/session-cookie.js` | `setSessionCookie`, `clearSessionCookie`, `readCookie` (sin `cookie-parser`) y `sendSession`, que responde con la sesión y deja la cookie |
-| Autenticación | `middlewares/authenticate.js` | Lee el token de la cabecera o, si no viene, de la cookie, verifica el token y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos |
+| Contraseñas | `utils/passwd.js` | `hashPassword` y `verifyPassword` con Argon2id, para cuando el admin crea un usuario o le pone contraseña desde el panel |
+| Configuración | `config/auth.js` | `AUTH_JWKS_URL`, `JWT_ISSUER` y `JWT_AUDIENCE`, y el JWKS remoto de `jose` (caché de 10 min; si llega un `kid` nuevo, lo vuelve a pedir como mucho cada 30 s) |
+| Token | `utils/jwt.js` | `verifyToken`: solo RS256, con el emisor y la audiencia de auth, 30 s de margen de reloj. Caducado, 401 `TOKEN_EXPIRED`; firma, clave o claims malos, 401 `TOKEN_INVALID`; el JWKS no responde, 503 |
+| Cookie de sesión | `utils/session-cookie.js` | `sessionCookieName` y `readCookie` (sin `cookie-parser`). La API no pone ni borra cookies |
+| Autenticación | `middlewares/authenticate.js` | Lee el token de la cabecera o, si no viene, de la cookie, lo verifica, mira la lista negra y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos, no del token |
 | RBAC | `middlewares/authorize.js` | `authorizeRoles(...roles)`, `isAdmin`, `adminOnly`, `hostOrAdmin` y `authorizeOwnership(load, check)` |
 | ABAC | `utils/access.js` | Funciones puras: `isOwnerOrAdmin`, `canAccessUserResource`, `canModifyHost`, `canModifyExperience`, `canModifyDeparture` y `canModifyImageOwner`. Los services cargan la cadena de dueños y lanzan `forbidden()` |
-| Lista negra | `models/revokedToken.model.js` | Los tokens cerrados con `logout`: solo su `jti`, de quién eran y cuándo caducan. `authenticate` la consulta en cada petición |
-| Intentos | `middlewares/rateLimit.js` | Login: 10 intentos **fallidos** cada 15 min por IP. Registro: 10 altas cada 15 min. Después, 429 |
+| Lista negra | `models/revokedToken.model.js` | Los `jti` de los tokens cerrados con logout. La escribe auth; `authenticate` la consulta en cada petición |
 
 ### La cookie de sesión
 
-El panel no guarda el token: vive en una cookie que el JavaScript de la página no puede leer, así que un XSS no se lo puede llevar.
+El panel no guarda el token: vive en una cookie que el JavaScript de la página no puede leer, así que un XSS no se lo puede llevar. **La pone y la borra el servicio de auth**; la API solo la lee.
 
 | Opción | Valor | Por qué |
 |---|---|---|
-| Nombre | `routly_session`, o `__Secure-routly_session` con `Secure` | El prefijo `__Secure-` hace que el navegador solo la acepte por HTTPS, así nadie la puede colar por HTTP. `__Host-` obligaría a `Path=/` |
+| Nombre | `routly_session`, o `__Secure-routly_session` con `Secure` | El prefijo `__Secure-` hace que el navegador solo la acepte por HTTPS. La API busca el nombre que diga `COOKIE_SECURE` |
 | `HttpOnly` | Sí | El JavaScript no la lee |
-| `SameSite` | `Strict` (o `Lax` con `COOKIE_SAMESITE`) | El navegador no la manda en peticiones que vienen de otra web (CSRF) |
-| `Path` | `/api` | Solo viaja a la API |
-| `Max-Age` | El `expiresIn` del token | Caduca a la vez que el token |
-| `Secure` | `COOKIE_SECURE`; sin definir, solo en producción | En `http://localhost` algunos navegadores no guardan una cookie `Secure` |
+| `SameSite` | `Strict` | El navegador no la manda en peticiones que vienen de otra web (CSRF) |
+| `Path` | `/` | Viaja a la API (`/api`) y a auth (`/auth`) detrás del mismo origen |
+| `Max-Age` | 15 minutos | Caduca a la vez que el token |
 
-- **La ponen** el login, el registro y el cambio de contraseña. **La borran** `logout` y `logout-all`, y cualquier 401 de una cookie que ya no sirve.
-- **En los GET públicos** (`optionalAuth`), una cookie que ya no sirve no da 401: la petición sigue como anónima y la cookie se borra. Con la cabecera, un token que no sirve sigue siendo un 401.
-- **CSRF.** Además de `SameSite=Strict`, con la cookie un POST o PATCH cuya cabecera `Origin` no sea la propia API, uno de `CORS_ORIGIN` o (fuera de producción) un `localhost` responde `403 Request origin not allowed`. Sin `Origin` (Postman, curl) no se puede saber de dónde viene y se deja pasar. Con la cabecera `Authorization` no se comprueba: no viaja sola, como la cookie.
-- **CORS.** En desarrollo el panel llama a `/api` a través del proxy de Angular, desde su propio origen, así que no hacen falta credenciales cruzadas. En producción la API responde con `credentials: true` para los orígenes de `CORS_ORIGIN`.
+- **En los GET públicos** (`optionalAuth`), una cookie que ya no sirve no da 401: la petición sigue como anónima. Con la cabecera, un token que no sirve sigue siendo un 401.
+- **CSRF.** Además de `SameSite=Strict`, con la cookie un POST o PATCH cuya cabecera `Origin` no sea la propia API, uno de `CORS_ORIGIN` o (fuera de producción) un `localhost` responde `403 Request origin not allowed`. Sin `Origin` (Postman, curl) se deja pasar. Con la cabecera `Authorization` no se comprueba: no viaja sola, como la cookie.
+- **CORS.** En desarrollo el panel llama a `/api` a través del proxy de Angular, desde su propio origen. En producción la API responde con `credentials: true` para los orígenes de `CORS_ORIGIN`.
 
-**Por qué cookie y no `localStorage`.** Los prompts del proyecto pedían guardar el token en `localStorage`. Se cambió porque ahí cualquier script de la página lo puede leer: con la cookie `httpOnly`, un XSS ya no se lleva la sesión, y `SameSite=Strict` más la comprobación del `Origin` cubren el CSRF que trae la cookie. El token sigue saliendo en el body para no romper Swagger, Postman ni los tests.
+**Por qué cookie y no `localStorage`.** Ahí cualquier script de la página lo podría leer: con la cookie `httpOnly`, un XSS ya no se lleva la sesión, y `SameSite=Strict` más la comprobación del `Origin` cubren el CSRF que trae la cookie.
 
-**El token** lleva `sub` (id del usuario), `email`, `role` (su `name`), `tv` (su `tokenVersion`) y `jti` (un UUID propio de cada token), además de `iat` y `exp`. Nunca la contraseña ni el hash.
+**El token** lleva `sub` (id del usuario), `role`, `tv` (su `tokenVersion`), `sid` (la sesión de auth) y `jti` (un UUID propio de cada token), además de `iss`, `aud`, `iat` y `exp`. Nunca la contraseña ni el correo. La API exige `sub`, `jti` y `exp`, y no se fía del `role` del token: lo lee de la base de datos.
 
-**Cerrar sesión: dos niveles.**
+**Cerrar sesiones.** El logout de auth mete el `jti` del token en la lista negra (`revokedtokens`, con un índice TTL que la vacía sola) y la API la consulta en cada petición: desde ese momento el token da `401 TOKEN_INVALID` aunque no haya caducado.
 
-| | `POST /api/auth/logout` | `POST /api/auth/logout-all` |
-|---|---|---|
-| Qué cierra | Solo esta sesión | Todas las sesiones del usuario |
-| Cómo | El `jti` del token va a la **lista negra** (`revokedtokens`) | Sube su `tokenVersion` |
-| Qué se guarda | `jti`, `userId` y `expiresAt`. Nunca el token, que es un dato sensible | Nada nuevo: un número del usuario |
-| Cuánto dura | Hasta que el token habría caducado: el índice TTL de `expiresAt` borra la entrada sola, así la lista no crece | Siempre |
+**`tokenVersion`** es un número del usuario (oculto, como `passwordHash`) que va dentro del token. Lo suben auth (cambio de contraseña, cerrar todas las sesiones, un refresh reutilizado) y la API (desactivar o eliminar al usuario, o cambiarle la contraseña desde el panel): desde ese momento, todos sus tokens anteriores responden 401. Reactivar o restaurar al usuario no les devuelve la vida.
 
-Desde ese momento, el token responde `401 TOKEN_INVALID` aunque no haya caducado. `authenticate` consulta la lista negra en cada petición, en paralelo con el usuario y sobre un índice único: es una consulta muy barata.
-
-**`tokenVersion`** es un número del usuario (oculto, como `passwordHash`) que va dentro del token. Sube al cambiar la contraseña, al desactivar o eliminar al usuario y con `logout-all`: desde ese momento, todos sus tokens anteriores responden 401 aunque no hayan caducado. Reactivar o restaurar al usuario no les devuelve la vida.
-
-**Por qué Argon2id y no bcrypt.** Es el algoritmo que recomienda OWASP para contraseñas: además de lento, necesita memoria (19 MiB por hash), lo que encarece mucho los ataques con GPU. No tiene el límite de 72 bytes de bcrypt (la contraseña llega a 128 caracteres) y guarda en el propio hash sus parámetros: si se suben, `needsRehash` lo detecta y el login rehace el hash sin que el usuario note nada.
-
-**El login no da pistas.** Si el correo no existe, la contraseña no coincide o la cuenta está inactiva, la respuesta es la misma: `401 Invalid email or password`. Si el correo no existe, se compara igualmente contra un hash ficticio, así el tiempo de respuesta tampoco delata qué correos están registrados.
+**Por qué RS256 y no HS256.** Con HS256 la misma clave firma y verifica: cualquier servicio que comprueba tokens podría fabricarlos. Con RS256 solo auth tiene la clave privada; la API y la futura gateway solo tienen la pública, que no sirve para firmar. El JWKS además permite rotar la clave sin tocar la API: el `kid` del token dice cuál usar.
 
 ### Roles y matriz de permisos
 
@@ -956,8 +933,7 @@ Desde ese momento, el token responde `401 TOKEN_INVALID` aunque no haya caducado
 | `PATCH /api/hosts/:id` | 401 | 403 | solo el suyo | ✔ |
 | Crear, activar, eliminar y restaurar hosts | 401 | 403 | 403 | ✔ |
 | Todo `/api/users` y `/api/roles`, también leer | 401 | 403 | 403 | ✔ |
-| `/api/auth/register` y `/api/auth/login` | ✔ | ✔ | ✔ | ✔ |
-| `/api/auth/me`, `/api/auth/logout`, `/api/auth/logout-all` y `/api/profile/me*` | 401 | ✔ | ✔ | ✔ |
+| `/api/profile/me*` | 401 | ✔ | ✔ | ✔ |
 | `/api/profile/:userId` | 401 | solo el suyo | solo el suyo | ✔ |
 
 "Las suyas" sigue la cadena de propiedad: `Host.userId` → `Experience.hostId` → `Departure.experienceId`. Un anfitrión no puede crear una experiencia en el perfil de otro, ni pasarle la suya. Si el recurso no existe, 404; si existe pero no es suyo, 403.
@@ -1082,13 +1058,13 @@ Con Caddy basta con `reverse_proxy /api/* 127.0.0.1:3000`: pide el certificado y
 **Antes de publicar:**
 
 - `NODE_ENV=production` y `TRUST_PROXY=1` (uno por cada proxy delante).
-- `JWT_SECRET` nuevo, de 32 caracteres o más, y `JWT_EXPIRES_IN=1h`.
+- `AUTH_JWKS_URL` con la URL del JWKS de auth en producción (con `https://` si va por fuera de la máquina).
 - `COOKIE_SECURE` sin definir o en `true`: la cookie pasa a `__Secure-routly_session`.
 - `CORS_ORIGIN` con el origen `https://` del panel, si no está en el mismo origen.
 - El proxy redirige HTTP a HTTPS. HSTS lo pone Helmet en producción.
 - `MONGODB_URI` de la base de datos de producción, con usuario y contraseña.
 
-**Si crece.** Con varias instancias de la API, el JWT no depende de ninguna y la lista negra ya está en Mongo, compartida. El contador del límite de intentos, en cambio, vive en la memoria de cada instancia: habría que llevarlo a Redis. Y con tokens de 1 h, para no volver a entrar cada hora, haría falta un refresh token en otra cookie `httpOnly`.
+**Si crece.** Con varias instancias de la API, el JWT no depende de ninguna (cada una guarda su copia del JWKS) y la lista negra ya está en Mongo, compartida. El login, el refresh y su límite de intentos son cosa del servicio de auth.
 
 ## Logs (Morgan)
 

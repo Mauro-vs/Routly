@@ -6,7 +6,8 @@ import { createProfileSchema, updateProfileSchema } from "./profile.schema.js";
 
 // La API recibe password y guarda solo su hash (Argon2id): passwordHash nunca se acepta
 // del cliente. Argon2 no tiene el límite de 72 de bcrypt; 128 deja usar frases largas y
-// evita hashear textos enormes. La comparten el alta, el registro y el cambio de contraseña.
+// evita hashear textos enormes. La comparten el alta y los cambios del panel; el servicio de auth tiene
+// una copia para el registro y el cambio de contraseña (moto-routes-auth/src/schemas/auth.schema.js).
 export const passwordSchema = z
   .string()
   .min(8)
@@ -40,17 +41,6 @@ export const updateOwnUserSchema = userFields
   .extend({
     profile: updateProfileSchema.optional(),
     ...cannotChange("_id", "slug", "roleId", "status", "isActive", "password", "passwordHash", "tokenVersion"),
-  });
-
-export const changePasswordSchema = z
-  .strictObject({
-    // Solo se compara con el hash: no se le aplican las reglas de una contraseña nueva
-    currentPassword: z.string().min(1).max(128),
-    newPassword: passwordSchema,
-  })
-  .refine((data) => data.currentPassword !== data.newPassword, {
-    message: "newPassword must be different from currentPassword",
-    path: ["newPassword"],
   });
 
 // Query params de GET /api/users (utils/listQuery.js): los comunes y estos filtros

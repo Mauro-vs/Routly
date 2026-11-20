@@ -3,7 +3,7 @@ import { revokedTokenRepository } from "../repositories/revokedToken.repository.
 import { userRepository } from "../repositories/user.repository.js";
 import { createError, unauthorized } from "../utils/errors.js";
 import { verifyToken } from "../utils/jwt.js";
-import { clearSessionCookie, readCookie, sessionCookieName } from "../utils/session-cookie.js";
+import { readCookie, sessionCookieName } from "../utils/session-cookie.js";
 
 // Las tres partes de un JWT en base64url, separadas por puntos
 const JWT = String.raw`[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*`;
@@ -39,33 +39,33 @@ function readCredentials(req) {
  * Para los GET públicos que enseñan más a un admin (services/visibility.js). Sin sesión sigue
  * como anónimo. Con cabecera Authorization, igual que authenticate: un token que no sirve es un
  * 401, no un anónimo. Con una cookie que ya no sirve (caducada, cerrada, de un usuario
- * desactivado), anónimo y se borra: una cookie vieja no debe romper las páginas públicas.
+ * desactivado), anónimo: una cookie vieja no debe romper las páginas públicas. La cookie la
+ * renueva o la borra el servicio de auth, no la API.
  */
 export function optionalAuth(req, res, next) {
   if (req.headers.authorization) return authenticate(req, res, next);
   if (!usesCookie(req)) return next();
 
   return authenticate(req, res, (error) => {
-    if (error?.status === 401) {
-      clearSessionCookie(res);
-      return next();
-    }
+    if (error?.status === 401) return next();
     next(error);
   });
 }
 
 /**
  * Exige sesión. Lee el token de Authorization: Bearer <token> o, si no viene, de la cookie
- * de sesión (utils/session-cookie.js). Comprueba la firma y la caducidad
- * (verifyToken), que el token no se haya cerrado con un logout (lista negra) y que el
- * usuario siga existiendo: no eliminado, activo, con un rol activo y el mismo tokenVersion.
+ * de sesión (utils/session-cookie.js). Comprueba la firma RS256 con el JWKS del servicio de
+ * auth, iss, aud y caducidad (verifyToken), que el token no se haya cerrado con un logout
+ * (lista negra, la escribe el servicio de auth) y que el usuario siga existiendo: no eliminado,
+ * activo, con un rol activo y el mismo tokenVersion. Así desactivar a alguien o cambiarle la
+ * contraseña desde el panel le cierra la sesión al momento, sin esperar a que caduque el token.
  *
- * Deja en req.user { id, email, role, name }, con el rol leído de la base de datos: un
- * cambio de rol se aplica en la siguiente petición, sin esperar al token. Y en req.auth
- * { jti, expiresAt }: lo que necesita el logout para cerrar esta sesión.
+ * Deja en req.user { id, email, role, name }, con el rol leído de la base de datos (no el del
+ * token): un cambio de rol se aplica en la siguiente petición.
  *
  * Con la cookie, además, una petición que cambia datos desde un origen que no es el nuestro
- * es un 403 (CSRF), y un token que no sirve borra la cookie.
+ * es un 403 (CSRF). Cuando el token caduca (401 TOKEN_EXPIRED), el panel lo renueva con
+ * POST /auth/refresh.
  *
  * Cualquier fallo de la sesión es el mismo 401 "Authentication required" (utils/errors.js).
  */
@@ -78,7 +78,7 @@ export async function authenticate(req, res, next) {
       throw createError("Request origin not allowed", 403);
     }
 
-    const payload = verifyToken(credentials.token);
+    const payload = await verifyToken(credentials.token);
     const [user, revoked] = await Promise.all([
       userRepository.findAuthById(payload.sub),
       revokedTokenRepository.isRevoked(payload.jti),
@@ -89,10 +89,8 @@ export async function authenticate(req, res, next) {
     }
 
     req.user = { id: String(user._id), email: user.email, role: user.role.name, name: user.name };
-    req.auth = { jti: payload.jti, expiresAt: new Date(payload.exp * 1000) };
     next();
   } catch (error) {
-    if (error.status === 401 && usesCookie(req)) clearSessionCookie(res);
     next(error);
   }
 }

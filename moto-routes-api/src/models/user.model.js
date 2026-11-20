@@ -26,9 +26,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: USER_LIMITS.emailMax,
     },
-    // Nunca sale en las consultas: hay que pedirlo explícitamente con select("+passwordHash")
+    // Nunca sale en las consultas: hay que pedirlo explícitamente con select("+passwordHash").
+    // También lo escribe el servicio de auth (moto-routes-auth): registro, rehash y cambio de
+    // contraseña. Los parámetros de Argon2 tienen que ser los mismos en los dos (utils/passwd.js)
     passwordHash: { type: String, required: true, select: false },
-    // Va en el token (tv): al subirlo (cambio de contraseña, desactivar, eliminar, cerrar
+    // Va en el token (tv). Lo suben la API y el servicio de auth: al subirlo (cambio de contraseña, desactivar, eliminar, cerrar
     // todas las sesiones) los tokens anteriores dejan de servir. Tampoco sale nunca.
     tokenVersion: { type: Number, default: 0, min: 0, select: false },
     roleId: { type: mongoose.Schema.Types.ObjectId, ref: "Role", required: true, index: true },

@@ -1,59 +1,64 @@
-import { randomUUID } from "node:crypto";
-import jwt from "jsonwebtoken";
-import { loadAuthConfig } from "../config/auth.js";
-import { unauthorized } from "./errors.js";
+import { errors as joseErrors, jwtVerify } from "jose";
+import { getKeySet, loadAuthConfig } from "../config/auth.js";
+import { createError, unauthorized } from "./errors.js";
 import { OBJECT_ID_PATTERN } from "./objectId.js";
 
-// El algoritmo es fijo: verifyToken no acepta ningún otro (ni "none")
-const ALGORITHM = "HS256";
+// El algoritmo es fijo: ni "none" ni HS256 (el ataque de firmar con la clave pública como secreto)
+const ALGORITHM = "RS256";
+// Margen para relojes un poco desfasados entre la API y el servicio de auth
+const CLOCK_TOLERANCE_SECONDS = 30;
 
-// jti: un UUID por token, para poder invalidar uno concreto (lista negra del logout)
-const JTI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// Los fallos que son culpa del token. Cualquier otro (el JWKS no se puede descargar o el servicio
+// de auth responde mal) no dice nada del token
+const INVALID_TOKEN_ERRORS = new Set([
+  "ERR_JWT_INVALID",
+  "ERR_JWT_CLAIM_VALIDATION_FAILED",
+  "ERR_JWS_INVALID",
+  "ERR_JWS_SIGNATURE_VERIFICATION_FAILED",
+  "ERR_JOSE_ALG_NOT_ALLOWED",
+  "ERR_JOSE_NOT_SUPPORTED",
+  "ERR_JWKS_NO_MATCHING_KEY",
+  "ERR_JWKS_MULTIPLE_MATCHING_KEYS",
+]);
 
-/**
- * Firma el token de un usuario. La caducidad es la exp estándar (JWT_EXPIRES_IN).
- * Payload: sub (id), email, role (su name), tv (tokenVersion: si cambia en la base de
- * datos, los tokens anteriores dejan de servir) y jti (su id, para el logout).
- *
- * @param role el name del rol ("admin", "host", "rider"), no el documento
- */
-export function createToken({ _id, email, role, tokenVersion = 0 }) {
-  if (typeof role !== "string") throw new Error("createToken needs the role name");
-  const { secret, expiresIn } = loadAuthConfig();
-  return jwt.sign({ sub: String(_id), email, role, tv: tokenVersion }, secret, {
-    algorithm: ALGORITHM,
-    expiresIn,
-    jwtid: randomUUID(),
-  });
-}
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-// Lo que tiene que traer un token nuestro: si falta algo, no es válido
+// Lo que tiene que traer un token del servicio de auth: si falta algo, no es válido
 const isValidPayload = (payload) =>
   OBJECT_ID_PATTERN.test(payload?.sub) &&
   typeof payload.role === "string" &&
   Number.isInteger(payload.tv) &&
-  JTI_PATTERN.test(payload.jti);
+  UUID_PATTERN.test(payload.jti);
 
 /**
- * Comprueba la firma y la caducidad y devuelve el payload. Si falta, está caducado o
- * no es válido, lanza un 401. Que el usuario siga existiendo lo comprueba authenticate.
+ * Comprueba un token de acceso del servicio de auth (moto-routes-auth) y devuelve su payload:
+ * firma RS256 con una clave de su JWKS, iss, aud y caducidad. Payload: sub (id del usuario), role,
+ * tv (tokenVersion), sid (la sesión), jti, iat y exp.
+ *
+ * Caducado, 401 TOKEN_EXPIRED; cualquier otro fallo del token, 401 TOKEN_INVALID. Si no se puede
+ * descargar el JWKS (el servicio de auth no responde), 503: el token puede ser bueno, así que el
+ * cliente no debe cerrar la sesión. Que el usuario siga existiendo lo comprueba authenticate.
  */
-export function verifyToken(token) {
+export async function verifyToken(token) {
   if (!token) throw unauthorized();
+  const { issuer, audience } = loadAuthConfig();
 
   let payload;
   try {
-    payload = jwt.verify(token, loadAuthConfig().secret, { algorithms: [ALGORITHM] });
+    ({ payload } = await jwtVerify(token, getKeySet(), {
+      algorithms: [ALGORITHM],
+      issuer,
+      audience,
+      requiredClaims: ["exp", "sub", "jti"],
+      clockTolerance: CLOCK_TOLERANCE_SECONDS,
+    }));
   } catch (error) {
-    throw unauthorized(error instanceof jwt.TokenExpiredError ? "TOKEN_EXPIRED" : "TOKEN_INVALID");
+    if (error instanceof joseErrors.JWTExpired) throw unauthorized("TOKEN_EXPIRED");
+    if (INVALID_TOKEN_ERRORS.has(error?.code)) throw unauthorized("TOKEN_INVALID");
+    console.error(`Cannot check the token: JWKS not available (${error.message})`);
+    throw createError("Authentication service unavailable", 503);
   }
 
   if (!isValidPayload(payload)) throw unauthorized("TOKEN_INVALID");
   return payload;
-}
-
-/** Segundos de vida de un token recién firmado: para el expiresIn de la respuesta del login. */
-export function tokenLifetime(token) {
-  const { iat, exp } = jwt.decode(token);
-  return exp - iat;
 }

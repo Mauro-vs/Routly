@@ -2,7 +2,6 @@ import express from "express";
 import mongoose from "mongoose";
 import { applyTrustProxy } from "../config/proxy.js";
 import { errorHandler, notFoundHandler } from "../middlewares/errorHandler.js";
-import authRoutes from "../routes/auth.routes.js";
 import bikeRoutes from "../routes/bike.routes.js";
 import categoryRoutes from "../routes/category.routes.js";
 import departureRoutes from "../routes/departure.routes.js";
@@ -18,12 +17,13 @@ import userRoutes from "../routes/user.routes.js";
 import { User } from "../models/user.model.js";
 import { roleService } from "../services/role.service.js";
 import { userService } from "../services/user.service.js";
-import { createToken } from "../utils/jwt.js";
 import { visibilityCache } from "../services/visibility.js";
+import { signTestToken, useTestKeys } from "./tokens.js";
 
-// Los tests firman con su propio secreto si no hay uno definido, y sin límite de intentos
-process.env.JWT_SECRET ??= "secreto-de-los-tests-con-mas-de-32-caracteres";
 process.env.NODE_ENV ??= "test";
+// Los tokens los firma una clave de prueba (testing/tokens.js) y la API los comprueba con su JWKS,
+// sin el servicio de auth
+useTestKeys();
 
 export const ADMIN_EMAIL = "admin@test.dev";
 export const TEST_PASSWORD = "clave1234";
@@ -37,7 +37,8 @@ export const TEST_PASSWORD = "clave1234";
  * hace falta tener MongoDB en marcha.
  *
  * Crea un admin (ADMIN_EMAIL) y las peticiones de api van con su token. Para probar con
- * otro usuario, api.loginAs(email); sin sesión, api.anonymous.
+ * otro usuario, api.loginAs(email); sin sesión, api.anonymous. El login de verdad es del
+ * servicio de auth: aquí los tokens se firman como él (testing/tokens.js).
  *
  * Uso, en un archivo *.test.js:
  *   const api = await startApi("slug");
@@ -73,7 +74,6 @@ export async function startApi(name) {
   app.use(express.json({ limit: "50kb" }));
   app.use(visibilityCache);
   const routers = {
-    auth: authRoutes,
     profile: profileRoutes,
     roles: roleRoutes,
     users: userRoutes,
@@ -120,11 +120,11 @@ export async function startApi(name) {
     };
   };
 
-  // Un token como el del login, firmado con los datos que hay ahora en la base de datos
+  // Un token como el del servicio de auth, firmado con los datos que hay ahora en la base de datos
   async function loginAs(email) {
     const user = await User.findOne({ email }).select("+tokenVersion").populate("role", "name").lean();
     if (!user) throw new Error(`No user with email ${email}`);
-    return client(createToken({ ...user, role: user.role.name }));
+    return client(await signTestToken({ ...user, role: user.role.name }));
   }
 
   // El admin se crea con los services: sin admin no se puede crear nada por la API

@@ -1,39 +1,71 @@
-import jwt from "jsonwebtoken";
+import { createLocalJWKSet, createRemoteJWKSet } from "jose";
 
-// En producción el secreto tiene que tener al menos 32 caracteres (256 bits para HS256)
-const MIN_SECRET_LENGTH = 32;
-const DEFAULT_EXPIRES_IN = "1h";
+/*
+ * Los tokens los firma el servicio de auth (moto-routes-auth, puerto 3002) con su clave privada
+ * (RS256). La API solo los comprueba, con la clave pública que el servicio publica en su JWKS: no
+ * tiene ningún secreto con el que pudiera fabricar un token.
+ *
+ *   AUTH_JWKS_URL  la URL del JWKS. Fuera de producción, por defecto el servicio de auth local;
+ *                  en producción es obligatoria (por HTTPS o por la red interna)
+ *   JWT_ISSUER     quién firma (iss). Por defecto routly-auth
+ *   JWT_AUDIENCE   para quién (aud). Por defecto routly
+ *
+ * Se lee al usarse, no al importar: server.js la carga al arrancar (y no arranca si algo está
+ * mal) y los tests pueden cambiar el JWKS por uno en memoria (useLocalKeySet).
+ */
+const DEFAULT_JWKS_URL = "http://localhost:3002/auth/.well-known/jwks.json";
+const DEFAULT_ISSUER = "routly-auth";
+const DEFAULT_AUDIENCE = "routly";
 
 let config;
+let keySet;
+
+/** Lee y comprueba la configuración a partir de unas variables de entorno. */
+export function authConfigFrom(env = process.env) {
+  const isProduction = env.NODE_ENV === "production";
+  const rawUrl = env.AUTH_JWKS_URL?.trim() || (isProduction ? "" : DEFAULT_JWKS_URL);
+  if (!rawUrl) {
+    throw new Error("AUTH_JWKS_URL is not defined in environment variables (see .env.example)");
+  }
+
+  let jwksUrl;
+  try {
+    jwksUrl = new URL(rawUrl);
+  } catch {
+    throw new Error(`AUTH_JWKS_URL has an invalid value: "${rawUrl}"`);
+  }
+  if (jwksUrl.protocol !== "https:" && jwksUrl.protocol !== "http:") {
+    throw new Error(`AUTH_JWKS_URL has an invalid value: "${rawUrl}" (use http or https)`);
+  }
+
+  return Object.freeze({
+    jwksUrl,
+    issuer: env.JWT_ISSUER?.trim() || DEFAULT_ISSUER,
+    audience: env.JWT_AUDIENCE?.trim() || DEFAULT_AUDIENCE,
+  });
+}
+
+/** La configuración del proceso, leída una vez. */
+export function loadAuthConfig() {
+  config ??= authConfigFrom();
+  return config;
+}
 
 /**
- * Lee y comprueba JWT_SECRET y JWT_EXPIRES_IN. Se lee al usarse, no al importar: así
- * server.js lo llama al arrancar (y no arranca si falta algo) y los tests pueden fijar
- * las variables antes de la primera firma.
+ * Las claves públicas con las que se comprueban los tokens. jose descarga el JWKS la primera vez,
+ * lo guarda en caché 10 minutos y, si llega un token con un kid que no conoce (una clave rotada),
+ * lo vuelve a pedir, pero como mucho una vez cada 30 s: un atacante no puede forzar descargas sin fin.
  */
-export function loadAuthConfig() {
-  if (config) return config;
+export function getKeySet() {
+  keySet ??= createRemoteJWKSet(loadAuthConfig().jwksUrl, {
+    timeoutDuration: 5000,
+    cooldownDuration: 30_000,
+    cacheMaxAge: 10 * 60 * 1000,
+  });
+  return keySet;
+}
 
-  const secret = process.env.JWT_SECRET;
-  const rawExpiresIn = process.env.JWT_EXPIRES_IN || DEFAULT_EXPIRES_IN;
-  // jsonwebtoken lee "3600" (texto sin unidad) como milisegundos: sin unidad son segundos
-  const expiresIn = /^\d+$/.test(rawExpiresIn) ? Number(rawExpiresIn) : rawExpiresIn;
-
-  if (!secret) {
-    throw new Error("JWT_SECRET is not defined in environment variables (see .env.example)");
-  }
-  if (process.env.NODE_ENV === "production" && secret.length < MIN_SECRET_LENGTH) {
-    throw new Error(`JWT_SECRET must be at least ${MIN_SECRET_LENGTH} characters long in production`);
-  }
-
-  // jsonwebtoken acepta segundos o un texto como "7d" o "1h": se prueba aquí para que un
-  // valor no válido pare el arranque y no el primer login
-  try {
-    jwt.sign({}, secret, { expiresIn });
-  } catch {
-    throw new Error(`JWT_EXPIRES_IN has an invalid value: "${expiresIn}" (use e.g. 1h or 7d)`);
-  }
-
-  config = Object.freeze({ secret, expiresIn });
-  return config;
+/** Solo para los tests: comprobar con un JWKS en memoria en vez de pedirlo al servicio de auth. */
+export function useLocalKeySet(jwks) {
+  keySet = createLocalJWKSet(jwks);
 }

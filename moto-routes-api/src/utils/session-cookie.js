@@ -1,31 +1,13 @@
 import { loadCookieConfig } from "../config/cookies.js";
 
 /*
- * La sesión del panel viaja en una cookie httpOnly: el JavaScript de la página no la puede
- * leer, así que un XSS no se lleva el token. El token sigue saliendo también en el body del
- * login para Swagger, Postman y los tests, que mandan Authorization: Bearer.
- *
- * Path=/api: solo viaja a la API. SameSite (strict por defecto) y Secure (en producción, con
- * el nombre __Secure-routly_session) salen de config/cookies.js.
+ * La sesión del panel viaja en una cookie httpOnly que pone y borra el servicio de auth
+ * (moto-routes-auth): routly_session, con Path=/ para que llegue a /api, /ai y /auth. La API
+ * solo la lee. Con Secure (producción) se llama __Secure-routly_session (config/cookies.js).
  */
 
 /** El nombre de la cookie: routly_session, o __Secure-routly_session con Secure. */
 export const sessionCookieName = () => loadCookieConfig().name;
-
-const cookieOptions = () => {
-  const { secure, sameSite } = loadCookieConfig();
-  return { httpOnly: true, sameSite, path: "/api", secure };
-};
-
-/** Pone la cookie con el token de la sesión. maxAge en segundos, como el expiresIn del login. */
-export function setSessionCookie(res, token, maxAge) {
-  res.cookie(sessionCookieName(), token, { ...cookieOptions(), maxAge: maxAge * 1000 });
-}
-
-/** La borra: el navegador la descarta al recibirla caducada, con las mismas opciones. */
-export function clearSessionCookie(res) {
-  res.clearCookie(sessionCookieName(), cookieOptions());
-}
 
 /** Lee una cookie de la cabecera Cookie ("a=1; b=2"). Sin cookie-parser: no hace falta más. */
 export function readCookie(req, name) {
@@ -42,10 +24,4 @@ export function readCookie(req, name) {
     }
   }
   return undefined;
-}
-
-/** Responde con la sesión (login, registro, cambio de contraseña) y deja puesta la cookie. */
-export function sendSession(res, session, status = 200) {
-  setSessionCookie(res, session.token, session.expiresIn);
-  res.status(status).json(session);
 }

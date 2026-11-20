@@ -37,18 +37,6 @@ export const userRepository = {
     return User.findOne({ _id: id }).select("+tokenVersion").populate("role", "name isActive").lean();
   },
 
-  // Para el login: con el hash y el tokenVersion, que nunca salen en otra consulta
-  findForLogin(email) {
-    return User.findOne({ email })
-      .select("+passwordHash +tokenVersion")
-      .populate("role", "name isActive")
-      .lean();
-  },
-
-  findPasswordHash(id) {
-    return User.findOne({ _id: id }).select("+passwordHash").lean();
-  },
-
   // Para check:integrity: los usuarios (también eliminados) que no están en ids
   findWithoutIds(ids) {
     return User.find({ _id: { $nin: ids } })
