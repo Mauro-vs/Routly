@@ -13,6 +13,16 @@ const IS_WINDOWS = process.platform === "win32";
 
 /** Las aplicaciones del monorepo. `ready` es la URL que responde cuando ya están en marcha. */
 export const SERVICES = {
+  // El servicio de auth: login, refresh y logout. Firma los tokens RS256; la API los comprueba
+  // con su JWKS. Va primero porque los demás dependen de él para la sesión
+  auth: {
+    label: "auth",
+    dir: "moto-routes-auth",
+    dev: "npm run dev",
+    port: 3002,
+    ready: "http://localhost:3002/health",
+    color: 32,
+  },
   api: {
     label: "api",
     dir: "moto-routes-api",

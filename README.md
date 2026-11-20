@@ -27,10 +27,11 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Hoy Routly tiene cuatro partes:
+Hoy Routly tiene cinco partes:
 - la **web pública**, donde un motero sin cuenta encuentra una salida guiada y elige fecha;
 - el **panel de administración** del catálogo;
 - la **API** que sirve a las dos;
+- el **servicio de auth**, que inicia y renueva las sesiones y firma los tokens;
 - el **servidor de IA**, que añade a la web el bloque Routly IA del detalle y el asistente.
 
 La API tiene las diez colecciones de la plataforma (cuentas, anfitriones, catálogo, experiencias, salidas, imágenes y el garaje de motos de cada usuario) y una tienda pública, `/api/shop`. El panel gestiona las colecciones; la web pública solo lee de la tienda.
@@ -154,7 +155,7 @@ El servidor de IA no toca la base de datos: lee la misma tienda y la completa co
   <img src="https://skillicons.dev/icons?i=angular,ts,html,css,nodejs,express,mongodb,postman&theme=dark" alt="Angular, TypeScript, HTML, CSS, Node.js, Express, MongoDB y Postman">
 </p>
 
-Un monorepo con cuatro aplicaciones independientes que se comunican por HTTP y JSON:
+Un monorepo con cinco aplicaciones independientes que se comunican por HTTP y JSON:
 
 ```mermaid
 flowchart LR
@@ -163,11 +164,14 @@ flowchart LR
     I -- "/api/shop" --> B
     I -. "tiempo, paradas y textos" .-> E["Open-Meteo, OpenStreetMap<br/>y Groq"]
     A["Panel de administración<br/>Angular 20"] -- "HTTP / JSON" --> B
+    A -- "/auth: login y refresh" --> U["Servicio de auth<br/>Express 5"]
+    B -. "JWKS (clave pública)" .-> U
     B -- "Mongoose" --> C[("MongoDB")]
+    U -- "Mongoose" --> C
     B -. "/api/docs" .-> D["Swagger UI"]
     classDef app fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
     classDef data fill:#1b7a4e,stroke:#0c2419,color:#ffffff
-    class A,B,W,I app
+    class A,B,W,I,U app
     class C,D,E data
 ```
 
@@ -193,6 +197,11 @@ flowchart LR
     <td>Arquitectura por capas, validación antes del controlador, borrado lógico reutilizable y un único formato de error</td>
   </tr>
   <tr>
+    <td><a href="moto-routes-auth/README.md"><b>Servicio de auth</b></a></td>
+    <td>Express 5, Zod 4, <code>jose</code> (JWT RS256 y JWKS), Argon2id</td>
+    <td>Solo él tiene la clave privada: la API comprueba los tokens con la pública. Token de acceso de 15 minutos y refresh rotatorio de 7 días en cookies <code>httpOnly</code>, con detección de reutilización, límite de intentos y protección CSRF</td>
+  </tr>
+  <tr>
     <td><a href="moto-routes-ai/README.md"><b>Servidor de IA</b></a></td>
     <td>Express 5, Zod 4, IA gratuita con Groq (GPT-OSS 120B), cambiable a Gemini u OpenRouter desde el <code>.env</code></td>
     <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
@@ -202,6 +211,7 @@ flowchart LR
 ```
 Routly/
 ├── moto-routes-api/        API REST (Node.js + Express + MongoDB)
+├── moto-routes-auth/       Servicio de auth: login, refresh y JWKS (Node.js + Express), puerto 3002
 ├── moto-routes-ai/         Servidor de IA: bloque Routly IA y asistente (Node.js + Express)
 ├── moto-routes-dashboard/   Panel de administración (Angular)
 ├── moto-routes-web/        Web pública: Home, Shop y detalle (Angular)
@@ -215,6 +225,7 @@ Routly/
 Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza:
 
 - [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, validación y errores.
+- [`moto-routes-auth/README.md`](moto-routes-auth/README.md): el flujo de la sesión, las claves y su rotación, y las medidas de seguridad.
 - [`moto-routes-ai/README.md`](moto-routes-ai/README.md): endpoints de la IA, el asistente y sus herramientas, y de dónde sale cada dato.
 - [`moto-routes-dashboard/README.md`](moto-routes-dashboard/README.md): flujo de datos, patrones de Angular, sistema de diseño y cómo añadir una entidad.
 - [`moto-routes-web/README.md`](moto-routes-web/README.md): la URL como estado, la cancelación de peticiones y cómo se usa cada componente reutilizable.
@@ -236,6 +247,8 @@ cp moto-routes-api/.env.example moto-routes-api/.env
 cp moto-routes-ai/.env.example moto-routes-ai/.env
 ```
 
+El servicio de auth no necesita `.env` en desarrollo (usa los valores de `moto-routes-auth/.env.example`), y su clave privada (`moto-routes-auth/keys/private.pem`, que no se sube) la crea `npm run dev` la primera vez.
+
 En `moto-routes-ai/.env` va la clave de la IA (`AI_API_KEY`), que es gratis y sin tarjeta: se crea en [console.groq.com/keys](https://console.groq.com/keys). Sin clave todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
 
 ```bash
@@ -246,11 +259,11 @@ npm run seed
 npm run dev
 ```
 
-`npm run dev` arranca la **API** (`http://localhost:3000`), el **servidor de IA** (`http://localhost:3001`), el **panel** (`http://localhost:4200`) y la **web pública** (`http://localhost:4300`) en una sola terminal:
+`npm run dev` arranca el **servicio de auth** (`http://localhost:3002`), la **API** (`http://localhost:3000`), el **servidor de IA** (`http://localhost:3001`), el **panel** (`http://localhost:4200`) y la **web pública** (`http://localhost:4300`) en una sola terminal:
 
-- **Antes de arrancar comprueba** lo que suele fallar: la versión de Node, que MongoDB responde, que existe el `.env` de la API y que los puertos están libres. Si algo falla, dice qué y cómo arreglarlo, y no arranca nada.
+- **Antes de arrancar comprueba** lo que suele fallar: la versión de Node, que MongoDB responde, que existe el `.env` de la API, que auth tiene su clave (si no, la crea) y que los puertos están libres. Si algo falla, dice qué y cómo arreglarlo, y no arranca nada.
 - **Instala solo** las dependencias (`npm install`) de las aplicaciones que aún no las tienen.
-- **Cada línea lleva su nombre** (`[api]`, `[ai]`, `[panel]`, `[web]`) y **los errores salen en rojo**. Cuando todas responden, enseña sus URL.
+- **Cada línea lleva su nombre** (`[auth]`, `[api]`, `[ai]`, `[panel]`, `[web]`) y **los errores salen en rojo**. Cuando todas responden, enseña sus URL.
 - **Si una se cae**, sale un bloque rojo con su nombre y las últimas líneas del error, y las demás siguen.
 - **`Ctrl+C` lo para todo**, sin dejar procesos colgados. Los cambios en el código se recargan solos.
 
@@ -261,8 +274,8 @@ npm run dev
 
 | Comando (desde la raíz) | Qué hace |
 |---|---|
-| `npm run dev` | La API, el servidor de IA, el panel y la web a la vez |
-| `npm run dev -- api ai web` | Solo los que se digan (`api`, `ai`, `panel`, `web`) |
+| `npm run dev` | Auth, la API, el servidor de IA, el panel y la web a la vez |
+| `npm run dev -- auth api panel` | Solo los que se digan (`auth`, `api`, `ai`, `panel`, `web`). El panel necesita auth y la API para iniciar sesión |
 | `npm test` | Los tests de todas, uno detrás de otro, con una tabla al final. Solo enseña lo que falla |
 | `npm test -- panel --verbose` | Los de una, con toda la salida |
 | `npm run check` | Lo de antes de un commit: compila el panel y la web y pasa todos los tests |
@@ -273,7 +286,16 @@ Los scripts están en [`scripts/`](scripts) y solo usan Node: no hace falta inst
 <details>
 <summary><b>Arrancar cada parte por separado</b></summary>
 
-**1. La API** en `http://localhost:3000`
+**1. El servicio de auth** en `http://localhost:3002`
+
+```bash
+cd moto-routes-auth
+npm install
+npm run keys
+npm run dev
+```
+
+**2. La API** en `http://localhost:3000`, en otra terminal
 
 ```bash
 cd moto-routes-api
@@ -281,7 +303,7 @@ npm install
 npm run dev
 ```
 
-**2. El servidor de IA** en `http://localhost:3001`, en otra terminal
+**3. El servidor de IA** en `http://localhost:3001`, en otra terminal
 
 ```bash
 cd moto-routes-ai
@@ -289,7 +311,7 @@ npm install
 npm run dev
 ```
 
-**3. El panel** en `http://localhost:4200`, en otra terminal
+**4. El panel** en `http://localhost:4200`, en otra terminal
 
 ```bash
 cd moto-routes-dashboard
@@ -297,7 +319,7 @@ npm install
 npm start
 ```
 
-**4. La web pública** en `http://localhost:4300`, en otra terminal
+**5. La web pública** en `http://localhost:4300`, en otra terminal
 
 ```bash
 cd moto-routes-web
@@ -319,7 +341,7 @@ Las colecciones están hechas de punta a punta (API, panel y tests), y la web p�
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Experiencias | `experiences`, `departures` | Salidas guiadas sobre una ruta, con fechas, plazas, precio y SKU |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Contenido | `images` | Galería de imágenes para rutas, usuarios, anfitriones y el resto |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Acceso | `users`, `roles` | Inicio de sesión con cookie de sesión; el panel solo para admin, y el perfil y el garaje para cada usuario |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Acceso | `users`, `roles` | Servicio de auth propio (RS256 + JWKS) con sesión en cookies y refresh rotatorio; el panel solo para admin, y el perfil y el garaje para cada usuario |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Web pública | `/api/shop` | Home, Shop y detalle con la elección de salida |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Routly IA | `/ai` | El bloque Routly IA del detalle (resumen, tiempo, paradas, qué llevar y preguntas) y el asistente, en un servidor aparte sin base de datos |
 | ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección (diseño en `DATABASE.md`, sección 14) |

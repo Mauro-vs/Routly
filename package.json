@@ -1,7 +1,7 @@
 {
   "name": "routly",
   "private": true,
-  "description": "Routly: comandos para el monorepo entero (API, panel y web pública)",
+  "description": "Routly: comandos para el monorepo entero (auth, API, IA, panel y web pública)",
   "type": "module",
   "engines": {
     "node": ">=20.19"

@@ -27,8 +27,9 @@ import {
 } from "./lib.mjs";
 
 const KARMA = "npx ng test --watch=false --browsers=ChromeHeadless";
-// Los del servidor de IA no necesitan red ni MongoDB: usan un fetch falso
-const COMMANDS = { api: "npm test", ai: "npm test", panel: KARMA, web: KARMA };
+// Los del servidor de IA no necesitan red ni MongoDB: usan un fetch falso. Los de auth tampoco:
+// usan repositorios en memoria (el de MongoDB real solo corre con TEST_MONGODB_URI)
+const COMMANDS = { auth: "npm test", api: "npm test", ai: "npm test", panel: KARMA, web: KARMA };
 
 const args = process.argv.slice(2);
 const verbose = args.includes("--verbose");

@@ -23,6 +23,8 @@ npm run dev
 ```
 
 MongoDB tiene que estar en marcha, con los roles del seed de la API (`npm run seed` en la raíz).
+Desde la raíz, `npm run dev` lo arranca con lo demás (y crea la clave si falta), y `npm test -- auth`
+pasa sus tests.
 Swagger: http://localhost:3002/auth/docs (solo fuera de producción).
 
 ## Endpoints
@@ -67,6 +69,10 @@ const { payload } = await jwtVerify(token, jwks, { algorithms: ["RS256"], issuer
 
 `jose` guarda el JWKS en caché y no lo vuelve a pedir más de una vez cada 30 s aunque lleguen `kid`
 desconocidos. Quien comprueba tiene que fijar siempre el algoritmo, `iss` y `aud`.
+
+**Quién lo usa**: la API comprueba así los tokens (`AUTH_JWKS_URL` en su `.env`) y ya no tiene login
+propio. El panel llama a `/auth` por su proxy (en desarrollo, `proxy.conf.json` lo manda al 3002) y,
+cuando la API responde `401 TOKEN_EXPIRED`, pide otro token a `/auth/refresh` y repite la petición.
 
 **Cerrar sesiones**: subir `tokenVersion` del usuario invalida sus tokens de acceso (la API lo mira
 en cada petición) y sus refresh. Lo hacen el logout-all, el cambio de contraseña, un refresh

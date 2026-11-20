@@ -1,12 +1,12 @@
-// npm run dev: la API, el servidor de IA, el panel y la web en una sola terminal.
+// npm run dev: el servicio de auth, la API, el servidor de IA, el panel y la web en una sola terminal.
 //
 //   npm run dev               todos
 //   npm run dev -- api web    solo esas
 //
-// Antes de arrancar comprueba lo que suele fallar (Node, MongoDB, el .env, las dependencias y los
-// puertos) y dice cómo arreglarlo. Cada línea lleva el nombre de quien la escribe y los errores
+// Antes de arrancar comprueba lo que suele fallar (Node, MongoDB, el .env, las claves de auth, las
+// dependencias y los puertos) y dice cómo arreglarlo. Cada línea lleva el nombre de quien la escribe y los errores
 // salen en rojo. Si uno se cae, se avisa y los demás siguen. Ctrl+C para todo.
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
   SERVICES,
@@ -15,6 +15,7 @@ import {
   dim,
   dirOf,
   fail,
+  finished,
   green,
   info,
   installMissing,
@@ -52,7 +53,8 @@ const problems = [];
 if (nodeIsRecent()) ok(`Node ${process.versions.node}`);
 else problems.push(`Node ${process.versions.node} es antiguo: Angular 20 pide la 20.19 o más. Instala la LTS de https://nodejs.org`);
 
-if (selected.includes(SERVICES.api)) {
+// La API y auth usan la misma base de datos
+if (selected.includes(SERVICES.api) || selected.includes(SERVICES.auth)) {
   const { host, port, fromEnv } = mongoAddress();
   if (await mongoUp()) ok(`MongoDB responde en ${host}:${port}`);
   else
@@ -60,9 +62,30 @@ if (selected.includes(SERVICES.api)) {
       `MongoDB no responde en ${host}:${port}${fromEnv ? " (MONGODB_URI)" : ""}. Arráncalo: en Windows, "net start MongoDB" en una terminal de administrador, o abre MongoDB Compass y comprueba que conecta.`,
     );
 
+}
+
+if (selected.includes(SERVICES.api)) {
   if (existsSync(path.join(dirOf(SERVICES.api), ".env"))) ok("moto-routes-api/.env existe");
   else problems.push('Falta moto-routes-api/.env. Copia la plantilla: copy moto-routes-api\\.env.example moto-routes-api\\.env');
+  if (!selected.includes(SERVICES.auth))
+    info(yellow("La API comprueba los tokens con el JWKS de auth (http://localhost:3002): sin él, las peticiones con sesión dan 503."));
 }
+
+// auth arranca sin .env (todo tiene valor por defecto), pero necesita su clave privada RSA. En
+// desarrollo es keys/private.pem, que no se sube: si falta, se crea más abajo con npm run keys.
+const authKeyPath = path.join(dirOf(SERVICES.auth), "keys", "private.pem");
+let needsAuthKeys = false;
+if (selected.includes(SERVICES.auth)) {
+  const envPath = path.join(dirOf(SERVICES.auth), ".env");
+  const env = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
+  if (existsSync(envPath)) ok("moto-routes-auth/.env existe");
+  else info(dim("moto-routes-auth no tiene .env: arranca con los valores por defecto (los de .env.example)."));
+  const keyInEnv = /^\s*JWT_PRIVATE_KEY(_FILE)?\s*=\s*\S/m.test(env);
+  if (existsSync(authKeyPath) || keyInEnv) ok("Clave privada de auth");
+  else needsAuthKeys = true;
+}
+if ((selected.includes(SERVICES.panel) || selected.includes(SERVICES.api)) && !selected.includes(SERVICES.auth))
+  info(yellow("Sin auth (npm run dev -- auth ...) no se puede iniciar sesión en el panel."));
 
 // El servidor de IA arranca sin .env: el tiempo y las paradas funcionan, y los textos y el chat
 // esperan a que haya una clave de OpenRouter. Se avisa, pero no para nada.
@@ -96,6 +119,15 @@ if (problems.length > 0) {
 }
 
 if (!(await installMissing(selected))) process.exit(1);
+
+if (needsAuthKeys) {
+  info("moto-routes-auth no tiene clave: npm run keys (crea keys/private.pem, que no se sube)...");
+  if ((await finished(run("npm run keys", { cwd: dirOf(SERVICES.auth) }))) !== 0) {
+    fail(red("No se ha podido crear la clave de auth. Prueba a mano: cd moto-routes-auth && npm run keys"));
+    process.exit(1);
+  }
+  ok("Clave de auth creada en moto-routes-auth/keys/private.pem");
+}
 
 // ---------- Arrancar ----------
 
@@ -174,6 +206,7 @@ async function waitReady(service) {
 }
 
 const LINKS = {
+  auth: ["Auth", "http://localhost:3002/auth", "Swagger: http://localhost:3002/auth/docs"],
   api: ["API", "http://localhost:3000/api", "Swagger: http://localhost:3000/api/docs"],
   ai: ["IA", "http://localhost:3001/health", "La web lo usa en /ai"],
   panel: ["Panel", "http://localhost:4200", "admin@routly.dev (contraseña del seed)"],

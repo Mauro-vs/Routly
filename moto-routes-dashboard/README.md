@@ -46,7 +46,7 @@ La API tiene nueve colecciones relacionadas entre sí. El panel ya tiene la **ba
 
 ## Arrancar el proyecto
 
-Hacen falta tres terminales: el servicio de auth, la API y el panel.
+Lo más cómodo es `npm run dev` en la raíz del monorepo, que arranca todo. A mano hacen falta tres terminales: el servicio de auth, la API y el panel.
 
 **1. Servicio de auth** (`http://localhost:3002`): el login, el registro, la renovación de la sesión, el logout y el cambio de contraseña. Cómo arrancarlo (claves y `.env`) está en `moto-routes-auth/README.md`.
 
