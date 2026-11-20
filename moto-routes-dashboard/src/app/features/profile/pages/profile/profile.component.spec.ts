@@ -7,12 +7,13 @@ import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../../../environments/environment';
 import { AuthStore } from '../../../../auth/auth.store';
-import { fakeToken, fakeUser } from '../../../../auth/testing/auth.testing';
+import { fakeSession, fakeUser } from '../../../../auth/testing/auth.testing';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { ProfileComponent } from './profile.component';
 
 const BASE = environment.apiUrl;
+const AUTH = environment.authUrl;
 
 describe('ProfileComponent', () => {
   let fixture: ComponentFixture<ProfileComponent>;
@@ -80,7 +81,7 @@ describe('ProfileComponent', () => {
     gallery.componentInstance.coverChange.emit();
 
     const photo = { _id: 'i1', url: 'https://picsum.photos/seed/ana/400', alt: 'Ana' };
-    http.expectOne({ method: 'GET', url: `${BASE}/auth/me` }).flush({ ...fakeUser('rider'), coverImage: photo });
+    http.expectOne({ method: 'GET', url: `${BASE}/profile/me` }).flush({ ...fakeUser('rider'), coverImage: photo });
     await settle();
 
     expect(store.user()?.coverImage?.url).toBe(photo.url);
@@ -145,22 +146,22 @@ describe('ProfileComponent', () => {
     expect(input('email').getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('cambiar la contraseña renueva la sesión (la cookie la pone la API)', async () => {
-    const token = fakeToken(7200);
+  it('cambiar la contraseña (en el servicio de auth) renueva la sesión', async () => {
+    const session = fakeSession('rider', 7200);
     type('currentPassword', 'clave-vieja-1');
     type('newPassword', 'clave-nueva-2');
     type('repeat', 'clave-nueva-2');
 
     await submit(1);
 
-    const request = http.expectOne({ method: 'PATCH', url: `${BASE}/profile/me/password` });
+    const request = http.expectOne({ method: 'PATCH', url: `${AUTH}/password` });
     expect(request.request.body).toEqual({ currentPassword: 'clave-vieja-1', newPassword: 'clave-nueva-2' });
-    request.flush({ token, tokenType: 'Bearer', expiresIn: 7200, user: fakeUser('rider') });
+    request.flush(session);
     await settle();
 
-    // La sesión nueva dura lo que diga la API, y el token no se guarda en el panel
+    // La sesión nueva dura lo que diga auth, y el token no se guarda en el panel
     expect(store.expiresAt()).toBeGreaterThan(Date.now() + 7000_000);
-    expect(localStorage.getItem('routly.session')).not.toContain(token);
+    expect(localStorage.getItem('routly.session')).not.toContain(session.token ?? '');
     expect(input('newPassword').value).toBe('');
   });
 
@@ -171,7 +172,7 @@ describe('ProfileComponent', () => {
 
     await submit(1);
 
-    http.expectNone(`${BASE}/profile/me/password`);
+    http.expectNone(`${AUTH}/password`);
     expect(element.textContent).toContain('Las contraseñas no coinciden.');
   });
 
@@ -182,7 +183,7 @@ describe('ProfileComponent', () => {
 
     await submit(1);
 
-    http.expectOne(`${BASE}/profile/me/password`).flush(
+    http.expectOne(`${AUTH}/password`).flush(
       { message: 'Validation failed', details: [{ field: 'currentPassword', message: 'currentPassword is incorrect' }] },
       { status: 400, statusText: 'Bad Request' },
     );

@@ -81,7 +81,7 @@ describe('Rutas y guards', () => {
   });
 
   it('sin confirmar la sesión (la API no respondía) se puede entrar: lo revisa SessionService', async () => {
-    localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
+    localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000, userId: '1' }));
 
     expect(await visit('anónimo', '/users')).toBe('/users');
   });

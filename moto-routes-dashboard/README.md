@@ -46,9 +46,11 @@ La API tiene nueve colecciones relacionadas entre sí. El panel ya tiene la **ba
 
 ## Arrancar el proyecto
 
-Hacen falta dos terminales: una para la API y otra para el panel.
+Hacen falta tres terminales: el servicio de auth, la API y el panel.
 
-**1. API** (`http://localhost:3000`)
+**1. Servicio de auth** (`http://localhost:3002`): el login, el registro, la renovación de la sesión, el logout y el cambio de contraseña. Cómo arrancarlo (claves y `.env`) está en `moto-routes-auth/README.md`.
+
+**2. API** (`http://localhost:3000`)
 
 ```bash
 cd moto-routes-api
@@ -67,7 +69,7 @@ npm run dev
 
 `npm run seed` borra las rutas y carga cinco de ejemplo. Solo hace falta la primera vez o para empezar de cero.
 
-**2. Panel** (`http://localhost:4200`)
+**3. Panel** (`http://localhost:4200`)
 
 ```bash
 cd moto-routes-dashboard
@@ -105,9 +107,10 @@ El panel se configura en `src/environments/`:
 | Variable | Valor por defecto | Para qué |
 |---|---|---|
 | `apiUrl` | `/api` | URL base de la API, sin barra final. En desarrollo la sirve el proxy de `ng serve`; en producción, el proxy de la web (ver abajo) |
+| `authUrl` | `/auth` | URL base del servicio de auth, sin barra final. Igual que `apiUrl`: en desarrollo, el proxy de `ng serve` |
 | `apiTimeout` | `10000` | Milisegundos que se espera una respuesta antes de cortar la petición |
 
-**El proxy de desarrollo.** `npm start` sirve el panel con `proxy.conf.json`: las peticiones a `/api` y `/health` pasan a `http://localhost:3000`. Así el panel llama a la API desde su propio origen y la cookie de sesión viaja sin credenciales cruzadas entre puertos. La documentación de la API también se abre por el proxy (`http://localhost:4200/api/docs`). En producción se hace lo mismo con el servidor web: sirve el panel y reenvía `/api` a la API, con HTTPS. Cómo montarlo, con un ejemplo de Nginx, está en "Producción con HTTPS" del README de la API. Si la API va en otro origen, `apiUrl` lleva su URL completa y el origen del panel tiene que estar en el `CORS_ORIGIN` de la API.
+**El proxy de desarrollo.** `npm start` sirve el panel con `proxy.conf.json`: las peticiones a `/api` y `/health` pasan a `http://localhost:3000`, y las de `/auth`, a `http://localhost:3002`. Así el panel llama a la API y a auth desde su propio origen, y las cookies de sesión viajan sin credenciales cruzadas entre puertos. La documentación de la API también se abre por el proxy (`http://localhost:4200/api/docs`). En producción se hace lo mismo con el servidor web: sirve el panel, reenvía `/api` a la API y `/auth` a auth, con HTTPS. Cómo montarlo, con un ejemplo de Nginx, está en "Producción con HTTPS" del README de la API. Si la API va en otro origen, `apiUrl` lleva su URL completa y el origen del panel tiene que estar en el `CORS_ORIGIN` de la API.
 
 La API se configura con su propio `.env` (ver `moto-routes-api/README.md`):
 
@@ -117,6 +120,9 @@ La API se configura con su propio `.env` (ver `moto-routes-api/README.md`):
 | `MONGODB_URI` | `mongodb://localhost:27017/moto_routes` | Base de datos |
 | `NODE_ENV` | `development` | En `production` la API solo acepta los orígenes de `CORS_ORIGIN` |
 | `CORS_ORIGIN` | `http://localhost:4200` | Origen del panel: en producción, para CORS con credenciales; siempre, para la comprobación CSRF de la cookie |
+| `AUTH_JWKS_URL` | `http://localhost:3002/auth/.well-known/jwks.json` | De dónde saca la API la clave pública con la que comprueba los tokens de auth |
+
+El servicio de auth tiene su `.env` (ver `moto-routes-auth/README.md`). Su `CORS_ORIGIN` también tiene que incluir el origen del panel.
 
 ## Arquitectura
 
@@ -205,9 +211,9 @@ La página nunca llama a la API: pide al store, y el store expone el resultado c
 
 - **`ApiService`** es la única puerta hacia la API. Sus métodos `get`, `post`, `put`, `patch` y `delete` devuelven promesas, para usarlas con `async/await`.
 - **Interceptores**, en este orden:
-  1. `errorInterceptor` convierte cualquier fallo en un `ApiError` con `status`, `type` (`network`, `timeout`, `validation`, `client` o `server`), `message` y, si los hay, `fieldErrors`.
+  1. `errorInterceptor` convierte cualquier fallo en un `ApiError` con `status`, `type` (`network`, `timeout`, `validation`, `client` o `server`), `message` y, si los hay, `fieldErrors`. Si la respuesta es un `401 TOKEN_EXPIRED`, renueva el token con `/auth/refresh` y repite la petición una vez.
   2. `timeoutInterceptor` corta la petición a los `apiTimeout` milisegundos.
-  3. `authInterceptor` añade el token de sesión a las peticiones a la API, y a ninguna más.
+  3. `authInterceptor` manda con credenciales (las cookies de la sesión) las peticiones a la API y a auth, y ninguna más.
 - **`EntityApiService`** (`core/services/entity-api.service.ts`) tiene los 11 endpoints comunes a todas las colecciones. El servicio de cada entidad hereda de él y solo declara su ruta (`path`). Las imágenes, que no tienen slug, heredan de `RecordApiService`, que es lo mismo sin `getBySlug`.
 - **`EntityStore`** guarda el estado de una entidad con signals y hace las operaciones comunes: cargar, crear, editar, eliminar, deshacer, cambiar el estado activo y la papelera.
 
@@ -346,17 +352,19 @@ Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar
 
 ### Autenticación
 
-**La sesión es una cookie `httpOnly`** (`routly_session`) que pone la API en el login. El JavaScript del panel no la puede leer, así que un XSS no se lleva el token; el navegador la manda sola en cada petición a la API. El panel solo guarda en `localStorage` cuándo caduca (`routly.session` = `{ expiresAt }`), para avisar a tiempo y enterarse de los cambios de otras pestañas. El `token` que sigue llegando en el body del login (para Swagger y Postman) se ignora. Las opciones de la cookie y la protección CSRF están en la sección "La cookie de sesión" del README de la API.
+**La sesión son dos cookies `httpOnly`** que pone el servicio de auth (`moto-routes-auth`) en el login: `routly_session`, con el token de acceso (RS256, 15 minutos), que viaja a la API y a auth; y `routly_refresh`, con el que se pide otro, que solo viaja a `/auth` y dura 7 días desde la última renovación. El JavaScript del panel no las puede leer, así que un XSS no se lleva los tokens. El panel solo guarda en `localStorage` hasta cuándo se puede renovar y de quién es la sesión (`routly.session` = `{ expiresAt, userId }`), para avisar a tiempo y enterarse de los cambios de otras pestañas. El `token` que llega en el body del login fuera de producción (para Swagger y Postman) se ignora.
+
+**Cómo dura la sesión.** Cuando el token de acceso caduca, la API responde `401 TOKEN_EXPIRED`. El `errorInterceptor` pide entonces uno nuevo a `POST /auth/refresh` y repite la petición, sin que se note. Si fallan varias a la vez, comparten un solo refresh (uno ya usado no vuelve a servir). Si auth rechaza el refresh (caducado, sesión cerrada en otro sitio o contraseña cambiada), se avisa y se vuelve al login. Sin red, solo falla esa petición y la sesión sigue. Otra pestaña que solo renueva la sesión no recarga nada en esta.
 
 Todo está en `src/app/auth/`:
 
-- `auth.store.ts`: el estado con signals y su copia en `localStorage` (`routly.session`, solo `{ expiresAt }`). No llama a la API ni navega.
-- `auth.service.ts`: login, registro, logout y comprobación de la sesión con `/auth/me`. Al arrancar solo pregunta si hay un `expiresAt` vigente; si no, se entra como anónimo. No toca la interfaz. `refreshUser()` vuelve a pedir el usuario para que el menú enseñe al momento lo que ha cambiado: lo llaman "Mi perfil" al cambiar la foto principal y `UsersStore` cuando un admin guarda su propia cuenta o le cambia la foto, sin tener que recargar.
-- `session.service.ts`: lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
-- `auth.interceptor.ts`: manda las peticiones a la API con `withCredentials` (la cookie), y a ninguna otra. Con la sesión ya caducada no envía nada.
+- `auth.store.ts`: el estado con signals y su copia en `localStorage` (`routly.session`, solo `{ expiresAt, userId }`). `login()` abre la sesión y `extend()` alarga el plazo tras un refresh. No llama a la API ni navega.
+- `auth.service.ts`: login, registro, logout y refresh contra auth (`/auth/*`), y el usuario de la sesión (rol y perfil) con `GET /api/profile/me`, porque auth solo devuelve lo mínimo. Al arrancar solo pregunta si hay un `expiresAt` vigente; si el token de acceso ha caducado, lo renueva una vez. No toca la interfaz. `refreshUser()` vuelve a pedir el usuario para que el menú enseñe al momento lo que ha cambiado: lo llaman "Mi perfil" al cambiar la foto principal y `UsersStore` cuando un admin guarda su propia cuenta o le cambia la foto, sin tener que recargar.
+- `session.service.ts`: `renew()`, que usa el `errorInterceptor` para el refresh, y lo que se ve cuando la sesión termina sola: el aviso y la vuelta al login.
+- `auth.interceptor.ts`: manda las peticiones a la API y a auth con `withCredentials` (las cookies), y a ninguna otra. Con la sesión ya imposible de renovar no envía nada.
 - `guards/`: `auth.guard.ts`, `admin.guard.ts` y `guest.guard.ts`. Sin sesión, al login; el panel, solo para ADMIN; con sesión, fuera del login.
 - `return-url.ts`: la vuelta tras el login, que solo acepta rutas internas.
-- `testing/auth.testing.ts`: un token y un usuario falsos para los specs. El token solo sirve para simular el body del login.
+- `testing/auth.testing.ts`: un usuario, una respuesta de auth y una sesión guardada falsos para los specs.
 
 Cada spec va junto a su archivo, como en el resto del proyecto.
 
@@ -514,7 +522,7 @@ npx ng test --watch=false --browsers=ChromeHeadless
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
 | `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos y validadores |
-| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión (el token nunca llega a `localStorage`), interceptor (`withCredentials`, sesión caducada, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
+| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión (el token nunca llega a `localStorage`), refresh al recibir `TOKEN_EXPIRED` (uno solo para varias peticiones, sin red, rechazado), interceptor (`withCredentials` a la API y a auth, sesión caducada, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
 | `users.store.spec.ts`, `user-form.component.spec.ts` | Tu propia cuenta no se desactiva, ni se elimina, ni cambia de rol |
 | `experience-form-page.component.spec.ts` | La página pide las motos del anfitrión una sola vez (sin bucle de peticiones) |
 | `bikes/**/*.spec.ts`, `profile.component.spec.ts` | El garaje: límites, moto principal, pública y el perfil propio |

@@ -7,7 +7,10 @@ export type AccessRole = 'ADMIN' | 'USER';
 /** Clave del rol de administrador en la API. Los roles pueden ser más que los tres base. */
 export const ADMIN_ROLE = 'admin';
 
-/** Usuario con sesión iniciada: lo que devuelven el login, el registro y `/auth/me`. */
+/**
+ * Usuario con sesión iniciada: el de `/api/profile/me`, con su rol y su perfil. El servicio de
+ * auth solo devuelve lo mínimo (SessionResponse), así que tras el login se pide a la API.
+ */
 export interface AuthUser extends Omit<User, 'role'> {
   role: RoleSummary;
 }
@@ -24,24 +27,29 @@ export interface RegisterRequest {
 }
 
 /**
- * Respuesta del login, del registro y del cambio de contraseña. La API deja además el token
- * en la cookie httpOnly `routly_session`, que es la que usa el panel: el `token` del body
- * (para Swagger y Postman) se ignora y no se guarda.
+ * Respuesta del servicio de auth al login, al registro, al refresh y al cambio de contraseña.
+ * Deja además dos cookies httpOnly: `routly_session` (el token de acceso, 15 min) y
+ * `routly_refresh` (para renovarlo, solo viaja a /auth). El `token` del body (para Swagger y
+ * Postman, solo fuera de producción) se ignora y no se guarda.
  */
-export interface AuthResponse {
-  token: string;
+export interface SessionResponse {
+  token?: string;
   tokenType: string;
-  /** Segundos de vida del token. */
+  /** Segundos de vida del token de acceso. */
   expiresIn: number;
-  user: AuthUser;
+  /** Segundos que se puede renovar la sesión sin volver a entrar. */
+  refreshExpiresIn: number;
+  user: { id: string; name: string; email: string; role: string };
 }
 
 /**
- * Lo que se guarda en `localStorage`: solo cuándo caduca la sesión, para avisar a tiempo y
- * enterarse de los cambios de otras pestañas. Ni el token, que vive en la cookie, ni el
- * usuario, que se pide a la API al arrancar.
+ * Lo que se guarda en `localStorage`: hasta cuándo se puede renovar la sesión y de quién es,
+ * para avisar a tiempo y enterarse de los cambios de otras pestañas. Ni los tokens, que viven
+ * en las cookies, ni el usuario, que se pide a la API al arrancar.
  */
 export interface Session {
-  /** Cuándo caduca el token, en milisegundos desde 1970. */
+  /** Cuándo deja de poder renovarse la sesión, en milisegundos desde 1970. */
   expiresAt: number;
+  /** El usuario de la sesión: si otra pestaña solo la renueva, este no cambia. */
+  userId: string;
 }

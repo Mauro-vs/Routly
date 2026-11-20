@@ -23,6 +23,7 @@ describe("sesión", () => {
       assert.equal(status, 201);
       assert.equal(body.tokenType, "Bearer");
       assert.equal(body.expiresIn, 900);
+      assert.equal(body.refreshExpiresIn, 7 * 24 * 3600);
       assert.deepEqual(body.user, { id: body.user.id, name: "Nueva Rider", email: "nueva@routly.dev", role: "rider" });
       assert.ok(app.db.profiles.some((profile) => profile.userId === body.user.id));
       // El hash nunca sale, y el refresh nunca va en el body

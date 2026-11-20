@@ -7,7 +7,8 @@ import { readAccessToken } from "../middlewares/authenticate.js";
 /**
  * Los endpoints de la sesión. La documentación Swagger está en src/docs/openapi.js.
  *
- * Una sesión responde { tokenType, expiresIn, user } y deja las dos cookies. El token de acceso
+ * Una sesión responde { tokenType, expiresIn, refreshExpiresIn, user } y deja las dos cookies.
+ * refreshExpiresIn le dice al panel hasta cuándo puede renovar sin volver a entrar. El token de acceso
  * solo va también en el body si TOKEN_IN_BODY (por defecto, fuera de producción): para Swagger,
  * Postman y los tests. El refresh nunca sale del body: solo en su cookie.
  */
@@ -20,6 +21,7 @@ export function authRouter({ auth, tokens, authenticate, limiters, config }) {
     res.status(status).json({
       tokenType: "Bearer",
       expiresIn: session.accessTtl,
+      refreshExpiresIn: session.refreshTtl,
       user: session.user,
       ...(config.tokenInBody && { token: session.accessToken }),
     });

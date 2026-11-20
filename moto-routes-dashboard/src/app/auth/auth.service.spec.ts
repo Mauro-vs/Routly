@@ -12,9 +12,12 @@ import { SessionResetService } from '../core/services/session-reset.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthService } from './auth.service';
 import { AuthStore } from './auth.store';
-import { fakeToken, fakeUser } from './testing/auth.testing';
+import { fakeSession, fakeUser, savedSession } from './testing/auth.testing';
 
 const BASE = environment.apiUrl;
+const AUTH = environment.authUrl;
+const ME = `${BASE}/profile/me`;
+const expired = { status: 401, statusText: 'Unauthorized' };
 const KEY = 'routly.session';
 
 describe('AuthService', () => {
@@ -27,7 +30,8 @@ describe('AuthService', () => {
     TestBed.configureTestingModule({
       providers: [
         provideZonelessChangeDetection(),
-        provideRouter([]),
+        // El errorInterceptor trae SessionService, que al cerrarse una sesión va al login
+        provideRouter([{ path: 'login', children: [] }]),
         provideHttpClient(withInterceptors([errorInterceptor, timeoutInterceptor, authInterceptor])),
         provideHttpClientTesting(),
       ],
@@ -48,49 +52,70 @@ describe('AuthService', () => {
     localStorage.removeItem(KEY);
   });
 
-  it('login guarda la sesión (sin el token) y devuelve el usuario', async () => {
+  it('login abre la sesión en auth, trae el usuario de la API y no guarda el token', async () => {
     setup();
-    const token = fakeToken();
+    const session = fakeSession();
+    const before = Date.now();
 
     const promise = service.login({ email: 'a@b.es', password: 'clave1234' });
-    const request = http.expectOne({ method: 'POST', url: `${BASE}/auth/login` });
+    const request = http.expectOne({ method: 'POST', url: `${AUTH}/login` });
     expect(request.request.body).toEqual({ email: 'a@b.es', password: 'clave1234' });
-    request.flush({ token, tokenType: 'Bearer', expiresIn: 3600, user: fakeUser() });
+    expect(request.request.withCredentials).toBeTrue();
+    request.flush(session);
+    await tick();
+    http.expectOne({ method: 'GET', url: ME }).flush(fakeUser());
 
     expect((await promise).name).toBe('Ana');
     expect(store.isAuthenticated()).toBeTrue();
-    expect(store.user()?.name).toBe('Ana');
-    // El token vive en la cookie httpOnly: el del body no se guarda en ningún sitio
-    expect(localStorage.getItem(KEY)).not.toContain(token);
+    expect(store.user()?.role.name).toBe('admin');
+    // La sesión dura lo que el refresh (7 días), no lo que el token de acceso
+    expect(store.expiresAt()).toBeGreaterThanOrEqual(before + session.refreshExpiresIn * 1000);
+    // Los tokens viven en las cookies httpOnly: el del body no se guarda en ningún sitio
+    expect(localStorage.getItem(KEY)).not.toContain(session.token ?? '');
   });
 
-  it('register inicia sesión con lo que devuelve la API', async () => {
+  it('register inicia sesión con lo que devuelve auth', async () => {
     setup();
 
     const promise = service.register({ name: 'Ana', email: 'a@b.es', password: 'clave1234' });
-    http
-      .expectOne({ method: 'POST', url: `${BASE}/auth/register` })
-      .flush({ token: fakeToken(), tokenType: 'Bearer', expiresIn: 3600, user: fakeUser('rider') });
+    http.expectOne({ method: 'POST', url: `${AUTH}/register` }).flush(fakeSession('rider'));
+    await tick();
+    http.expectOne(ME).flush(fakeUser('rider'));
     await promise;
 
     expect(store.isAuthenticated()).toBeTrue();
     expect(store.isAdmin()).toBeFalse();
   });
 
-  it('una respuesta de login sin caducidad o sin usuario válido no crea sesión', async () => {
+  it('una respuesta de login sin plazo de renovación o sin usuario válido no crea sesión', async () => {
     setup();
+    const { user } = fakeSession();
     for (const body of [
-      { user: fakeUser() },
-      { expiresIn: 'mañana', user: fakeUser() },
-      { expiresIn: 0, user: fakeUser() },
-      { expiresIn: 3600 },
-      { expiresIn: 3600, user: { name: 'Sin rol' } },
+      { user },
+      { refreshExpiresIn: 'mañana', user },
+      { refreshExpiresIn: 0, user },
+      { refreshExpiresIn: 3600 },
+      { refreshExpiresIn: 3600, user: { name: 'Sin id' } },
     ]) {
       const promise = service.login({ email: 'a@b.es', password: 'clave1234' });
-      http.expectOne(`${BASE}/auth/login`).flush(body);
+      http.expectOne(`${AUTH}/login`).flush(body);
 
       const error = await promise.catch((failure: unknown) => failure);
       expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).type).toBe('server');
+      expect(store.isAuthenticated()).toBeFalse();
+    }
+  });
+
+  it('si la API devuelve otro usuario o uno sin rol, no crea sesión', async () => {
+    setup();
+    for (const user of [{ ...fakeUser(), _id: '2' }, { name: 'Sin rol' }]) {
+      const promise = service.login({ email: 'a@b.es', password: 'clave1234' });
+      http.expectOne(`${AUTH}/login`).flush(fakeSession());
+      await tick();
+      http.expectOne(ME).flush(user);
+
+      const error = await promise.catch((failure: unknown) => failure);
       expect((error as ApiError).type).toBe('server');
       expect(store.isAuthenticated()).toBeFalse();
     }
@@ -102,7 +127,7 @@ describe('AuthService', () => {
 
     const promise = service.login({ email: 'a@b.es', password: 'mal' });
     http
-      .expectOne(`${BASE}/auth/login`)
+      .expectOne(`${AUTH}/login`)
       .flush({ message: 'Invalid email or password' }, { status: 401, statusText: 'Unauthorized' });
 
     const error = (await promise.catch((failure: unknown) => failure)) as ApiError;
@@ -112,7 +137,7 @@ describe('AuthService', () => {
 
   describe('loadSession', () => {
     function withSavedSession(): void {
-      localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
+      localStorage.setItem(KEY, savedSession());
       setup();
     }
 
@@ -125,7 +150,7 @@ describe('AuthService', () => {
       withSavedSession();
 
       const promise = service.loadSession();
-      const request = http.expectOne(`${BASE}/auth/me`);
+      const request = http.expectOne(ME);
       expect(request.request.withCredentials).toBeTrue();
       request.flush(fakeUser('host'));
 
@@ -139,7 +164,7 @@ describe('AuthService', () => {
 
       const promise = service.loadSession();
       http
-        .expectOne(`${BASE}/auth/me`)
+        .expectOne(ME)
         .flush({ code: 'TOKEN_INVALID' }, { status: 401, statusText: 'Unauthorized' });
 
       expect(await promise).toBeFalse();
@@ -151,7 +176,7 @@ describe('AuthService', () => {
       withSavedSession();
 
       const promise = service.loadSession();
-      http.expectOne(`${BASE}/auth/me`).error(new ProgressEvent('error'));
+      http.expectOne(ME).error(new ProgressEvent('error'));
 
       expect(await promise).toBeFalse();
       expect(store.isAuthenticated()).toBeTrue();
@@ -164,9 +189,81 @@ describe('AuthService', () => {
 
       const first = service.loadSession();
       const second = service.loadSession();
-      http.expectOne(`${BASE}/auth/me`).flush(fakeUser());
+      http.expectOne(ME).flush(fakeUser());
 
       expect(await Promise.all([first, second])).toEqual([true, true]);
+    });
+
+    it('con el token de acceso caducado, lo renueva una vez y vuelve a preguntar', async () => {
+      withSavedSession();
+
+      const promise = service.loadSession();
+      http.expectOne(ME).flush({ code: 'TOKEN_EXPIRED' }, expired);
+      await tick();
+      const refresh = http.expectOne({ method: 'POST', url: `${AUTH}/refresh` });
+      expect(refresh.request.withCredentials).toBeTrue();
+      refresh.flush(fakeSession());
+      await tick();
+      http.expectOne(ME).flush(fakeUser());
+
+      expect(await promise).toBeTrue();
+      expect(store.user()?.name).toBe('Ana');
+    });
+
+    it('si auth tampoco renueva la sesión, se cierra', async () => {
+      withSavedSession();
+
+      const promise = service.loadSession();
+      http.expectOne(ME).flush({ code: 'TOKEN_EXPIRED' }, expired);
+      await tick();
+      http.expectOne(`${AUTH}/refresh`).flush({ code: 'TOKEN_INVALID' }, expired);
+
+      expect(await promise).toBeFalse();
+      expect(store.isAuthenticated()).toBeFalse();
+      expect(resets).toHaveBeenCalled();
+    });
+  });
+
+  describe('refresh', () => {
+    function withSavedSession(): void {
+      localStorage.setItem(KEY, savedSession(60_000));
+      setup();
+    }
+
+    it('guarda el nuevo plazo de la sesión', async () => {
+      withSavedSession();
+      const before = Date.now();
+
+      const promise = service.refresh();
+      http.expectOne({ method: 'POST', url: `${AUTH}/refresh` }).flush(fakeSession('admin', 3600));
+
+      expect(await promise).toBeTrue();
+      expect(store.expiresAt()).toBeGreaterThanOrEqual(before + 3600_000);
+    });
+
+    it('varias llamadas a la vez comparten un solo refresh (un refresh usado ya no sirve)', async () => {
+      withSavedSession();
+
+      const all = Promise.all([service.refresh(), service.refresh()]);
+      http.expectOne(`${AUTH}/refresh`).flush(fakeSession());
+
+      expect(await all).toEqual([true, true]);
+    });
+
+    it('sin red rechaza y conserva la sesión', async () => {
+      withSavedSession();
+
+      const promise = service.refresh();
+      http.expectOne(`${AUTH}/refresh`).error(new ProgressEvent('error'));
+
+      expect(await promise.catch(() => 'rechazada')).toBe('rechazada');
+      expect(store.isAuthenticated()).toBeTrue();
+    });
+
+    it('sin sesión no pregunta nada', async () => {
+      setup();
+      expect(await service.refresh()).toBeFalse();
+      http.expectNone(`${AUTH}/refresh`);
     });
   });
 
@@ -177,7 +274,7 @@ describe('AuthService', () => {
 
       const promise = service.refreshUser();
       const photo = { _id: 'i1', url: 'https://picsum.photos/seed/ana/400', alt: 'Ana' };
-      http.expectOne({ method: 'GET', url: `${BASE}/auth/me` }).flush({ ...fakeUser(), coverImage: photo });
+      http.expectOne({ method: 'GET', url: ME }).flush({ ...fakeUser(), coverImage: photo });
       await promise;
 
       expect(store.user()?.coverImage?.url).toBe(photo.url);
@@ -188,7 +285,7 @@ describe('AuthService', () => {
       store.login({ expiresIn: 3600, user: fakeUser() });
 
       const promise = service.refreshUser();
-      http.expectOne(`${BASE}/auth/me`).error(new ProgressEvent('error'));
+      http.expectOne(ME).error(new ProgressEvent('error'));
       await promise;
 
       expect(store.user()?.name).toBe('Ana');
@@ -198,7 +295,8 @@ describe('AuthService', () => {
     it('sin sesión no pregunta nada', async () => {
       setup();
       await service.refreshUser();
-      http.expectNone(`${BASE}/auth/me`);
+      http.expectNone(ME);
+      expect(store.isAuthenticated()).toBeFalse();
     });
   });
 
@@ -212,7 +310,7 @@ describe('AuthService', () => {
       loggedIn();
 
       const promise = service.logout();
-      const request = http.expectOne({ method: 'POST', url: `${BASE}/auth/logout` });
+      const request = http.expectOne({ method: 'POST', url: `${AUTH}/logout` });
       expect(request.request.withCredentials).toBeTrue();
       request.flush(null, { status: 204, statusText: 'No Content' });
       await promise;
@@ -225,7 +323,7 @@ describe('AuthService', () => {
       loggedIn();
 
       const promise = service.logout();
-      http.expectOne(`${BASE}/auth/logout`).error(new ProgressEvent('error'));
+      http.expectOne(`${AUTH}/logout`).error(new ProgressEvent('error'));
       await promise;
 
       expect(store.isAuthenticated()).toBeFalse();
@@ -238,7 +336,7 @@ describe('AuthService', () => {
 
       const promise = service.logout();
       http
-        .expectOne(`${BASE}/auth/logout`)
+        .expectOne(`${AUTH}/logout`)
         .flush({ code: 'TOKEN_EXPIRED' }, { status: 401, statusText: 'Unauthorized' });
       await promise;
 
@@ -251,10 +349,24 @@ describe('AuthService', () => {
 
       const promise = service.logoutAll();
       http
-        .expectOne({ method: 'POST', url: `${BASE}/auth/logout-all` })
+        .expectOne({ method: 'POST', url: `${AUTH}/logout-all` })
         .flush(null, { status: 204, statusText: 'No Content' });
       await promise;
       await tick();
+
+      expect(store.isAuthenticated()).toBeFalse();
+    });
+
+    it('logoutAll con el token de acceso caducado lo renueva y lo repite', async () => {
+      loggedIn();
+
+      const promise = service.logoutAll();
+      http.expectOne(`${AUTH}/logout-all`).flush({ code: 'TOKEN_EXPIRED' }, expired);
+      await tick();
+      http.expectOne(`${AUTH}/refresh`).flush(fakeSession());
+      await tick();
+      http.expectOne(`${AUTH}/logout-all`).flush(null, { status: 204, statusText: 'No Content' });
+      await promise;
 
       expect(store.isAuthenticated()).toBeFalse();
     });

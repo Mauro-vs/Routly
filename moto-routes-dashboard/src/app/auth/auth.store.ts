@@ -1,18 +1,29 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 
-import { ADMIN_ROLE, AccessRole, AuthResponse, AuthUser, Session } from './auth.models';
+import { ADMIN_ROLE, AccessRole, AuthUser, Session } from './auth.models';
 
 const SESSION_KEY = 'routly.session';
 
-/** La sesión guardada, si sigue vigente. Un `expiresAt` que no es un número o ya pasó se descarta. */
+const validLifetime = (seconds: number): boolean => Number.isFinite(seconds) && seconds > 0;
+
+/**
+ * La sesión guardada, si sigue vigente. Un `expiresAt` que no es un número o ya pasó, o sin
+ * `userId` (las de antes del servicio de auth), se descarta.
+ */
 function parseSession(raw: string | null): Session | null {
   if (!raw) return null;
   try {
-    const { expiresAt } = JSON.parse(raw) as { expiresAt?: unknown };
-    return typeof expiresAt === 'number' && expiresAt > Date.now() ? { expiresAt } : null;
+    const { expiresAt, userId } = JSON.parse(raw) as { expiresAt?: unknown; userId?: unknown };
+    const valid = typeof expiresAt === 'number' && expiresAt > Date.now();
+    return valid && typeof userId === 'string' && userId ? { expiresAt, userId } : null;
   } catch {
     return null;
   }
+}
+
+/** La misma sesión, quizá renovada: el mismo usuario sigue dentro. */
+function sameUser(a: Session | null, b: Session | null): boolean {
+  return a !== null && b !== null && a.userId === b.userId;
 }
 
 function readSession(): Session | null {
@@ -36,8 +47,9 @@ function writeSession(session: Session | null): void {
 /**
  * Estado de la sesión, con signals. Solo guarda y cuenta: no llama a la API ni navega.
  *
- * El token no pasa por aquí: vive en la cookie httpOnly que pone la API y el navegador la
- * manda sola. El panel solo sabe si hay sesión y cuándo caduca.
+ * Los tokens no pasan por aquí: viven en las cookies httpOnly que pone el servicio de auth y
+ * el navegador las manda solas. El panel solo sabe si hay sesión, de quién y hasta cuándo se
+ * puede renovar. El token de acceso dura 15 minutos y se renueva al recibir un TOKEN_EXPIRED.
  *
  * El rol sale siempre de `user`, que viene de la API, y nunca del token: la API lo lee de
  * la base de datos, así que el del token puede haberse quedado viejo.
@@ -67,12 +79,19 @@ export class AuthStore {
   readonly foreignChanges = this._foreignChanges.asReadonly();
 
   constructor() {
-    // Una versión anterior del panel guardaba aquí el token: se reescribe sin él.
+    // Una versión anterior del panel guardaba aquí el token, o una sesión sin usuario: se
+    // reescribe con lo que vale.
     writeSession(this._session());
 
     const onStorage = (event: StorageEvent): void => {
       if (event.key !== SESSION_KEY && event.key !== null) return;
-      this._session.set(parseSession(event.newValue));
+      const next = parseSession(event.newValue);
+      // Otra pestaña solo ha renovado la sesión: nada que recargar.
+      if (sameUser(this._session(), next)) {
+        this._session.set(next);
+        return;
+      }
+      this._session.set(next);
       this._user.set(null);
       this._foreignChanges.update((count) => count + 1);
     };
@@ -85,15 +104,29 @@ export class AuthStore {
   }
 
   /**
-   * Guarda una sesión nueva, que caduca dentro de `expiresIn` segundos. Devuelve false si
-   * ese plazo no sirve, y entonces no guarda nada.
+   * Guarda una sesión nueva, que se puede renovar durante `expiresIn` segundos. Devuelve false
+   * si ese plazo no sirve, y entonces no guarda nada.
    */
-  login({ expiresIn, user }: Pick<AuthResponse, 'expiresIn' | 'user'>): boolean {
-    if (!Number.isFinite(expiresIn) || expiresIn <= 0) return false;
+  login({ expiresIn, user }: { expiresIn: number; user: AuthUser }): boolean {
+    if (!validLifetime(expiresIn)) return false;
 
-    const session = { expiresAt: Date.now() + expiresIn * 1000 };
+    const session = { expiresAt: Date.now() + expiresIn * 1000, userId: user._id };
     this._session.set(session);
     this._user.set(user);
+    writeSession(session);
+    return true;
+  }
+
+  /**
+   * La sesión se ha renovado (refresh o cambio de contraseña): mismo usuario, nuevo plazo.
+   * Devuelve false si no hay sesión o el plazo no sirve.
+   */
+  extend(expiresIn: number): boolean {
+    const current = this._session();
+    if (!current || !validLifetime(expiresIn)) return false;
+
+    const session = { ...current, expiresAt: Date.now() + expiresIn * 1000 };
+    this._session.set(session);
     writeSession(session);
     return true;
   }

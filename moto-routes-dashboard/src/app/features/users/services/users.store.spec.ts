@@ -50,7 +50,7 @@ describe('UsersStore: el menú se pone al día al editarte a ti mismo', () => {
 
   /** Deja que las promesas pendientes lleguen a lanzar su petición. */
   const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve));
-  const meRequests = (): number => http.match((request) => request.url.endsWith('/auth/me')).length;
+  const meRequests = (): number => http.match((request) => request.url.endsWith('/profile/me')).length;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -92,7 +92,7 @@ describe('UsersStore: el menú se pone al día al editarte a ti mismo', () => {
     await opening;
 
     const refreshing = store.refreshSelected();
-    http.expectOne((request) => request.method === 'GET' && !request.url.endsWith('/auth/me')).flush(fakeUser());
+    http.expectOne((request) => request.method === 'GET' && !request.url.endsWith('/profile/me')).flush(fakeUser());
     await refreshing;
     await tick();
 

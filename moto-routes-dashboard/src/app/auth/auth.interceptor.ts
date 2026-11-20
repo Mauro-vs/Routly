@@ -12,16 +12,20 @@ import { AuthStore } from './auth.store';
  */
 export const SKIP_SESSION_HANDLING = new HttpContextToken<boolean>(() => false);
 
+/** Las URLs que reciben las cookies de la sesión: la API y el servicio de auth. */
+const withSession = (url: string): boolean =>
+  url.startsWith(`${environment.apiUrl}/`) || url.startsWith(`${environment.authUrl}/`);
+
 /**
- * Las peticiones a la API van con credenciales (`withCredentials`), para que el navegador
- * mande la cookie httpOnly de la sesión, y ninguna otra: la cookie no debe salir nunca hacia
- * otro dominio. El panel no ve el token ni pone la cabecera Authorization.
+ * Las peticiones a la API y a auth van con credenciales (`withCredentials`), para que el
+ * navegador mande las cookies httpOnly de la sesión, y ninguna otra: las cookies no deben salir
+ * nunca hacia otro dominio. El panel no ve los tokens ni pone la cabecera Authorization.
  *
- * Con la sesión ya caducada no se envía nada: la petición falla aquí mismo y el
- * errorInterceptor cierra la sesión, sin esperar al 401 de la API.
+ * Con la sesión ya imposible de renovar no se envía nada: la petición falla aquí mismo y el
+ * errorInterceptor cierra la sesión, sin esperar al 401.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith(`${environment.apiUrl}/`)) return next(req);
+  if (!withSession(req.url)) return next(req);
 
   const expiresAt = inject(AuthStore).expiresAt();
   if (expiresAt !== null && expiresAt <= Date.now()) return throwError(() => tokenExpiredError());

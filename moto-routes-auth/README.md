@@ -41,7 +41,7 @@ Responden los errores con el formato de la API (`{ statusCode, error, message, c
 | `GET /auth/.well-known/jwks.json` | La clave pública (JWKS) |
 | `GET /auth/health` (y `/health`) | `{ ok: true }` |
 
-Una sesión responde `{ tokenType, expiresIn, user }` y deja dos cookies. El token de acceso va también
+Una sesión responde `{ tokenType, expiresIn, refreshExpiresIn, user }` (`refreshExpiresIn`: los segundos que se puede renovar con `/auth/refresh`) y deja dos cookies. El token de acceso va también
 en el body (`token`) fuera de producción, para Swagger y Postman (`TOKEN_IN_BODY`).
 
 ## Cómo funcionan los tokens

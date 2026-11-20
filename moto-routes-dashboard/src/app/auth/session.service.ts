@@ -17,8 +17,8 @@ const REJECTED_MESSAGE = 'Tu sesión ya no es válida. Inicia sesión de nuevo.'
  * Lo que pasa en pantalla cuando una sesión termina sin que nadie la cierre: avisar y volver
  * al login. Es el reparto que AuthService no puede hacer, porque no toca la interfaz.
  *
- * Termine por lo que termine (un 401, la hora de `exp` u otra pestaña), pasa por aquí una
- * sola vez, aunque fallen varias peticiones a la vez.
+ * Termine por lo que termine (un 401, un refresh rechazado, el fin del plazo de renovación u
+ * otra pestaña), pasa por aquí una sola vez, aunque fallen varias peticiones a la vez.
  */
 @Injectable({ providedIn: 'root' })
 export class SessionService {
@@ -29,8 +29,10 @@ export class SessionService {
   private readonly resets = inject(SessionResetService);
   private readonly apiStatus = inject(ApiStatusService);
 
+  private renewing: Promise<boolean> | null = null;
+
   constructor() {
-    // La sesión se cierra sola a la hora de `exp`.
+    // La sesión se cierra sola cuando ya no se puede renovar.
     effect((onCleanup) => {
       const expiresAt = this.store.expiresAt();
       if (expiresAt === null) return;
@@ -61,6 +63,16 @@ export class SessionService {
     });
   }
 
+  /**
+   * El token de acceso ha caducado: pide otro a auth. Devuelve true si se puede repetir la
+   * petición. Si auth rechaza la sesión, avisa y vuelve al login; sin red, la sesión sigue y
+   * solo falla esta petición. Varias peticiones a la vez esperan al mismo refresh.
+   */
+  renew(): Promise<boolean> {
+    this.renewing ??= this.tryRenew().finally(() => (this.renewing = null));
+    return this.renewing;
+  }
+
   /** La API ha rechazado la sesión, o ya ha caducado. */
   reject(error: ApiError): void {
     this.leave(error.code === 'TOKEN_EXPIRED' ? EXPIRED_MESSAGE : REJECTED_MESSAGE);
@@ -85,6 +97,18 @@ export class SessionService {
   async logout(everywhere = false): Promise<void> {
     await (everywhere ? this.auth.logoutAll() : this.auth.logout());
     await this.router.navigateByUrl(LOGIN_PATH, { info: FORCED_NAVIGATION });
+  }
+
+  private async tryRenew(): Promise<boolean> {
+    if (!this.store.isAuthenticated()) return false;
+    try {
+      if (await this.auth.refresh()) return true;
+    } catch {
+      return false;
+    }
+    // auth.refresh ya ha limpiado la sesión: falta decirlo.
+    this.notifyAndLeave(EXPIRED_MESSAGE);
+    return false;
   }
 
   /** Ya no es administrador, o nunca lo fue: fuera del panel, salvo si está en su zona. */

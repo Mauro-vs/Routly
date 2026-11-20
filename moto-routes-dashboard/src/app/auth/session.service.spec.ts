@@ -14,10 +14,12 @@ import { NotificationService } from '../core/services/notification.service';
 import { SessionResetService } from '../core/services/session-reset.service';
 import { authInterceptor } from './auth.interceptor';
 import { AuthStore } from './auth.store';
-import { fakeUser } from './testing/auth.testing';
+import { fakeSession, fakeUser, savedSession } from './testing/auth.testing';
 import { SessionService } from './session.service';
 
 const BASE = environment.apiUrl;
+const AUTH = environment.authUrl;
+const ME = `${BASE}/profile/me`;
 const KEY = 'routly.session';
 
 describe('Fin de la sesión', () => {
@@ -66,12 +68,79 @@ describe('Fin de la sesión', () => {
     localStorage.removeItem(KEY);
   });
 
-  it('TOKEN_EXPIRED: limpia, avisa de que ha caducado y va al login', async () => {
+  /** Deja que las promesas pendientes lleguen a lanzar su petición. */
+  const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve));
+
+  it('TOKEN_EXPIRED: renueva el token con auth y repite la petición, sin que se note', async () => {
+    loggedIn();
+
+    const promise = api.get<string[]>('/users');
+    const { body, options } = unauthorized('TOKEN_EXPIRED');
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await tick();
+    http.expectOne({ method: 'POST', url: `${AUTH}/refresh` }).flush(fakeSession());
+    await tick();
+    http.expectOne(`${BASE}/users`).flush(['ana']);
+
+    expect(await promise).toEqual(['ana']);
+    expect(store.isAuthenticated()).toBeTrue();
+    expect(notifications.warning).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('varios TOKEN_EXPIRED a la vez: un solo refresh, y se repiten todas', async () => {
+    loggedIn();
+
+    const promises = ['/a', '/b', '/c'].map((path) => api.get<number>(path));
+    const { body, options } = unauthorized('TOKEN_EXPIRED');
+    for (const path of ['/a', '/b', '/c']) http.expectOne(`${BASE}${path}`).flush(body, options);
+    await tick();
+    http.expectOne(`${AUTH}/refresh`).flush(fakeSession());
+    await tick();
+    for (const path of ['/a', '/b', '/c']) http.expectOne(`${BASE}${path}`).flush(1);
+
+    expect(await Promise.all(promises)).toEqual([1, 1, 1]);
+  });
+
+  it('si la repetición vuelve a dar TOKEN_EXPIRED, no se intenta otra vez: fuera', async () => {
     loggedIn();
 
     const promise = api.get('/users').catch(() => null);
     const { body, options } = unauthorized('TOKEN_EXPIRED');
     http.expectOne(`${BASE}/users`).flush(body, options);
+    await tick();
+    http.expectOne(`${AUTH}/refresh`).flush(fakeSession());
+    await tick();
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await promise;
+
+    expect(store.isAuthenticated()).toBeFalse();
+    expect(notifications.warning).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin red para el refresh: falla la petición, pero la sesión sigue', async () => {
+    loggedIn();
+
+    const promise = api.get('/users').catch(() => 'falla');
+    const { body, options } = unauthorized('TOKEN_EXPIRED');
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await tick();
+    http.expectOne(`${AUTH}/refresh`).error(new ProgressEvent('error'));
+
+    expect(await promise).toBe('falla');
+    expect(store.isAuthenticated()).toBeTrue();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('TOKEN_EXPIRED y auth rechaza el refresh: limpia, avisa de que ha caducado y va al login', async () => {
+    loggedIn();
+
+    const promise = api.get('/users').catch(() => null);
+    const { body, options } = unauthorized('TOKEN_EXPIRED');
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await tick();
+    const rejected = unauthorized('TOKEN_INVALID');
+    http.expectOne(`${AUTH}/refresh`).flush(rejected.body, rejected.options);
     await promise;
 
     expect(store.isAuthenticated()).toBeFalse();
@@ -139,7 +208,7 @@ describe('Fin de la sesión', () => {
     http.expectOne(`${BASE}/users`).flush({}, { status: 403, statusText: 'Forbidden' });
     await promise;
 
-    http.expectOne(`${BASE}/auth/me`).flush(fakeUser('rider'));
+    http.expectOne(ME).flush(fakeUser('rider'));
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(store.isAdmin()).toBeFalse();
@@ -154,7 +223,7 @@ describe('Fin de la sesión', () => {
     http.expectOne(`${BASE}/users`).flush({}, { status: 403, statusText: 'Forbidden' });
     await promise;
 
-    http.expectOne(`${BASE}/auth/me`).flush(fakeUser('admin'));
+    http.expectOne(ME).flush(fakeUser('admin'));
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(navigate).not.toHaveBeenCalled();
@@ -165,7 +234,7 @@ describe('Fin de la sesión', () => {
     const navigateByUrl = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
 
     const promise = TestBed.inject(SessionService).logout();
-    http.expectOne(`${BASE}/auth/logout`).flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne(`${AUTH}/logout`).flush(null, { status: 204, statusText: 'No Content' });
     await promise;
 
     expect(store.isAuthenticated()).toBeFalse();
@@ -178,7 +247,7 @@ describe('Fin de la sesión', () => {
     spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
 
     const promise = TestBed.inject(SessionService).logout(true);
-    http.expectOne(`${BASE}/auth/logout-all`).flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne(`${AUTH}/logout-all`).flush(null, { status: 204, statusText: 'No Content' });
     await promise;
 
     expect(store.isAuthenticated()).toBeFalse();
@@ -192,7 +261,7 @@ describe('Fin de la sesión', () => {
     await promise;
 
     const { body, options } = unauthorized('TOKEN_INVALID');
-    http.expectOne(`${BASE}/auth/me`).flush(body, options);
+    http.expectOne(ME).flush(body, options);
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(store.isAuthenticated()).toBeFalse();
@@ -200,7 +269,7 @@ describe('Fin de la sesión', () => {
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 
-  it('se cierra sola a la hora de exp', async () => {
+  it('se cierra sola cuando ya no se puede renovar', async () => {
     jasmine.clock().install();
     try {
       loggedIn('admin', 60);
@@ -228,15 +297,15 @@ describe('Fin de la sesión', () => {
   });
 
   it('sin conexión al arrancar: al volver la API se confirma la sesión', async () => {
-    localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
+    localStorage.setItem(KEY, savedSession());
     setup();
     await TestBed.tick();
-    http.expectNone(`${BASE}/auth/me`);
+    http.expectNone(ME);
 
     TestBed.inject(ApiStatusService).markOnline();
     await TestBed.tick();
 
-    http.expectOne(`${BASE}/auth/me`).flush(fakeUser());
+    http.expectOne(ME).flush(fakeUser());
     await new Promise((resolve) => setTimeout(resolve));
     expect(store.unverified()).toBeFalse();
   });

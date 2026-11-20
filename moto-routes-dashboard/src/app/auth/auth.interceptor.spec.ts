@@ -67,6 +67,14 @@ describe('authInterceptor', () => {
     }
   });
 
+  it('las peticiones al servicio de auth también van con credenciales', async () => {
+    const promise = api.post(`${environment.authUrl}/logout`, null);
+    const request = http.expectOne(`${environment.authUrl}/logout`);
+    expect(request.request.withCredentials).toBeTrue();
+    request.flush(null);
+    await promise;
+  });
+
   it('sin sesión, también con credenciales: la cookie la decide la API', async () => {
     const promise = api.get('/routes');
     const request = http.expectOne(`${BASE}/routes`);

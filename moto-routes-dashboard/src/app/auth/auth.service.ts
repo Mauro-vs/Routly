@@ -1,16 +1,21 @@
 import { HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 
+import { environment } from '../../environments/environment';
 import { REQUEST_TIMEOUT } from '../core/interceptors/timeout.interceptor';
 import { ApiService } from '../core/services/api.service';
 import { SessionResetService } from '../core/services/session-reset.service';
 import { invalidResponseError, toApiError } from '../core/utils/api-error.mapper';
 import { SKIP_SESSION_HANDLING } from './auth.interceptor';
-import { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from './auth.models';
+import { AuthUser, LoginRequest, RegisterRequest, SessionResponse } from './auth.models';
 import { AuthStore } from './auth.store';
 
 /** Espera máxima al arrancar o al salir: si la API no responde, no se hace esperar a nadie. */
 const SESSION_TIMEOUT = 3000;
+
+/** El servicio de auth (login, refresh, logout, contraseña). El usuario sale de la API. */
+const AUTH = environment.authUrl;
+const ME = '/profile/me';
 
 // Estas llamadas deciden por su cuenta qué significa un 401: un login fallido no cierra
 // ninguna sesión, y un logout con el token ya caducado sigue siendo un logout.
@@ -30,18 +35,25 @@ function isAuthUser(value: unknown): value is AuthUser {
   );
 }
 
-function isAuthResponse(value: unknown): value is AuthResponse {
+/** Lo que importa de la respuesta de auth: hasta cuándo se puede renovar y de quién es. */
+export function isSessionResponse(value: unknown): value is SessionResponse {
   return (
     isRecord(value) &&
-    typeof value['expiresIn'] === 'number' &&
-    value['expiresIn'] > 0 &&
-    isAuthUser(value['user'])
+    typeof value['refreshExpiresIn'] === 'number' &&
+    value['refreshExpiresIn'] > 0 &&
+    isRecord(value['user']) &&
+    typeof value['user']['id'] === 'string'
   );
 }
 
+const isExpired = (error: unknown): boolean => toApiError(error).code === 'TOKEN_EXPIRED';
+
 /**
- * Comunicación con la API de autenticación. La sesión es la cookie httpOnly que pone la
- * API: aquí solo se sincroniza AuthStore, y es el único punto por el que se cierra una sesión.
+ * Comunicación con el servicio de auth. La sesión son las cookies httpOnly que pone auth: aquí
+ * solo se sincroniza AuthStore, y es el único punto por el que se cierra una sesión.
+ *
+ * El token de acceso dura 15 minutos. Cuando caduca, `refresh()` pide otro con la cookie de
+ * refresh, que se renueva con él (dura 7 días desde la última renovación).
  *
  * No toca la interfaz: ni Router, ni avisos. Lo que hay que enseñar y adónde ir lo deciden
  * las páginas, los guards y SessionService.
@@ -53,25 +65,39 @@ export class AuthService {
   private readonly resets = inject(SessionResetService);
 
   private verifying: Promise<boolean> | null = null;
+  private refreshing: Promise<boolean> | null = null;
 
   login(credentials: LoginRequest): Promise<AuthUser> {
-    return this.authenticate('/auth/login', credentials);
+    return this.authenticate(`${AUTH}/login`, credentials);
   }
 
   register(data: RegisterRequest): Promise<AuthUser> {
-    return this.authenticate('/auth/register', data);
+    return this.authenticate(`${AUTH}/register`, data);
   }
 
   /**
    * Comprueba con la API la sesión (la cookie) y trae el usuario. Devuelve true si sirve.
-   * Sin sesión guardada, o ya caducada, no se pregunta: se entra como anónimo. Un 401 la
-   * cierra; un fallo de red no, porque no dice nada de la cookie. Varias
-   * llamadas a la vez comparten la misma petición.
+   * Sin sesión guardada, o ya caducada, no se pregunta: se entra como anónimo. Si el token de
+   * acceso ha caducado (lo normal al volver al día siguiente), se renueva una vez. Un 401 la
+   * cierra; un fallo de red no, porque no dice nada de las cookies. Varias llamadas a la vez
+   * comparten la misma petición.
    */
   loadSession(): Promise<boolean> {
     if (!this.store.isAuthenticated()) return Promise.resolve(false);
     this.verifying ??= this.verify().finally(() => (this.verifying = null));
     return this.verifying;
+  }
+
+  /**
+   * Pide un token de acceso nuevo con la cookie de refresh. Devuelve true si lo hay; false si
+   * auth rechaza la sesión, que entonces se cierra aquí. Sin red, rechaza la promesa y la
+   * sesión sigue: no dice nada de las cookies. Varias llamadas a la vez comparten la petición,
+   * porque un refresh ya usado no vuelve a servir.
+   */
+  refresh(): Promise<boolean> {
+    if (!this.store.isAuthenticated()) return Promise.resolve(false);
+    this.refreshing ??= this.renew().finally(() => (this.refreshing = null));
+    return this.refreshing;
   }
 
   /**
@@ -82,21 +108,24 @@ export class AuthService {
   async refreshUser(): Promise<void> {
     if (!this.store.isAuthenticated()) return;
     try {
-      const user = await this.api.get<unknown>('/auth/me');
+      const user = await this.api.get<unknown>(ME);
       if (isAuthUser(user)) this.store.setUser(user);
     } catch {
       // Se mantiene el usuario que había.
     }
   }
 
-  /** Cierra esta sesión en la API (que borra la cookie) y, pase lo que pase, en el panel. */
+  /** Cierra esta sesión en auth (que borra las cookies) y, pase lo que pase, en el panel. */
   logout(): Promise<void> {
-    return this.signOut('/auth/logout');
+    return this.signOut(`${AUTH}/logout`);
   }
 
-  /** Cierra todas las sesiones del usuario, en todos sus dispositivos. */
+  /**
+   * Cierra todas las sesiones del usuario, en todos sus dispositivos. Auth lo pide con un
+   * token de acceso vigente: si ha caducado, se renueva antes.
+   */
   logoutAll(): Promise<void> {
-    return this.signOut('/auth/logout-all');
+    return this.signOut(`${AUTH}/logout-all`, true);
   }
 
   /** Olvida la sesión y los datos del panel, para que el siguiente no vea los del anterior. */
@@ -105,27 +134,65 @@ export class AuthService {
     this.resets.resetAll();
   }
 
+  /** Abre la sesión en auth y trae de la API el usuario completo, con su rol y su perfil. */
   private async authenticate(path: string, body: unknown): Promise<AuthUser> {
     const response = await this.api.post<unknown>(path, body, { context: sessionContext() });
-    if (!isAuthResponse(response) || !this.store.login(response)) throw invalidResponseError();
-    return response.user;
+    if (!isSessionResponse(response)) throw invalidResponseError();
+
+    const user = await this.api.get<unknown>(ME, { context: sessionContext() });
+    if (!isAuthUser(user) || user._id !== response.user.id) throw invalidResponseError();
+    if (!this.store.login({ expiresIn: response.refreshExpiresIn, user })) throw invalidResponseError();
+    return user;
   }
 
   private async verify(): Promise<boolean> {
     try {
-      const user = await this.api.get<unknown>('/auth/me', { context: sessionContext() });
-      if (!isAuthUser(user)) return false;
-      this.store.setUser(user);
-      return true;
+      return this.keep(await this.fetchMe());
+    } catch (error) {
+      if (!isExpired(error)) {
+        if (toApiError(error).isUnauthorized) this.clearSession();
+        return false;
+      }
+    }
+    // El token de acceso ha caducado: se renueva y se pregunta otra vez.
+    try {
+      if (!(await this.refresh())) return false;
+      return this.keep(await this.fetchMe());
     } catch (error) {
       if (toApiError(error).isUnauthorized) this.clearSession();
       return false;
     }
   }
 
-  private async signOut(path: string): Promise<void> {
+  private fetchMe(): Promise<unknown> {
+    return this.api.get<unknown>(ME, { context: sessionContext() });
+  }
+
+  private keep(user: unknown): boolean {
+    if (!isAuthUser(user)) return false;
+    this.store.setUser(user);
+    return true;
+  }
+
+  private async renew(): Promise<boolean> {
     try {
-      await this.api.post<null>(path, null, { context: sessionContext() });
+      const response = await this.api.post<unknown>(`${AUTH}/refresh`, null, { context: sessionContext() });
+      if (isSessionResponse(response) && this.store.extend(response.refreshExpiresIn)) return true;
+    } catch (error) {
+      if (!toApiError(error).isUnauthorized) throw error;
+    }
+    this.clearSession();
+    return false;
+  }
+
+  private async signOut(path: string, needsAccess = false): Promise<void> {
+    const send = (): Promise<null> => this.api.post<null>(path, null, { context: sessionContext() });
+    try {
+      try {
+        await send();
+      } catch (error) {
+        if (needsAccess && isExpired(error) && (await this.refresh())) await send();
+      }
     } catch {
       // Sin red o con la sesión caducada, se cierra igual en el panel.
     } finally {

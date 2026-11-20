@@ -15,7 +15,7 @@ describe('AuthStore', () => {
   beforeEach(() => localStorage.removeItem(KEY));
   afterEach(() => localStorage.removeItem(KEY));
 
-  it('login guarda en localStorage solo cuándo caduca: ni el token ni el usuario', () => {
+  it('login guarda en localStorage solo hasta cuándo se renueva y de quién es: ni el token ni el usuario', () => {
     const store = create();
     const before = Date.now();
 
@@ -23,7 +23,8 @@ describe('AuthStore', () => {
 
     const raw = localStorage.getItem(KEY) ?? '';
     const saved = JSON.parse(raw) as Record<string, unknown>;
-    expect(Object.keys(saved)).toEqual(['expiresAt']);
+    expect(Object.keys(saved)).toEqual(['expiresAt', 'userId']);
+    expect(saved['userId']).toBe('1');
     expect(saved['expiresAt']).toBeGreaterThanOrEqual(before + 3600_000);
     expect(raw).not.toContain('token');
     expect(store.isAuthenticated()).toBeTrue();
@@ -32,7 +33,7 @@ describe('AuthStore', () => {
 
   it('restaura la sesión al recargar, aún sin confirmar por la API', () => {
     const expiresAt = Date.now() + 3600_000;
-    localStorage.setItem(KEY, JSON.stringify({ expiresAt }));
+    localStorage.setItem(KEY, JSON.stringify({ expiresAt, userId: '1' }));
 
     const store = create();
 
@@ -47,6 +48,8 @@ describe('AuthStore', () => {
       JSON.stringify({ expiresAt: Date.now() - 10 }),
       JSON.stringify({ expiresAt: 'mañana' }),
       JSON.stringify({ token: fakeToken() }),
+      // La de antes del servicio de auth: sin usuario, sus cookies ya no sirven
+      JSON.stringify({ expiresAt: Date.now() + 3600_000 }),
       'esto no es JSON',
     ]) {
       TestBed.resetTestingModule();
@@ -56,14 +59,46 @@ describe('AuthStore', () => {
     }
   });
 
-  it('una sesión guardada por la versión anterior (con el token) se reescribe sin él', () => {
+  it('una sesión guardada con el token (versiones anteriores) se reescribe sin él', () => {
     const expiresAt = Date.now() + 3600_000;
-    localStorage.setItem(KEY, JSON.stringify({ token: fakeToken(), expiresAt }));
+    localStorage.setItem(KEY, JSON.stringify({ token: fakeToken(), expiresAt, userId: '1' }));
 
     const store = create();
 
     expect(store.isAuthenticated()).toBeTrue();
-    expect(JSON.parse(localStorage.getItem(KEY) ?? '{}')).toEqual({ expiresAt });
+    expect(JSON.parse(localStorage.getItem(KEY) ?? '{}')).toEqual({ expiresAt, userId: '1' });
+  });
+
+  it('una sesión guardada sin usuario (la de antes del servicio de auth) se borra', () => {
+    localStorage.setItem(KEY, JSON.stringify({ expiresAt: Date.now() + 3600_000 }));
+
+    const store = create();
+
+    expect(store.isAuthenticated()).toBeFalse();
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('extend alarga la sesión del mismo usuario sin tocar el usuario', () => {
+    const store = create();
+    store.login({ expiresIn: 60, user: fakeUser() });
+    const before = Date.now();
+
+    expect(store.extend(7200)).toBeTrue();
+
+    expect(store.expiresAt()).toBeGreaterThanOrEqual(before + 7200_000);
+    expect(store.user()?.name).toBe('Ana');
+    expect(JSON.parse(localStorage.getItem(KEY) ?? '{}').userId).toBe('1');
+  });
+
+  it('extend sin sesión, o con un plazo que no sirve, no hace nada', () => {
+    const store = create();
+    expect(store.extend(3600)).toBeFalse();
+    expect(store.isAuthenticated()).toBeFalse();
+
+    store.login({ expiresIn: 3600, user: fakeUser() });
+    const expiresAt = store.expiresAt();
+    expect(store.extend(0)).toBeFalse();
+    expect(store.expiresAt()).toBe(expiresAt);
   });
 
   it('login rechaza un plazo que no sirve y no guarda nada', () => {
@@ -154,11 +189,26 @@ describe('AuthStore', () => {
     const expiresAt = Date.now() + 7200_000;
 
     window.dispatchEvent(
-      new StorageEvent('storage', { key: KEY, newValue: JSON.stringify({ expiresAt }) }),
+      new StorageEvent('storage', { key: KEY, newValue: JSON.stringify({ expiresAt, userId: '2' }) }),
     );
 
     expect(store.expiresAt()).toBe(expiresAt);
     expect(store.unverified()).toBeTrue();
+    expect(store.foreignChanges()).toBe(1);
+  });
+
+  it('otra pestaña solo renueva la sesión del mismo usuario: se adopta el plazo y nada más', () => {
+    const store = create();
+    store.login({ expiresIn: 3600, user: fakeUser() });
+    const expiresAt = Date.now() + 7200_000;
+
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: KEY, newValue: JSON.stringify({ expiresAt, userId: '1' }) }),
+    );
+
+    expect(store.expiresAt()).toBe(expiresAt);
+    expect(store.user()?.name).toBe('Ana');
+    expect(store.foreignChanges()).toBe(0);
   });
 
   it('ignora los cambios de otras claves del almacenamiento', () => {

@@ -41,6 +41,7 @@ export function buildOpenApi(config) {
           properties: {
             tokenType: { type: "string", example: "Bearer" },
             expiresIn: { type: "integer", example: config.jwt.accessTtl, description: "Segundos de vida del token de acceso" },
+            refreshExpiresIn: { type: "integer", example: config.jwt.refreshTtl, description: "Segundos que se puede renovar la sesión con /auth/refresh" },
             user: { $ref: "#/components/schemas/User" },
             token: { type: "string", description: "El token de acceso. Solo con TOKEN_IN_BODY (no en producción)" },
           },

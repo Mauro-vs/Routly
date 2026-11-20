@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 
-import { AuthResponse, AuthUser } from '../../../auth/auth.models';
+import { environment } from '../../../../environments/environment';
+import { AuthUser } from '../../../auth/auth.models';
+import { isSessionResponse } from '../../../auth/auth.service';
 import { AuthStore } from '../../../auth/auth.store';
 import { ProfilePayload } from '../../../core/models/profile.model';
 import { ApiService } from '../../../core/services/api.service';
@@ -19,8 +21,8 @@ export interface PasswordChange {
 
 /**
  * El perfil del usuario de la sesión. Tras cada cambio pone al día AuthStore, para que el nombre
- * del menú cambie a la vez y, con la contraseña, para guardar el token nuevo: el anterior ya
- * no sirve.
+ * del menú cambie a la vez y, con la contraseña, para guardar el nuevo plazo de la sesión: auth
+ * deja cookies nuevas y las anteriores ya no sirven.
  */
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
@@ -34,7 +36,10 @@ export class ProfileService {
   }
 
   async changePassword(change: PasswordChange): Promise<void> {
-    const session = await this.api.patch<AuthResponse>('/profile/me/password', change);
-    if (!this.store.login(session)) throw invalidResponseError();
+    // En el servicio de auth: cierra las demás sesiones y deja esta con cookies nuevas.
+    const session = await this.api.patch<unknown>(`${environment.authUrl}/password`, change);
+    if (!isSessionResponse(session) || !this.store.extend(session.refreshExpiresIn)) {
+      throw invalidResponseError();
+    }
   }
 }

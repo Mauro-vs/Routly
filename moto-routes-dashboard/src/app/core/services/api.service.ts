@@ -66,8 +66,12 @@ export class ApiService {
     return firstValueFrom(this.http.delete<T>(this.url(path), options));
   }
 
-  /** Las rutas relativas cuelgan de `apiUrl`; una URL completa se respeta tal cual. */
+  /**
+   * Las rutas relativas cuelgan de `apiUrl`. Una URL completa, o una del servicio de auth
+   * (`authUrl`, la usa AuthService), se respeta tal cual.
+   */
   private url(path: string): string {
-    return /^https?:\/\//.test(path) ? path : `${this.baseUrl}${path}`;
+    if (/^https?:\/\//.test(path) || path.startsWith(`${environment.authUrl}/`)) return path;
+    return `${this.baseUrl}${path}`;
   }
 }
