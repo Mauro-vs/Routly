@@ -2,6 +2,8 @@
 // dependencias, para que funcionen recién clonado el repositorio.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import http from "node:http";
+import https from "node:https";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -55,6 +57,17 @@ export const SERVICES = {
     port: 4300,
     ready: "http://localhost:4300/",
     color: 33,
+  },
+  // La API gateway: la única puerta de entrada, con HTTPS. Reparte /api, /auth y /ai y sirve la
+  // web (routly.localhost) y el panel (panel.routly.localhost). Va la última: se apoya en todos
+  gateway: {
+    label: "gateway",
+    dir: "moto-routes-gateway",
+    dev: "npm run dev",
+    port: 4000,
+    // Su propia salud (/health es el de la API). Con su certificado de desarrollo: ver probe()
+    ready: "https://127.0.0.1:4000/gateway/health",
+    color: 91,
   },
 };
 
@@ -137,6 +150,22 @@ export function stopTree(child) {
 }
 
 // ---------- Comprobaciones ----------
+
+/**
+ * El código HTTP de una URL, o null si no responde. Acepta el certificado autofirmado de la
+ * gateway (solo para saber si ya está en marcha: no se manda nada).
+ */
+export function probe(url, timeout = 2000) {
+  return new Promise((resolve) => {
+    const client = url.startsWith("https:") ? https : http;
+    const request = client.get(url, { rejectUnauthorized: false, timeout }, (response) => {
+      response.resume();
+      resolve(response.statusCode);
+    });
+    request.on("timeout", () => request.destroy());
+    request.on("error", () => resolve(null));
+  });
+}
 
 /** Si algo escucha en ese puerto (en IPv4 o en IPv6). */
 export async function portInUse(port) {

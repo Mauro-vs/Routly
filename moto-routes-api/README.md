@@ -912,7 +912,7 @@ El panel no guarda el token: vive en una cookie que el JavaScript de la página 
 
 **`tokenVersion`** es un número del usuario (oculto, como `passwordHash`) que va dentro del token. Lo suben auth (cambio de contraseña, cerrar todas las sesiones, un refresh reutilizado) y la API (desactivar o eliminar al usuario, o cambiarle la contraseña desde el panel): desde ese momento, todos sus tokens anteriores responden 401. Reactivar o restaurar al usuario no les devuelve la vida.
 
-**Por qué RS256 y no HS256.** Con HS256 la misma clave firma y verifica: cualquier servicio que comprueba tokens podría fabricarlos. Con RS256 solo auth tiene la clave privada; la API y la futura gateway solo tienen la pública, que no sirve para firmar. El JWKS además permite rotar la clave sin tocar la API: el `kid` del token dice cuál usar.
+**Por qué RS256 y no HS256.** Con HS256 la misma clave firma y verifica: cualquier servicio que comprueba tokens podría fabricarlos. Con RS256 solo auth tiene la clave privada; la API y la gateway solo tienen la pública, que no sirve para firmar. El JWKS además permite rotar la clave sin tocar la API: el `kid` del token dice cuál usar.
 
 ### Roles y matriz de permisos
 

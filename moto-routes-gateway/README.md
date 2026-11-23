@@ -2,7 +2,7 @@
 
 La **API gateway** de Routly: la única puerta de entrada, con HTTPS. Reparte cada petición a su servicio por el prefijo, sin reescribir la ruta, y sirve la web y el panel, cada uno en su nombre.
 
-> Estado: **fases 1 a 3** (reparto, errores, id de petición, registro, salud, HTTPS, frontales, token en la puerta y límites). Falta la fase 4: los scripts de la raíz y la documentación completa.
+`npm run dev` en la raíz la arranca junto a los demás (y crea el certificado si falta); `npm test` y `npm run check` pasan también sus tests.
 
 | Dirección | Qué es |
 |---|---|

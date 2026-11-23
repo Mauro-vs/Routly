@@ -1,11 +1,11 @@
 # moto-routes-auth
 
 El servicio de autenticación de Routly: registro, login y sesiones. **Es el único que conoce las
-contraseñas y el único que firma tokens.** La API, la IA y la futura gateway solo los comprueban, con
-su clave pública.
+contraseñas y el único que firma tokens.** La API y la gateway solo los comprueban, con su clave
+pública.
 
-- Puerto **3002**. Todo cuelga de `/auth` (la API de `/api` y la IA de `/ai`): el proxy de Angular, y
-  la futura gateway, mandan cada prefijo a su servicio.
+- Puerto **3002**. Todo cuelga de `/auth` (la API de `/api` y la IA de `/ai`): la gateway
+  (`moto-routes-gateway`, que exige `TRUST_PROXY=1` aquí) y el proxy de Angular mandan cada prefijo a su servicio.
 - Mismo stack que la API: Node 20.19+, Express 5, Zod, Mongoose, argon2, helmet y
   express-rate-limit, en JS ESM. Los tokens con [jose](https://github.com/panva/jose).
 - Misma base de datos que la API (`moto_routes`). Los usuarios y los roles son de la API; este

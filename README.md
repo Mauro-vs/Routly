@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="#míralo-en-marcha"><b>Demo</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#lo-que-ya-funciona"><b>Funciones</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#cómo-está-hecho"><b>Arquitectura</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#preparado-para-la-api-gateway"><b>API gateway</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#puesta-en-marcha"><b>Arrancar</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#hoja-de-ruta"><b>Hoja de ruta</b></a>
+  <a href="#míralo-en-marcha"><b>Demo</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#lo-que-ya-funciona"><b>Funciones</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#cómo-está-hecho"><b>Arquitectura</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#la-api-gateway"><b>API gateway</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#puesta-en-marcha"><b>Arrancar</b></a>&nbsp;&nbsp;/&nbsp;&nbsp;<a href="#hoja-de-ruta"><b>Hoja de ruta</b></a>
 </p>
 
 Routly reúne las mejores carreteras para ir en moto en un catálogo cuidado y las convierte en **salidas guiadas** por anfitriones locales: eliges la ruta, la fecha y te apuntas. Cada ruta tiene la misma información (origen, destino, distancia, duración y dificultad) y cada salida, sus plazas, su precio y su moto guía.
@@ -29,7 +29,7 @@ Las buenas rutas suelen estar repartidas en foros, grupos de mensajería y track
 
 ## Lo que ya funciona
 
-Routly son **cinco aplicaciones** que se hablan por HTTP y JSON. Cada una vive en su carpeta, con su puerto, su prefijo y sus tests:
+Routly son **seis aplicaciones** que se hablan por HTTP y JSON. Cada una vive en su carpeta, con su puerto, su prefijo y sus tests. Se entra por una sola puerta, la **API gateway**: `https://routly.localhost:4000` para la web y `https://panel.routly.localhost:4000` para el panel.
 
 | | Aplicación | Puerto | Prefijo | Para qué |
 |:---:|---|:---:|---|---|
@@ -38,6 +38,7 @@ Routly son **cinco aplicaciones** que se hablan por HTTP y JSON. Cada una vive e
 | <img src="docs/assets/icon-docs.svg" width="28" alt=""> | [**API**](moto-routes-api/README.md) | 3000 | `/api` | Las diez colecciones, los permisos de cada rol y la tienda pública (`/api/shop`) |
 | <img src="docs/assets/icon-lock.svg" width="28" alt=""> | [**Auth**](moto-routes-auth/README.md) | 3002 | `/auth` | Inicia, renueva y cierra las sesiones, y es el único que firma los tokens |
 | <img src="docs/assets/icon-sparkle.svg" width="28" alt=""> | [**IA**](moto-routes-ai/README.md) | 3001 | `/ai` | El bloque Routly IA del detalle, el mapa del recorrido y el asistente |
+| <img src="docs/assets/icon-gateway.svg" width="28" alt=""> | [**API gateway**](moto-routes-gateway/README.md) | 4000 | todo | La única puerta de entrada: HTTPS, reparte cada prefijo a su servicio, sirve la web y el panel, y comprueba el token en la puerta |
 
 <table>
   <tr>
@@ -96,8 +97,8 @@ Routly son **cinco aplicaciones** que se hablan por HTTP y JSON. Cada una vive e
     </td>
     <td valign="top">
       <img src="docs/assets/icon-gateway.svg" width="44" alt=""><br>
-      <b>Lista para una API gateway</b><br>
-      Cada servicio con su prefijo, tokens que cualquiera comprueba con la clave pública y todo pensado para ir detrás de un proxy. <a href="#preparado-para-la-api-gateway">Cómo está montado</a>.
+      <b>Una sola puerta de entrada</b><br>
+      Una API gateway propia con HTTPS: reparte cada prefijo a su servicio, da a la web y al panel su propio nombre (y su propia sesión) y corta en la puerta los tokens que no valen. <a href="#la-api-gateway">Cómo está montada</a>.
     </td>
   </tr>
 </table>
@@ -168,13 +169,13 @@ Routly son **cinco aplicaciones** que se hablan por HTTP y JSON. Cada una vive e
   <img src="https://skillicons.dev/icons?i=angular,ts,html,css,nodejs,express,mongodb,postman&theme=dark" alt="Angular, TypeScript, HTML, CSS, Node.js, Express, MongoDB y Postman">
 </p>
 
-Un monorepo con cinco aplicaciones independientes. Los dos frontales llaman siempre a su propio origen (`/api`, `/auth`, `/ai`), y un proxy reparte cada prefijo a su servicio:
+Un monorepo con seis aplicaciones independientes. Los dos frontales llaman siempre a su propio origen (`/api`, `/auth`, `/ai`), y la API gateway reparte cada prefijo a su servicio:
 
 ```mermaid
 flowchart LR
-    W["Web pública<br/>Angular 20 · 4300"]
-    A["Panel<br/>Angular 20 · 4200"]
-    P{{"Proxy<br/>/api · /auth · /ai"}}
+    W["Web pública<br/>Angular 20<br/>routly.localhost"]
+    A["Panel<br/>Angular 20<br/>panel.routly.localhost"]
+    P{{"API gateway · 4000<br/>HTTPS · token · límites"}}
     B["API REST<br/>Express 5 · 3000"]
     U["Auth<br/>Express 5 · 3002"]
     I["IA<br/>Express 5 · 3001"]
@@ -188,6 +189,7 @@ flowchart LR
     P -- "/ai" --> I
     I -- "/api/shop" --> B
     B -. "JWKS: clave pública" .-> U
+    P -. "JWKS" .-> U
     B -- "Mongoose" --> C
     U -- "Mongoose" --> C
     I -.-> E
@@ -202,7 +204,7 @@ flowchart LR
     class C,E data
 ```
 
-Hoy ese proxy es el de `ng serve` en desarrollo (`proxy.conf.json` de cada frontal) y un Nginx o Caddy en producción. Mañana será la [API gateway](#preparado-para-la-api-gateway), sin tocar los frontales.
+La [API gateway](#la-api-gateway) entró sin tocar una línea de Angular: los frontales siguen llamando a `/api`, `/auth` y `/ai` en su mismo origen. Por eso también se puede seguir entrando sin ella, por `http://localhost:4300` y `:4200`, donde el `proxy.conf.json` de `ng serve` hace el mismo reparto.
 
 <table>
   <tr>
@@ -235,6 +237,11 @@ Hoy ese proxy es el de `ng serve` en desarrollo (`proxy.conf.json` de cada front
     <td>Express 5, Zod 4, IA gratuita con Groq (GPT-OSS 120B), cambiable a Gemini u OpenRouter desde el <code>.env</code></td>
     <td>Sin base de datos, respuestas de la IA validadas con Zod, agente con herramientas de solo lectura, streaming SSE y caché en memoria</td>
   </tr>
+  <tr>
+    <td><a href="moto-routes-gateway/README.md"><b>API gateway</b></a></td>
+    <td>Express 5, <code>http-proxy-middleware</code>, <code>jose</code>, HTTPS de Node</td>
+    <td>Reenvía en streaming (el chat de la IA llega evento a evento), comprueba el token con el JWKS de auth respondiendo igual que la API, y un test que compara su tabla de rutas protegidas con las rutas reales</td>
+  </tr>
 </table>
 
 ### Cómo viaja una sesión
@@ -243,22 +250,27 @@ Hoy ese proxy es el de `ng serve` en desarrollo (`proxy.conf.json` de cada front
 sequenceDiagram
     autonumber
     participant N as Navegador
+    participant G as Gateway
     participant U as Auth
     participant B as API
-    N->>U: POST /auth/login
+    N->>G: POST /auth/login
+    G->>U: Reenvía
     U-->>N: Cookies httpOnly: routly_session (15 min) y routly_refresh (7 días, solo /auth)
-    N->>B: GET /api/... con la cookie
-    B->>B: Comprueba la firma (JWKS), el usuario, el rol y la propiedad
+    N->>G: GET /api/... con la cookie
+    G->>G: Comprueba la firma (JWKS) y la caducidad
+    G->>B: Reenvía el token tal cual
+    B->>B: Vuelve a comprobarlo, y el usuario, el rol y la propiedad
     B-->>N: 200
     Note over N,B: A los 15 minutos
-    N->>B: GET /api/...
-    B-->>N: 401 TOKEN_EXPIRED
-    N->>U: POST /auth/refresh
+    N->>G: GET /api/users
+    G-->>N: 401 TOKEN_EXPIRED (no llega a la API)
+    N->>G: POST /auth/refresh
+    G->>U: Reenvía
     U-->>N: Cookies nuevas (el refresh anterior ya no sirve)
-    N->>B: Repite la petición: 200
+    N->>G: Repite la petición: 200
 ```
 
-La API nunca ve una contraseña ni una clave con la que pueda fabricar tokens: solo los comprueba. El panel guarda en `localStorage` hasta cuándo dura la sesión, nunca el token.
+La API y la gateway nunca ven una clave con la que puedan fabricar tokens: solo los comprueban. El panel guarda en `localStorage` hasta cuándo dura la sesión, nunca el token.
 
 ```
 Routly/
@@ -267,6 +279,7 @@ Routly/
 ├── moto-routes-api/        API REST: colecciones, permisos y tienda (Node.js + Express + MongoDB)
 ├── moto-routes-auth/       Auth: login, refresh y JWKS (Node.js + Express + MongoDB)
 ├── moto-routes-ai/         IA: bloque Routly IA, mapa y asistente (Node.js + Express)
+├── moto-routes-gateway/    API gateway: HTTPS, reparto, token en la puerta y límites (Node.js + Express)
 ├── design/                 Bocetos de la web pública y el script del peor caso
 ├── docs/                   Demo, capturas e imágenes de los README
 ├── scripts/                npm run dev, test, check y seed para todas las partes a la vez
@@ -280,54 +293,40 @@ Cada parte tiene su README técnico, con la arquitectura explicada pieza a pieza
 - [`moto-routes-api/README.md`](moto-routes-api/README.md): capas, modelo, endpoints, permisos, validación y errores.
 - [`moto-routes-auth/README.md`](moto-routes-auth/README.md): el flujo de la sesión, las claves y su rotación, y las medidas de seguridad.
 - [`moto-routes-ai/README.md`](moto-routes-ai/README.md): endpoints de la IA, el mapa, el asistente y sus herramientas, y de dónde sale cada dato.
+- [`moto-routes-gateway/README.md`](moto-routes-gateway/README.md): el reparto, el certificado, los dos nombres, la tabla de rutas con sesión y los límites.
 
-## Preparado para la API gateway
+## La API gateway
 
-La siguiente pieza es una **API gateway**: una sola puerta de entrada que reciba todo el tráfico, termine el HTTPS y reparta cada petición a su servicio. No está hecha todavía, pero el resto ya está montado para que entre sin tocar ni los frontales ni la lógica de los servicios.
+Todo el tráfico entra por una sola puerta, [`moto-routes-gateway`](moto-routes-gateway/README.md), en el puerto 4000: termina el HTTPS, reparte cada petición a su servicio y sirve la web y el panel.
 
 ```mermaid
 flowchart LR
-    N["Navegador<br/>web y panel"] -- "HTTPS<br/>un solo dominio" --> G{{"API gateway"}}
+    W["routly.localhost"] -- "HTTPS" --> G{{"API gateway · 4000"}}
+    P["panel.routly.localhost"] -- "HTTPS" --> G
     G -- "/api" --> B["API · 3000"]
     G -- "/auth" --> U["Auth · 3002"]
     G -- "/ai" --> I["IA · 3001"]
+    G -- "el resto" --> F["La web o el panel<br/>(ng serve o su build)"]
     G -. "JWKS (caché)" .-> U
     B -. "JWKS (caché)" .-> U
-    subgraph red["Red interna: solo la gateway llega a los servicios"]
-        B
-        U
-        I
-    end
     classDef gw fill:#c6f04d,stroke:#0c2419,color:#0c2419,stroke-width:2px
     classDef app fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
     classDef client fill:#e8f3ec,stroke:#1b7a4e,color:#0c2419
     class G gw
-    class B,U,I app
-    class N client
-    style red fill:#f4f9f1,stroke:#1b7a4e,stroke-dasharray:4 4,color:#0c2419
+    class B,U,I,F app
+    class W,P client
 ```
 
-### Lo que ya está listo
+| Qué hace | Cómo |
+|---|---|
+| **HTTPS** | En el puerto 4000, con un certificado de desarrollo (`npm run certs`, lo crea `npm run dev` si falta) o uno de [mkcert](https://github.com/FiloSottile/mkcert) para que el navegador no avise |
+| **Un nombre por frontal** | `routly.localhost` es la web y `panel.routly.localhost` el panel. Los `*.localhost` apuntan a tu equipo sin tocar nada, y como las cookies van por nombre, **cada uno tiene su propia sesión** |
+| **Reparto por prefijo** | `/api` → 3000, `/auth` → 3002, `/ai` → 3001, sin reescribir rutas. Todo en streaming: el `Set-Cookie` de auth llega intacto y el chat de la IA, evento a evento |
+| **El token en la puerta** | Comprueba la firma con el JWKS de auth en las rutas que exigen sesión y responde igual que la API (`401 TOKEN_EXPIRED` → el frontal renueva). Los permisos los sigue decidiendo la API, que no se fía de nadie |
+| **Límites y registro** | Un límite por IP para todo y otro más estricto para el chat y los textos IA. Una línea JSON por petición con su `X-Request-Id`, sin cookies ni tokens |
+| **Nadie se hace pasar por otro** | Borra los `X-Forwarded-*` y las cabeceras de identidad que mande el cliente |
 
-| Pieza | Cómo está hoy | Por qué le sirve a la gateway |
-|---|---|---|
-| **Un prefijo por servicio** | `/api` (API), `/auth` (auth) y `/ai` (IA), cada uno con su `/health` | La gateway enruta por prefijo, sin reescribir rutas, y sabe si cada servicio está vivo |
-| **Los frontales no saben de puertos** | La web y el panel llaman a `/api`, `/auth` y `/ai` en su mismo origen. En desarrollo los reparte `proxy.conf.json`, que hace ya de gateway | Montarla solo cambia a quién apunta el proxy: ni una línea de Angular |
-| **Tokens que cualquiera comprueba** | Auth firma con RS256 y publica la clave pública en `/auth/.well-known/jwks.json`, con `kid`, emisor (`routly-auth`) y audiencia (`routly`) | La gateway puede rechazar un token malo en la puerta con el mismo JWKS, sin secretos compartidos ni llamar a auth en cada petición |
-| **Rotar la clave sin cortes** | `JWT_PREVIOUS_PUBLIC_KEY_FILE` sigue publicando la clave anterior mientras viven sus tokens | La gateway y la API recogen la nueva sola: el `kid` del token dice cuál usar |
-| **Cookies pensadas para un solo dominio** | `routly_session` con `Path=/` y `routly_refresh` con `Path=/auth`, `SameSite=Strict`, y `__Secure-` con HTTPS | Detrás de la gateway todo es el mismo origen: el refresh solo viaja a auth |
-| **Detrás de un proxy** | `TRUST_PROXY` en la API, auth y la IA: leen la IP, el protocolo y el host de `X-Forwarded-*` | El límite de intentos cuenta la IP real y la comprobación CSRF del `Origin` sigue funcionando |
-| **Orígenes permitidos** | `CORS_ORIGIN` en la API y en auth | Con todo en un dominio no hace falta CORS; si un frontal va aparte, se configura en un sitio |
-| **La API no se fía de nadie** | Comprueba ella misma cada token, el usuario, el rol y la propiedad | Si alguien llega a la API saltándose la gateway, no gana nada |
-
-### Qué hará la gateway
-
-1. **Ser la única entrada**: HTTPS, un solo dominio y los servicios en una red interna, sin puertos abiertos fuera.
-2. **Enrutar por prefijo**: `/api` → 3000, `/auth` → 3002, `/ai` → 3001, y servir la web y el panel.
-3. **Comprobar el token en la puerta** con el JWKS de auth, para cortar antes lo que no lleva sesión válida. La API lo seguirá comprobando (cuesta microsegundos) y seguirá decidiendo los permisos.
-4. **Límites y logs comunes**: un límite de peticiones global y un registro de todo el tráfico en un solo sitio, sin cabeceras `Cookie` ni `Authorization`.
-
-Al montarla, cada servicio solo necesita `TRUST_PROXY=1`, `COOKIE_SECURE=true` y, en la API, `AUTH_JWKS_URL` apuntando a auth por la red interna.
+Detrás de la gateway, auth, la API y la IA llevan `TRUST_PROXY=1` (ya viene así en sus `.env.example`): leen el protocolo, el nombre y la IP reales de la gateway. Sin eso, el login por la gateway da 403, porque el `Origin` no cuadra.
 
 ## Puesta en marcha
 
@@ -342,11 +341,12 @@ cd Routly
 ```
 
 ```bash
+cp moto-routes-auth/.env.example moto-routes-auth/.env
 cp moto-routes-api/.env.example moto-routes-api/.env
 cp moto-routes-ai/.env.example moto-routes-ai/.env
 ```
 
-El servicio de auth no necesita `.env` en desarrollo (usa los valores de `moto-routes-auth/.env.example`), y su clave privada (`moto-routes-auth/keys/private.pem`, que no se sube) la crea `npm run dev` la primera vez.
+La clave privada de auth (`moto-routes-auth/keys/private.pem`) y el certificado de la gateway (`moto-routes-gateway/certs/`), que no se suben, los crea `npm run dev` la primera vez.
 
 En `moto-routes-ai/.env` va la clave de la IA (`AI_API_KEY`), que es gratis y sin tarjeta: se crea en [console.groq.com/keys](https://console.groq.com/keys). Sin clave todo arranca igual: el tiempo y las paradas salen, y los textos de la IA y el asistente esperan a que la pongas.
 
@@ -358,11 +358,16 @@ npm run seed
 npm run dev
 ```
 
-`npm run dev` arranca el **servicio de auth** (`http://localhost:3002`), la **API** (`http://localhost:3000`), el **servidor de IA** (`http://localhost:3001`), el **panel** (`http://localhost:4200`) y la **web pública** (`http://localhost:4300`) en una sola terminal:
+`npm run dev` arranca el **servicio de auth** (`http://localhost:3002`), la **API** (`http://localhost:3000`), el **servidor de IA** (`http://localhost:3001`), el **panel** (`http://localhost:4200`), la **web pública** (`http://localhost:4300`) y la **API gateway** en una sola terminal. Entra por la gateway:
 
-- **Antes de arrancar comprueba** lo que suele fallar: la versión de Node, que MongoDB responde, que existe el `.env` de la API, que auth tiene su clave (si no, la crea) y que los puertos están libres. Si algo falla, dice qué y cómo arreglarlo, y no arranca nada.
+- **Web**: `https://routly.localhost:4000`
+- **Panel**: `https://panel.routly.localhost:4000` (`admin@routly.dev`, con la contraseña del seed)
+
+La primera vez el navegador avisará en cada uno de que la conexión no es privada (el certificado es de desarrollo): *Configuración avanzada → Continuar*. Para que no avise, [créalo con mkcert](moto-routes-gateway/README.md#el-certificado).
+
+- **Antes de arrancar comprueba** lo que suele fallar: la versión de Node, que MongoDB responde, que existe el `.env` de la API, que auth tiene su clave y la gateway su certificado (si no, los crea), que los servicios llevan `TRUST_PROXY=1` y que los puertos están libres. Si algo falla, dice qué y cómo arreglarlo, y no arranca nada.
 - **Instala solo** las dependencias (`npm install`) de las aplicaciones que aún no las tienen.
-- **Cada línea lleva su nombre** (`[auth]`, `[api]`, `[ai]`, `[panel]`, `[web]`) y **los errores salen en rojo**. Cuando todas responden, enseña sus URL.
+- **Cada línea lleva su nombre** (`[auth]`, `[api]`, `[ai]`, `[panel]`, `[web]`, `[gateway]`) y **los errores salen en rojo**. Cuando todas responden, enseña sus URL.
 - **Si una se cae**, sale un bloque rojo con su nombre y las últimas líneas del error, y las demás siguen.
 - **`Ctrl+C` lo para todo**, sin dejar procesos colgados. Los cambios en el código se recargan solos.
 
@@ -373,8 +378,8 @@ npm run dev
 
 | Comando (desde la raíz) | Qué hace |
 |---|---|
-| `npm run dev` | Auth, la API, el servidor de IA, el panel y la web a la vez |
-| `npm run dev -- auth api panel` | Solo los que se digan (`auth`, `api`, `ai`, `panel`, `web`). El panel necesita auth y la API para iniciar sesión |
+| `npm run dev` | Auth, la API, el servidor de IA, el panel, la web y la gateway a la vez |
+| `npm run dev -- auth api panel` | Solo los que se digan (`auth`, `api`, `ai`, `panel`, `web`, `gateway`). El panel necesita auth y la API para iniciar sesión |
 | `npm test` | Los tests de todas, uno detrás de otro, con una tabla al final. Solo enseña lo que falla |
 | `npm test -- panel --verbose` | Los de una, con toda la salida |
 | `npm run check` | Lo de antes de un commit: compila el panel y la web y pasa todos los tests |
@@ -426,11 +431,20 @@ npm install
 npm start
 ```
 
+**6. La API gateway** en `https://routly.localhost:4000` y `https://panel.routly.localhost:4000`, en otra terminal
+
+```bash
+cd moto-routes-gateway
+npm install
+npm run certs
+npm run dev
+```
+
 </details>
 
 ## Hoja de ruta
 
-El catálogo está hecho de punta a punta (API, panel y tests), la web pública ya enseña las salidas con su mapa y su IA, y la sesión vive en su propio servicio. Lo siguiente es la API gateway y, después, las reservas: la API ya cuenta las plazas reservadas de cada salida y la web tiene preparado el botón y el servicio.
+El catálogo está hecho de punta a punta (API, panel y tests), la web pública ya enseña las salidas con su mapa y su IA, la sesión vive en su propio servicio y todo entra por una API gateway propia con HTTPS. Lo siguiente son las reservas: la API ya cuenta las plazas reservadas de cada salida y la web tiene preparado el botón y el servicio.
 
 | Estado | Bloque | Dónde | Para qué |
 |:---:|---|---|---|
@@ -443,8 +457,8 @@ El catálogo está hecho de punta a punta (API, panel y tests), la web pública 
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Web pública | `/api/shop` | Home, Shop y detalle con la elección de salida |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Routly IA | `/ai` | El bloque Routly IA del detalle, el mapa del recorrido y el asistente, en un servidor aparte sin base de datos |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Auth | `/auth`, `sessions` | Servicio propio con RS256 + JWKS, cookies `httpOnly` y refresh rotatorio con `status` (active, used, revoked); el panel solo para admin, y en la web pública registro, login y Mi cuenta para los clientes |
-| ![siguiente](https://img.shields.io/badge/siguiente-c6f04d?style=flat-square&labelColor=0c2419) | API gateway | | Una sola entrada para todo, con HTTPS, enrutado por prefijo y el token comprobado en la puerta ([cómo está preparada](#preparado-para-la-api-gateway)) |
-| ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | API gateway | `moto-routes-gateway` | Una sola entrada para todo, con HTTPS, la web y el panel en su propio nombre, el token comprobado en la puerta y límites ([cómo está montada](#la-api-gateway)) |
+| ![siguiente](https://img.shields.io/badge/siguiente-c6f04d?style=flat-square&labelColor=0c2419) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `reviews` | Valoraciones |
 
 ## Autor

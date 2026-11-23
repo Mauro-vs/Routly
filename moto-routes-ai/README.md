@@ -4,8 +4,8 @@ El servidor de IA de Routly. Añade a la web pública textos generados con IA, e
 de cada ruta, y un chatbot. **No tiene base de datos ni toca MongoDB**: lee los datos de la parte
 pública de la API (`/api/shop`), como cualquier visitante.
 
-- Puerto **3001**. Todo cuelga de `/ai` (la API, de `/api`): el proxy de la web, y el futuro API
-  gateway, solo tienen que mandar cada prefijo a su servidor.
+- Puerto **3001**. Todo cuelga de `/ai` (la API, de `/api`): la API gateway
+  (`moto-routes-gateway`) y el proxy de la web solo tienen que mandar cada prefijo a su servidor.
 - IA gratuita con [Groq](https://console.groq.com) (GPT-OSS 120B, y Qwen de reserva):
   sin tarjeta y muy rápida. Cualquier API compatible con la de OpenAI vale igual: con
   `AI_PROVIDER` se cambia a Gemini (Google AI Studio) u OpenRouter, y con `AI_MODELS`, los

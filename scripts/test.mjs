@@ -1,4 +1,4 @@
-// npm test: los tests de la API, el servidor de IA, el panel y la web, uno detrás de otro, y una
+// npm test: los tests de auth, la API, el servidor de IA, el panel, la web y la gateway, uno detrás de otro, y una
 // tabla al final.
 //
 //   npm test                    todos
@@ -28,8 +28,9 @@ import {
 
 const KARMA = "npx ng test --watch=false --browsers=ChromeHeadless";
 // Los del servidor de IA no necesitan red ni MongoDB: usan un fetch falso. Los de auth tampoco:
-// usan repositorios en memoria (el de MongoDB real solo corre con TEST_MONGODB_URI)
-const COMMANDS = { auth: "npm test", api: "npm test", ai: "npm test", panel: KARMA, web: KARMA };
+// usan repositorios en memoria (el de MongoDB real solo corre con TEST_MONGODB_URI). Los de la
+// gateway, servicios falsos en puertos libres y claves de prueba
+const COMMANDS = { auth: "npm test", api: "npm test", ai: "npm test", panel: KARMA, web: KARMA, gateway: "npm test" };
 
 const args = process.argv.slice(2);
 const verbose = args.includes("--verbose");

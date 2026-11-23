@@ -1,9 +1,11 @@
-// npm run dev: el servicio de auth, la API, el servidor de IA, el panel y la web en una sola terminal.
+// npm run dev: el servicio de auth, la API, el servidor de IA, el panel, la web y la gateway en una
+// sola terminal.
 //
 //   npm run dev               todos
 //   npm run dev -- api web    solo esas
 //
-// Antes de arrancar comprueba lo que suele fallar (Node, MongoDB, el .env, las claves de auth, las
+// Antes de arrancar comprueba lo que suele fallar (Node, MongoDB, el .env, las claves de auth, el
+// certificado de la gateway, las
 // dependencias y los puertos) y dice cómo arreglarlo. Cada línea lleva el nombre de quien la escribe y los errores
 // salen en rojo. Si uno se cae, se avisa y los demás siguen. Ctrl+C para todo.
 import { existsSync, readFileSync } from "node:fs";
@@ -25,6 +27,7 @@ import {
   nodeIsRecent,
   ok,
   portInUse,
+  probe,
   red,
   run,
   stopTree,
@@ -100,6 +103,27 @@ if (selected.includes(SERVICES.ai)) {
   if (!selected.includes(SERVICES.api)) info(yellow("El servidor de IA lee la API (http://localhost:3000): si no la tienes arrancada, sus respuestas fallarán."));
 }
 
+// La gateway arranca sin .env, pero va por HTTPS: necesita su certificado (certs/, que no se sube).
+// Si falta, se crea más abajo con npm run certs. Y los servicios, detrás de ella, necesitan
+// TRUST_PROXY=1: si no, el login por https://routly.localhost:4000 da 403 (el Origin no cuadra)
+const gatewayCertPath = path.join(dirOf(SERVICES.gateway), "certs", "cert.pem");
+let needsGatewayCerts = false;
+if (selected.includes(SERVICES.gateway)) {
+  if (existsSync(gatewayCertPath)) ok("Certificado de la gateway");
+  else needsGatewayCerts = true;
+  const untrusted = [SERVICES.auth, SERVICES.api, SERVICES.ai].filter((service) => {
+    const envPath = path.join(dirOf(service), ".env");
+    const env = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
+    return !/^\s*TRUST_PROXY\s*=\s*[1-9]/m.test(env);
+  });
+  if (untrusted.length > 0)
+    info(
+      yellow(
+        `Para entrar por la gateway, pon TRUST_PROXY=1 en el .env de ${untrusted.map((service) => service.dir).join(", ")}: si no, el login por https://routly.localhost:4000 da 403.`,
+      ),
+    );
+}
+
 for (const service of selected) {
   if (await portInUse(service.port))
     problems.push(
@@ -127,6 +151,15 @@ if (needsAuthKeys) {
     process.exit(1);
   }
   ok("Clave de auth creada en moto-routes-auth/keys/private.pem");
+}
+
+if (needsGatewayCerts) {
+  info("moto-routes-gateway no tiene certificado: npm run certs (crea certs/, que no se sube)...");
+  if ((await finished(run("npm run certs", { cwd: dirOf(SERVICES.gateway) }))) !== 0) {
+    fail(red("No se ha podido crear el certificado de la gateway. Prueba a mano: cd moto-routes-gateway && npm run certs"));
+    process.exit(1);
+  }
+  ok("Certificado de la gateway creado en moto-routes-gateway/certs/ (el navegador avisará la primera vez)");
 }
 
 // ---------- Arrancar ----------
@@ -194,12 +227,9 @@ async function waitReady(service) {
   const start = Date.now();
   while (Date.now() - start < READY_TIMEOUT) {
     if (!children.has(service)) return false;
-    try {
-      const response = await fetch(service.ready, { signal: AbortSignal.timeout(2000) });
-      if (response.status < 500) return true;
-    } catch {
-      // Aún no escucha
-    }
+    // null: aún no escucha
+    const status = await probe(service.ready);
+    if (status !== null && status < 500) return true;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   return false;
@@ -211,6 +241,7 @@ const LINKS = {
   ai: ["IA", "http://localhost:3001/health", "La web lo usa en /ai"],
   panel: ["Panel", "http://localhost:4200", "admin@routly.dev (contraseña del seed)"],
   web: ["Web", "http://localhost:4300", "Home, Shop y detalle"],
+  gateway: ["Gateway", "https://routly.localhost:4000", "la web; el panel en https://panel.routly.localhost:4000"],
 };
 
 const results = await Promise.all(selected.map(async (service) => [service, await waitReady(service)]));
@@ -220,10 +251,10 @@ if (!stopping) {
   console.log(`\n${green(bold("━━ En marcha ━━"))}`);
   for (const [service] of up) {
     const [name, url, note] = LINKS[service.label];
-    console.log(`   ${green("●")} ${bold(name.padEnd(6))} ${url}   ${dim(note)}`);
+    console.log(`   ${green("●")} ${bold(name.padEnd(7))} ${url}   ${dim(note)}`);
   }
   for (const [service] of down) {
-    console.log(`   ${red("●")} ${bold(LINKS[service.label][0].padEnd(6))} ${red("no responde: mira sus líneas en rojo")}`);
+    console.log(`   ${red("●")} ${bold(LINKS[service.label][0].padEnd(7))} ${red("no responde: mira sus líneas en rojo")}`);
   }
   console.log(dim("   Ctrl+C para todo.\n"));
   if (up.length > 0 && down.length === 0) info(yellow("Los cambios se recargan solos: no hace falta volver a lanzar nada."));
