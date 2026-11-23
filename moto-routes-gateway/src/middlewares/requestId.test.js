@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { startStack } from "../testing/helpers.js";
+import { signToken } from "../testing/tokens.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -31,8 +32,9 @@ describe("X-Request-Id y registro", () => {
   });
 
   it("una línea por petición, sin query, cookies ni tokens", async () => {
+    const token = await signToken();
     const { headers } = await stack.gateway.request("/api/shop/experiences?q=correo@ejemplo.com", {
-      headers: { cookie: "routly_session=secreto", authorization: "Bearer secreto" },
+      headers: { cookie: `routly_session=${token}`, authorization: `Bearer ${token}` },
     });
     const line = stack.gateway.logs.find((entry) => entry.requestId === headers.get("x-request-id"));
     assert.deepEqual(Object.keys(line).sort(), ["method", "ms", "path", "requestId", "service", "status", "time"]);
@@ -40,7 +42,9 @@ describe("X-Request-Id y registro", () => {
     assert.equal(line.service, "api");
     assert.equal(line.status, 200);
     assert.equal(line.method, "GET");
-    assert.doesNotMatch(JSON.stringify(stack.gateway.logs), /secreto|correo@ejemplo/);
+    const logs = JSON.stringify(stack.gateway.logs);
+    assert.equal(logs.includes(token), false);
+    assert.doesNotMatch(logs, /correo@ejemplo/);
   });
 
   it("lo que contesta la gateway lleva service null", async () => {

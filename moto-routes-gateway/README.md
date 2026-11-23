@@ -2,7 +2,7 @@
 
 La **API gateway** de Routly: la única puerta de entrada, con HTTPS. Reparte cada petición a su servicio por el prefijo, sin reescribir la ruta, y sirve la web y el panel, cada uno en su nombre.
 
-> Estado: **fases 1 y 2** (reparto, errores, id de petición, registro, salud, HTTPS y frontales). Vienen después la comprobación del token en la puerta y los límites (fase 3), y los scripts y la documentación completa (fase 4).
+> Estado: **fases 1 a 3** (reparto, errores, id de petición, registro, salud, HTTPS, frontales, token en la puerta y límites). Falta la fase 4: los scripts de la raíz y la documentación completa.
 
 | Dirección | Qué es |
 |---|---|
@@ -55,19 +55,55 @@ Con `WEB_DIST` o `PANEL_DIST` apuntando a la carpeta de su `ng build` (`../moto-
 
 ## Qué hace con cada petición
 
-1. **`X-Request-Id`**: respeta el del cliente si es un UUID; si no, crea uno. Llega al servicio y vuelve en la respuesta.
-2. **Registro**: una línea JSON por petición (hora, id, método, ruta **sin query**, servicio, estado y ms). Nunca `Cookie`, `Authorization`, `Set-Cookie` ni cuerpos.
-3. **Limpia las cabeceras**: borra los `X-Forwarded-*`, `Forwarded` y `X-Real-IP` que mande el cliente (pone los suyos) y cualquier cabecera de identidad (`X-User-*`, `X-Auth-*`...). La gateway nunca dice a los servicios quién es el usuario: la API lo comprueba con el token.
-4. **Tope del cuerpo** por `Content-Length` (`MAX_BODY_BYTES`, 413). El cuerpo no se lee: se reenvía en streaming.
-5. **Reenvía** con `http-proxy-middleware`: método, ruta, query, cabeceras (`Cookie` y `Authorization` incluidas) y cuerpo, tal cual. La respuesta vuelve igual: el `Set-Cookie` de auth sin tocar y el chat de la IA (SSE) evento a evento, sin buffer ni compresión.
+1. **HSTS**, solo en producción (en `localhost`, con un certificado autofirmado, dejaría el navegador sin el botón de "Continuar").
+2. **`X-Request-Id`**: respeta el del cliente si es un UUID; si no, crea uno. Llega al servicio y vuelve en la respuesta.
+3. **Registro**: una línea JSON por petición (hora, id, método, ruta **sin query**, servicio, estado y ms). Nunca `Cookie`, `Authorization`, `Set-Cookie` ni cuerpos.
+4. **Limpia las cabeceras**: borra los `X-Forwarded-*`, `Forwarded` y `X-Real-IP` que mande el cliente (pone los suyos) y cualquier cabecera de identidad (`X-User-*`, `X-Auth-*`...). La gateway nunca dice a los servicios quién es el usuario: la API lo comprueba con el token.
+5. **Tope del cuerpo** por `Content-Length` (`MAX_BODY_BYTES`, 413). El cuerpo no se lee: se reenvía en streaming.
+6. **Límites por IP** en `/api`, `/auth` y `/ai`: uno general (`RATE_LIMIT_MAX`, 300 por minuto) y otro más estricto para lo que gasta cuota de la IA, el chat y los textos (`AI_RATE_LIMIT_MAX`, 30 cada 10 minutos). Los frontales no cuentan. Al pasarse, 429 con `Retry-After`. Los límites del login siguen en auth.
+7. **El token en la puerta** (ver abajo).
+8. **Reenvía** con `http-proxy-middleware`: método, ruta, query, cabeceras (`Cookie` y `Authorization` incluidas) y cuerpo, tal cual. La respuesta vuelve igual: el `Set-Cookie` de auth sin tocar y el chat de la IA (SSE) evento a evento, sin buffer ni compresión.
 
-Errores, con el mismo formato que los servicios (`{ statusCode, error, message }`):
+## El token en la puerta
+
+La gateway comprueba que el token es **auténtico** con la clave pública de auth (su JWKS, descargado una vez y guardado; con un `kid` nuevo lo vuelve a pedir): firma RS256, emisor, audiencia y caducidad. Lo lee como la API: primero `Authorization: Bearer`, si no la cookie `routly_session` (o `__Secure-routly_session`).
+
+No mira la base de datos: la lista negra, que el usuario siga activo, su rol y la propiedad del recurso los sigue comprobando la API. Un rider que pide `/api/users` pasa la puerta y la API le responde 403. Y la gateway nunca dice a la API quién es el usuario: reenvía el token tal cual.
+
+Qué rutas exigen sesión lo dice [`src/config/policies.js`](src/config/policies.js):
+
+| Exigen sesión | Públicas |
+|---|---|
+| Cualquier `POST`, `PUT`, `PATCH` o `DELETE` en `/api` | El resto de `GET` de `/api`, incluidos `/api/shop` y `/api/docs` |
+| Todo `/api/users`, `/api/roles` y `/api/profile` | Login, registro, refresh y logout de auth, y su JWKS |
+| `GET /api/*/inactives` y `/api/*/deleted` | Toda la IA (`/ai`) |
+| `GET /auth/me`, `POST /auth/logout-all` y `PATCH /auth/password` | `/health` y `/gateway/*` |
+
+Un test (`policies.test.js`) lee las rutas de la API y de auth y falla si alguna exige sesión allí y no en la tabla, o al revés.
+
+Responde **exactamente como la API**, porque los interceptores del panel y de la web cuentan con ello:
+
+| | Ruta que exige sesión | Ruta pública |
+|---|---|---|
+| Sin token | 401 sin `code` | Pasa |
+| Token válido | Pasa | Pasa |
+| Caducado | 401 `TOKEN_EXPIRED` → el frontal renueva con `/auth/refresh` | Por cookie, pasa como anónimo; por `Authorization`, 401 |
+| Firma mala, otro emisor o audiencia, basura | 401 `TOKEN_INVALID` → el frontal cierra la sesión | Por cookie, pasa; por `Authorization`, 401 |
+| Auth no responde (sin JWKS) | 503: el token puede ser bueno, así que el frontal no cierra la sesión | Pasa: lo público no depende de auth |
+
+En una ruta pública la cookie vieja no se borra: llega a la API, que hace su `optionalAuth`, y la renueva o la borra auth.
+
+## Errores
+
+Con el mismo formato que los servicios (`{ statusCode, error, message }`):
 
 | Caso | Respuesta |
 |---|---|
 | El servicio está caído | 502 `The <servicio> service is not available` |
 | No contesta en `UPSTREAM_TIMEOUT_MS` (la IA, en `AI_TIMEOUT_MS`) | 504 `The <servicio> service took too long to answer` |
 | Cuerpo demasiado grande | 413 |
+| Demasiadas peticiones | 429, con `Retry-After` |
+| Token que no vale, en la puerta | 401 (ver arriba) |
 | Ruta que no es de nadie | 404 |
 
 Los errores del propio servicio (un 401 con su `code`, un 403...) pasan tal cual.
@@ -81,10 +117,12 @@ src/
   servers.js            el servidor HTTPS (con los WebSocket) y el de redirección
   proxy/frontends.js    la web y el panel por su nombre: ng serve o su build
   config/env.js         la configuración, con Zod
-  middlewares/          requestId, accessLog, cleanHeaders, bodyLimit, errorHandler
+  config/policies.js    qué rutas exigen sesión
+  middlewares/          requestId, accessLog, cleanHeaders, bodyLimit, rateLimit, gateAuth, errorHandler
   proxy/serviceProxy.js el proxy de cada servicio (502, 504, SSE)
   routes/health.js      /gateway/health y /gateway/ready
   testing/helpers.js    servicios falsos (node:http en puertos libres) y la gateway de los tests
+  testing/tokens.js     claves y tokens de prueba, como los de auth
 scripts/generate-certs.js  npm run certs
 ```
 

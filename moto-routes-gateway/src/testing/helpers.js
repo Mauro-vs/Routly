@@ -1,6 +1,7 @@
 import http from "node:http";
 import { createApp } from "../app.js";
 import { loadConfig } from "../config/env.js";
+import { testKeys } from "./tokens.js";
 
 process.env.NODE_ENV ??= "test";
 
@@ -96,9 +97,9 @@ export function testConfig(overrides = {}) {
  * Arranca la gateway en un puerto libre. Devuelve request(path, init) → { status, headers, body,
  * text }, las líneas del registro (logs) y close().
  */
-export async function startGateway({ config = testConfig(), fetch } = {}) {
+export async function startGateway({ config = testConfig(), fetch, keys = testKeys } = {}) {
   const logs = [];
-  const app = createApp({ config, fetch, log: (line) => logs.push(JSON.parse(line)) });
+  const app = createApp({ config, fetch, keys, log: (line) => logs.push(JSON.parse(line)) });
   const server = http.createServer(app);
   server.on("upgrade", (req, socket, head) => app.locals.upgrade(req, socket, head));
   const close = closer(server);
@@ -123,7 +124,7 @@ export async function startGateway({ config = testConfig(), fetch } = {}) {
 }
 
 /** Arranca los tres servicios y los dos frontales (su ng serve) falsos, y una gateway que los apunta. */
-export async function startStack({ api = {}, auth = {}, ai = {}, web = {}, panel = {}, env = {} } = {}) {
+export async function startStack({ api = {}, auth = {}, ai = {}, web = {}, panel = {}, env = {}, keys } = {}) {
   const upstreams = {
     api: await startUpstream(api),
     auth: await startUpstream(auth),
@@ -140,6 +141,7 @@ export async function startStack({ api = {}, auth = {}, ai = {}, web = {}, panel
       PANEL_URL: upstreams.panel.url,
       ...env,
     }),
+    keys,
   });
   return {
     gateway,

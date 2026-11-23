@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { startStack } from "./testing/helpers.js";
+import { signToken } from "./testing/tokens.js";
 
 describe("reparto por prefijo", () => {
   let stack;
+  let session;
   before(async () => {
+    session = { cookie: `routly_session=${await signToken()}` };
     stack = await startStack({
       auth: {
         // Como el login de auth: dos cookies con su Path, que tienen que llegar intactas
@@ -30,7 +33,7 @@ describe("reparto por prefijo", () => {
     ["/health", "api"],
   ]) {
     it(`${path} va a ${service}, con la misma ruta`, async () => {
-      const { status, body } = await stack.gateway.request(path);
+      const { status, body } = await stack.gateway.request(path, { headers: session });
       assert.equal(status, 200);
       assert.equal(body.url, path);
       assert.equal(stack[service].requests.at(-1).url, path);
@@ -52,15 +55,16 @@ describe("reparto por prefijo", () => {
   });
 
   it("reenvía el método, el cuerpo, Cookie y Authorization sin tocarlos", async () => {
+    const token = await signToken();
     const { body } = await stack.gateway.request("/api/routes/1", {
       method: "PATCH",
-      headers: { "content-type": "application/json", cookie: "routly_session=a.b.c", authorization: "Bearer x.y.z" },
+      headers: { "content-type": "application/json", cookie: `routly_session=${token}; tema=oscuro`, authorization: `Bearer ${token}` },
       body: JSON.stringify({ name: "Costa" }),
     });
     assert.equal(body.method, "PATCH");
     assert.equal(body.body, '{"name":"Costa"}');
-    assert.equal(body.headers.cookie, "routly_session=a.b.c");
-    assert.equal(body.headers.authorization, "Bearer x.y.z");
+    assert.equal(body.headers.cookie, `routly_session=${token}; tema=oscuro`);
+    assert.equal(body.headers.authorization, `Bearer ${token}`);
   });
 
   it("el Set-Cookie de auth llega tal cual: mismo Path y sin Domain", async () => {
@@ -99,7 +103,7 @@ describe("reparto por prefijo", () => {
 
   it("nadie puede colar cabeceras de identidad", async () => {
     const { body } = await stack.gateway.request("/api/users", {
-      headers: { "x-user-id": "1", "x-user-role": "admin", "x-auth-user": "admin", "x-authenticated-user": "admin" },
+      headers: { ...session, "x-user-id": "1", "x-user-role": "admin", "x-auth-user": "admin", "x-authenticated-user": "admin" },
     });
     for (const name of ["x-user-id", "x-user-role", "x-auth-user", "x-authenticated-user"]) {
       assert.equal(body.headers[name], undefined, name);

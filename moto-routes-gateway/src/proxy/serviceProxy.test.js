@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { deadUrl, startStack } from "../testing/helpers.js";
+import { signToken } from "../testing/tokens.js";
 import { matchesPrefix } from "./serviceProxy.js";
 
 describe("matchesPrefix", () => {
@@ -18,7 +19,7 @@ describe("errores de los servicios", () => {
   it("un servicio caído es un 502 con el formato común", async () => {
     const stack = await startStack({ env: { AUTH_URL: await deadUrl() } });
     try {
-      const { status, body } = await stack.gateway.request("/auth/me");
+      const { status, body } = await stack.gateway.request("/auth/me", { headers: { authorization: `Bearer ${await signToken()}` } });
       assert.equal(status, 502);
       assert.deepEqual(body, { statusCode: 502, error: "Bad Gateway", message: "The auth service is not available" });
       // Los demás siguen funcionando
@@ -73,7 +74,8 @@ describe("errores de los servicios", () => {
       },
     });
     try {
-      const { status, body } = await stack.gateway.request("/api/users");
+      // El token pasa la puerta (es auténtico), pero la API lo rechaza (por ejemplo, revocado)
+      const { status, body } = await stack.gateway.request("/api/users", { headers: { cookie: `routly_session=${await signToken()}` } });
       assert.equal(status, 401);
       assert.equal(body.code, "TOKEN_EXPIRED");
     } finally {

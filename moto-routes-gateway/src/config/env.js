@@ -67,6 +67,19 @@ const envSchema = z.object({
   // Lo que espera /gateway/ready a cada /health
   HEALTH_TIMEOUT_MS: milliseconds(2_000),
 
+  // El token en la puerta: la clave pública de auth (su JWKS) y lo que tiene que decir el token.
+  // Sin definir, el JWKS es el de AUTH_URL. Emisor y audiencia, los mismos que en auth y la API
+  AUTH_JWKS_URL: z.url({ protocol: /^https?$/ }).optional(),
+  JWT_ISSUER: z.string().trim().min(1).default("routly-auth"),
+  JWT_AUDIENCE: z.string().trim().min(1).default("routly"),
+
+  // Límite general por IP para /api, /auth y /ai (los frontales no cuentan)...
+  RATE_LIMIT_WINDOW_MS: milliseconds(60_000),
+  RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(300),
+  // ...y uno más estricto para lo que gasta cuota de la IA (el chat y los textos)
+  AI_RATE_LIMIT_WINDOW_MS: milliseconds(600_000),
+  AI_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(30),
+
   // Tope del cuerpo de una petición, por su Content-Length (413). La gateway no lo lee: lo reenvía
   MAX_BODY_BYTES: z.coerce.number().int().min(1_024).default(1_048_576),
 
@@ -101,6 +114,18 @@ export function loadConfig(env = process.env) {
       auth: Object.freeze({ name: "auth", prefix: "/auth", target: config.AUTH_URL, timeoutMs: config.UPSTREAM_TIMEOUT_MS }),
       ai: Object.freeze({ name: "ai", prefix: "/ai", target: config.AI_URL, timeoutMs: config.AI_TIMEOUT_MS }),
     }),
+    auth: Object.freeze({
+      jwksUrl: config.AUTH_JWKS_URL ?? `${config.AUTH_URL}/auth/.well-known/jwks.json`,
+      issuer: config.JWT_ISSUER,
+      audience: config.JWT_AUDIENCE,
+    }),
+    rateLimits: Object.freeze({
+      general: Object.freeze({ name: "general", limit: config.RATE_LIMIT_MAX, windowMs: config.RATE_LIMIT_WINDOW_MS }),
+      ai: Object.freeze({ name: "ai", limit: config.AI_RATE_LIMIT_MAX, windowMs: config.AI_RATE_LIMIT_WINDOW_MS }),
+    }),
+    // HSTS solo en producción: en localhost, con un certificado autofirmado, dejaría el navegador
+    // sin el botón de "Continuar" (y valdría para todos los puertos de localhost)
+    hsts: config.NODE_ENV === "production" && config.HTTPS,
     healthTimeoutMs: config.HEALTH_TIMEOUT_MS,
     maxBodyBytes: config.MAX_BODY_BYTES,
     accessLog: config.ACCESS_LOG ? config.ACCESS_LOG === "true" : config.NODE_ENV !== "test",
