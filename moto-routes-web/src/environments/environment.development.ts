@@ -6,4 +6,6 @@ export const environment = {
   // /ai llega al servidor de IA (moto-routes-ai, puerto 3001) por proxy.conf.json
   aiUrl: '/ai',
   aiTimeout: 75_000,
+  // /auth llega al servicio de auth (moto-routes-auth, puerto 3002) por proxy.conf.json
+  authUrl: '/auth',
 };

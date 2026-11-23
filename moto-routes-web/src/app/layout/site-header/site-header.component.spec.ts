@@ -2,6 +2,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
+import { AuthStore } from '../../core/auth/auth.store';
 import { ThemeService } from '../../core/services/theme.service';
 import { SiteHeaderComponent } from './site-header.component';
 
@@ -25,8 +26,20 @@ describe('SiteHeaderComponent', () => {
       ['', '/'],
       ['Inicio', '/'],
       ['Experiencias', '/experiencias'],
+      ['Entrar', '/entrar'],
     ]);
     expect(element.querySelector('a')?.getAttribute('aria-label')).toBe('Routly, ir al inicio');
+  });
+
+  it('con sesión, el enlace de la cuenta lleva a Mi cuenta con el nombre del cliente', () => {
+    const fixture = render();
+    TestBed.inject(AuthStore).setUser({ id: 'u1', name: 'Lucía Pérez', email: 'l@routly.dev', role: 'rider' });
+    fixture.detectChanges();
+
+    const account: HTMLAnchorElement = fixture.nativeElement.querySelector('a.account');
+    expect(account.getAttribute('href')).toBe('/mi-cuenta');
+    expect(account.textContent?.trim()).toBe('Lucía');
+    expect(account.getAttribute('aria-label')).toBe('Mi cuenta');
   });
 
   it('el botón de tema dice a qué tema cambia y lo cambia', () => {

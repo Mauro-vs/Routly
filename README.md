@@ -33,7 +33,7 @@ Routly son **cinco aplicaciones** que se hablan por HTTP y JSON. Cada una vive e
 
 | | Aplicación | Puerto | Prefijo | Para qué |
 |:---:|---|:---:|---|---|
-| <img src="docs/assets/icon-search.svg" width="28" alt=""> | [**Web pública**](moto-routes-web/README.md) | 4300 | | Un motero sin cuenta encuentra una salida guiada, ve el recorrido en el mapa y elige fecha |
+| <img src="docs/assets/icon-search.svg" width="28" alt=""> | [**Web pública**](moto-routes-web/README.md) | 4300 | | Un motero encuentra una salida guiada, ve el recorrido en el mapa y elige fecha; con su cuenta, entra y ve Mi cuenta |
 | <img src="docs/assets/icon-chart.svg" width="28" alt=""> | [**Panel**](moto-routes-dashboard/README.md) | 4200 | | Los administradores gestionan el catálogo, las salidas, los usuarios y las imágenes |
 | <img src="docs/assets/icon-docs.svg" width="28" alt=""> | [**API**](moto-routes-api/README.md) | 3000 | `/api` | Las diez colecciones, los permisos de cada rol y la tienda pública (`/api/shop`) |
 | <img src="docs/assets/icon-lock.svg" width="28" alt=""> | [**Auth**](moto-routes-auth/README.md) | 3002 | `/auth` | Inicia, renueva y cierra las sesiones, y es el único que firma los tokens |
@@ -442,7 +442,7 @@ El catálogo está hecho de punta a punta (API, panel y tests), la web pública 
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Garaje | `bikes` | Las motos de cada usuario con su ficha, modificaciones y fotos, y la moto con la que guía cada anfitrión |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Web pública | `/api/shop` | Home, Shop y detalle con la elección de salida |
 | ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Routly IA | `/ai` | El bloque Routly IA del detalle, el mapa del recorrido y el asistente, en un servidor aparte sin base de datos |
-| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Auth | `/auth`, `sessions` | Servicio propio con RS256 + JWKS, cookies `httpOnly` y refresh rotatorio; el panel solo para admin, y el perfil y el garaje para cada usuario |
+| ![hecho](https://img.shields.io/badge/hecho-1b7a4e?style=flat-square) | Auth | `/auth`, `sessions` | Servicio propio con RS256 + JWKS, cookies `httpOnly` y refresh rotatorio con `status` (active, used, revoked); el panel solo para admin, y en la web pública registro, login y Mi cuenta para los clientes |
 | ![siguiente](https://img.shields.io/badge/siguiente-c6f04d?style=flat-square&labelColor=0c2419) | API gateway | | Una sola entrada para todo, con HTTPS, enrutado por prefijo y el token comprobado en la puerta ([cómo está preparada](#preparado-para-la-api-gateway)) |
 | ![preparado](https://img.shields.io/badge/preparado-3f7a5c?style=flat-square) | Reservas | `bookings` | Plazas reservadas en cada salida y el botón "Reservar" listos; falta la colección |
 | ![más adelante](https://img.shields.io/badge/más_adelante-7b8a81?style=flat-square) | Comunidad | `reviews` | Valoraciones |

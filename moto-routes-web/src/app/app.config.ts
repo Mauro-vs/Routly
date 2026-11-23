@@ -1,6 +1,8 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
@@ -12,6 +14,8 @@ import {
 } from '@angular/router';
 
 import { routes } from './app.routes';
+import { authInterceptor } from './core/auth/auth.interceptor';
+import { AuthService } from './core/auth/auth.service';
 import { timeoutInterceptor } from './core/interceptors/timeout.interceptor';
 import { PageMetaStrategy } from './core/services/page-meta.strategy';
 
@@ -26,8 +30,12 @@ export const appConfig: ApplicationConfig = {
       // Arriba al cambiar de página; al volver atrás, a donde estaba (el Shop al volver del detalle)
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
     ),
-    // withFetch: al cancelar una suscripción se aborta el fetch (ShopApiService)
-    provideHttpClient(withFetch(), withInterceptors([timeoutInterceptor])),
+    // withFetch: al cancelar una suscripción se aborta el fetch (ShopApiService).
+    // authInterceptor primero: manda las cookies y, con un 401, renueva la sesión y repite la
+    // petición, que vuelve a pasar por el timeout
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, timeoutInterceptor])),
+    // Arranca la sesión del cliente (si la hay) sin esperar: la web pública no la necesita para pintarse
+    provideAppInitializer(() => void inject(AuthService)),
     { provide: TitleStrategy, useExisting: PageMetaStrategy },
   ],
 };

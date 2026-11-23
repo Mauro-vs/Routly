@@ -7,12 +7,12 @@
   <img src="https://img.shields.io/badge/TypeScript-5.9_strict-1b7a4e?style=flat-square&labelColor=0c2419&logo=typescript&logoColor=c6f04d" alt="TypeScript 5.9 strict">
   <img src="https://img.shields.io/badge/zoneless-signals-1b7a4e?style=flat-square&labelColor=0c2419" alt="zoneless signals">
   <img src="https://img.shields.io/badge/AbortController-sin_carreras-1b7a4e?style=flat-square&labelColor=0c2419" alt="AbortController, sin carreras">
-  <img src="https://img.shields.io/badge/tests-105_Karma_%2B_Jasmine-1b7a4e?style=flat-square&labelColor=0c2419&logo=jasmine&logoColor=c6f04d" alt="105 tests con Karma y Jasmine">
+  <img src="https://img.shields.io/badge/tests-155_Karma_%2B_Jasmine-1b7a4e?style=flat-square&labelColor=0c2419&logo=jasmine&logoColor=c6f04d" alt="155 tests con Karma y Jasmine">
 </p>
 
-La cara pública de Routly, la plataforma de rutas en moto. Aquí un motero sin cuenta encuentra una salida guiada que le encaje (zona, tipo de carretera, anfitrión, fecha y precio) y la elige. Tiene tres pantallas: el **Home**, el **Shop** y el **detalle de una experiencia**.
+La cara pública de Routly, la plataforma de rutas en moto. Aquí un motero sin cuenta encuentra una salida guiada que le encaje (zona, tipo de carretera, anfitrión, fecha y precio) y la elige. Tiene tres pantallas: el **Home**, el **Shop** y el **detalle de una experiencia**. Además, el cliente puede crear su cuenta, entrar y ver **Mi cuenta**.
 
-Está hecha con Angular 20 y lee solo de **`/api/shop`**, la tienda pública de [`moto-routes-api`](../moto-routes-api/README.md), que no pide sesión. El panel de administración es otra aplicación, [`moto-routes-dashboard`](../moto-routes-dashboard/README.md). La visión general del proyecto está en el [README de la raíz](../README.md).
+Está hecha con Angular 20 y lee de **`/api/shop`**, la tienda pública de [`moto-routes-api`](../moto-routes-api/README.md), que no pide sesión. La cuenta del cliente va contra el servicio de auth ([`moto-routes-auth`](../moto-routes-auth/README.md), `/auth`). El panel de administración es otra aplicación, [`moto-routes-dashboard`](../moto-routes-dashboard/README.md). La visión general del proyecto está en el [README de la raíz](../README.md).
 
 <img src="../docs/screenshots/web-home.png" alt="Home de la web pública: el panel de orientación verde con los tipos de carretera, la búsqueda y el hito con el total de experiencias, sobre una carretera" width="100%">
 
@@ -108,7 +108,7 @@ La web se configura en `src/environments/`:
 | `apiUrl` | `/api` | URL base de la API, sin barra final. La web solo usa `${apiUrl}/shop` |
 | `apiTimeout` | `10000` | Milisegundos que se espera una respuesta antes de cortar la petición |
 
-**El proxy de desarrollo.** `npm start` sirve la web con `proxy.conf.json`: las peticiones a `/api` pasan a `http://localhost:3000`. Así la web llama a la API desde su propio origen. En producción se hace lo mismo con el servidor web, como con el panel ("Producción con HTTPS" en el README de la API).
+**El proxy de desarrollo.** `npm start` sirve la web con `proxy.conf.json`: las peticiones a `/api` pasan a `http://localhost:3000`, las de `/ai` a `http://localhost:3001` y las de `/auth` al servicio de auth en `http://localhost:3002`. Así la web llama a la API desde su propio origen. En producción se hace lo mismo con el servidor web, como con el panel ("Producción con HTTPS" en el README de la API).
 
 ## Arquitectura
 
@@ -150,6 +150,9 @@ Reglas:
 | `/` | **Home.** Una carretera a sangre y, encima, el panel de orientación: una fila por tipo de carretera (con cuántas experiencias tiene) que lleva al Shop filtrado, y la búsqueda. Debajo, el tablón de próximas salidas (fecha, recorrido, hora y precio) y tres carruseles: destinos, tipos de carretera y guías |
 | `/experiencias` | **Shop.** El pórtico de filtros (carretera, destino, guía) y la búsqueda; el recuento y el orden; una franja con la dificultad, "Solo con fechas" y el slider de precio; los filtros puestos, las tarjetas (con la placa del tipo de carretera, la próxima salida y el precio) y la paginación. En el móvil, los filtros van en una hoja que sube desde abajo |
 | `/experiencias/:slug` | **Detalle.** La galería, el cartel de la ruta, lo práctico, el anfitrión y la taquilla: las salidas como billetes (matriz con la fecha, perforación, horario, plazas y precio) y el botón "Reservar" preparado. En el móvil, una barra fija abajo con la salida elegida |
+| `/entrar` | **Entrar**, con correo y contraseña. Solo sin sesión (`guestGuard`). Con `?volver=` vuelve a donde iba |
+| `/registro` | **Crear cuenta** de rider: nombre, correo y contraseña (8 caracteres con letras y números). Abre la sesión al momento |
+| `/mi-cuenta` | **Mi cuenta**: nombre, correo y tipo de cuenta; cerrar sesión aquí o en todos los dispositivos. Solo con sesión (`authGuard`) |
 | `**` | Página no encontrada, con enlace a las experiencias |
 
 <table>
@@ -250,6 +253,35 @@ Reservar llega en una fase posterior; la web lo deja todo a punto:
 - **El botón "Reservar"**, deshabilitado y con el motivo unido por `aria-describedby`.
 
 Cuando la API tenga `/api/bookings` (el diseño está en [`DATABASE.md`](../DATABASE.md), sección 14), basta con implementar `reserve()` y poner `available = true`: el botón se activa solo.
+
+### La sesión del cliente
+
+La web usa el mismo servicio de auth que el panel: **token de acceso** (JWT de 15 min) y **refresh** (7 días, de un solo uso), los dos en **cookies `httpOnly`** que pone auth. El JavaScript de la página no ve ningún token.
+
+```mermaid
+sequenceDiagram
+    participant W as Web
+    participant A as Auth (/auth)
+    W->>A: POST /auth/login (o /register)
+    A-->>W: cookies routly_session + routly_refresh, y el usuario
+    W->>A: GET /auth/me (o cualquier /api)
+    A-->>W: 401 (el token ha caducado)
+    W->>A: POST /auth/refresh (con la cookie de refresh)
+    A-->>W: cookies nuevas (el refresh anterior queda "used")
+    W->>A: repite GET /auth/me
+    A-->>W: 200
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `core/auth/auth.store.ts` | **AuthStore** con signals: `user`, `hasSession`, `isLoggedIn`, `firstName`. Guarda en `localStorage` solo de quién es la sesión y hasta cuándo se renueva, nunca un token. Por el evento `storage`, entrar o salir en una pestaña se ve en todas |
+| `core/auth/auth.service.ts` | **AuthService**: `login`, `register`, `restore` (`GET /auth/me` al arrancar), `refresh` (uno compartido aunque fallen varias peticiones a la vez), `logout` y `logoutAll`. Si la sesión termina estando en `/mi-cuenta`, lleva al login |
+| `core/auth/auth.interceptor.ts` | **authInterceptor**: manda `withCredentials: true` a `/api`, `/auth` y `/ai` (y a nadie más). Con un 401 y sesión, llama a `/auth/refresh` y repite la petición una vez; si el refresh falla (o el token es `TOKEN_INVALID`), cierra la sesión |
+| `core/auth/auth.guards.ts` | **authGuard** (`/mi-cuenta`) y **guestGuard** (`/entrar`, `/registro`). Esperan a que se confirme la sesión guardada antes de decidir. `safeReturnUrl` solo deja volver a rutas propias |
+
+La cookie de acceso dura lo mismo que el token: cuando caduca, el navegador la tira y la petición llega sin ella. Por eso el interceptor renueva con **cualquier** 401 si hay sesión, no solo con `TOKEN_EXPIRED`.
+
+En desarrollo, `proxy.conf.json` manda `/auth` a `http://localhost:3002`, así que todo va por el mismo origen y las cookies `SameSite=Strict` funcionan.
 
 ### Rendimiento
 
@@ -484,7 +516,7 @@ Además, la web pasó el detector de [impeccable](https://impeccable.style) (sin
 - **Las fotos del seed** son de picsum (al azar, no son de motos): si no cargan, se ve el paisaje de la marca de su tipo de carretera, que es lo que sale en las capturas.
 - **La búsqueda va por palabras enteras** (el índice de texto de la API): "pir" no encuentra "Pirineos". La pista del campo y el estado vacío lo explican.
 - **No se puede reservar todavía:** la API no tiene `/api/bookings`. Ver [La reserva, preparada](#la-reserva-preparada).
-- **Sin sesión:** la web no enseña si hay sesión de admin ni enlaza al panel. Llegará con las reservas, que sí la piden.
+- **Mi cuenta es mínima:** enseña los datos y cierra la sesión. Editar el perfil, cambiar la contraseña o ver las reservas llegará con las reservas.
 - **Sin SSR:** las páginas se pintan en el navegador. El título y la descripción cambian con cada página, pero un buscador que no ejecute JavaScript solo ve los generales.
 - **Algunas piezas están copiadas del panel** (tokens, icono, marca, esqueleto, tema y tiempo de espera), con una línea al principio que lo dice: si cambian allí, hay que cambiarlas aquí.
 

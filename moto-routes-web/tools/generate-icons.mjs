@@ -36,6 +36,8 @@ const ICONS = [
   // tema
   'sun',
   'moon',
+  // cuenta del cliente (cabecera)
+  'user-circle',
   // Routly IA (moto-routes-ai): el bloque del detalle y el chat
   'sparkle',
   'chat-circle-dots',

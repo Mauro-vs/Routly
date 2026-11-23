@@ -10,4 +10,6 @@ export const environment = {
   aiUrl: '/ai',
   /** Lo que se espera a los textos IA: escribirlos lleva más que una consulta normal. */
   aiTimeout: 75_000,
+  /** URL base del servicio de auth (moto-routes-auth): login, registro, refresh y logout de los clientes. */
+  authUrl: '/auth',
 };
