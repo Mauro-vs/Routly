@@ -211,7 +211,7 @@ La página nunca llama a la API: pide al store, y el store expone el resultado c
 
 - **`ApiService`** es la única puerta hacia la API. Sus métodos `get`, `post`, `put`, `patch` y `delete` devuelven promesas, para usarlas con `async/await`.
 - **Interceptores**, en este orden:
-  1. `errorInterceptor` convierte cualquier fallo en un `ApiError` con `status`, `type` (`network`, `timeout`, `validation`, `client` o `server`), `message` y, si los hay, `fieldErrors`. Si la respuesta es un `401 TOKEN_EXPIRED`, renueva el token con `/auth/refresh` y repite la petición una vez.
+  1. `errorInterceptor` convierte cualquier fallo en un `ApiError` con `status`, `type` (`network`, `timeout`, `validation`, `client` o `server`), `message` y, si los hay, `fieldErrors`. Si la respuesta es un `401 TOKEN_EXPIRED`, o un `401` sin `code` con la sesión abierta, renueva el token con `/auth/refresh` y repite la petición una vez.
   2. `timeoutInterceptor` corta la petición a los `apiTimeout` milisegundos.
   3. `authInterceptor` manda con credenciales (las cookies de la sesión) las peticiones a la API y a auth, y ninguna más.
 - **`EntityApiService`** (`core/services/entity-api.service.ts`) tiene los 11 endpoints comunes a todas las colecciones. El servicio de cada entidad hereda de él y solo declara su ruta (`path`). Las imágenes, que no tienen slug, heredan de `RecordApiService`, que es lo mismo sin `getBySlug`.
@@ -354,7 +354,7 @@ Las acciones que la API va a rechazar (desactivar o eliminar un rol base, marcar
 
 **La sesión son dos cookies `httpOnly`** que pone el servicio de auth (`moto-routes-auth`) en el login: `routly_session`, con el token de acceso (RS256, 15 minutos), que viaja a la API y a auth; y `routly_refresh`, con el que se pide otro, que solo viaja a `/auth` y dura 7 días desde la última renovación. El JavaScript del panel no las puede leer, así que un XSS no se lleva los tokens. El panel solo guarda en `localStorage` hasta cuándo se puede renovar y de quién es la sesión (`routly.session` = `{ expiresAt, userId }`), para avisar a tiempo y enterarse de los cambios de otras pestañas. El `token` que llega en el body del login fuera de producción (para Swagger y Postman) se ignora.
 
-**Cómo dura la sesión.** Cuando el token de acceso caduca, la API responde `401 TOKEN_EXPIRED`. El `errorInterceptor` pide entonces uno nuevo a `POST /auth/refresh` y repite la petición, sin que se note. Si fallan varias a la vez, comparten un solo refresh (uno ya usado no vuelve a servir). Si auth rechaza el refresh (caducado, sesión cerrada en otro sitio o contraseña cambiada), se avisa y se vuelve al login. Sin red, solo falla esa petición y la sesión sigue. Otra pestaña que solo renueva la sesión no recarga nada en esta.
+**Cómo dura la sesión.** Cuando el token de acceso caduca, la API responde `401 TOKEN_EXPIRED`. Lo más habitual, en cambio, es un `401` sin `code`: la cookie del token dura lo mismo que él, así que el navegador la tira al caducar y la petición llega sin token. El panel trata los dos igual. El `errorInterceptor` pide entonces uno nuevo a `POST /auth/refresh` y repite la petición, sin que se note. Si fallan varias a la vez, comparten un solo refresh (uno ya usado no vuelve a servir). Si auth rechaza el refresh (caducado, sesión cerrada en otro sitio o contraseña cambiada), se avisa y se vuelve al login. Sin red, solo falla esa petición y la sesión sigue. Otra pestaña que solo renueva la sesión no recarga nada en esta.
 
 Todo está en `src/app/auth/`:
 
@@ -522,7 +522,7 @@ npx ng test --watch=false --browsers=ChromeHeadless
 | `image-gallery.component.spec.ts` | Principal, orden, regla de la imagen inactiva y añadir por URL |
 | Componentes compartidos | Insignia de estado, lista de datos, acciones de fila, interruptor, plantillas de listado y papelera |
 | `navigation.spec.ts`, `utils.spec.ts` | Menú, formato, fechas, textos y validadores |
-| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión (el token nunca llega a `localStorage`), refresh al recibir `TOKEN_EXPIRED` (uno solo para varias peticiones, sin red, rechazado), interceptor (`withCredentials` a la API y a auth, sesión caducada, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
+| `auth/*.spec.ts`, `app.routes.spec.ts` | Sesión (el token nunca llega a `localStorage`), refresh al recibir `TOKEN_EXPIRED` o un 401 sin cookie de acceso (uno solo para varias peticiones, sin red, rechazado), interceptor (`withCredentials` a la API y a auth, sesión caducada, respuestas no válidas), guards, `returnUrl` y qué ve cada rol en cada URL |
 | `users.store.spec.ts`, `user-form.component.spec.ts` | Tu propia cuenta no se desactiva, ni se elimina, ni cambia de rol |
 | `experience-form-page.component.spec.ts` | La página pide las motos del anfitrión una sola vez (sin bucle de peticiones) |
 | `bikes/**/*.spec.ts`, `profile.component.spec.ts` | El garaje: límites, moto principal, pública y el perfil propio |

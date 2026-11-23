@@ -70,6 +70,15 @@ export class ApiError extends Error {
     return this.isUnauthorized && this.code !== undefined;
   }
 
+  /**
+   * 401 que se arregla renovando el token de acceso: ha caducado (TOKEN_EXPIRED) o no ha
+   * llegado (sin code). Lo segundo es lo normal: la cookie del token dura lo mismo que él, así
+   * que cuando caduca el navegador la tira y la petición sale sin ella.
+   */
+  get isRenewable(): boolean {
+    return this.isUnauthorized && (this.code === 'TOKEN_EXPIRED' || this.code === undefined);
+  }
+
   /** 403: hay sesión, pero sin permiso para eso. */
   get isForbidden(): boolean {
     return this.status === 403;

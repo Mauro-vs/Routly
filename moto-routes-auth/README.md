@@ -83,8 +83,10 @@ const { payload } = await jwtVerify(token, jwks, { algorithms: ["RS256"], issuer
 desconocidos. Quien comprueba tiene que fijar siempre el algoritmo, `iss` y `aud`.
 
 **Quién lo usa**: la API comprueba así los tokens (`AUTH_JWKS_URL` en su `.env`) y ya no tiene login
-propio. El panel llama a `/auth` por su proxy (en desarrollo, `proxy.conf.json` lo manda al 3002) y,
-cuando la API responde `401 TOKEN_EXPIRED`, pide otro token a `/auth/refresh` y repite la petición.
+propio. El panel y la web pública llaman a `/auth` por su proxy (en desarrollo, `proxy.conf.json` lo
+manda al 3002) y, cuando reciben un 401 con la sesión abierta, piden otro token a `/auth/refresh` y
+repiten la petición. Vale tanto `TOKEN_EXPIRED` como un 401 sin `code`: la cookie del token dura lo
+mismo que él, así que al caducar el navegador la tira y la petición llega sin token.
 
 **Cerrar sesiones**: subir `tokenVersion` del usuario invalida sus tokens de acceso (la API lo mira
 en cada petición) y sus refresh. Lo hacen el logout-all, el cambio de contraseña, un refresh

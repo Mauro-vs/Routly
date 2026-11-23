@@ -15,19 +15,20 @@ import { ApiStatusService } from '../services/api-status.service';
 import { toApiError } from '../utils/api-error.mapper';
 
 /**
- * Un TOKEN_EXPIRED que ha respondido la API o auth: el token de acceso ha caducado y se puede
- * renovar. El que lanza el authInterceptor sin enviar nada (la sesión ya no se puede renovar)
- * no es una respuesta HTTP, y ese cierra la sesión.
+ * Un 401 de la API o de auth que se arregla renovando: TOKEN_EXPIRED, o sin code porque el
+ * navegador ya ha tirado la cookie del token (dura lo mismo que él). Sin sesión, SessionService
+ * no renueva nada. El TOKEN_EXPIRED que lanza el authInterceptor sin enviar nada (la sesión ya
+ * no se puede renovar) no es una respuesta HTTP, y ese cierra la sesión.
  */
 const canRenew = (raw: unknown, error: ApiError): boolean =>
-  raw instanceof HttpErrorResponse && error.code === 'TOKEN_EXPIRED';
+  raw instanceof HttpErrorResponse && error.isRenewable;
 
 /**
  * Normaliza cualquier fallo a un ApiError y mantiene al día el estado de la conexión.
  * Va el primero en la cadena para ver también el corte del timeoutInterceptor.
  *
- * Un token de acceso caducado se renueva con el servicio de auth y la petición se repite una
- * vez, sin que se entere quien la hizo. Un token rechazado (o un refresh que no sirve) termina
+ * Un token de acceso caducado (o cuya cookie ya ha tirado el navegador) se renueva con el
+ * servicio de auth y la petición se repite una vez, sin que se entere quien la hizo. Un token rechazado (o un refresh que no sirve) termina
  * la sesión, y un 403 la vuelve a comprobar, por si ha cambiado el rol. El resto de avisos los
  * decide quien hizo la petición, con ErrorHandlerService.
  */
@@ -55,7 +56,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           );
         }
 
-        if (apiError.isSessionRejected) session.reject(apiError);
+        // Con el token recién renovado sigue sin valer: la sesión no sirve
+        if (apiError.isSessionRejected || (retried && apiError.isUnauthorized)) session.reject(apiError);
         else if (apiError.isForbidden) void session.recheck();
 
         return throwError(() => apiError);

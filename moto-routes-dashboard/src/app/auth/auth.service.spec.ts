@@ -210,6 +210,20 @@ describe('AuthService', () => {
       expect(store.user()?.name).toBe('Ana');
     });
 
+    it('al volver pasados 15 min (sin cookie de acceso, 401 sin code) renueva y sigue dentro', async () => {
+      withSavedSession();
+
+      const promise = service.loadSession();
+      http.expectOne(ME).flush({ message: 'Authentication required' }, expired);
+      await tick();
+      http.expectOne({ method: 'POST', url: `${AUTH}/refresh` }).flush(fakeSession());
+      await tick();
+      http.expectOne(ME).flush(fakeUser());
+
+      expect(await promise).toBeTrue();
+      expect(store.isAuthenticated()).toBeTrue();
+    });
+
     it('si auth tampoco renueva la sesión, se cierra', async () => {
       withSavedSession();
 

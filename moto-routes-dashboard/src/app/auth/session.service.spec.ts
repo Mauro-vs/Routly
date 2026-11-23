@@ -88,6 +88,38 @@ describe('Fin de la sesión', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('el navegador ya ha tirado la cookie de acceso (401 sin code): renueva y repite igual', async () => {
+    loggedIn();
+
+    const promise = api.get<string[]>('/users');
+    const { body, options } = unauthorized();
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await tick();
+    http.expectOne({ method: 'POST', url: `${AUTH}/refresh` }).flush(fakeSession());
+    await tick();
+    http.expectOne(`${BASE}/users`).flush(['ana']);
+
+    expect(await promise).toEqual(['ana']);
+    expect(store.isAuthenticated()).toBeTrue();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('si tras renovar sigue llegando un 401 sin code, la sesión no sirve: fuera', async () => {
+    loggedIn();
+
+    const promise = api.get('/users').catch(() => null);
+    const { body, options } = unauthorized();
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await tick();
+    http.expectOne(`${AUTH}/refresh`).flush(fakeSession());
+    await tick();
+    http.expectOne(`${BASE}/users`).flush(body, options);
+    await promise;
+
+    expect(store.isAuthenticated()).toBeFalse();
+    expect(notifications.warning).toHaveBeenCalledTimes(1);
+  });
+
   it('varios TOKEN_EXPIRED a la vez: un solo refresh, y se repiten todas', async () => {
     loggedIn();
 

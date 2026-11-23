@@ -46,7 +46,8 @@ export function isSessionResponse(value: unknown): value is SessionResponse {
   );
 }
 
-const isExpired = (error: unknown): boolean => toApiError(error).code === 'TOKEN_EXPIRED';
+/** Se arregla renovando: TOKEN_EXPIRED, o un 401 sin code porque el navegador ya ha tirado la cookie del token. */
+const isRenewable = (error: unknown): boolean => toApiError(error).isRenewable;
 
 /**
  * Comunicación con el servicio de auth. La sesión son las cookies httpOnly que pone auth: aquí
@@ -149,12 +150,12 @@ export class AuthService {
     try {
       return this.keep(await this.fetchMe());
     } catch (error) {
-      if (!isExpired(error)) {
+      if (!isRenewable(error)) {
         if (toApiError(error).isUnauthorized) this.clearSession();
         return false;
       }
     }
-    // El token de acceso ha caducado: se renueva y se pregunta otra vez.
+    // El token de acceso ha caducado (o su cookie ya no está): se renueva y se pregunta otra vez.
     try {
       if (!(await this.refresh())) return false;
       return this.keep(await this.fetchMe());
@@ -191,7 +192,7 @@ export class AuthService {
       try {
         await send();
       } catch (error) {
-        if (needsAccess && isExpired(error) && (await this.refresh())) await send();
+        if (needsAccess && isRenewable(error) && (await this.refresh())) await send();
       }
     } catch {
       // Sin red o con la sesión caducada, se cierra igual en el panel.
