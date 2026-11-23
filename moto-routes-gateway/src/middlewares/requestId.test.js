@@ -48,6 +48,6 @@ describe("X-Request-Id y registro", () => {
     const line = stack.gateway.logs.at(-1);
     assert.equal(line.path, "/no-existe");
     assert.equal(line.service, null);
-    assert.equal(line.status, 404);
+    assert.equal(line.status, 421);
   });
 });

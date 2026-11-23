@@ -9,11 +9,16 @@
 const PROXY_HEADERS = new Set(["forwarded", "x-real-ip", "x-client-ip", "true-client-ip"]);
 const IDENTITY = /^x-(user|auth|authenticated|remote-user|forwarded-user)(-|$)/;
 
-export function cleanHeaders(req, res, next) {
+/** Borra esas cabeceras de una petición (también de un WebSocket, que no pasa por Express). */
+export function stripUntrustedHeaders(req) {
   for (const name of Object.keys(req.headers)) {
     if (name.startsWith("x-forwarded-") || PROXY_HEADERS.has(name) || IDENTITY.test(name)) {
       delete req.headers[name];
     }
   }
+}
+
+export function cleanHeaders(req, res, next) {
+  stripUntrustedHeaders(req);
   next();
 }

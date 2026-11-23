@@ -1,7 +1,7 @@
 {
   "name": "moto-routes-gateway",
   "version": "1.0.0",
-  "description": "API gateway de Routly: la única puerta de entrada. Reparte /api, /auth y /ai a su servicio, con un id por petición y un registro común",
+  "description": "API gateway de Routly: la única puerta de entrada, con HTTPS. Reparte /api, /auth y /ai a su servicio y sirve la web y el panel, cada uno en su nombre",
   "type": "module",
   "main": "src/server.js",
   "engines": {
@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "certs": "node scripts/generate-certs.js",
     "test": "node --test"
   },
   "license": "ISC",
@@ -20,7 +21,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "selfsigned": "^5.5.0"
   },
   "nodemonConfig": {
     "watch": [

@@ -14,9 +14,46 @@ const url = (fallback) =>
     // Sin barra final: la ruta de la petición se le añade tal cual
     .transform((value) => value.replace(/\/+$/, ""));
 
+const optionalText = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => value || null);
+const bool = (fallback) =>
+  z
+    .enum(["true", "false"])
+    .default(String(fallback))
+    .transform((value) => value === "true");
+// Un nombre de host, sin puerto ni protocolo: routly.localhost
+const hostname = (fallback) =>
+  z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/, "must be a host name, without port or protocol")
+    .default(fallback);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
+
+  // HTTPS con el certificado de certs/ (npm run certs, o el de mkcert). false solo para depurar
+  HTTPS: bool(true),
+  TLS_CERT_FILE: z.string().trim().min(1).default("certs/cert.pem"),
+  TLS_KEY_FILE: z.string().trim().min(1).default("certs/key.pem"),
+  // Opcional: un puerto HTTP que solo redirige (301) a HTTPS. Sin definir, no se abre
+  HTTP_PORT: z.coerce.number().int().min(1).max(65_535).optional(),
+
+  // Los dos frontales, cada uno en su nombre. Los *.localhost apuntan a este equipo sin tocar el
+  // archivo hosts, y cada nombre tiene sus cookies: la web y el panel, cada uno con su sesión
+  WEB_HOST: hostname("routly.localhost"),
+  PANEL_HOST: hostname("panel.routly.localhost"),
+  // En desarrollo, su ng serve (con el live reload por WebSocket)...
+  WEB_URL: url("http://localhost:4300"),
+  PANEL_URL: url("http://localhost:4200"),
+  // ...o, si se indica, la carpeta de su build (ng build), que sirve la gateway
+  WEB_DIST: optionalText,
+  PANEL_DIST: optionalText,
 
   // Dónde está cada servicio. Por la red interna: el navegador nunca habla con ellos directamente
   API_URL: url("http://127.0.0.1:3000"),
@@ -45,9 +82,19 @@ export function loadConfig(env = process.env) {
     throw new Error(`Invalid configuration in .env:\n  ${problems.join("\n  ")}`);
   }
   const config = result.data;
+  if (config.WEB_HOST === config.PANEL_HOST) {
+    throw new Error("Invalid configuration in .env:\n  WEB_HOST and PANEL_HOST must be different");
+  }
   return Object.freeze({
     env: config.NODE_ENV,
     port: config.PORT,
+    https: config.HTTPS,
+    tls: Object.freeze({ certFile: config.TLS_CERT_FILE, keyFile: config.TLS_KEY_FILE }),
+    httpPort: config.HTTP_PORT ?? null,
+    frontends: Object.freeze({
+      web: Object.freeze({ name: "web", host: config.WEB_HOST, target: config.WEB_URL, dist: config.WEB_DIST }),
+      panel: Object.freeze({ name: "panel", host: config.PANEL_HOST, target: config.PANEL_URL, dist: config.PANEL_DIST }),
+    }),
     // Los servicios, en el orden en que se buscan por prefijo
     services: Object.freeze({
       api: Object.freeze({ name: "api", prefix: "/api", target: config.API_URL, timeoutMs: config.UPSTREAM_TIMEOUT_MS }),

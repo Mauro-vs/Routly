@@ -1,8 +1,15 @@
 # moto-routes-gateway
 
-La **API gateway** de Routly: la única puerta de entrada. Recibe todo el tráfico y reparte cada petición a su servicio por el prefijo, sin reescribir la ruta.
+La **API gateway** de Routly: la única puerta de entrada, con HTTPS. Reparte cada petición a su servicio por el prefijo, sin reescribir la ruta, y sirve la web y el panel, cada uno en su nombre.
 
-> Estado: **fase 1** (reparto, errores, id de petición, registro y salud), todavía en HTTP. Vienen después el HTTPS y los frontales (fase 2), la comprobación del token en la puerta y los límites (fase 3), y los scripts y la documentación completa (fase 4).
+> Estado: **fases 1 y 2** (reparto, errores, id de petición, registro, salud, HTTPS y frontales). Vienen después la comprobación del token en la puerta y los límites (fase 3), y los scripts y la documentación completa (fase 4).
+
+| Dirección | Qué es |
+|---|---|
+| `https://routly.localhost:4000` | La web pública |
+| `https://panel.routly.localhost:4000` | El panel |
+
+Los nombres `*.localhost` apuntan siempre a tu equipo, sin tocar el archivo `hosts`. Y como el navegador guarda las cookies por nombre (no por puerto), **la web y el panel tienen cada uno su propia sesión**: puedes estar como rider en la web y como admin en el panel a la vez.
 
 | Petición | Va a |
 |---|---|
@@ -11,18 +18,40 @@ La **API gateway** de Routly: la única puerta de entrada. Recibe todo el tráfi
 | `/ai/**` | IA (`AI_URL`, 3001) |
 | `/gateway/health` | La propia gateway: está viva |
 | `/gateway/ready` | La gateway pregunta al `/health` de los tres: 200 si contestan todos, 503 si no, con el estado de cada uno |
-| Lo demás | 404 con el formato de error común |
+| Lo demás, en `routly.localhost` | La web: su `ng serve` (`WEB_URL`, 4300) con el live reload por WebSocket, o su build si hay `WEB_DIST` |
+| Lo demás, en `panel.routly.localhost` | El panel: su `ng serve` (`PANEL_URL`, 4200) o su build (`PANEL_DIST`) |
+| Lo demás, en otro nombre | 421 con el formato de error común |
 
 ## Arrancar
 
 ```bash
 cp .env.example .env
 npm install
-npm run dev     # http://localhost:4000
+npm run certs   # el certificado de desarrollo, en certs/ (no se sube)
+npm run dev     # https://routly.localhost:4000 y https://panel.routly.localhost:4000
 npm test
 ```
 
-Con los servicios en marcha (`npm run dev` en la raíz), prueba `http://localhost:4000/api/shop/experiences` o `http://localhost:4000/gateway/ready`.
+Con los servicios y los dos `ng serve` en marcha (`npm run dev` en la raíz), abre `https://routly.localhost:4000`, o `https://routly.localhost:4000/gateway/ready` para ver si llegan los tres servicios.
+
+**Los servicios, detrás de la gateway**: pon `TRUST_PROXY=1` en el `.env` de auth, la API y la IA. Así leen el protocolo y el nombre de `X-Forwarded-Proto` y `X-Forwarded-Host`, la comprobación del `Origin` (CSRF) acepta `https://routly.localhost:4000` y el límite de intentos cuenta la IP real. Sin eso, el login por la gateway da **403 `Request origin not allowed`**.
+
+### El certificado
+
+`npm run certs` crea uno **autofirmado** para `localhost`, `routly.localhost` y `panel.routly.localhost`, válido un año. El navegador avisará la primera vez en cada nombre ("La conexión no es privada"): **Configuración avanzada → Continuar**.
+
+Para que no avise, crea uno de confianza con [mkcert](https://github.com/FiloSottile/mkcert) en la misma ruta, y la gateway lo usa tal cual:
+
+```bash
+mkcert -install
+mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost routly.localhost panel.routly.localhost 127.0.0.1 ::1
+```
+
+`HTTP_PORT=8080` abre además un puerto HTTP que solo redirige a HTTPS (a uno de nuestros nombres, nunca al que diga el `Host`). `HTTPS=false` arranca en HTTP, solo para depurar.
+
+### Las builds en vez de `ng serve`
+
+Con `WEB_DIST` o `PANEL_DIST` apuntando a la carpeta de su `ng build` (`../moto-routes-web/dist/moto-routes-web/browser`), la gateway sirve los archivos ella misma: los que llevan hash en el nombre con caché de un año, el resto revalidando, y cualquier ruta de la app (`/experiencias/costa`) con su `index.html`. Un archivo que no existe (`/logo.png`) es un 404.
 
 ## Qué hace con cada petición
 
@@ -48,12 +77,15 @@ Los errores del propio servicio (un 401 con su `code`, un 403...) pasan tal cual
 ```
 src/
   app.js                createApp({ config, fetch, log }): sin efectos al importarse
-  server.js             lee la config y arranca
+  server.js             lee la config y el certificado, y arranca
+  servers.js            el servidor HTTPS (con los WebSocket) y el de redirección
+  proxy/frontends.js    la web y el panel por su nombre: ng serve o su build
   config/env.js         la configuración, con Zod
   middlewares/          requestId, accessLog, cleanHeaders, bodyLimit, errorHandler
   proxy/serviceProxy.js el proxy de cada servicio (502, 504, SSE)
   routes/health.js      /gateway/health y /gateway/ready
   testing/helpers.js    servicios falsos (node:http en puertos libres) y la gateway de los tests
+scripts/generate-certs.js  npm run certs
 ```
 
-Los tests (`node --test`) arrancan servicios falsos que devuelven lo que les llega, así se comprueba qué reenvía la gateway sin red ni servicios reales.
+Los tests (`node --test`) arrancan servicios falsos que devuelven lo que les llega (y un WebSocket de eco), así se comprueba qué reenvía la gateway sin red ni servicios reales.

@@ -4,6 +4,7 @@ import { bodyLimit } from "./middlewares/bodyLimit.js";
 import { cleanHeaders } from "./middlewares/cleanHeaders.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { requestId } from "./middlewares/requestId.js";
+import { createFrontends } from "./proxy/frontends.js";
 import { serviceProxy } from "./proxy/serviceProxy.js";
 import { healthRouter } from "./routes/health.js";
 
@@ -15,8 +16,11 @@ import { healthRouter } from "./routes/health.js";
  * /gateway/ready) y dónde se escribe el registro.
  *
  * Orden: id de la petición → registro → limpiar cabeceras → tope del cuerpo → salud propia →
- * los tres servicios por prefijo → 404. Nada lee el cuerpo (sin express.json): se reenvía en
- * streaming.
+ * los tres servicios por prefijo → el frontal de ese Host (web o panel) → error. Nada lee el
+ * cuerpo (sin express.json): se reenvía en streaming.
+ *
+ * Los WebSocket (el live reload de ng serve) no pasan por Express: server.js los manda a
+ * app.locals.upgrade.
  */
 export function createApp({ config, fetch: fetchImpl = globalThis.fetch, log = (line) => console.log(line) }) {
   const app = express();
@@ -36,6 +40,11 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch, log = (
   // en el proxy.conf.json del panel (su indicador de conexión lo usa)
   for (const service of Object.values(config.services)) app.use(serviceProxy(service));
   app.use(serviceProxy({ ...config.services.api, prefix: "/health" }));
+
+  // El resto, al frontal de ese nombre: routly.localhost (web) o panel.routly.localhost (panel)
+  const frontends = createFrontends(config.frontends);
+  app.use(frontends.middleware);
+  app.locals.upgrade = frontends.upgrade;
 
   app.use(notFoundHandler);
   app.use(errorHandler);

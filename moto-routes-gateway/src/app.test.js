@@ -45,8 +45,9 @@ describe("reparto por prefijo", () => {
   it("un prefijo parecido no cuenta: /apix no es /api", async () => {
     const before = stack.api.requests.length;
     const { status, body } = await stack.gateway.request("/apix/users");
-    assert.equal(status, 404);
-    assert.deepEqual(body, { statusCode: 404, error: "Not Found", message: "Endpoint GET /apix/users not found" });
+    // Sin prefijo de servicio, toca a un frontal, y 127.0.0.1 no es ninguno
+    assert.equal(status, 421);
+    assert.equal(body.message, "Unknown host: use routly.localhost or panel.routly.localhost");
     assert.equal(stack.api.requests.length, before);
   });
 
