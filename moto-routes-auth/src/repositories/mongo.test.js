@@ -84,8 +84,11 @@ describe("repositorios de MongoDB", { skip: !uri && "sin TEST_MONGODB_URI" }, ()
     const sessions = await db.collection("sessions").find({}).toArray();
     assert.ok(sessions.every((session) => !session.tokenHash.includes(client.cookie("routly_refresh"))));
 
+    assert.deepEqual(sessions.map((session) => session.status).sort(), ["active", "used"]);
+
     assert.equal((await client.request("/auth/logout", { method: "POST" })).status, 204);
     assert.equal(await db.collection("revokedtokens").countDocuments(), 1);
+    assert.equal(await db.collection("sessions").countDocuments({ status: { $ne: "revoked" } }), 0);
   });
 
   it("un refresh solo se puede gastar una vez, aunque lleguen dos a la vez", async () => {
@@ -96,13 +99,13 @@ describe("repositorios de MongoDB", { skip: !uri && "sin TEST_MONGODB_URI" }, ()
     assert.equal(results.filter(Boolean).length, 1);
   });
 
-  it("logout-all sube tokenVersion y borra sus sesiones", async () => {
+  it("logout-all sube tokenVersion y revoca sus sesiones", async () => {
     const client = createClient(baseUrl);
     await login(client, "rider@routly.dev", PASSWORD);
     assert.equal((await client.request("/auth/logout-all", { method: "POST" })).status, 204);
     const user = await db.collection("users").findOne({ email: "rider@routly.dev" });
     assert.ok(user.tokenVersion >= 1);
-    assert.equal(await db.collection("sessions").countDocuments({ userId: user._id }), 0);
+    assert.equal(await db.collection("sessions").countDocuments({ userId: user._id, status: { $ne: "revoked" } }), 0);
   });
 
   it("sessions tiene el índice TTL, y users no recibe índices del auth", async () => {

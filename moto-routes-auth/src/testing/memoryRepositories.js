@@ -14,6 +14,11 @@ export function createMemoryRepositories() {
     const role = db.roles.find((r) => r._id === user.roleId && !r.deletedAt);
     return role ? { name: role.name, isActive: role.isActive } : null;
   };
+  const revoke = (predicate, now) => {
+    for (const session of db.sessions) {
+      if (session.status !== "revoked" && predicate(session)) Object.assign(session, { status: "revoked", revokedAt: now });
+    }
+  };
   const aliveUser = (predicate) => db.users.find((u) => !u.deletedAt && predicate(u));
   const withRole = (user, extra = []) => {
     if (!user) return null;
@@ -65,22 +70,23 @@ export function createMemoryRepositories() {
     },
     sessions: {
       async create(session) {
-        db.sessions.push({ ...session, userId: String(session.userId), usedAt: null });
+        db.sessions.push({ ...session, userId: String(session.userId), status: "active", usedAt: null, revokedAt: null });
       },
       async consume(tokenHash, now) {
-        const session = db.sessions.find((s) => s.tokenHash === tokenHash && !s.usedAt && s.expiresAt > now);
+        const session = db.sessions.find((s) => s.tokenHash === tokenHash && s.status === "active" && s.expiresAt > now);
         if (!session) return null;
+        session.status = "used";
         session.usedAt = now;
         return copy(session);
       },
       async findByHash(tokenHash) {
         return copy(db.sessions.find((s) => s.tokenHash === tokenHash));
       },
-      async deleteFamily(familyId) {
-        db.sessions = db.sessions.filter((s) => s.familyId !== familyId);
+      async revokeFamily(familyId, now) {
+        revoke((s) => s.familyId === familyId, now);
       },
-      async deleteByUser(userId) {
-        db.sessions = db.sessions.filter((s) => s.userId !== String(userId));
+      async revokeByUser(userId, now) {
+        revoke((s) => s.userId === String(userId), now);
       },
     },
     revokedTokens: {

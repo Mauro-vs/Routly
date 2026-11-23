@@ -76,13 +76,13 @@ export const sessionRepository = {
   },
 
   /**
-   * Gasta un refresh: lo marca usado solo si no lo estaba y no ha caducado, en una sola operación
-   * atómica (dos peticiones a la vez no pueden gastar el mismo). null si no se pudo.
+   * Gasta un refresh: lo pasa de active a used solo si estaba activo y no ha caducado, en una sola
+   * operación atómica (dos peticiones a la vez no pueden gastar el mismo). null si no se pudo.
    */
   consume(tokenHash, now) {
     return Session.findOneAndUpdate(
-      { tokenHash, usedAt: null, expiresAt: { $gt: now } },
-      { $set: { usedAt: now } },
+      { tokenHash, status: "active", expiresAt: { $gt: now } },
+      { $set: { status: "used", usedAt: now } },
       { returnDocument: "after" }
     ).lean();
   },
@@ -91,12 +91,13 @@ export const sessionRepository = {
     return Session.findOne({ tokenHash }).lean();
   },
 
-  deleteFamily(familyId) {
-    return Session.deleteMany({ familyId });
+  // Revoca todos los refresh de una sesión (los gastados también: ninguno vuelve a valer)
+  revokeFamily(familyId, now) {
+    return Session.updateMany({ familyId, status: { $ne: "revoked" } }, { $set: { status: "revoked", revokedAt: now } });
   },
 
-  deleteByUser(userId) {
-    return Session.deleteMany({ userId });
+  revokeByUser(userId, now) {
+    return Session.updateMany({ userId, status: { $ne: "revoked" } }, { $set: { status: "revoked", revokedAt: now } });
   },
 };
 

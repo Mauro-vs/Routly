@@ -53,11 +53,13 @@ export function createAuthService({ repositories, tokens, now = Date.now }) {
     };
   }
 
-  // Cierra todas las sesiones de un usuario: los tokens de acceso por tokenVersion, los refresh borrados
+  // Cierra todas las sesiones de un usuario: los tokens de acceso por tokenVersion, los refresh revocados
   async function closeAllSessions(userId) {
     await users.bumpTokenVersion(userId);
-    await sessions.deleteByUser(userId);
+    await sessions.revokeByUser(userId, new Date(now()));
   }
+
+  const revokeFamily = (familyId) => sessions.revokeFamily(familyId, new Date(now()));
 
   return {
     // Siempre como rider: el esquema no acepta roleId
@@ -106,7 +108,8 @@ export function createAuthService({ repositories, tokens, now = Date.now }) {
       let session = await sessions.consume(hash, current);
       if (!session) {
         const spent = await sessions.findByHash(hash);
-        if (!spent || spent.expiresAt <= current) throw unauthorized("TOKEN_INVALID");
+        // No existe, ha caducado o ya se cerró (logout...): sin más, 401
+        if (!spent || spent.status !== "used" || spent.expiresAt <= current) throw unauthorized("TOKEN_INVALID");
         if (current - spent.usedAt > REFRESH_GRACE_MS) {
           await closeAllSessions(spent.userId);
           throw unauthorized("TOKEN_INVALID");
@@ -117,7 +120,7 @@ export function createAuthService({ repositories, tokens, now = Date.now }) {
       // El usuario puede haber cambiado desde el login: desactivado, rol quitado, contraseña nueva...
       const user = await users.findAuthById(String(session.userId));
       if (!canSignIn(user) || user.tokenVersion !== session.tokenVersion) {
-        await sessions.deleteFamily(session.familyId);
+        await revokeFamily(session.familyId);
         throw unauthorized("TOKEN_INVALID");
       }
       return issue(user, session.familyId);
@@ -130,10 +133,10 @@ export function createAuthService({ repositories, tokens, now = Date.now }) {
     async logout({ refreshToken, access }) {
       if (refreshToken) {
         const session = await sessions.findByHash(hashRefreshToken(refreshToken));
-        if (session) await sessions.deleteFamily(session.familyId);
+        if (session) await revokeFamily(session.familyId);
       }
       if (access) {
-        await sessions.deleteFamily(access.sid);
+        await revokeFamily(access.sid);
         await revokedTokens.revoke({ jti: access.jti, userId: access.sub, expiresAt: new Date(access.exp * 1000) });
       }
     },

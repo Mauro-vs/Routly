@@ -58,6 +58,18 @@ este servicio). En la base de datos solo su hash (`sessions`, con TTL). Cada uso
 siguiente de la misma familia. Si llega uno ya gastado (pasados 10 s de gracia para dos pestañas a la
 vez), alguien lo ha copiado: se cierran todas las sesiones del usuario.
 
+Cada documento de `sessions` guarda `tokenHash`, `userId`, `familyId`, `expiresAt` y un `status`:
+
+| `status` | Cuándo | Fecha |
+|---|---|---|
+| `active` | Recién emitido: se puede gastar una vez | `createdAt` |
+| `used` | Gastado en `/auth/refresh`; ya hay otro `active` en su familia | `usedAt` |
+| `revoked` | Cerrado: logout, cerrar todas, usuario desactivado o reutilización detectada | `revokedAt` |
+
+Solo vale un refresh `active` y sin caducar. Un `revoked` es un 401 sin más; un `used` fuera de la
+gracia es la señal de robo. Los documentos no se borran al cerrar sesión: el índice TTL los quita al
+llegar a `expiresAt`.
+
 **Comprobarlos desde otro servicio**: con la clave pública del JWKS, sin ningún secreto compartido:
 
 ```js

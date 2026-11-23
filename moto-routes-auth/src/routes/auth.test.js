@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
+import { hashRefreshToken } from "../services/token.service.js";
 import { PASSWORD, login, startApp } from "../testing/helpers.js";
 
 describe("sesión", () => {
@@ -10,6 +11,9 @@ describe("sesión", () => {
     app = await startApp();
   });
   after(() => app.close());
+  // El documento de sessions de un refresh (en la BBDD solo está su hash)
+  const sessionOf = (refresh) => app.db.sessions.find((session) => session.tokenHash === hashRefreshToken(refresh));
+
   beforeEach(() => {
     client = app.client();
   });
@@ -129,6 +133,14 @@ describe("sesión", () => {
       assert.notEqual(client.cookie("routly_refresh"), firstRefresh);
       assert.notEqual(client.cookie("routly_session"), firstAccess);
       assert.equal((await client.request("/auth/me")).status, 200);
+
+      // En la BBDD: el primero queda used (con usedAt) y el nuevo active, los dos de la misma familia
+      const first = sessionOf(firstRefresh);
+      const second = sessionOf(client.cookie("routly_refresh"));
+      assert.equal(first.status, "used");
+      assert.ok(first.usedAt);
+      assert.equal(second.status, "active");
+      assert.equal(second.familyId, first.familyId);
     });
 
     it("sin cookie de refresh, 401", async () => {
@@ -150,6 +162,7 @@ describe("sesión", () => {
     it("un refresh reutilizado fuera de la gracia cierra todas las sesiones del usuario", async () => {
       await login(client);
       const stolen = client.cookie("routly_refresh");
+      const { userId } = sessionOf(stolen);
       // El usuario de verdad renueva...
       assert.equal((await client.request("/auth/refresh", { method: "POST" })).status, 200);
       const victimAccess = client.cookie("routly_session");
@@ -166,6 +179,8 @@ describe("sesión", () => {
       assert.equal((await client.request("/auth/refresh", { method: "POST" })).status, 401);
       const me = await app.client().request("/auth/me", { headers: { authorization: `Bearer ${victimAccess}` } });
       assert.equal(me.status, 401);
+      const userSessions = app.db.sessions.filter((session) => session.userId === userId);
+      assert.ok(userSessions.every((session) => session.status === "revoked" && session.revokedAt));
     });
 
     it("caducado, no vale", async () => {
@@ -193,7 +208,7 @@ describe("sesión", () => {
   });
 
   describe("POST /auth/logout", () => {
-    it("cierra esta sesión: el token va a la lista negra, el refresh se borra y las cookies también", async () => {
+    it("cierra esta sesión: el token va a la lista negra, el refresh queda revocado y se borran las cookies", async () => {
       const { body } = await login(client);
       const refresh = client.cookie("routly_refresh");
 
@@ -208,6 +223,7 @@ describe("sesión", () => {
       const again = app.client();
       again.setCookie("routly_refresh", refresh, "/auth");
       assert.equal((await again.request("/auth/refresh", { method: "POST" })).status, 401);
+      assert.equal(sessionOf(refresh).status, "revoked");
     });
 
     it("también sale con el token de acceso caducado (solo con el refresh)", async () => {
