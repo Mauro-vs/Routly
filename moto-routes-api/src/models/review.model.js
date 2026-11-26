@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
 import { REVIEW_TARGET_TYPES } from "./reviewTargets.js";
+import { TEXT_INDEX } from "./textIndex.js";
 import { integer } from "./validators.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/review.schema.js).
@@ -93,5 +94,7 @@ reviewSchema.index(
 );
 // El listado de la tienda: las visibles de un objetivo, de la más reciente a la más antigua
 reviewSchema.index({ targetType: 1, targetId: 1, isActive: 1, createdAt: -1 });
+// El buscador del panel (?q=): en el título y el comentario
+reviewSchema.index({ title: "text", comment: "text" }, TEXT_INDEX);
 
 export const Review = mongoose.model("Review", reviewSchema);

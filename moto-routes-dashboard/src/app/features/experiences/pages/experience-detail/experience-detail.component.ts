@@ -6,6 +6,7 @@ import { DetailPageComponent } from '../../../../shared/components/detail-page/d
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
+import { RatingSummaryComponent } from '../../../../shared/components/rating-summary/rating-summary.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { ExperiencesStore } from '../../services/experiences.store';
 
@@ -21,6 +22,7 @@ import { ExperiencesStore } from '../../services/experiences.store';
     DetailSectionComponent,
     FieldListComponent,
     ImageGalleryComponent,
+    RatingSummaryComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -37,6 +39,9 @@ import { ExperiencesStore } from '../../services/experiences.store';
       (remove)="remove()"
       (retry)="retry()"
     >
+      <ui-detail-section heading="Opiniones" description="La media de sus opiniones visibles en la web.">
+        <ui-rating-summary [rating]="record()?.rating" [targetId]="record()?._id ?? null" />
+      </ui-detail-section>
       <ui-detail-section heading="Ruta y anfitrión">
         <ui-field-list [columns]="2" [items]="relations()" />
       </ui-detail-section>

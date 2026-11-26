@@ -421,6 +421,10 @@ describe("el listado completo es del admin", () => {
     assert.equal((await api.get("/reviews/inactives")).body.some((item) => item._id === review._id), true);
     assert.equal((await api.get(`/reviews/${review._id}`)).body.rating, 3);
 
+    // El buscador del panel: en el título y el comentario
+    const word = (await riders[7].post("/reviews", forExperience(experience, { rating: 5, comment: "Volvería mañana mismo, el zarandeo de curvas fue perfecto" }))).body;
+    assert.deepEqual((await api.get(`/reviews?q=zarandeo&targetId=${experience._id}`)).body.map((item) => item._id), [word._id]);
+
     const paged = await api.get("/reviews?targetType=host&page=1&limit=1");
     assert.equal(paged.body.length, 1);
     assert.ok(Number(paged.headers.get("x-total-count")) >= 1);

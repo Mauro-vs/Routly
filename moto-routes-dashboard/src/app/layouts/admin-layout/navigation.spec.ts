@@ -14,6 +14,7 @@ describe('navigation', () => {
 
   it('la papelera es parte de la sección de su colección', () => {
     expect(findSection('/routes/trash')?.id).toBe('routes');
+    expect(findSection('/reviews/trash')?.id).toBe('reviews');
   });
 
   it('una sección sin páginas todavía no se marca', () => {
@@ -21,7 +22,7 @@ describe('navigation', () => {
     if (pending) expect(findSection(pending.path)).toBeNull();
   });
 
-  it('las diez colecciones llevan contador con el nombre de su ruta en la API', () => {
+  it('las once colecciones llevan contador con el nombre de su ruta en la API', () => {
     expect([...COLLECTION_IDS].sort()).toEqual(
       [
         'bikes',
@@ -31,6 +32,7 @@ describe('navigation', () => {
         'hosts',
         'images',
         'locations',
+        'reviews',
         'roles',
         'routes',
         'users',

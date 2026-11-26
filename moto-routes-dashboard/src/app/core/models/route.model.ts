@@ -1,6 +1,7 @@
 import { CategorySummary } from './category.model';
 import { BaseEntity } from './entity.model';
 import { ImageSummary } from './image.model';
+import { Rating } from './review.model';
 import { LocationSummary } from './location.model';
 
 export type RouteDifficulty = 'easy' | 'medium' | 'hard';
@@ -39,6 +40,8 @@ export interface Route extends BaseEntity {
   waypoints?: RouteWaypoint[];
   /** Portada. La papelera no la trae. */
   coverImage?: ImageSummary | null;
+  /** La media de las opiniones de sus experiencias (las rutas no se comentan) */
+  rating?: Rating;
 }
 
 /** Cuerpo de `POST /api/routes` y, con campos opcionales, de `PATCH /api/routes/:id`. */

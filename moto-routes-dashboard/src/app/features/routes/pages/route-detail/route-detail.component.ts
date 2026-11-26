@@ -5,13 +5,14 @@ import { DetailPageComponent } from '../../../../shared/components/detail-page/d
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
+import { RatingSummaryComponent } from '../../../../shared/components/rating-summary/rating-summary.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { RoutesStore } from '../../services/routes.store';
 
 /** Detalle de una ruta (`/routes/:slug`), con su recorrido y su galería. */
 @Component({
   selector: 'app-route-detail',
-  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
+  imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent, RatingSummaryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ui-detail-page
@@ -28,6 +29,9 @@ import { RoutesStore } from '../../services/routes.store';
       (remove)="remove()"
       (retry)="retry()"
     >
+      <ui-detail-section heading="Opiniones" description="Las rutas no se comentan: es la media de las opiniones de las experiencias que la usan.">
+        <ui-rating-summary [rating]="record()?.rating" />
+      </ui-detail-section>
       <ui-detail-section heading="Recorrido">
         <ui-field-list [columns]="2" [items]="trip()" />
       </ui-detail-section>

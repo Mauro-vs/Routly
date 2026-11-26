@@ -6,6 +6,7 @@ import { DetailPageComponent } from '../../../../shared/components/detail-page/d
 import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
+import { RatingSummaryComponent } from '../../../../shared/components/rating-summary/rating-summary.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { HostsStore } from '../../services/hosts.store';
 
@@ -18,6 +19,7 @@ import { HostsStore } from '../../services/hosts.store';
     DetailSectionComponent,
     FieldListComponent,
     ImageGalleryComponent,
+    RatingSummaryComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -34,6 +36,12 @@ import { HostsStore } from '../../services/hosts.store';
       (remove)="remove()"
       (retry)="retry()"
     >
+      <ui-detail-section heading="Opiniones" description="Las que hablan de él como anfitrión y, aparte, la media de las de sus experiencias.">
+        <div class="ratings">
+          <ui-rating-summary label="Como anfitrión" [rating]="record()?.rating" [targetId]="record()?._id ?? null" />
+          <ui-rating-summary label="En sus experiencias" [rating]="record()?.experiencesRating" />
+        </div>
+      </ui-detail-section>
       <ui-detail-section heading="Perfil público">
         <ui-field-list [items]="profile()" />
       </ui-detail-section>
@@ -58,6 +66,12 @@ import { HostsStore } from '../../services/hosts.store';
     </ui-detail-page>
   `,
   styles: `
+    .ratings {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-4);
+    }
+
     .bike + .bike {
       margin-top: var(--space-3);
     }

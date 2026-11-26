@@ -611,7 +611,8 @@ export abstract class EntityStore<T extends BaseRecord, TPayload> {
     }
   }
 
-  private replace(entity: T): void {
+  /** Pone al día un registro en el listado, la página y el abierto (lo usan las acciones propias de cada store). */
+  protected replace(entity: T): void {
     const swap = (items: T[]): T[] => items.map((item) => (item._id === entity._id ? entity : item));
     this._items.update(swap);
     this._page.update(swap);

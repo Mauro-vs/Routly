@@ -14,10 +14,11 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
 // que no hacen falta credenciales cruzadas. En producción, si el panel está en otro
 // origen, credentials: true deja que el navegador mande la cookie de sesión.
 // exposedHeaders: sin esto, el navegador no deja leer las cabeceras de la paginación
-// (utils/listQuery.js) a un panel servido desde otro origen
+// (utils/listQuery.js) a un panel servido desde otro origen. DELETE: solo para quitar una foto
+// de una opinión (DELETE /api/reviews/:id/photos/:photoId); el resto del borrado va por PATCH
 export const corsMiddleware = cors({
   origin: isProduction ? allowedOrigins : "*",
-  methods: ["GET", "POST", "PATCH"],
+  methods: ["GET", "POST", "PATCH", "DELETE"],
   credentials: isProduction,
   exposedHeaders: LIST_HEADERS,
 });

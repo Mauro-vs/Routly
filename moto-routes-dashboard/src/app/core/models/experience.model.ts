@@ -1,6 +1,7 @@
 import { BikeSummary } from './bike.model';
 import { BaseEntity } from './entity.model';
 import { HostSummary } from './host.model';
+import { Rating } from './review.model';
 
 /** Salida guiada que un anfitrión organiza sobre una ruta. */
 export interface Experience extends BaseEntity {
@@ -20,6 +21,8 @@ export interface Experience extends BaseEntity {
   /** Con qué moto guía el anfitrión. */
   guideBikeId?: string | null;
   guideBike?: BikeSummary | null;
+  /** La nota de sus opiniones (la calcula la API) */
+  rating?: Rating;
 }
 
 /** Lo que trae una experiencia de su ruta (`populate`). */

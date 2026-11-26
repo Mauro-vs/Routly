@@ -22,8 +22,9 @@ interface RequestOptions {
  * Devuelve promesas para consumirlas con async/await. Cuando una petición falla, la
  * promesa se rechaza con un ApiError (lo construye el errorInterceptor).
  *
- * Nota: la API solo admite GET, POST y PATCH por CORS. `put` y `delete` están por
- * si un endpoint futuro los necesita.
+ * Nota: la API admite GET, POST, PATCH y DELETE por CORS. DELETE solo lo usa quitar una
+ * foto de una opinión (el borrado normal va por PATCH). `put` está por si un endpoint futuro
+ * lo necesita.
  */
 @Injectable({ providedIn: 'root' })
 export class ApiService {

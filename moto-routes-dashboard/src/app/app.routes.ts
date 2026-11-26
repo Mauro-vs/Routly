@@ -157,6 +157,10 @@ export const routes: Routes = [
         loadChildren: () => import('./features/roles/roles.routes').then((m) => m.ROLES_ROUTES),
       },
       {
+        path: 'reviews',
+        loadChildren: () => import('./features/reviews/reviews.routes').then((m) => m.REVIEWS_ROUTES),
+      },
+      {
         path: 'images',
         loadChildren: () => import('./features/images/images.routes').then((m) => m.IMAGES_ROUTES),
       },

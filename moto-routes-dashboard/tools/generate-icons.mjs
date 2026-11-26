@@ -28,6 +28,7 @@ const ICONS = [
   'arrow-right',
   'arrow-up-right',
   'book-open',
+  'chat-circle-text',
   // acciones
   'plus',
   'pencil-simple',

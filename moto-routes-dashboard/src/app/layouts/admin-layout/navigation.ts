@@ -120,8 +120,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   },
   {
     label: 'Contenido',
-    // Las imágenes se crean desde la galería de su dueño: no hay "Nueva imagen".
-    items: [{ id: 'images', label: 'Imágenes', icon: 'images', path: '/images' }],
+    // Las imágenes se crean desde la galería de su dueño y las opiniones, en la web: no hay
+    // "Nueva imagen" ni "Nueva opinión"
+    items: [
+      { id: 'reviews', label: 'Opiniones', icon: 'chat-circle-text', path: '/reviews' },
+      { id: 'images', label: 'Imágenes', icon: 'images', path: '/images' },
+    ],
   },
 ];
 
