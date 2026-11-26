@@ -2,6 +2,7 @@
  * Lo que devuelve /api/shop (el contrato está en "La parte pública" del README de la API).
  * Solo los campos que usa la web: la API manda más (status, createdAt...) y se ignoran.
  */
+import { Rating } from '../reviews/reviews.models';
 
 export interface ShopImage {
   _id: string;
@@ -55,6 +56,8 @@ export interface ShopRoute {
   category: { _id: string; name: string; slug: string } | null;
   startLocation: ShopPlace | null;
   endLocation: ShopPlace | null;
+  /** La nota de las opiniones de sus experiencias (las rutas no se comentan) */
+  rating?: Rating;
 }
 
 export interface GuideBike {
@@ -86,12 +89,29 @@ export interface ShopExperience {
   priceFrom: number | null;
   /** La fecha de su próxima salida reservable, o null */
   nextDepartureAt: string | null;
+  /** La nota de sus opiniones */
+  rating?: Rating;
 }
 
 /** El detalle: además, el anfitrión entero y la galería, por posición. */
 export interface ShopExperienceDetail extends Omit<ShopExperience, 'host'> {
   host: (ShopHost & { user?: { _id: string; name: string } }) | null;
   images: ShopImage[];
+}
+
+/** La ficha de un guía (/api/shop/hosts/:slug): sus dos notas, sus motos y sus experiencias. */
+export interface ShopHostDetail {
+  _id: string;
+  name: string;
+  slug: string;
+  biography?: string | null;
+  coverImage: ShopImage | null;
+  /** Sus opiniones como guía */
+  rating: Rating;
+  /** Las de todas sus experiencias, juntas */
+  experiencesRating: Rating;
+  bikes?: GuideBike[];
+  experiences: ShopExperience[];
 }
 
 export type DepartureState = 'scheduled' | 'cancelled' | 'completed';

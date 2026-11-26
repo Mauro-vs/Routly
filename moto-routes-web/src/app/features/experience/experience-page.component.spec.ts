@@ -7,6 +7,7 @@ import { Router, provideRouter, withComponentInputBinding } from '@angular/route
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { AiApiService } from '../../core/ai/ai-api.service';
+import { ReviewsApiService } from '../../core/reviews/reviews-api.service';
 import { ExperiencePageComponent } from './experience-page.component';
 import { DETAIL, flushDetail } from './testing/experience.fixtures';
 
@@ -25,6 +26,8 @@ describe('ExperiencePageComponent', () => {
         provideHttpClientTesting(),
         // El bloque Routly IA tiene sus propios tests: aquí sus peticiones no acaban nunca
         { provide: AiApiService, useValue: { insights: pending, weather: pending, stops: pending } },
+        // Las opiniones también tienen los suyos (features/reviews)
+        { provide: ReviewsApiService, useValue: { list: pending, mine: pending } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -43,6 +46,19 @@ describe('ExperiencePageComponent', () => {
   }
 
   const text = (element: Element | null | undefined): string => element?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+  it('enseña la sección de opiniones y enlaza la ficha del guía', async () => {
+    const element = await open(`/experiencias/${DETAIL.slug}`);
+    expect(element.querySelector('app-reviews-section #opiniones-titulo')?.textContent).toContain('Opiniones');
+    const links = [...element.querySelectorAll('.host a')].map((link) => link.getAttribute('href'));
+    expect(links).toContain('/guias/lucia-ferrer-1');
+  });
+
+  it('la ruta con opiniones en sus experiencias enseña su nota', async () => {
+    const rated = { ...DETAIL, route: { ...DETAIL.route!, rating: { average: 4.6, count: 12, distribution: {} } } };
+    const element = await open(`/experiencias/${DETAIL.slug}`, (http) => flushDetail(http, { detail: rated }));
+    expect(text(element.querySelector('.route-rating'))).toContain('Esta ruta: 4,6 en 12 opiniones de sus experiencias');
+  });
 
   it('pone el nombre de la experiencia en la pestaña', async () => {
     await open(`/experiencias/${DETAIL.slug}`);

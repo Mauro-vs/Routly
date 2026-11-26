@@ -85,13 +85,13 @@ describe('HomePageComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/experiencias'], { queryParams: { buscar: 'costa' } });
   });
 
-  it('cada carrusel lleva al Shop con su filtro: destinos, tipos de carretera y guías', async () => {
+  it('los destinos y los tipos de carretera llevan al Shop con su filtro, y los guías a su ficha', async () => {
     flushHome(http);
     await settle();
 
     expect(hrefs('#destinos ui-carousel a')).toEqual(['/experiencias?ubicacion=jaca-1']);
     expect(hrefs('#carreteras ui-carousel a')).toEqual(['/experiencias?categoria=montana-1', '/experiencias?categoria=costa-2']);
-    expect(hrefs('#guias ui-carousel a')).toEqual(['/experiencias?anfitrion=pablo-ortega-1']);
+    expect(hrefs('#guias ui-carousel a')).toEqual(['/guias/pablo-ortega-1']);
   });
 
   it('un carrusel sin elementos no se enseña', async () => {

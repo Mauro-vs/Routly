@@ -55,3 +55,10 @@ export const formatKm = formatNumber;
 export function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
+
+const rating = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Una nota de 1 a 5, con un decimal: 4.6 → "4,6"; 5 → "5,0" */
+export function formatRating(value: number): string {
+  return rating.format(value);
+}

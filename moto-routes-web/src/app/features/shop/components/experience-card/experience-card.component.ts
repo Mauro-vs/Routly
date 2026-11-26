@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 
 import { ShopExperience } from '../../../../core/api/shop.models';
 import { DifficultyComponent } from '../../../../shared/ui/difficulty/difficulty.component';
+import { StarsComponent } from '../../../../shared/ui/stars/stars.component';
 import { IconComponent } from '../../../../shared/ui/icon/icon.component';
 import { sceneFor } from '../../../../shared/ui/photo/landscape';
 import { PhotoComponent } from '../../../../shared/ui/photo/photo.component';
-import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../../shared/utils/shop-format';
+import { formatHours, formatKm, formatPrice, formatRating, formatShortDate } from '../../../../shared/utils/shop-format';
 
 /**
  * La tarjeta de una experiencia en el Shop: la foto con su hito kilométrico apoyado en el borde,
@@ -15,7 +16,7 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
  */
 @Component({
   selector: 'app-experience-card',
-  imports: [RouterLink, PhotoComponent, DifficultyComponent, IconComponent],
+  imports: [RouterLink, PhotoComponent, DifficultyComponent, IconComponent, StarsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a [routerLink]="['/experiencias', experience().slug]">
@@ -31,6 +32,9 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
       </div>
       <div class="body">
         <h3>{{ experience().title }}</h3>
+        @if (experience().rating?.count; as count) {
+          <p class="rating"><ui-stars [value]="experience().rating!.average" /> <span class="num">{{ ratingText(count) }}</span></p>
+        }
         @if (route(); as route) {
           <p class="where">
             <span>{{ route.startLocation?.city }}</span>
@@ -210,6 +214,14 @@ import { formatHours, formatKm, formatPrice, formatShortDate } from '../../../..
       overflow-wrap: anywhere;
     }
 
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
     .where {
       display: flex;
       flex-wrap: wrap;
@@ -293,4 +305,8 @@ export class ExperienceCardComponent {
   protected readonly hours = computed(() => formatHours(this.route()?.duration ?? 0));
   protected readonly price = computed(() => formatPrice(this.experience().priceFrom ?? 0));
   protected readonly date = formatShortDate;
+  /** "4,6 (12)" */
+  protected ratingText(count: number): string {
+    return `${formatRating(this.experience().rating?.average ?? 0)} (${count})`;
+  }
 }

@@ -10,7 +10,9 @@ import { IconComponent } from '../../shared/ui/icon/icon.component';
 import { sceneFor } from '../../shared/ui/photo/landscape';
 import { PhotoComponent } from '../../shared/ui/photo/photo.component';
 import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
-import { formatHours, formatPrice, formatShortDate, plural } from '../../shared/utils/shop-format';
+import { formatHours, formatPrice, formatRating, formatShortDate, plural } from '../../shared/utils/shop-format';
+import { StarsComponent } from '../../shared/ui/stars/stars.component';
+import { ReviewsSectionComponent } from '../reviews/reviews-section.component';
 import { AiInsightsComponent } from './components/ai-insights/ai-insights.component';
 import { DeparturePickerComponent } from './components/departure-picker/departure-picker.component';
 import { GalleryComponent } from './components/gallery/gallery.component';
@@ -47,6 +49,8 @@ const LANGUAGES: Record<string, string> = {
     SkeletonComponent,
     IconComponent,
     AiInsightsComponent,
+    StarsComponent,
+    ReviewsSectionComponent,
   ],
   providers: [ExperienceStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -96,6 +100,12 @@ const LANGUAGES: Record<string, string> = {
             <div class="main">
               @if (experience.route; as route) {
                 <app-route-sign class="route-sign" [route]="route" />
+                @if (route.rating?.count; as count) {
+                  <p class="route-rating">
+                    <ui-stars [value]="route.rating!.average" />
+                    Esta ruta: <strong class="num">{{ rating(route.rating!.average) }}</strong> en {{ plural(count, 'opinión', 'opiniones') }} de sus experiencias
+                  </p>
+                }
               }
 
               @if (experience.description) {
@@ -121,10 +131,15 @@ const LANGUAGES: Record<string, string> = {
                   <div>
                     <h2 id="anfitrion-titulo">Tu anfitrión: {{ host.name }}</h2>
                     <p>{{ host.biography || 'Aún no ha contado nada sobre sí mismo.' }}</p>
-                    <a [routerLink]="['/experiencias']" [queryParams]="{ anfitrion: host.slug }">Más salidas con {{ host.name }}</a>
+                    <p class="host-links">
+                      <a [routerLink]="['/guias', host.slug]">Ver la ficha de {{ host.name }}</a>
+                      <a [routerLink]="['/experiencias']" [queryParams]="{ anfitrion: host.slug }">Más salidas con {{ host.name }}</a>
+                    </p>
                   </div>
                 </section>
               }
+
+              <app-reviews-section type="experience" [slug]="experience.slug" [targetId]="experience._id" [name]="experience.title" />
             </div>
 
             <aside class="booking" aria-labelledby="salidas-titulo">
@@ -304,6 +319,21 @@ const LANGUAGES: Record<string, string> = {
       color: var(--color-text-muted);
     }
 
+    .route-rating {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: calc(var(--space-4) * -1);
+      color: var(--color-text-muted);
+    }
+
+    .host-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 var(--space-5);
+    }
+
     .host a {
       display: inline-flex;
       align-items: center;
@@ -470,6 +500,7 @@ export class ExperiencePageComponent {
   protected readonly hours = formatHours;
   protected readonly shortDate = formatShortDate;
   protected readonly plural = plural;
+  protected readonly rating = formatRating;
 
   constructor() {
     effect(() => void this.store.load(this.slug()));

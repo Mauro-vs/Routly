@@ -28,11 +28,12 @@ export const URL_PARAMS = {
 /** Los límites del slider de precio, en euros. En un extremo no se filtra por ese lado */
 export const PRICE_RANGE = { floor: 0, ceiling: 400, step: 10 } as const;
 
-export type SortKey = 'proximas' | 'precio' | 'precio-desc' | 'titulo';
+export type SortKey = 'proximas' | 'valoracion' | 'precio' | 'precio-desc' | 'titulo';
 
 /** Cada orden de la URL y su campo de la API. Sin orden: novedades, o relevancia si se busca */
 export const SORTS: Record<SortKey, { label: string; api: string }> = {
   proximas: { label: 'Próxima salida', api: 'nextDepartureAt' },
+  valoracion: { label: 'Mejor valoradas', api: '-rating' },
   precio: { label: 'Más baratas', api: 'priceFrom' },
   'precio-desc': { label: 'Más caras', api: '-priceFrom' },
   titulo: { label: 'Por nombre', api: 'title' },

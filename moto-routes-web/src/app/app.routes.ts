@@ -31,6 +31,11 @@ export const routes: Routes = [
       import('./features/experience/experience-page.component').then((m) => m.ExperiencePageComponent),
   },
   {
+    path: 'guias/:slug',
+    // Como el detalle: el título lo pone la ficha cuando conoce al guía
+    loadComponent: () => import('./features/guide/guide-page.component').then((m) => m.GuidePageComponent),
+  },
+  {
     path: 'entrar',
     title: 'Entrar',
     canActivate: [guestGuard],

@@ -227,6 +227,7 @@ export class HomePageComponent {
       photo: host.coverImage?.url ?? null,
       seed: host.slug,
       queryParams: { anfitrion: host.slug },
+      link: ['/guias', host.slug],
     })),
   );
 

@@ -1,0 +1,85 @@
+/* Las opiniones (estrellas y formulario): lo que comparten la sección de opiniones, la ficha del
+   guía y las tarjetas. Va en la hoja global porque el presupuesto de cada componente es de 4 kB. */
+
+:root {
+  --color-star: #b97700;
+  --color-star-off: #d3ddd6;
+}
+
+:root[data-theme='dark'] {
+  --color-star: #f2c14e;
+  --color-star-off: #2e4239;
+}
+
+.field textarea,
+.field select {
+  min-height: 48px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 450;
+  font-size: 1rem;
+}
+
+.field textarea {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.field textarea:focus-visible,
+.field select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.field textarea[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+/* Un botón con aspecto de enlace, para acciones pequeñas (editar, borrar, leer más) */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.link-button.danger {
+  color: var(--color-danger);
+}
+
+/* Un panel modal (<dialog>): el visor de fotos y las confirmaciones */
+dialog.sheet {
+  max-width: min(92vw, 560px);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-3);
+}
+
+dialog.sheet::backdrop {
+  background: rgb(5 12 9 / 0.72);
+}
+
+/* Un botón principal que aún no se puede pulsar (el formulario sin terminar) */
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

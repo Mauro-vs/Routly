@@ -58,6 +58,9 @@ const ICONS = [
   'drop',
   'wind',
   'thermometer-simple',
+  // opiniones
+  'camera',
+  'images',
 ];
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');

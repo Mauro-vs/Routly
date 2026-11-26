@@ -15,6 +15,8 @@ export interface PlaceItem {
   /** El paisaje si no hay foto; sin él, uno según la semilla */
   scene?: SceneKind | null;
   queryParams: Params;
+  /** A dónde lleva la tarjeta; sin él, al Shop filtrado (queryParams) */
+  link?: string[];
 }
 
 /**
@@ -40,6 +42,7 @@ export interface PlaceItem {
           [scene]="item.scene ?? null"
           [kind]="kind()"
           [queryParams]="item.queryParams"
+          [link]="item.link ?? null"
         />
       }
     </ui-carousel>

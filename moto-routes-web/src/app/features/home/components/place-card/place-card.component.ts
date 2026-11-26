@@ -14,14 +14,14 @@ export type PlateKind = 'town' | 'route' | 'guide';
 
 /**
  * Una tarjeta del Home: la foto y debajo su placa con el nombre y cuántas experiencias tiene.
- * Toda la tarjeta es un enlace al Shop filtrado.
+ * Toda la tarjeta es un enlace al Shop filtrado (o, la de un guía, a su ficha).
  */
 @Component({
   selector: 'app-place-card',
   imports: [RouterLink, PhotoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a [routerLink]="['/experiencias']" [queryParams]="queryParams()">
+    <a [routerLink]="link() ?? ['/experiencias']" [queryParams]="link() ? null : queryParams()">
       <ui-photo [src]="photo()" [seed]="seed()" [scene]="scene()" alt="" />
       <span class="plate" [class]="'plate plate--' + kind()">
         <span class="name">{{ name() }}</span>
@@ -124,6 +124,8 @@ export class PlaceCardComponent {
   readonly kind = input.required<PlateKind>();
   /** El filtro del Shop al que lleva: { categoria: 'montana-1a2b' } */
   readonly queryParams = input.required<Params>();
+  /** Otra página en lugar del Shop filtrado (la ficha de un guía) */
+  readonly link = input<string[] | null>(null);
 
   protected readonly countLabel = computed(() => `${this.count()} ${this.count() === 1 ? 'experiencia' : 'experiencias'}`);
 }
