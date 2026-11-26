@@ -1,5 +1,7 @@
 import "dotenv/config";
+import { rm } from "node:fs/promises";
 import mongoose from "mongoose";
+import { loadUploadsConfig } from "./config/uploads.js";
 import { Bike } from "./models/bike.model.js";
 import { Category } from "./models/category.model.js";
 import { Departure } from "./models/departure.model.js";
@@ -509,6 +511,9 @@ try {
     await Model.syncIndexes();
   }
   console.log("Cleared all collections");
+  // Las fotos de las opiniones que se acaban de borrar: sin su opinión ya no las usa nadie
+  await rm(loadUploadsConfig().reviewsDir, { recursive: true, force: true });
+  console.log("Cleared the review photos");
 
   const roles = {};
   for (const role of ROLES) roles[role.name] = await roleService.create(role);

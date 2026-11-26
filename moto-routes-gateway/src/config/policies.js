@@ -6,9 +6,9 @@
  * y el tokenVersion los sigue comprobando la API: un rider que pide /api/users pasa la puerta y la
  * API le responde 403.
  *
- * Lo que no está aquí es público: los GET de /api (incluidos /api/shop y /api/docs, salvo "mi
- * opinión"), el login, el registro, el refresh y el logout de auth, su JWKS, la IA (salvo
- * /ai/admin) y los /health.
+ * Lo que no está aquí es público: los GET de /api (incluidos /api/shop, salvo "mi opinión", las
+ * fotos de las opiniones en /api/uploads y /api/docs), el login, el registro, el refresh y el
+ * logout de auth, su JWKS, la IA (salvo /ai/admin) y los /health.
  */
 
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { cookieConfigFrom } from "../config/cookies.js";
+import { uploadsConfigFrom } from "../config/uploads.js";
 import { bikeListQuery, createBikeSchema, updateBikeSchema } from "../schemas/bike.schema.js";
 import { categoryListQuery, createCategorySchema, updateCategorySchema } from "../schemas/category.schema.js";
 import {
@@ -1054,9 +1055,24 @@ const REVIEW_EXAMPLE = {
   title: "Inolvidable",
   comment: "El paisaje es espectacular y el guía conoce cada curva.",
   verified: false,
+  photos: [
+    {
+      _id: "6710a1b2c3d4e5f6a7b8c9a1",
+      url: "/api/uploads/reviews/0b7c1f9e-3c2a-4a59-9d55-1f1c8f2b6a10.webp",
+      width: 1600,
+      height: 1067,
+      createdAt: "2026-11-20T10:15:00.000Z",
+    },
+  ],
 };
 
 const RATING_EXAMPLE = { average: 4.38, count: 8, distribution: { 1: 0, 2: 1, 3: 0, 4: 2, 5: 5 } };
+
+// Los límites de las fotos, como los lee la API (config/uploads.js)
+const PHOTO_LIMITS = (() => {
+  const { reviewPhotoMaxBytes, reviewPhotosMax } = uploadsConfigFrom();
+  return { max: reviewPhotosMax, kb: Math.round(reviewPhotoMaxBytes / 1024) };
+})();
 
 const REVIEW_CODES =
   "code: REVIEW_ALREADY_EXISTS (409, ya has opinado), OWN_TARGET (403, el anfitrión sobre sí mismo o su experiencia) " +
@@ -1165,6 +1181,68 @@ const REVIEW_PATHS = {
       "user",
     ),
   },
+  "/api/reviews/{id}/photos": {
+    post: secured(
+      {
+        summary: "Subir una foto a mi opinión",
+        description:
+          `Solo su autor, de una en una y hasta ${PHOTO_LIMITS.max} por opinión. multipart/form-data con un único campo, photo: JPEG, PNG o WebP de ${PHOTO_LIMITS.kb} KB como mucho ` +
+          "(la web la manda ya reducida a WebP de 1600 px). Se comprueban los bytes del archivo, no su nombre ni su Content-Type. " +
+          "Responde la opinión con photos[].url (/api/uploads/reviews/...). code: INVALID_IMAGE (400), PHOTO_TOO_LARGE (413) o TOO_MANY_PHOTOS (409).",
+        tags: REVIEW_TAGS,
+        parameters: [idParam],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: { type: "object", required: ["photo"], properties: { photo: { type: "string", format: "binary" } } },
+              encoding: { photo: { contentType: "image/jpeg, image/png, image/webp" } },
+            },
+          },
+        },
+        responses: {
+          201: ok("Añadida: la opinión con sus fotos", reviewRef),
+          400: error("Sin foto, más de un archivo o campos de más, o no es JPEG, PNG ni WebP (INVALID_IMAGE)"),
+          403: error("No es tu opinión"),
+          404: error("No encontrada o eliminada"),
+          409: error(`Ya tiene ${PHOTO_LIMITS.max} fotos (TOO_MANY_PHOTOS)`),
+          413: error(`La foto pasa de ${PHOTO_LIMITS.kb} KB (PHOTO_TOO_LARGE)`),
+        },
+      },
+      "user",
+    ),
+  },
+  "/api/reviews/{id}/photos/{photoId}": {
+    delete: secured(
+      {
+        summary: "Quitar una foto de una opinión",
+        description: "Su autor o el admin (la moderación). Borra también el archivo.",
+        tags: REVIEW_TAGS,
+        parameters: [idParam, { in: "path", name: "photoId", required: true, schema: { type: "string" }, description: "Id de la foto (photos[]._id)" }],
+        responses: {
+          200: ok("Quitada: la opinión con las fotos que le quedan", reviewRef),
+          400: error("ID inválido"),
+          403: error("No es tu opinión"),
+          404: error("La opinión o la foto no existen"),
+        },
+      },
+      "user",
+    ),
+  },
+  "/api/uploads/reviews/{file}": {
+    get: {
+      summary: "Una foto de una opinión",
+      description:
+        "Público. La URL viene en photos[].url. El nombre no cambia nunca: se puede guardar en caché un año (Cache-Control immutable). " +
+        "Las de una opinión oculta o eliminada se siguen sirviendo, para que se pueda restaurar.",
+      tags: REVIEW_TAGS,
+      parameters: [{ in: "path", name: "file", required: true, schema: { type: "string" }, example: "0b7c1f9e-3c2a-4a59-9d55-1f1c8f2b6a10.webp" }],
+      responses: {
+        200: { description: "La foto", content: { "image/webp": {}, "image/jpeg": {}, "image/png": {} } },
+        404: error("No existe"),
+      },
+    },
+  },
   "/api/reviews/{id}/restore": {
     patch: secured(
       {
@@ -1190,6 +1268,7 @@ const hostSlugPath = { ...slugPath, example: "lucia-ferrer-b8c915" };
 const reviewQuery = [
   { in: "query", name: "sort", required: false, schema: { type: "string", enum: Object.keys(SHOP_REVIEW_SORT), default: "recent" }, description: "recent: las más recientes; best: las mejores; worst: las peores" },
   { in: "query", name: "rating", required: false, schema: { type: "integer", minimum: 1, maximum: 5 }, description: "Solo las de esas estrellas" },
+  { in: "query", name: "withPhotos", required: false, schema: { type: "string", enum: ["true", "false"] }, description: "true: solo las que tienen fotos" },
   { in: "query", name: "page", required: false, schema: { type: "integer", minimum: 1 }, description: "Página, desde 1 (1 por defecto)" },
   { in: "query", name: "limit", required: false, schema: { type: "integer", minimum: 1, maximum: SHOP_REVIEWS_LIMIT.max, default: SHOP_REVIEWS_LIMIT.default }, description: "Tamaño de la página" },
 ];
@@ -1198,7 +1277,8 @@ const shopReviewsPath = (what, param) => ({
   get: {
     summary: `Opiniones de ${what}`,
     description:
-      "Las visibles, por páginas, con su autor (nombre y foto, nunca el email). summary es la nota de todas: average, count y distribution (cuántas de cada estrella). Público.",
+      "Las visibles, por páginas, con su autor (nombre y foto, nunca el email) y sus fotos. summary es la nota de todas: average, count, distribution (cuántas de cada estrella) " +
+      "y withPhotos (cuántas tienen fotos). Público.",
     tags: SHOP_TAGS,
     parameters: [param, ...reviewQuery],
     responses: {
@@ -1207,7 +1287,7 @@ const shopReviewsPath = (what, param) => ({
         content: {
           "application/json": {
             schema: { type: "object", properties: { data: { type: "array", items: reviewRef }, pagination: { type: "object" }, summary: { type: "object" } } },
-            example: { data: [REVIEW_EXAMPLE], pagination: { total: 8, page: 1, limit: 10, totalPages: 1 }, summary: RATING_EXAMPLE },
+            example: { data: [REVIEW_EXAMPLE], pagination: { total: 8, page: 1, limit: 10, totalPages: 1 }, summary: { ...RATING_EXAMPLE, withPhotos: 1 } },
           },
         },
       },

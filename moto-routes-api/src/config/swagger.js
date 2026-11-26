@@ -37,7 +37,7 @@ const options = {
             message: { type: "string", example: "Validation failed" },
             code: {
               type: "string",
-              enum: ["TOKEN_EXPIRED", "TOKEN_INVALID", "REVIEW_ALREADY_EXISTS", "OWN_TARGET", "COMMENT_REQUIRED_FOR_LOW_RATING"],
+              enum: ["TOKEN_EXPIRED", "TOKEN_INVALID", "REVIEW_ALREADY_EXISTS", "OWN_TARGET", "COMMENT_REQUIRED_FOR_LOW_RATING", "INVALID_IMAGE", "PHOTO_TOO_LARGE", "TOO_MANY_PHOTOS"],
               description:
                 "Solo en algunos errores: por qué no sirve el token (401) o qué regla de las opiniones no se cumple (400, 403, 409)",
             },

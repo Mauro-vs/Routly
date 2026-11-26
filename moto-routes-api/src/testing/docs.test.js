@@ -12,7 +12,7 @@ before(async () => {
 after(() => api?.stop());
 
 // Valores con formato válido para los parámetros de la ruta
-const PARAMS = { id: "6710a1b2c3d4e5f6a7b8c999", userId: "6710a1b2c3d4e5f6a7b8c999", slug: "no-existe", sku: "RTL-DEP-261108-7QX2M" };
+const PARAMS = { id: "6710a1b2c3d4e5f6a7b8c999", userId: "6710a1b2c3d4e5f6a7b8c999", slug: "no-existe", sku: "RTL-DEP-261108-7QX2M", photoId: "6710a1b2c3d4e5f6a7b8c998", file: "no-existe.webp" };
 const toPath = (path) => path.replace(/^\/api/, "").replace(/\{(\w+)\}/g, (_, name) => PARAMS[name]);
 
 test("cada operación de Swagger con candado pide token, y las demás no", async () => {

@@ -69,6 +69,32 @@ export const reviewController = {
     }
   },
 
+  // Antes de multer: que la opinión sea tuya y quepa otra foto (si no, el archivo ni se recibe)
+  async checkPhotoSlot(req, res, next) {
+    try {
+      await reviewService.assertCanAddPhoto(req.params.id, req.user);
+      next();
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async addPhoto(req, res, next) {
+    try {
+      res.status(201).json(await reviewService.addPhoto(req.params.id, req.file, req.user));
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async removePhoto(req, res, next) {
+    try {
+      res.json(await reviewService.removePhoto(req.params.id, req.params.photoId, req.user));
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async restore(req, res, next) {
     try {
       res.json(await reviewService.restore(req.params.id, req.body.isActive, req.user));

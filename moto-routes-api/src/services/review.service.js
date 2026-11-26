@@ -1,3 +1,7 @@
+import { readFile, rename, rm } from "node:fs/promises";
+import path from "node:path";
+import mongoose from "mongoose";
+import { REVIEW_PHOTOS_PATH, loadUploadsConfig } from "../config/uploads.js";
 import { LOW_RATING_MESSAGE, missingLowRatingComment } from "../models/review.model.js";
 import { REVIEW_TARGETS } from "../models/reviewTargets.js";
 import { restoredStatus, statusFromActive } from "../models/status.js";
@@ -7,6 +11,7 @@ import { reviewRepository } from "../repositories/review.repository.js";
 import { SHOP_REVIEWS_LIMIT, SHOP_REVIEW_SORT, reviewListQuery } from "../schemas/review.schema.js";
 import { isAdminUser, isOwnerOrAdmin } from "../utils/access.js";
 import { conflict, fieldError, forbidden, notFound, withCode } from "../utils/errors.js";
+import { invalidImage, readImageInfo } from "../utils/imageFile.js";
 import { findList } from "../utils/listQuery.js";
 import { imageService } from "./image.service.js";
 import { ratingService, summarize } from "./rating.service.js";
@@ -30,6 +35,10 @@ import { PUBLIC, assertVisible } from "./visibility.js";
  *   - Con 1 o 2 estrellas el comentario es obligatorio (400 COMMENT_REQUIRED_FOR_LOW_RATING).
  *
  * Cada cambio recalcula las notas guardadas (services/rating.service.js).
+ *
+ * Las fotos (hasta REVIEW_PHOTOS_MAX) se suben de una en una a una opinión que ya existe: solo su
+ * autor las sube; su autor o el admin las quitan. El archivo va a disco (config/uploads.js) y en
+ * la opinión queda su nombre. Borrar la opinión no borra sus fotos: se puede restaurar.
  */
 
 // Cada tipo de objetivo: su repositorio, su nombre en los mensajes y su regla de visibilidad
@@ -48,6 +57,9 @@ function createForbidden(message) {
   error.message = message;
   return error;
 }
+
+const tooManyPhotos = (max) =>
+  withCode(conflict(`A review can have at most ${max} photos`), "TOO_MANY_PHOTOS");
 
 // El índice único (una por usuario y objetivo) cuando dos peticiones llegan a la vez
 const isDuplicate = (error) => error?.code === 11000;
@@ -95,14 +107,62 @@ async function assertCanReview(user, targetType, target) {
   if (!allowed) throw withCode(forbidden(), reason);
 }
 
+// ---------- Fotos ----------
+
+/** La opinión, si es de ese usuario. 404 si no existe o está borrada; 403 si es de otro. */
+async function findOwnReview(id, actor) {
+  const review = await findCurrent(reviewRepository, id, "Review");
+  if (String(review.userId) !== actor.id) throw forbidden();
+  return review;
+}
+
+const photoPath = (file) => path.join(loadUploadsConfig().reviewsDir, file);
+
+// Borrar un archivo que puede no existir ya: si falla, se avisa en el log y se sigue
+async function removeFile(filePath) {
+  try {
+    await rm(filePath, { force: true });
+  } catch (error) {
+    console.error(`Could not delete ${filePath}:`, error.message);
+  }
+}
+
+/**
+ * Comprueba los bytes del archivo subido y lo deja con la extensión de lo que es de verdad (un PNG
+ * que llega como image/jpeg se queda en .png, para que se sirva con su Content-Type).
+ * Devuelve { file, path, width, height }. Si no es JPEG, PNG ni WebP, 400 INVALID_IMAGE.
+ */
+async function checkUploadedPhoto(upload) {
+  const info = readImageInfo(await readFile(upload.path));
+  if (!info) throw invalidImage();
+  const { name } = path.parse(upload.filename);
+  const file = `${name}.${info.extension}`;
+  const finalPath = photoPath(file);
+  if (finalPath !== upload.path) await rename(upload.path, finalPath);
+  return { file, path: finalPath, width: info.width, height: info.height };
+}
+
+// Lo que ve el cliente de una foto: su URL, nunca la ruta en disco
+const photoView = ({ _id, file, width, height, createdAt }) => ({
+  _id,
+  url: `${REVIEW_PHOTOS_PATH}/${file}`,
+  width,
+  height,
+  createdAt,
+});
+
 // ---------- Cómo se enseña una opinión ----------
 
-// El autor: su nombre y su foto de perfil (nunca el email)
+// El autor: su nombre y su foto de perfil (nunca el email). Y las fotos, con su URL
 async function withAuthors(reviews) {
   const users = [...new Map(reviews.filter((review) => review.user).map((review) => [String(review.user._id), review.user])).values()];
   const withCovers = await imageService.attachCovers("user", users);
   const byId = new Map(withCovers.map((user) => [String(user._id), { _id: user._id, name: user.name, coverImage: user.coverImage }]));
-  return reviews.map((review) => ({ ...review, user: byId.get(String(review.userId)) ?? null }));
+  return reviews.map((review) => ({
+    ...review,
+    user: byId.get(String(review.userId)) ?? null,
+    photos: (review.photos ?? []).map(photoView),
+  }));
 }
 
 // Para el panel: el título (o el nombre) y el slug de lo que se valora
@@ -224,23 +284,84 @@ export const reviewService = {
     return reviewService.getById(id);
   },
 
+  // ---------- Fotos ----------
+
+  /**
+   * Antes de recibir el archivo: que la opinión sea tuya y que quepa otra foto. Así no se escribe
+   * en disco una foto que se va a rechazar. La comprobación de verdad es la de addPhoto.
+   */
+  async assertCanAddPhoto(id, actor) {
+    const review = await findOwnReview(id, actor);
+    const max = loadUploadsConfig().reviewPhotosMax;
+    if ((review.photos?.length ?? 0) >= max) throw tooManyPhotos(max);
+  },
+
+  /**
+   * Añade a tu opinión la foto que ha dejado multer en disco (upload: req.file). Si algo falla, el
+   * archivo se borra (compensación, como en references.js). 409 TOO_MANY_PHOTOS si ya está llena.
+   */
+  async addPhoto(id, upload, actor) {
+    const max = loadUploadsConfig().reviewPhotosMax;
+    let filePath = upload.path;
+    try {
+      await findOwnReview(id, actor);
+      const photo = await checkUploadedPhoto(upload);
+      filePath = photo.path;
+      const added = await reviewRepository.addPhoto(id, actor.id, {
+        _id: new mongoose.Types.ObjectId(),
+        file: photo.file,
+        width: photo.width,
+        height: photo.height,
+        createdAt: new Date(),
+      }, max);
+      // Entre la comprobación y la escritura ha llegado otra foto (o se ha borrado la opinión)
+      if (!added) throw tooManyPhotos(max);
+    } catch (error) {
+      await removeFile(filePath);
+      throw error;
+    }
+    return reviewService.getById(id);
+  },
+
+  /** Quita una foto y borra su archivo. Su autor o el admin (la moderación). */
+  async removePhoto(id, photoId, actor) {
+    const review = await findCurrent(reviewRepository, id, "Review");
+    if (!isOwnerOrAdmin(actor, review)) throw forbidden();
+    const before = await reviewRepository.removePhoto(id, photoId);
+    const photo = before?.photos.find((item) => String(item._id) === photoId);
+    if (!photo) throw notFound("Photo");
+    await removeFile(photoPath(photo.file));
+    return reviewService.getById(id);
+  },
+
   // ---------- La tienda ----------
 
   /**
    * Las opiniones visibles de una experiencia o un anfitrión visibles, por páginas, y su resumen:
-   * la media, cuántas y cuántas de cada nota. { data, pagination, summary }
+   * la media, cuántas, cuántas de cada nota y cuántas con fotos. { data, pagination, summary }.
+   * withPhotos: solo las que tienen fotos
    */
-  async listForTarget(targetType, slug, { sort = "recent", rating, page = 1, limit = SHOP_REVIEWS_LIMIT.default } = {}) {
+  async listForTarget(
+    targetType,
+    slug,
+    { sort = "recent", rating, withPhotos = false, page = 1, limit = SHOP_REVIEWS_LIMIT.default } = {},
+  ) {
     const target = await findVisibleTargetBySlug(targetType, slug);
     const base = { targetType, targetId: target._id };
-    const filter = { ...base, isActive: true, ...(rating !== undefined && { rating }) };
+    const hasPhotos = { "photos.0": { $exists: true } };
+    const filter = { ...base, isActive: true, ...(rating !== undefined && { rating }), ...(withPhotos && hasPhotos) };
 
-    const [items, total, summary] = await Promise.all([
+    const [items, total, summary, photoCount] = await Promise.all([
       reviewRepository.findAll(filter, { sort: SHOP_REVIEW_SORT[sort], skip: (page - 1) * limit, limit }),
       reviewRepository.count(filter),
       summarize(base),
+      reviewRepository.count({ ...base, isActive: true, ...hasPhotos }),
     ]);
-    return { data: await withAuthors(items), pagination: pagination(total, page, limit), summary };
+    return {
+      data: await withAuthors(items),
+      pagination: pagination(total, page, limit),
+      summary: { ...summary, withPhotos: photoCount },
+    };
   },
 
   /**

@@ -26,6 +26,15 @@ export const LOW_RATING_MESSAGE =
   `comment is required with ${REVIEW_LIMITS.lowRatingMax} stars or less ` +
   `(at least ${REVIEW_LIMITS.lowRatingCommentMin} characters)`;
 
+// Una foto de la opinión. Solo se guarda el nombre del archivo en disco (config/uploads.js); la
+// URL se forma al enseñarla. width y height, de la cabecera del archivo (null si no se pudo leer)
+const photoSchema = new mongoose.Schema({
+  file: { type: String, required: true },
+  width: { type: Number, default: null },
+  height: { type: Number, default: null },
+  createdAt: { type: Date, default: Date.now },
+});
+
 /**
  * Una opinión de un usuario sobre una experiencia o un anfitrión (targetType + targetId, como las
  * imágenes con ownerType). Cada usuario tiene como mucho una por experiencia y una por anfitrión.
@@ -51,6 +60,9 @@ const reviewSchema = new mongoose.Schema(
     // "Ha hecho esta ruta": hará falta una reserva (colección bookings, todavía no existe). Hasta
     // entonces siempre false; la regla de quién puede opinar está en reviewService.canReview
     verified: { type: Boolean, default: false },
+    // Se añaden y se quitan de una en una (POST y DELETE /api/reviews/:id/photos); el máximo
+    // (REVIEW_PHOTOS_MAX) lo comprueba el repositorio en la misma escritura
+    photos: { type: [photoSchema], default: [] },
   },
   { timestamps: true }
 );

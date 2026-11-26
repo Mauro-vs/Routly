@@ -10,6 +10,7 @@ import { helmetMiddleware } from "./config/helmet.js";
 import { morganMiddleware } from "./config/morgan.js";
 import { applyTrustProxy } from "./config/proxy.js";
 import { swaggerSpec } from "./config/swagger.js";
+import { serveUploads } from "./config/uploads.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import bikeRoutes from "./routes/bike.routes.js";
 import shopRoutes from "./routes/shop.routes.js";
@@ -50,6 +51,9 @@ app.use(visibilityCache);
 app.get("/health", (req, res) => {
   res.json({ ok: true });
 });
+
+// Las fotos de las opiniones (público): /api/uploads/reviews/<archivo>
+serveUploads(app);
 
 // persistAuthorization: el token de Authorize no se pierde al recargar la página
 app.use(

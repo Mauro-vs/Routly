@@ -81,19 +81,22 @@ describe("requiresSession", () => {
       ["POST", "/ai/chat"],
       ["GET", "/api/shop/experiences/costa/reviews"],
       ["GET", "/api/shop/hosts/lucia/reviews?sort=best"],
+      ["GET", "/api/uploads/reviews/0b7c1f9e-3c2a-4a59-9d55-1f1c8f2b6a10.webp"],
       ["GET", "/health"],
     ]) {
       assert.equal(requiresSession(method, path), false, `${method} ${path}`);
     }
   });
 
-  it("las opiniones: todas, la mía y la IA del panel, sí", () => {
+  it("las opiniones: todas, la mía, sus fotos y la IA del panel, sí", () => {
     for (const [method, path] of [
       ["GET", "/api/reviews"],
       ["GET", "/api/reviews/6710a1b2c3d4e5f6a7b8c9a0"],
       ["GET", "/api/shop/experiences/costa/reviews/mine"],
       ["GET", "/api/shop/hosts/lucia/reviews/mine"],
       ["GET", "/ai/admin/reviews-health"],
+      ["POST", "/api/reviews/6710a1b2c3d4e5f6a7b8c9a0/photos"],
+      ["DELETE", "/api/reviews/6710a1b2c3d4e5f6a7b8c9a0/photos/6710a1b2c3d4e5f6a7b8c9a1"],
     ]) {
       assert.equal(requiresSession(method, path), true, `${method} ${path}`);
     }

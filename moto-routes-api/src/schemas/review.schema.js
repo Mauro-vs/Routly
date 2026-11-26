@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { LOW_RATING_MESSAGE, REVIEW_LIMITS as LIMITS, missingLowRatingComment } from "../models/review.model.js";
 import { REVIEW_TARGET_TYPES } from "../models/reviewTargets.js";
-import { defineListQuery, equals, queryNumber } from "../utils/listQuery.js";
+import { defineListQuery, equals, queryBoolean, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, objectIdSchema } from "./common.schema.js";
 
 // Un texto vacío ("" o solo espacios) es como no enviarlo: el comentario y el título son opcionales
@@ -74,6 +74,10 @@ export const SHOP_REVIEWS_LIMIT = Object.freeze({ default: 10, max: 20 });
 export const shopReviewsQuery = z.strictObject({
   sort: z.enum(Object.keys(SHOP_REVIEW_SORT)).optional(),
   rating: queryNumber.pipe(rating).optional(),
+  withPhotos: queryBoolean.optional(),
   page: queryNumber.pipe(z.number().int().min(1)).optional(),
   limit: queryNumber.pipe(z.number().int().min(1).max(SHOP_REVIEWS_LIMIT.max)).optional(),
 });
+
+/** POST /api/reviews/:id/photos y DELETE /api/reviews/:id/photos/:photoId. */
+export const photoParamSchema = z.strictObject({ id: objectIdSchema, photoId: objectIdSchema });

@@ -64,6 +64,28 @@ export const reviewRepository = {
     }).lean();
   },
 
+  /**
+   * Añade una foto a la opinión de ese usuario solo si todavía cabe: la condición (que no exista la
+   * foto número max) y el $push van en la misma escritura, así dos subidas a la vez no pasan de max.
+   * null si no es suya, no existe o ya está llena.
+   */
+  addPhoto(id, userId, photo, max) {
+    return Review.findOneAndUpdate(
+      { _id: id, userId, [`photos.${max - 1}`]: { $exists: false } },
+      { $push: { photos: photo } },
+      { returnDocument: "after" },
+    ).lean();
+  },
+
+  // Quita una foto. Devuelve la opinión de antes (con la foto, para borrar su archivo) o null
+  removePhoto(id, photoId) {
+    return Review.findOneAndUpdate(
+      { _id: id, "photos._id": photoId },
+      { $pull: { photos: { _id: photoId } } },
+      { returnDocument: "before" },
+    ).lean();
+  },
+
   softDeleteById(id, deletedAt) {
     return Review.softDeleteById(id, deletedAt).lean();
   },

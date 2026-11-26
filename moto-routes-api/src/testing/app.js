@@ -1,6 +1,10 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import express from "express";
 import mongoose from "mongoose";
 import { applyTrustProxy } from "../config/proxy.js";
+import { serveUploads } from "../config/uploads.js";
 import { errorHandler, notFoundHandler } from "../middlewares/errorHandler.js";
 import bikeRoutes from "../routes/bike.routes.js";
 import categoryRoutes from "../routes/category.routes.js";
@@ -25,6 +29,10 @@ process.env.NODE_ENV ??= "test";
 // Los tokens los firma una clave de prueba (testing/tokens.js) y la API los comprueba con su JWKS,
 // sin el servicio de auth
 useTestKeys();
+// Las fotos que se suban, siempre en una carpeta temporal por proceso que se borra al terminar,
+// nunca en la de verdad (config/uploads.js la lee la primera vez que se usa, ya con este valor)
+const TEST_UPLOADS_DIR = mkdtempSync(path.join(tmpdir(), "routly-uploads-"));
+process.env.UPLOADS_DIR = TEST_UPLOADS_DIR;
 
 export const ADMIN_EMAIL = "admin@test.dev";
 export const TEST_PASSWORD = "clave1234";
@@ -74,6 +82,7 @@ export async function startApi(name) {
   applyTrustProxy(app);
   app.use(express.json({ limit: "50kb" }));
   app.use(visibilityCache);
+  serveUploads(app);
   const routers = {
     profile: profileRoutes,
     roles: roleRoutes,
@@ -114,11 +123,27 @@ export async function startApi(name) {
         body: response.status === 204 ? null : await response.json(),
       };
     };
+    // multipart/form-data: { campo: Blob o texto }. Blob con nombre: [blob, "foto.jpg"]
+    const upload = async (path, fields) => {
+      const form = new FormData();
+      for (const [name, value] of Object.entries(fields)) {
+        if (Array.isArray(value)) form.append(name, ...value);
+        else form.append(name, value);
+      }
+      const response = await fetch(base + path, {
+        method: "POST",
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      return { status: response.status, headers: response.headers, body: await response.json() };
+    };
     return {
       token,
       get: (path) => request("GET", path),
       post: (path, body) => request("POST", path, body),
       patch: (path, body) => request("PATCH", path, body),
+      delete: (path) => request("DELETE", path),
+      upload,
     };
   };
 
@@ -150,6 +175,7 @@ export async function startApi(name) {
       await new Promise((resolve) => server.close(resolve));
       await mongoose.connection.dropDatabase();
       await mongoose.disconnect();
+      rmSync(TEST_UPLOADS_DIR, { recursive: true, force: true });
     },
   };
 }
