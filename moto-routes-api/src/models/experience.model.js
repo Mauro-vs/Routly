@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { ratingField } from "./rating.js";
 import { integer, positive } from "./validators.js";
 import { TEXT_INDEX } from "./textIndex.js";
 
@@ -67,6 +68,8 @@ const experienceSchema = new mongoose.Schema(
       max: EXPERIENCE_LIMITS.participantsMax,
       validate: integer,
     },
+    // La nota de sus opiniones visibles: la calcula la API (services/rating.service.js)
+    rating: ratingField(),
   },
   { timestamps: true }
 );
@@ -90,5 +93,7 @@ experienceSchema.plugin(softDeletePlugin);
 
 // ?q= busca en el título y la descripción (con language_override: ver textIndex.js)
 experienceSchema.index({ title: "text", description: "text" }, TEXT_INDEX);
+// sort=rating en la tienda
+experienceSchema.index({ "rating.average": -1 });
 
 export const Experience = mongoose.model("Experience", experienceSchema);

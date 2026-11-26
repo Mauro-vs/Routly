@@ -53,6 +53,19 @@ export const hostRepository = {
     return Host.create(data);
   },
 
+  /**
+   * Guarda sus notas (services/rating.service.js), también si está en la papelera. Sin tocar
+   * updatedAt: una opinión nueva no es un cambio de la ficha del anfitrión.
+   */
+  setRatings(id, ratings) {
+    return Host.updateOne({ _id: id }, { $set: ratings }, { timestamps: false }).setOptions({ withDeleted: true });
+  },
+
+  // Las notas guardadas de todos (también los de la papelera): para recalcularlas o comprobarlas
+  findRatings() {
+    return Host.find({}).select("rating experiencesRating").setOptions({ withDeleted: true }).lean();
+  },
+
   updateById(id, data) {
     return Host.findOneAndUpdate({ _id: id }, toUpdate(data), {
       returnDocument: "after",

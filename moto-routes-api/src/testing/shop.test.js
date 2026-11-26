@@ -195,7 +195,7 @@ describe("el Shop", () => {
     assert.equal((await shop("/experiences?limit=51")).status, 400);
     assert.equal((await shop("/experiences?page=0")).status, 400);
     assert.equal((await shop("/experiences?category=No%20Vale")).status, 400);
-    assert.equal(fieldMessage(await shop("/experiences?sort=price"), "sort"), "sort must be a comma-separated list of: title, priceFrom, nextDepartureAt, createdAt");
+    assert.equal(fieldMessage(await shop("/experiences?sort=price"), "sort"), "sort must be a comma-separated list of: title, priceFrom, nextDepartureAt, rating, createdAt");
     assert.equal(fieldMessage(await shop("/experiences?priceMin=200&priceMax=100"), "priceMax"), "priceMax must be greater than or equal to priceMin");
   });
 

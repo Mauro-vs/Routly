@@ -20,9 +20,11 @@ import hostRoutes from "./routes/host.routes.js";
 import imageRoutes from "./routes/image.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
 import roleRoutes from "./routes/role.routes.js";
 import routeRoutes from "./routes/route.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import { ratingService } from "./services/rating.service.js";
 import { visibilityCache } from "./services/visibility.js";
 
 // Sin una AUTH_JWKS_URL válida (la clave pública del servicio de auth), o con la cookie mal
@@ -66,6 +68,8 @@ app.use("/api/experiences", experienceRoutes);
 app.use("/api/departures", departureRoutes);
 app.use("/api/images", imageRoutes);
 app.use("/api/bikes", bikeRoutes);
+// Las opiniones de las experiencias y los anfitriones (las públicas se leen en /api/shop)
+app.use("/api/reviews", reviewRoutes);
 // La tienda pública: el Home, el Shop y el detalle de una experiencia
 app.use("/api/shop", shopRoutes);
 
@@ -75,6 +79,8 @@ app.use(errorHandler);
 connectDB()
   // Las rutas de antes de existir difficultyLevel: una sola vez, luego no cambia nada
   .then(() => Route.syncDifficultyLevels())
+  // Las notas de los documentos de antes de existir las opiniones: una sola vez, luego no hace nada
+  .then(() => ratingService.fillMissing())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);

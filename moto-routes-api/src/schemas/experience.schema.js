@@ -52,7 +52,9 @@ export const updateExperienceSchema = experienceFields
 // ?priceMax=100&from=2026-12-01 es "alguna salida de 100 € o menos a partir de diciembre".
 export const experienceListQuery = defineListQuery({
   // priceFrom y nextDepartureAt salen de sus salidas: el service los ordena aparte
-  sort: ["title", "duration", "maxParticipants", "priceFrom", "nextDepartureAt", "createdAt", "updatedAt"],
+  sort: ["title", "duration", "maxParticipants", "priceFrom", "nextDepartureAt", "rating", "createdAt", "updatedAt"],
+  // rating: la media de sus opiniones (-rating, las mejor valoradas primero)
+  sortFields: { rating: "rating.average" },
   filters: {
     hostId: { schema: objectIdSchema, to: equals("hostId") },
     routeId: { schema: objectIdSchema, to: equals("routeId") },

@@ -10,7 +10,7 @@ const options = {
       version: "2.0.0",
       description:
         "API REST de Routly, la plataforma de rutas en moto: roles, usuarios, anfitriones, " +
-        "categorías, ubicaciones, rutas, experiencias, salidas e imágenes. Todas las " +
+        "categorías, ubicaciones, rutas, experiencias, salidas, imágenes y opiniones. Todas las " +
         "colecciones se activan, se desactivan y tienen papelera (soft delete).\n\n" +
         "Autenticación con JWT: el login es del servicio de auth (POST /auth/login, puerto 3002), " +
         "que firma el token con RS256. Se envía en Authorization: Bearer <token> (botón Authorize) " +
@@ -37,8 +37,9 @@ const options = {
             message: { type: "string", example: "Validation failed" },
             code: {
               type: "string",
-              enum: ["TOKEN_EXPIRED", "TOKEN_INVALID"],
-              description: "Solo en algunos 401: por qué no sirve el token",
+              enum: ["TOKEN_EXPIRED", "TOKEN_INVALID", "REVIEW_ALREADY_EXISTS", "OWN_TARGET", "COMMENT_REQUIRED_FOR_LOW_RATING"],
+              description:
+                "Solo en algunos errores: por qué no sirve el token (401) o qué regla de las opiniones no se cumple (400, 403, 409)",
             },
             details: {
               type: "array",

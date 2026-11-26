@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { ratingField } from "./rating.js";
 import { TEXT_INDEX } from "./textIndex.js";
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/host.schema.js).
@@ -20,6 +21,10 @@ const hostSchema = new mongoose.Schema(
       maxlength: HOST_LIMITS.nameMax,
     },
     biography: { type: String, trim: true, maxlength: HOST_LIMITS.biographyMax },
+    // Dos notas, las dos calculadas por la API (services/rating.service.js): la de las opiniones
+    // del anfitrión como guía y la de todas las opiniones de sus experiencias activas
+    rating: ratingField(),
+    experiencesRating: ratingField(),
   },
   { timestamps: true }
 );

@@ -10,6 +10,7 @@ import hostRoutes from "../routes/host.routes.js";
 import imageRoutes from "../routes/image.routes.js";
 import locationRoutes from "../routes/location.routes.js";
 import profileRoutes from "../routes/profile.routes.js";
+import reviewRoutes from "../routes/review.routes.js";
 import roleRoutes from "../routes/role.routes.js";
 import routeRoutes from "../routes/route.routes.js";
 import shopRoutes from "../routes/shop.routes.js";
@@ -86,6 +87,7 @@ export async function startApi(name) {
     departures: departureRoutes,
     images: imageRoutes,
     bikes: bikeRoutes,
+    reviews: reviewRoutes,
   };
   for (const [path, router] of Object.entries(routers)) app.use(`/api/${path}`, router);
   app.use(notFoundHandler);

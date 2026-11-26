@@ -10,6 +10,7 @@
     "dev": "node scripts/dev.mjs",
     "test": "node scripts/test.mjs",
     "check": "node scripts/check.mjs",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "seed:reviews": "node scripts/seed.mjs --reviews"
   }
 }

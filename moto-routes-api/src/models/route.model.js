@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { slugPlugin } from "./plugins/slug.plugin.js";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
+import { ratingField } from "./rating.js";
 import { positive } from "./validators.js";
 import { TEXT_INDEX } from "./textIndex.js";
 
@@ -61,6 +62,9 @@ const routeSchema = new mongoose.Schema(
         message: `a route has at most ${ROUTE_LIMITS.waypointsMax} waypoints`,
       },
     },
+    // Las rutas no se comentan: su nota es la de las opiniones de las experiencias activas que la
+    // usan, y la calcula la API (services/rating.service.js)
+    rating: ratingField(),
   },
   { timestamps: true }
 );

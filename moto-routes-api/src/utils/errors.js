@@ -37,3 +37,13 @@ export function fieldError(field, message) {
   error.details = [{ field, message }];
   return error;
 }
+
+/**
+ * Un error con un code propio de la API (REVIEW_ALREADY_EXISTS, OWN_TARGET...) que sí llega al
+ * cliente, como los de los 401: así la web distingue un caso de otro sin leer el mensaje.
+ */
+export function withCode(error, code) {
+  error.code = code;
+  error.publicCode = true;
+  return error;
+}

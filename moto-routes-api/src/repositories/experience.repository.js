@@ -11,7 +11,7 @@ import { reservable } from "./departure.repository.js";
 // el servidor de IA (moto-routes-ai) busca el tiempo y las paradas de la ruta.
 const ROUTE_SUMMARY = {
   path: "route",
-  select: "title slug distance duration difficulty categoryId startLocationId endLocationId waypoints",
+  select: "title slug distance duration difficulty categoryId startLocationId endLocationId waypoints rating",
   populate: [
     { path: "category", select: "name slug" },
     { path: "startLocation", select: "city region country slug coordinates" },
@@ -194,6 +194,19 @@ export const experienceRepository = {
 
   create(data) {
     return Experience.create(data);
+  },
+
+  /**
+   * Guarda sus notas (services/rating.service.js), también si está en la papelera. Sin tocar
+   * updatedAt: una opinión nueva no es un cambio de la experiencia.
+   */
+  setRatings(id, ratings) {
+    return Experience.updateOne({ _id: id }, { $set: ratings }, { timestamps: false }).setOptions({ withDeleted: true });
+  },
+
+  // Las notas guardadas de todos (también los de la papelera): para recalcularlas o comprobarlas
+  findRatings() {
+    return Experience.find({}).select("rating").setOptions({ withDeleted: true }).lean();
   },
 
   updateById(id, data) {

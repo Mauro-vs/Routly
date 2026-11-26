@@ -55,6 +55,19 @@ export const routeRepository = {
     return Route.create(data);
   },
 
+  /**
+   * Guarda sus notas (services/rating.service.js), también si está en la papelera. Sin tocar
+   * updatedAt: una opinión nueva no es un cambio de la ruta.
+   */
+  setRatings(id, ratings) {
+    return Route.updateOne({ _id: id }, { $set: ratings }, { timestamps: false }).setOptions({ withDeleted: true });
+  },
+
+  // Las notas guardadas de todos (también los de la papelera): para recalcularlas o comprobarlas
+  findRatings() {
+    return Route.find({}).select("rating").setOptions({ withDeleted: true }).lean();
+  },
+
   updateById(id, data) {
     return Route.findOneAndUpdate({ _id: id }, toUpdate(data), {
       returnDocument: "after",

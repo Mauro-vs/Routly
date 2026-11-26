@@ -17,6 +17,13 @@ import { createHostSchema, hostListQuery, updateHostSchema } from "../schemas/ho
 import { createImageSchema, imageListQuery, updateImageSchema } from "../schemas/image.schema.js";
 import { createLocationSchema, locationListQuery, updateLocationSchema } from "../schemas/location.schema.js";
 import { createRoleSchema, roleListQuery, updateRoleSchema } from "../schemas/role.schema.js";
+import {
+  SHOP_REVIEWS_LIMIT,
+  SHOP_REVIEW_SORT,
+  createReviewSchema,
+  reviewListQuery,
+  updateReviewSchema,
+} from "../schemas/review.schema.js";
 import { createRouteSchema, routeListQuery, updateRouteSchema } from "../schemas/route.schema.js";
 import { SHOP_DEFAULT_SORT, SHOP_LIMIT, SHOP_SORT, shopExperiencesQuery } from "../schemas/shop.schema.js";
 import {
@@ -154,6 +161,9 @@ const RESOURCES = [
       biography: "Guía en Mallorca desde 2015.",
       coverImage: null,
       slug: "lucia-ferrer-b8c915",
+      // Sus notas: como guía y la de sus experiencias (las calcula la API con las opiniones)
+      rating: { average: 4.38, count: 8, distribution: { 1: 0, 2: 1, 3: 0, 4: 2, 5: 5 } },
+      experiencesRating: { average: 4.5, count: 40, distribution: { 1: 1, 2: 1, 3: 2, 4: 9, 5: 27 } },
       // Solo en GET /hosts/:id y /hosts/slug/:slug: su garaje (en público, las públicas)
       bikes: [],
     },
@@ -252,6 +262,8 @@ const RESOURCES = [
         { name: "Deià", latitude: 39.748, longitude: 2.649 },
       ],
       coverImage: { _id: "6710a1b2c3d4e5f6a7b8c991", url: "https://picsum.photos/seed/caminos/1200/800", alt: "Caminos de Mallorca, foto 1" },
+      // Las rutas no se comentan: la nota de las opiniones de las experiencias activas que la usan
+      rating: { average: 4.38, count: 8, distribution: { 1: 0, 2: 1, 3: 0, 4: 2, 5: 5 } },
       slug: "caminos-de-mallorca-df38e9",
     },
     conflicts: {
@@ -320,6 +332,8 @@ const RESOURCES = [
       coverImage: { _id: "6710a1b2c3d4e5f6a7b8c996", url: "https://picsum.photos/seed/tramuntana/1200/800", alt: "Tramuntana al amanecer, foto 1" },
       priceFrom: 89,
       nextDepartureAt: "2026-11-08T06:00:00.000Z",
+      // La nota de sus opiniones visibles (la calcula la API)
+      rating: { average: 4.38, count: 8, distribution: { 1: 0, 2: 1, 3: 0, 4: 2, 5: 5 } },
       slug: "tramuntana-al-amanecer-b8c940",
     },
     conflicts: {
@@ -599,6 +613,9 @@ const FILTER_DOCS = {
   ownerId: "Id del dueño (necesita ownerType)",
   isCover: "Solo la principal (true) o las demás (false)",
   hasDepartures: "Solo las que tienen alguna salida reservable: activa, programada y futura (solo admite true)",
+  targetType: "Qué se valora: experience o host",
+  targetId: "Id de la experiencia o del anfitrión que se valora",
+  rating: "Estrellas, de 1 a 5",
 };
 
 // El tipo de un filtro para Swagger, a partir de su esquema de Zod (lo que llega en la URL)
@@ -1019,9 +1036,238 @@ const SHOP_PATHS = {
   },
 };
 
+// ---------- Opiniones: /api/reviews ----------
+// No siguen el patrón de las colecciones: crear es de cualquier sesión, editar solo de su autor,
+// borrar de su autor o del admin, y leer, ocultar y restaurar, solo del admin (la moderación)
+
+const REVIEW_TAGS = ["Reviews"];
+const reviewRef = { $ref: "#/components/schemas/Review" };
+
+const REVIEW_EXAMPLE = {
+  _id: "6710a1b2c3d4e5f6a7b8c9a0",
+  targetType: "experience",
+  targetId: "6710a1b2c3d4e5f6a7b8c940",
+  target: { _id: "6710a1b2c3d4e5f6a7b8c940", name: "Tramuntana al amanecer", slug: "tramuntana-al-amanecer-b8c940" },
+  userId: "6710a1b2c3d4e5f6a7b8c912",
+  user: { _id: "6710a1b2c3d4e5f6a7b8c912", name: "Marta Gil", coverImage: null },
+  rating: 5,
+  title: "Inolvidable",
+  comment: "El paisaje es espectacular y el guía conoce cada curva.",
+  verified: false,
+};
+
+const RATING_EXAMPLE = { average: 4.38, count: 8, distribution: { 1: 0, 2: 1, 3: 0, 4: 2, 5: 5 } };
+
+const REVIEW_CODES =
+  "code: REVIEW_ALREADY_EXISTS (409, ya has opinado), OWN_TARGET (403, el anfitrión sobre sí mismo o su experiencia) " +
+  "o COMMENT_REQUIRED_FOR_LOW_RATING (400, con 1 o 2 estrellas el comentario es obligatorio, de 30 caracteres como mínimo).";
+
+const REVIEW_PATHS = {
+  "/api/reviews": {
+    get: secured(
+      {
+        summary: "Listar opiniones",
+        description:
+          "Todas las opiniones (visibles y ocultas), con lo que valoran (target) y su autor. status=active, las visibles; status=inactive, las ocultas.",
+        tags: REVIEW_TAGS,
+        parameters: listParameters(reviewListQuery),
+        responses: {
+          200: { ...list("Listado (o la página pedida)", reviewRef), headers: PAGE_HEADERS },
+          400: error("Un query param que no existe o con un valor no válido"),
+        },
+      },
+      "admin",
+    ),
+    post: secured(
+      {
+        summary: "Crear mi opinión",
+        description:
+          "Sobre una experiencia o un anfitrión visibles. La opinión es de quien la escribe (userId no se envía). Una por usuario y objetivo. " +
+          "comment es opcional con 3 a 5 estrellas y obligatorio con 1 o 2. " + REVIEW_CODES,
+        tags: REVIEW_TAGS,
+        requestBody: body("CreateReviewInput"),
+        responses: {
+          201: ok("Creada", reviewRef),
+          400: error("Datos no válidos, o 1-2 estrellas sin comentario suficiente"),
+          403: error("Eres el anfitrión de lo que quieres valorar (OWN_TARGET)"),
+          404: error("La experiencia o el anfitrión no existen o no son visibles"),
+          409: error("Ya has opinado sobre eso (REVIEW_ALREADY_EXISTS)"),
+        },
+      },
+      "user",
+    ),
+  },
+  "/api/reviews/inactives": {
+    get: secured({ summary: "Listar opiniones ocultas", tags: REVIEW_TAGS, responses: { 200: list("Las ocultas", reviewRef) } }, "admin"),
+  },
+  "/api/reviews/deleted": {
+    get: secured(
+      { summary: "Papelera de opiniones", description: "De la más reciente a la más antigua.", tags: REVIEW_TAGS, responses: { 200: list("Eliminadas", reviewRef) } },
+      "admin",
+    ),
+  },
+  "/api/reviews/{id}": {
+    get: secured(
+      {
+        summary: "Obtener opinión por ID",
+        tags: REVIEW_TAGS,
+        parameters: [idParam],
+        responses: { 200: ok("Encontrada", reviewRef), 400: error("ID inválido"), 404: error("No encontrada o eliminada") },
+      },
+      "admin",
+    ),
+    patch: secured(
+      {
+        summary: "Editar mi opinión",
+        description:
+          "Solo su autor (ni siquiera el admin cambia lo que ha escrito otro: puede ocultarla o borrarla). rating, title y comment; null vacía el título o el comentario. " +
+          "La regla de las notas bajas se comprueba con la opinión como quedaría: bajar a 1 estrella sin comentario es un 400.",
+        tags: REVIEW_TAGS,
+        parameters: [idParam],
+        requestBody: body("UpdateReviewInput"),
+        responses: {
+          200: ok("Actualizada", reviewRef),
+          400: error("Datos no válidos, body vacío o 1-2 estrellas sin comentario suficiente"),
+          403: error("No es tu opinión"),
+          404: error("No encontrada o eliminada"),
+        },
+      },
+      "user",
+    ),
+  },
+  "/api/reviews/{id}/active": {
+    patch: secured(
+      {
+        summary: "Ocultar o mostrar una opinión",
+        description: "La moderación: isActive false la oculta de la tienda y deja de contar en las notas.",
+        tags: REVIEW_TAGS,
+        parameters: [idParam],
+        requestBody: activeBody(true),
+        responses: { 200: ok("Actualizada", reviewRef), 400: error("ID inválido o isActive ausente"), 404: error("No encontrada o eliminada") },
+      },
+      "admin",
+    ),
+  },
+  "/api/reviews/{id}/delete": {
+    patch: secured(
+      {
+        summary: "Eliminar una opinión (soft delete)",
+        description: "Su autor o el admin; nadie más (403). Va a la papelera y deja de contar en las notas.",
+        tags: REVIEW_TAGS,
+        parameters: [idParam],
+        responses: {
+          204: { description: "Eliminada" },
+          400: error("ID inválido"),
+          403: error("No es tu opinión"),
+          404: error("No encontrada o ya eliminada"),
+        },
+      },
+      "user",
+    ),
+  },
+  "/api/reviews/{id}/restore": {
+    patch: secured(
+      {
+        summary: "Restaurar una opinión",
+        description: "Vuelve con el estado que tenía, salvo que se envíe isActive.",
+        tags: REVIEW_TAGS,
+        parameters: [idParam],
+        requestBody: activeBody(false),
+        responses: {
+          200: ok("Restaurada", reviewRef),
+          400: error("ID inválido"),
+          404: error("No encontrada"),
+          409: error("No está eliminada, su objetivo está eliminado o su autor ya ha vuelto a opinar (REVIEW_ALREADY_EXISTS)"),
+        },
+      },
+      "admin",
+    ),
+  },
+};
+
+// Las opiniones de la tienda: las de una experiencia y las de un anfitrión son iguales
+const hostSlugPath = { ...slugPath, example: "lucia-ferrer-b8c915" };
+const reviewQuery = [
+  { in: "query", name: "sort", required: false, schema: { type: "string", enum: Object.keys(SHOP_REVIEW_SORT), default: "recent" }, description: "recent: las más recientes; best: las mejores; worst: las peores" },
+  { in: "query", name: "rating", required: false, schema: { type: "integer", minimum: 1, maximum: 5 }, description: "Solo las de esas estrellas" },
+  { in: "query", name: "page", required: false, schema: { type: "integer", minimum: 1 }, description: "Página, desde 1 (1 por defecto)" },
+  { in: "query", name: "limit", required: false, schema: { type: "integer", minimum: 1, maximum: SHOP_REVIEWS_LIMIT.max, default: SHOP_REVIEWS_LIMIT.default }, description: "Tamaño de la página" },
+];
+
+const shopReviewsPath = (what, param) => ({
+  get: {
+    summary: `Opiniones de ${what}`,
+    description:
+      "Las visibles, por páginas, con su autor (nombre y foto, nunca el email). summary es la nota de todas: average, count y distribution (cuántas de cada estrella). Público.",
+    tags: SHOP_TAGS,
+    parameters: [param, ...reviewQuery],
+    responses: {
+      200: {
+        description: "La página, su paginación y el resumen",
+        content: {
+          "application/json": {
+            schema: { type: "object", properties: { data: { type: "array", items: reviewRef }, pagination: { type: "object" }, summary: { type: "object" } } },
+            example: { data: [REVIEW_EXAMPLE], pagination: { total: 8, page: 1, limit: 10, totalPages: 1 }, summary: RATING_EXAMPLE },
+          },
+        },
+      },
+      400: error("Slug o query param no válido"),
+      404: error(`${what[0].toUpperCase()}${what.slice(1)} no existe, está eliminado o no es visible`),
+    },
+  },
+});
+
+const myReviewPath = (what, param) => ({
+  get: secured(
+    {
+      summary: `Mi opinión de ${what}`,
+      description:
+        "Para el formulario: review (la mía, o null), canReview (si puedo opinar) y reason (por qué no: OWN_TARGET o REVIEW_ALREADY_EXISTS). " +
+        "La web enseña o no el botón de opinar con canReview, así no cambia cuando cambie la regla.",
+      tags: SHOP_TAGS,
+      parameters: [param],
+      responses: {
+        200: shopData("Mi opinión y si puedo opinar", { type: "object" }, { review: null, canReview: true, reason: null }),
+        400: error("Slug con formato inválido"),
+        404: error("No existe, está eliminado o no es visible"),
+      },
+    },
+    "user",
+  ),
+});
+
+Object.assign(SHOP_PATHS, {
+  "/api/shop/hosts/{slug}": {
+    get: {
+      summary: "Ficha de un anfitrión",
+      description:
+        "Su perfil (biografía, foto y motos públicas), sus dos notas (rating: sus opiniones como guía; experiencesRating: las de todas sus experiencias activas) " +
+        "y experiences: sus experiencias visibles, como las tarjetas del Shop. Público.",
+      tags: SHOP_TAGS,
+      parameters: [hostSlugPath],
+      responses: {
+        200: shopData("El anfitrión", { $ref: "#/components/schemas/Host" }),
+        400: error("Slug con formato inválido"),
+        404: error("No existe, está eliminado o no es visible"),
+      },
+    },
+  },
+  "/api/shop/experiences/{slug}/reviews": shopReviewsPath("una experiencia", slugPath),
+  "/api/shop/experiences/{slug}/reviews/mine": myReviewPath("una experiencia", slugPath),
+  "/api/shop/hosts/{slug}/reviews": shopReviewsPath("un anfitrión", hostSlugPath),
+  "/api/shop/hosts/{slug}/reviews/mine": myReviewPath("un anfitrión", hostSlugPath),
+});
+
 export const apiTags = [
   { name: "Profile", description: "El usuario de la sesión y su perfil. El perfil pertenece al usuario: nace, se elimina y se restaura con él." },
   ...RESOURCES.map(({ tag, description }) => ({ name: tag, ...(description && { description }) })),
+  {
+    name: "Reviews",
+    description:
+      "Opiniones de las experiencias y de los anfitriones (targetType + targetId), con estrellas de 1 a 5. Una por usuario y objetivo. " +
+      "Las visibles se leen en la tienda (/api/shop/.../reviews); aquí se escriben y se moderan. Cada cambio recalcula las notas guardadas: " +
+      "rating en experiencias, anfitriones y rutas (la de una ruta, de las opiniones de sus experiencias) y experiencesRating en los anfitriones.",
+  },
   {
     name: "Shop",
     description:
@@ -1030,10 +1276,13 @@ export const apiTags = [
   },
 ];
 
-export const apiPaths = Object.assign({}, PROFILE_PATHS, ...RESOURCES.map(crudPaths), SHOP_PATHS);
+export const apiPaths = Object.assign({}, PROFILE_PATHS, ...RESOURCES.map(crudPaths), REVIEW_PATHS, SHOP_PATHS);
 
 export const apiSchemas = {
   UpdateOwnUserInput: fromZod(updateOwnUserSchema),
+  Review: { type: "object", example: { ...REVIEW_EXAMPLE, ...COMMON_FIELDS } },
+  CreateReviewInput: fromZod(createReviewSchema),
+  UpdateReviewInput: fromZod(updateReviewSchema),
   ...Object.fromEntries(
     RESOURCES.flatMap(({ schema, create, update, example }) => [
       [schema, { type: "object", example: { ...example, ...COMMON_FIELDS } }],

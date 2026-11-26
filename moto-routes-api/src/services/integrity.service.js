@@ -11,7 +11,9 @@ import { ROLES, Role } from "../models/role.model.js";
 import { Route } from "../models/route.model.js";
 import { STATUS } from "../models/status.js";
 import { User } from "../models/user.model.js";
+import { Review } from "../models/review.model.js";
 import { profileService } from "./profile.service.js";
+import { ratingService } from "./rating.service.js";
 
 /*
  * Comprobación de la integridad referencial de toda la base de datos (npm run check:integrity).
@@ -35,6 +37,8 @@ const REFERENCES = [
   { model: Experience, field: "routeId", parent: Route },
   { model: Departure, field: "experienceId", parent: Experience },
   { model: Bike, field: "userId", parent: User },
+  // Una opinión de un usuario eliminado deja de verse
+  { model: Review, field: "userId", parent: User },
 ];
 
 // Los padres de una lista de ids, también los eliminados, en un Map por id
@@ -142,6 +146,16 @@ export async function checkIntegrity() {
     if (user && hostRole && String(user.roleId) !== String(hostRole._id)) {
       problems.push(problem("hosts", host._id, "userId references a user without the host role", null));
     }
+  }
+
+  // 5. Las notas guardadas (experiencias, anfitriones y rutas) tienen que cuadrar con las opiniones
+  //    visibles → se recalculan
+  for (const { kind, id, field, stored, expected } of await ratingService.findMismatches()) {
+    const was = stored ? `${stored.average} (${stored.count})` : "missing";
+    problems.push(
+      problem(`${kind}s`, id, `${field} is ${was} but its reviews give ${expected.average} (${expected.count})`,
+        () => ratingService[`recalculate${kind[0].toUpperCase()}${kind.slice(1)}`](id))
+    );
   }
 
   return problems;

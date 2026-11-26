@@ -10,7 +10,7 @@ import { FACETS_LIMIT, experienceListQuery } from "./experience.schema.js";
 export const SHOP_LIMIT = Object.freeze({ default: 12, max: 50 });
 
 /** Los órdenes del Shop. Sin sort, las más recientes. */
-export const SHOP_SORT = Object.freeze(["title", "priceFrom", "nextDepartureAt", "createdAt"]);
+export const SHOP_SORT = Object.freeze(["title", "priceFrom", "nextDepartureAt", "rating", "createdAt"]);
 export const SHOP_DEFAULT_SORT = "-createdAt";
 
 const slug = z

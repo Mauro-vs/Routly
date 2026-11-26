@@ -92,10 +92,13 @@ function mongooseDetail(err) {
 
 function normalizeError(err) {
   if (err instanceof ZodError) {
+    // Una regla propia (.superRefine) puede traer su code (params.code), como la de las notas bajas
+    const code = err.issues.find((issue) => issue.code === "custom" && issue.params?.code)?.params.code;
     return {
       statusCode: 400,
       message: "Validation failed",
       details: err.issues.flatMap(zodDetails),
+      code,
     };
   }
 
@@ -131,8 +134,9 @@ function normalizeError(err) {
   // fieldError() trae details con el mismo formato que los errores de Zod, y
   // unauthorized() un code (TOKEN_EXPIRED, TOKEN_INVALID) cuando el token no sirve.
   if (Number.isInteger(err?.status) && err.status >= 400 && err.status < 500) {
-    // Solo en los 401: otros errores de Express traen code propios (ECONNABORTED...)
-    const code = err.status === 401 && typeof err.code === "string" ? err.code : undefined;
+    // Solo en los 401 y en los que la API marca con withCode (utils/errors.js): otros errores de
+    // Express traen code propios (ECONNABORTED...) que no deben salir
+    const code = (err.status === 401 || err.publicCode) && typeof err.code === "string" ? err.code : undefined;
     return { statusCode: err.status, message: err.message, details: err.details, code };
   }
 

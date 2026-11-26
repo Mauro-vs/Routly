@@ -6,8 +6,9 @@
  * y el tokenVersion los sigue comprobando la API: un rider que pide /api/users pasa la puerta y la
  * API le responde 403.
  *
- * Lo que no está aquí es público: los GET de /api (incluidos /api/shop y /api/docs), el login, el
- * registro, el refresh y el logout de auth, su JWKS, toda la IA y los /health.
+ * Lo que no está aquí es público: los GET de /api (incluidos /api/shop y /api/docs, salvo "mi
+ * opinión"), el login, el registro, el refresh y el logout de auth, su JWKS, la IA (salvo
+ * /ai/admin) y los /health.
  */
 
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -20,6 +21,12 @@ export const POLICIES = Object.freeze([
   { name: "api private collections", path: /^\/api\/(users|roles|profile)(\/|$)/ },
   // Las papeleras y los inactivos de cada colección (solo admin)
   { name: "api inactives and trash", methods: READ, path: /^\/api\/[^/]+\/(inactives|deleted)\/?$/ },
+  // Las opiniones: leerlas todas es del panel (solo admin); las públicas van por /api/shop
+  { name: "api reviews", methods: READ, path: /^\/api\/reviews(\/|$)/ },
+  // Mi opinión de una experiencia o un anfitrión, para el formulario de la tienda
+  { name: "api my review", methods: READ, path: /^\/api\/shop\/(experiences|hosts)\/[^/]+\/reviews\/mine\/?$/ },
+  // La IA del panel (la salud del producto): solo admin, lo comprueba la API
+  { name: "ai admin", path: /^\/ai\/admin(\/|$)/ },
   // Auth: lo que necesita saber quién eres
   { name: "auth me", methods: READ, path: /^\/auth\/me\/?$/ },
   { name: "auth logout all", methods: new Set(["POST"]), path: /^\/auth\/logout-all\/?$/ },

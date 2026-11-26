@@ -3,6 +3,7 @@
 //
 //   npm run seed            pregunta antes
 //   npm run seed -- --yes   sin preguntar
+//   npm run seed:reviews    añade opiniones de ejemplo sin borrar nada (no pregunta)
 import readline from "node:readline/promises";
 import { SERVICES, bold, dirOf, fail, finished, installMissing, mongoAddress, mongoUp, ok, red, run, yellow } from "./lib.mjs";
 
@@ -14,6 +15,14 @@ if (!(await mongoUp())) {
   process.exit(1);
 }
 if (!(await installMissing([api]))) process.exit(1);
+
+// Las opiniones de ejemplo solo añaden: no hace falta confirmar
+if (process.argv.includes("--reviews")) {
+  const code = await finished(run("npm run seed:reviews", { cwd: dirOf(api) }));
+  if (code === 0) ok("Opiniones de ejemplo añadidas y notas recalculadas.");
+  else fail(red(`Las opiniones de ejemplo han fallado (código ${code}). Revisa el error de arriba.`));
+  process.exit(code);
+}
 
 if (!process.argv.includes("--yes")) {
   const target = process.env.MONGODB_URI ? `MONGODB_URI (${process.env.MONGODB_URI})` : "la base de datos de moto-routes-api/.env (moto_routes, si no la has cambiado)";

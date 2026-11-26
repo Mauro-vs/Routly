@@ -6,6 +6,7 @@ import { SHOP_DEFAULT_SORT, SHOP_LIMIT } from "../schemas/shop.schema.js";
 import { notFound } from "../utils/errors.js";
 import { departureService } from "./departure.service.js";
 import { experienceService } from "./experience.service.js";
+import { hostService } from "./host.service.js";
 import { imageService } from "./image.service.js";
 import { PUBLIC, assertVisible } from "./visibility.js";
 
@@ -90,6 +91,17 @@ export const shopService = {
       PUBLIC,
     );
     return { ...experience, images };
+  },
+
+  /**
+   * La ficha pública de un anfitrión (guía): su perfil (biografía, foto, motos públicas), sus dos
+   * notas (rating, como guía; experiencesRating, la de sus experiencias) y sus experiencias
+   * visibles, como las tarjetas del Shop.
+   */
+  async host(slug) {
+    const host = await hostService.getBySlug(slug, PUBLIC);
+    const { items: experiences } = await experienceService.search({ hostId: String(host._id), sort: "-createdAt" }, PUBLIC);
+    return { ...host, experiences };
   },
 
   /** Las salidas que se pueden reservar: activas, programadas y futuras, de la más próxima a la más lejana. */

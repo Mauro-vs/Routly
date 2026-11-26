@@ -14,6 +14,7 @@ import { departureService } from "./departure.service.js";
 import { hostService } from "./host.service.js";
 import { imageService } from "./image.service.js";
 import { locationService, toResponse as presentLocation } from "./location.service.js";
+import { ratingService } from "./rating.service.js";
 import { assertVisible, scopeFilter } from "./visibility.js";
 import {
   assertHasChanges,
@@ -261,6 +262,11 @@ export const experienceService = {
     if (data.title !== undefined && data.title !== experience.title) {
       await departureService.renameExperience(id, data.title);
     }
+    // Cambiar de anfitrión o de ruta, o activarla o desactivarla, cambia la nota de sus
+    // experiencias en el anfitrión y la de la ruta (los de antes y los de ahora)
+    if (data.hostId !== undefined || data.routeId !== undefined || data.status !== undefined) {
+      await ratingService.afterExperienceChange(experience, await experienceRepository.findPlainById(id));
+    }
     return experienceService.getById(id);
   },
 
@@ -273,7 +279,8 @@ export const experienceService = {
   },
 
   async remove(id, actor) {
-    await assertOwnExperience(actor, await findCurrent(experienceRepository, id, "Experience"));
+    const experience = await findCurrent(experienceRepository, id, "Experience");
+    await assertOwnExperience(actor, experience);
     await softDeleteWithCascades({
       repository: experienceRepository,
       id,
@@ -287,6 +294,8 @@ export const experienceService = {
       ],
       cascades: [imageService.cascade("experience", id)],
     });
+    // Sus opiniones dejan de contar en su anfitrión y su ruta
+    await ratingService.afterExperienceChange(experience);
   },
 
   async restore(id, isActive, actor) {
@@ -307,6 +316,7 @@ export const experienceService = {
       await imageService.removeByOwner("experience", id, deleted.deletedAt);
       await experienceRepository.softDeleteById(id, deleted.deletedAt);
     });
+    await ratingService.afterExperienceChange(deleted);
     return experienceService.getById(id);
   },
 };

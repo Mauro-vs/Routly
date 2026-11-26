@@ -62,6 +62,7 @@ test("cada listado documenta justo los query params que acepta su esquema", asyn
     departures: (await import("../schemas/departure.schema.js")).departureListQuery,
     images: (await import("../schemas/image.schema.js")).imageListQuery,
     bikes: (await import("../schemas/bike.schema.js")).bikeListQuery,
+    reviews: (await import("../schemas/review.schema.js")).reviewListQuery,
   };
 
   for (const [path, listQuery] of Object.entries(schemas)) {
