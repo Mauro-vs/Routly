@@ -33,6 +33,12 @@ describe("loadConfig", () => {
     assert.equal(loadConfig({ AI_PROVIDER: "groq", OPENROUTER_API_KEY: "sk-or-x" }).ai.apiKey, null);
   });
 
+  it("el resumen de opiniones puede tener sus propios modelos; sin ellos, los de AI_MODELS", () => {
+    assert.equal(loadConfig({}).ai.reviewsModels, null);
+    assert.deepEqual(loadConfig({ AI_MODELS_REVIEWS: "openai/gpt-oss-120b, x/y" }).ai.reviewsModels, ["openai/gpt-oss-120b", "x/y"]);
+    assert.throws(() => loadConfig({ AI_MODELS_REVIEWS: "con espacios" }), /AI_MODELS_REVIEWS/);
+  });
+
   it("una clave vacía cuenta como sin clave", () => {
     assert.equal(loadConfig({ AI_API_KEY: "   " }).ai.apiKey, null);
   });

@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { AiApiService } from '../../core/ai/ai-api.service';
 import { ShopHostDetail } from '../../core/api/shop.models';
 import { ReviewsApiService } from '../../core/reviews/reviews-api.service';
 import { GuidePageComponent } from './guide-page.component';
@@ -34,6 +35,7 @@ describe('GuidePageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ReviewsApiService, useValue: { list: pending, mine: pending } },
+        { provide: AiApiService, useValue: { reviewsSummary: pending } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -59,6 +61,8 @@ describe('GuidePageComponent', () => {
     expect(scores[1]).toContain('4,5');
     expect(scores[1]).toContain('en sus experiencias · 40 opiniones');
     expect(element.querySelector('app-reviews-section')).not.toBeNull();
+    // Con el resumen IA de sus opiniones encima de la lista
+    expect(element.querySelector('app-reviews-section app-reviews-ai-summary')).not.toBeNull();
   });
 
   it('un guía que no existe queda como no encontrado', async () => {

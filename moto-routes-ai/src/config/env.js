@@ -40,6 +40,13 @@ const modelList = (value) =>
     .map((model) => model.trim())
     .filter(Boolean);
 
+// Modelos separados por comas: el primero es el principal y el resto, los de reserva. Vacío = null
+const modelsSchema = z
+  .string()
+  .optional()
+  .transform((value) => (value ? modelList(value) : null))
+  .pipe(z.array(z.string().regex(/^[\w.:/-]+$/, "must be model names separated by commas")).min(1).nullable());
+
 const milliseconds = (fallback) => z.coerce.number().int().min(100).max(120_000).default(fallback);
 const url = (fallback) =>
   z
@@ -68,11 +75,9 @@ const envSchema = z.object({
   AI_BASE_URL: z.url({ protocol: /^https?$/ }).optional(),
   // Modelos separados por comas: el primero es el principal y el resto, los de reserva. Vacío = los
   // del proveedor
-  AI_MODELS: z
-    .string()
-    .optional()
-    .transform((value) => (value ? modelList(value) : null))
-    .pipe(z.array(z.string().regex(/^[\w.:/-]+$/, "must be model names separated by commas")).min(1).nullable()),
+  AI_MODELS: modelsSchema,
+  // Opcional: los modelos del agente de resumen de opiniones. Vacío = los de AI_MODELS
+  AI_MODELS_REVIEWS: modelsSchema,
   AI_TIMEOUT_MS: milliseconds(30_000),
   // Opcional: la clave gratuita de Geoapify (sitios de OpenStreetMap, más fiable que Photon y Overpass)
   GEOAPIFY_API_KEY: optionalText,
@@ -103,6 +108,8 @@ export function loadConfig(env = process.env) {
       apiKey: config.AI_API_KEY ?? (config.AI_PROVIDER === "openrouter" ? config.OPENROUTER_API_KEY : null),
       baseUrl: (config.AI_BASE_URL ?? provider.baseUrl).replace(/\/+$/, ""),
       models: Object.freeze(config.AI_MODELS ?? modelList(provider.models)),
+      // Los de cada agente, si tiene los suyos (null = los de arriba)
+      reviewsModels: config.AI_MODELS_REVIEWS ? Object.freeze(config.AI_MODELS_REVIEWS) : null,
       timeoutMs: config.AI_TIMEOUT_MS,
       maxTokens: config.AI_MAX_TOKENS,
       siteUrl: config.SITE_URL,

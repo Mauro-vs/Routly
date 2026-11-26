@@ -12,6 +12,7 @@ import { PhotoComponent } from '../../shared/ui/photo/photo.component';
 import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
 import { formatHours, formatPrice, formatRating, formatShortDate, plural } from '../../shared/utils/shop-format';
 import { StarsComponent } from '../../shared/ui/stars/stars.component';
+import { ReviewsAiSummaryComponent } from '../reviews/components/reviews-ai-summary.component';
 import { ReviewsSectionComponent } from '../reviews/reviews-section.component';
 import { AiInsightsComponent } from './components/ai-insights/ai-insights.component';
 import { DeparturePickerComponent } from './components/departure-picker/departure-picker.component';
@@ -51,6 +52,7 @@ const LANGUAGES: Record<string, string> = {
     AiInsightsComponent,
     StarsComponent,
     ReviewsSectionComponent,
+    ReviewsAiSummaryComponent,
   ],
   providers: [ExperienceStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -139,7 +141,9 @@ const LANGUAGES: Record<string, string> = {
                 </section>
               }
 
-              <app-reviews-section type="experience" [slug]="experience.slug" [targetId]="experience._id" [name]="experience.title" />
+              <app-reviews-section type="experience" [slug]="experience.slug" [targetId]="experience._id" [name]="experience.title">
+                <app-reviews-ai-summary reviews-extra type="experience" [slug]="experience.slug" [count]="experience.rating?.count ?? 0" />
+              </app-reviews-section>
             </div>
 
             <aside class="booking" aria-labelledby="salidas-titulo">

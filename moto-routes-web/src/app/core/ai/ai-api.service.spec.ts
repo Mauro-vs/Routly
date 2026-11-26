@@ -63,6 +63,16 @@ describe('AiApiService', () => {
     expect((await promise).summary).toBe('Resumen');
   });
 
+  it('el resumen de opiniones, de una experiencia o de un guía (null si hay pocas)', async () => {
+    const experience = api.reviewsSummary('experience', 'calas-de-mallorca');
+    http.expectOne('/ai/experiences/calas-de-mallorca/reviews-summary').flush({ data: { summary: 'Gusta mucho' } });
+    expect((await experience)?.summary).toBe('Gusta mucho');
+
+    const host = api.reviewsSummary('host', 'lucia-ferrer-1');
+    http.expectOne('/ai/hosts/lucia-ferrer-1/reviews-summary').flush({ data: null });
+    expect(await host).toBeNull();
+  });
+
   it('un 503 es "IA no disponible"', async () => {
     const promise = api.weather('calas-de-mallorca');
     http

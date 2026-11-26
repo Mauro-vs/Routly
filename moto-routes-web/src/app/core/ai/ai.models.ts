@@ -14,6 +14,28 @@ export interface AiInsights {
   basedOn: { weather: boolean; stops: boolean };
 }
 
+/** De qué se habla en las opiniones y cómo (GET /ai/{experiences|hosts}/:slug/reviews-summary). */
+export interface AiReviewTopic {
+  name: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  /** En cuántas opiniones sale */
+  mentions: number;
+}
+
+/** El resumen IA de las opiniones. null si no hay bastantes con comentario (menos de 3). */
+export interface AiReviewsSummary {
+  summary: string;
+  /** Lo que más gusta */
+  pros: string[];
+  /** Lo que se puede mejorar (vacío si no hay quejas) */
+  cons: string[];
+  topics: AiReviewTopic[];
+  /** Cuántas opiniones ha leído la IA */
+  basedOn: number;
+  model: string;
+  generatedAt: string;
+}
+
 export type WeatherIcon = 'sun' | 'cloud-sun' | 'cloud' | 'fog' | 'drizzle' | 'rain' | 'snow' | 'storm' | 'unknown';
 export type WeatherWarning = 'rain' | 'cold' | 'heat' | 'wind' | 'storm';
 

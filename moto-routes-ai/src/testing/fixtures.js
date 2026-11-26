@@ -152,3 +152,58 @@ export function geoapifyBody(url) {
       })),
   };
 }
+
+// Opiniones de la tienda (GET /api/shop/{experiences|hosts}/:slug/reviews), de la más reciente a la más antigua
+const COMMENTS = [
+  "Las curvas del Valle de Tena son una pasada y el guía marca un ritmo muy cómodo.",
+  "Muy bien organizado, aunque la parada para comer se hizo algo larga.",
+  "Paisajes increíbles y un grupo pequeño. Repetiría sin dudarlo.",
+  "El guía conoce cada pueblo. El precio me pareció justo para lo que incluye.",
+];
+
+/** n opiniones: las primeras con comentario (withComment) y el resto, solo con estrellas. */
+export function shopReviews(n, { withComment = n, from = 0 } = {}) {
+  return Array.from({ length: n }, (_, index) => {
+    const number = from + index;
+    return {
+      _id: `r${number}`,
+      targetType: "experience",
+      targetId: "e1",
+      rating: [5, 4, 5, 3][number % 4],
+      title: number % 2 === 0 ? `Opinión ${number}` : undefined,
+      comment: index < withComment ? COMMENTS[number % COMMENTS.length] : undefined,
+      verified: false,
+      photos: [],
+      user: { _id: `u${number}`, name: `Rider ${number}` },
+      createdAt: iso(NOW - number * DAY),
+      updatedAt: iso(NOW - number * DAY),
+    };
+  });
+}
+
+/** Una página de opiniones como la da la API, con el resumen de todas. */
+export function reviewsPage(all, url) {
+  const page = Number(url.searchParams.get("page") ?? 1);
+  const limit = Number(url.searchParams.get("limit") ?? 10);
+  const data = all.slice((page - 1) * limit, page * limit);
+  const average = all.length ? Math.round((all.reduce((sum, review) => sum + review.rating, 0) / all.length) * 10) / 10 : 0;
+  return {
+    data,
+    pagination: { total: all.length, page, limit, totalPages: Math.ceil(all.length / limit) },
+    summary: { average, count: all.length, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, withPhotos: 0 },
+  };
+}
+
+export const hostDetail = { _id: "h1", slug: "ana-rutas-1", name: "Ana Rutas", experiences: [experience] };
+
+// Una respuesta buena de la IA para el resumen de opiniones
+export const reviewsSummaryAnswer = {
+  summary: "Los clientes destacan las curvas del Pirineo y lo bien que guía el anfitrión. El ritmo es cómodo y el grupo, pequeño.",
+  pros: ["Carreteras de montaña espectaculares", "Guía que conoce bien la zona", "Grupos pequeños"],
+  cons: ["La parada para comer puede alargarse"],
+  topics: [
+    { name: "Ruta", sentiment: "positive", mentions: 4 },
+    { name: "Guía", sentiment: "positive", mentions: 3 },
+    { name: "Paradas", sentiment: "neutral", mentions: 1 },
+  ],
+};

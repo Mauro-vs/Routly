@@ -8,6 +8,7 @@ import { SkeletonComponent } from '../../shared/ui/skeleton/skeleton.component';
 import { StarsComponent } from '../../shared/ui/stars/stars.component';
 import { formatRating, plural } from '../../shared/utils/shop-format';
 import { ExperienceCardComponent } from '../shop/components/experience-card/experience-card.component';
+import { ReviewsAiSummaryComponent } from '../reviews/components/reviews-ai-summary.component';
 import { ReviewsSectionComponent } from '../reviews/reviews-section.component';
 import { GuideStore } from './guide.store';
 
@@ -18,7 +19,7 @@ import { GuideStore } from './guide.store';
  */
 @Component({
   selector: 'app-guide-page',
-  imports: [RouterLink, PhotoComponent, SkeletonComponent, IconComponent, StarsComponent, ExperienceCardComponent, ReviewsSectionComponent],
+  imports: [RouterLink, PhotoComponent, SkeletonComponent, IconComponent, StarsComponent, ExperienceCardComponent, ReviewsSectionComponent, ReviewsAiSummaryComponent],
   providers: [GuideStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -85,7 +86,9 @@ import { GuideStore } from './guide.store';
               }
             </section>
 
-            <app-reviews-section type="host" [slug]="guide.slug" [targetId]="guide._id" [name]="guide.name" (changed)="store.load(slug(), { quiet: true })" />
+            <app-reviews-section type="host" [slug]="guide.slug" [targetId]="guide._id" [name]="guide.name" (changed)="store.load(slug(), { quiet: true })">
+              <app-reviews-ai-summary reviews-extra type="host" [slug]="guide.slug" [count]="guide.rating.count" />
+            </app-reviews-section>
           </div>
         }
       }

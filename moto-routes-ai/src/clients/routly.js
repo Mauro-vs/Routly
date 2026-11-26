@@ -37,6 +37,18 @@ export function createRoutlyClient({ baseUrl, fetch: fetchImpl, timeoutMs }) {
     async experiences(query = {}) {
       return get("/experiences", query);
     },
+    /** La ficha pública de un guía (anfitrión), con sus notas y sus experiencias. */
+    async host(slug) {
+      return (await get(`/hosts/${slugPath(slug)}`, {}, { resource: "Host" })).data;
+    },
+    /**
+     * Una página de las opiniones visibles de una experiencia (type "experience") o de un guía
+     * ("host"): { data, pagination, summary }, con los filtros de la tienda (sort, page, limit...).
+     */
+    async reviews(type, slug, query = {}) {
+      const [base, resource] = type === "host" ? ["hosts", "Host"] : ["experiences", "Experience"];
+      return get(`/${base}/${slugPath(slug)}/reviews`, query, { resource });
+    },
     async categories(limit = 50) {
       return (await get("/categories", { limit })).data;
     },

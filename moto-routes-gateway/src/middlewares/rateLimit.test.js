@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { rawRequest, startStack } from "../testing/helpers.js";
+import { isCostlyAi } from "./rateLimit.js";
 
 describe("límites de peticiones", () => {
   it("el general corta con 429, Retry-After y el formato común", async () => {
@@ -42,6 +43,23 @@ describe("límites de peticiones", () => {
     } finally {
       await stack.close();
     }
+  });
+});
+
+describe("isCostlyAi", () => {
+  const costly = (method, path) => isCostlyAi({ method, path });
+
+  it("el chat, los textos y los resúmenes de opiniones gastan cuota de la IA", () => {
+    assert.equal(costly("POST", "/ai/chat"), true);
+    assert.equal(costly("GET", "/ai/experiences/costa/insights"), true);
+    assert.equal(costly("GET", "/ai/experiences/costa/reviews-summary"), true);
+    assert.equal(costly("GET", "/ai/hosts/ana-rutas-1/reviews-summary"), true);
+  });
+
+  it("el tiempo, las paradas y el mapa, no", () => {
+    assert.equal(costly("GET", "/ai/experiences/costa/weather"), false);
+    assert.equal(costly("GET", "/ai/experiences/costa/route"), false);
+    assert.equal(costly("GET", "/ai/hosts/ana/insights"), false);
   });
 });
 

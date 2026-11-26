@@ -11,11 +11,13 @@ import { helmetMiddleware } from "./config/helmet.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { chatRouter } from "./routes/chat.routes.js";
 import { experiencesRouter } from "./routes/experiences.routes.js";
+import { reviewsRouter } from "./routes/reviews.routes.js";
 import { createCatalogService } from "./services/catalog.service.js";
 import { createChatService } from "./services/chat.service.js";
 import { createInsightsService } from "./services/insights.service.js";
 import { createPlacesService } from "./services/places.service.js";
 import { createPoisService } from "./services/pois.service.js";
+import { createReviewsSummaryService } from "./services/reviewsSummary.service.js";
 import { createRouteMapService } from "./services/routeMap.service.js";
 import { createStopsService } from "./services/stops.service.js";
 import { createWeatherService } from "./services/weather.service.js";
@@ -40,6 +42,10 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
     openRouter: createOpenRouterClient({ ...config.ai, fetch: fetchImpl }),
   };
 
+  // Un agente con sus propios modelos (AI_MODELS_REVIEWS...) usa otro cliente con la misma clave y
+  // el mismo proveedor; sin ellos, el de siempre
+  const aiFor = (models) => (models ? createOpenRouterClient({ ...config.ai, models, fetch: fetchImpl }) : clients.openRouter);
+
   // Los services, cada uno con lo que necesita (sin variables globales: cada app tiene su caché)
   const catalog = createCatalogService({ routly: clients.routly });
   const places = createPlacesService({ weather: clients.weather });
@@ -53,6 +59,7 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
     stops,
     routeMap: createRouteMapService({ catalog, places, osrm: clients.osrm, pois, geoapify: clients.geoapify.enabled }),
     insights: createInsightsService({ catalog, weather, stops, openRouter: clients.openRouter }),
+    reviewsSummary: createReviewsSummaryService({ catalog, openRouter: aiFor(config.ai.reviewsModels) }),
   };
   // El chatbot usa las herramientas, que tiran de los demás services y de la API
   services.chat = createChatService({ openRouter: clients.openRouter, services: { ...services, routly: clients.routly } });
@@ -76,6 +83,8 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   // futuro API gateway) solo tiene que mandar cada prefijo a su servidor
   const ai = express.Router();
   app.use("/ai", ai);
+  // El resumen de opiniones, antes que /experiences: sus rutas no pasan por el límite de ese router
+  ai.use(reviewsRouter(services));
   ai.use("/experiences", experiencesRouter(services));
   ai.use("/chat", chatRouter(services));
 

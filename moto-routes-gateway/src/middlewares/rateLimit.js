@@ -22,8 +22,9 @@ export function createLimiter({ name, limit, windowMs }) {
   });
 }
 
-// Lo que cuesta cuota de la IA: escribir los textos y el chat. El resto de /ai (tiempo, paradas,
-// mapa) va con el límite general
+// Lo que cuesta cuota de la IA: escribir los textos, el resumen de opiniones (de una experiencia o
+// de un guía) y el chat. El resto de /ai (tiempo, paradas, mapa) va con el límite general
 export const isCostlyAi = (req) =>
   (req.method === "POST" && /^\/ai\/chat\/?$/.test(req.path)) ||
-  (req.method === "GET" && /^\/ai\/experiences\/[^/]+\/insights\/?$/.test(req.path));
+  (req.method === "GET" && /^\/ai\/experiences\/[^/]+\/insights\/?$/.test(req.path)) ||
+  (req.method === "GET" && /^\/ai\/(experiences|hosts)\/[^/]+\/reviews-summary\/?$/.test(req.path));

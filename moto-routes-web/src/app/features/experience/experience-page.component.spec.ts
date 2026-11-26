@@ -25,7 +25,7 @@ describe('ExperiencePageComponent', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         // El bloque Routly IA tiene sus propios tests: aquí sus peticiones no acaban nunca
-        { provide: AiApiService, useValue: { insights: pending, weather: pending, stops: pending } },
+        { provide: AiApiService, useValue: { insights: pending, weather: pending, stops: pending, reviewsSummary: pending } },
         // Las opiniones también tienen los suyos (features/reviews)
         { provide: ReviewsApiService, useValue: { list: pending, mine: pending } },
       ],
