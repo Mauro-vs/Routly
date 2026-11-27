@@ -272,6 +272,53 @@ sequenceDiagram
 
 La API y la gateway nunca ven una clave con la que puedan fabricar tokens: solo los comprueban. El panel guarda en `localStorage` hasta cuándo dura la sesión, nunca el token.
 
+### Cómo seguir una petición
+
+Todas las partes siguen el mismo camino, así que para entender una petición basta con abrir un archivo por paso. En los frontales: **componente → store → `ApiService`**. En los servidores: **ruta → controller → service → repository → modelo**. Ningún componente llama a la API y ninguna ruta tiene lógica.
+
+Ejemplo: un rider publica una opinión desde la ficha de una experiencia.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant F as review-form.component
+    participant S as ReviewsStore
+    participant A as ApiService
+    participant G as Gateway
+    participant R as review.routes.js
+    participant C as review.controller
+    participant V as review.service
+    participant D as review.repository
+    F->>S: create(tipo, id, opinión)
+    S->>A: post("/api/reviews", cuerpo)
+    A->>G: POST /api/reviews con la cookie
+    G->>G: ¿Exige sesión? (config/policies.js) Comprueba el token
+    G->>R: Reenvía
+    R->>R: authenticate y validate (Zod)
+    R->>C: create
+    C->>V: create(datos, usuario)
+    V->>V: canReview: ¿puede opinar?
+    V->>D: create
+    D-->>V: la opinión guardada
+    V->>V: ratingService recalcula la nota
+    V-->>C: la opinión
+    C-->>A: 201 + JSON
+    A-->>S: la opinión
+    S->>S: refresh: la lista y la nota se vuelven a pedir
+```
+
+| Paso | Web | Panel | API | IA | Auth |
+|---|---|---|---|---|---|
+| Lo que ve el usuario | `features/*/…component.{ts,html,css}` | `features/*/pages/*` | | | |
+| El estado | `*.store.ts` junto a la página | `features/*/…store.ts` (EntityStore) | | | |
+| La petición | `core/api/api.service.ts` | `core/services/api.service.ts` | | | |
+| La URL | | | `routes/*.routes.js` (montadas en `app.js`) | `routes/*.routes.js` | `routes/auth.routes.js` |
+| Leer la petición y responder | | | `controllers/` | `controllers/` | `controllers/auth.controller.js` |
+| Las reglas | | | `services/` | `services/` | `services/` |
+| La base de datos | | | `repositories/` → `models/` | (no tiene) | `repositories/` |
+
+Si algo falla, cada servidor lo manda a su `errorHandler` (Express 5 pasa solo los errores de las funciones `async`: no hay `try/catch` en controllers ni middlewares), y en los frontales el store traduce el error a un mensaje.
+
 ```
 Routly/
 ├── moto-routes-web/        Web pública: Home, Shop y detalle con el mapa (Angular)
