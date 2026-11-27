@@ -138,7 +138,7 @@ En desarrollo, `nodemon` vigila la carpeta `src/` y el archivo `.env`, y reinici
 | `src/testing/soft-delete.test.js` | Eliminar conserva el estado, listados y papelera, restaurar como estaba, cascada de imágenes, dependientes, referencias eliminadas, duplicados en la papelera y roles base |
 | `src/testing/validation.test.js` | Campos de más, `status` en el PATCH, vaciar con `null`, región vacía, límites, contraseña, idioma, `https`, etiqueta de rol, 413, respuestas iguales al GET y 404 frente a 400 |
 
-Los tokens de los tests los firma `src/testing/tokens.js` con un par de claves RSA de prueba, así que no hace falta tener el servicio de auth en marcha. Los de `src/testing/` son de integración: levantan la API real (routers, services y modelos, con `src/testing/app.js`) sobre una base de datos temporal `routly_test_*` que se borra al terminar. Necesitan **MongoDB en marcha** en `mongodb://localhost:27017`, o en la URI de la variable `MONGODB_TEST_URI`. No tocan la base de datos de `MONGODB_URI`.
+Los tokens de los tests los firma `src/testing/tokens.js` con un par de claves RSA de prueba, así que no hace falta tener el servicio de auth en marcha. Los de `src/testing/` son de integración: levantan la API real (routers, services y modelos, con `createApp()` de `src/app.js`, desde `src/testing/app.js`) sobre una base de datos temporal `routly_test_*` que se borra al terminar. Necesitan **MongoDB en marcha** en `mongodb://localhost:27017`, o en la URI de la variable `MONGODB_TEST_URI`. No tocan la base de datos de `MONGODB_URI`.
 
 Con el servidor en marcha, la documentación interactiva está en `http://localhost:3000/api/docs` y la comprobación de estado en `http://localhost:3000/health`.
 
@@ -190,7 +190,7 @@ Cada colección tiene sus seis archivos, uno por capa. Por ejemplo, para `routes
 | Capa | Archivo | Responsabilidad | Lo que no hace |
 |---|---|---|---|
 | Rutas | `routes/route.routes.js` | Asocia método y URL a un controlador, y aplica `validate()` con el esquema de Zod | Lógica |
-| Controlador | `controllers/route.controller.js` | `async/await` con `try/catch`: lee `req`, llama al service y responde con el código adecuado (200, 201, 204). Si algo falla, pasa el error con `next(error)` | Consultar la base de datos |
+| Controlador | `controllers/route.controller.js` | `async/await` sin `try/catch`: lee `req`, llama al service y responde con el código adecuado (200, 201, 204). Si algo falla, Express 5 pasa solo el error al `errorHandler` | Consultar la base de datos |
 | Service | `services/route.service.js` | Reglas de negocio: 404 si no existe, 400 si una referencia no es válida, 409 si hay dependientes o un dato único está repetido. Gestiona las relaciones y la cascada de imágenes | Conocer `req` o `res` |
 | Repositorio | `repositories/route.repository.js` | Consultas a Mongoose con `populate` de las relaciones. Devuelven objetos planos (`.lean()`). Los eliminados los excluye el plugin `softDelete` | Decidir errores HTTP |
 | Modelo | `models/route.model.js` | Esquema, relaciones (`ref`), índices y plugins | |
@@ -253,7 +253,7 @@ sequenceDiagram
 
 Si algo falla en cualquier punto (Zod, el service o Mongoose), el error llega a `errorHandler`, que responde con el formato común (ver [Manejo de errores](#manejo-de-errores)).
 
-### Orden de los middlewares (`server.js`)
+### Orden de los middlewares (`app.js`)
 
 1. `helmet`: cabeceras de seguridad.
 2. `cors`: orígenes permitidos y métodos `GET`, `POST` y `PATCH`.
@@ -263,7 +263,7 @@ Si algo falla en cualquier punto (Zod, el service o Mongoose), el error llega a 
 6. `notFoundHandler`: 404 para cualquier otra URL.
 7. `errorHandler`: siempre el último.
 
-Antes de nada, `loadAuthConfig()` comprueba `AUTH_JWKS_URL`, `JWT_ISSUER` y `JWT_AUDIENCE`: si en producción falta la URL o alguna no es válida, el servidor no arranca. El JWKS no se descarga al arrancar sino con el primer token, así que la API arranca aunque auth aún no esté en marcha. El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista. Si falla, el proceso termina con un error.
+La app la monta `createApp()` en `src/app.js` y la arranca `server.js`; los tests usan la misma `createApp()`. Antes de nada, `server.js` llama a `loadAuthConfig()`, que comprueba `AUTH_JWKS_URL`, `JWT_ISSUER` y `JWT_AUDIENCE`: si en producción falta la URL o alguna no es válida, el servidor no arranca. El JWKS no se descarga al arrancar sino con el primer token, así que la API arranca aunque auth aún no esté en marcha. El servidor solo empieza a escuchar cuando la conexión con MongoDB está lista. Si falla, el proceso termina con un error.
 
 ## Estructura del proyecto
 
@@ -277,6 +277,7 @@ src/
 │   ├── db.js                      Conexión a MongoDB
 │   ├── cookies.js                 COOKIE_SECURE: el nombre de la cookie de sesión
 │   ├── cors.js                    Orígenes, métodos y cabeceras de la paginación
+│   ├── cookies.js                 La cookie de sesión: su nombre y leerla (sessionCookieName, readCookie)
 │   ├── helmet.js                  Cabeceras de seguridad
 │   ├── morgan.js                  Logs en consola y en logs/
 │   ├── proxy.js                   TRUST_PROXY: cuántos proxies hay delante
@@ -305,7 +306,7 @@ src/
 │   ├── <recurso>.service.js       También profile.service.js (solo lo usa user.service.js) y
 │   │                              shop.service.js (la tienda: usa los de cada colección)
 │   └── references.js              Comprobaciones entre colecciones, doble comprobación y cascadas
-├── controllers/<recurso>.controller.js   Más profile y shop
+├── controllers/<recurso>.controller.js   Más profile y shop (review.controller atiende también las opiniones de /api/shop)
 ├── routes/<recurso>.routes.js           Más profile (/api/profile) y shop (/api/shop)
 ├── middlewares/
 │   ├── authenticate.js            JWT RS256 → req.user (401, o 503 si auth no responde)
@@ -316,7 +317,6 @@ src/
 ├── utils/
 │   ├── errors.js                  notFound, conflict, badRequest, fieldError, unauthorized, forbidden
 │   ├── listQuery.js               Query params de los listados: filtro, orden y página (defineListQuery)
-│   ├── session-cookie.js          La cookie de sesión: ponerla, borrarla y leerla
 │   ├── jwt.js                     createToken y verifyToken
 │   ├── passwd.js                  Hash de contraseñas con Argon2id
 │   ├── access.js                  Reglas de ABAC (funciones puras)
@@ -327,11 +327,12 @@ src/
 │   ├── update.js                  null de un PATCH → $unset
 │   └── objectId.js                Formato de un ObjectId
 ├── testing/
-│   ├── app.js                     La API sobre una base de datos temporal, para los tests
+│   ├── app.js                     startApi(): createApp() sobre una base de datos temporal, para los tests
 │   └── *.test.js                  Tests de integración
 ├── seed.js                        Datos de ejemplo
 ├── check-integrity.js             Comprueba (y repara) la integridad referencial
-└── server.js                      Punto de entrada
+├── app.js                         createApp(): middlewares, routers y errorHandler
+└── server.js                      Punto de entrada: conecta con MongoDB y escucha
 ```
 
 Hay además un [`postman.md`](postman.md) con ejemplos de las peticiones para probarlas en Postman.
@@ -805,7 +806,7 @@ En tres capas:
 
 1. **Rutas:** `validate()` con Zod rechaza la petición antes de llegar al controlador. En los `PATCH`, además, los campos que no se pueden cambiar (`cannotChange()` en `schemas/common.schema.js`).
 2. **Services:** antes de escribir, cada operación lee el documento sin relaciones (una consulta) y comprueba que existe y está en un estado que la permite (funciones de `services/references.js`). Después de editar, activar o restaurar, la respuesta es la misma que la de un GET. Lanzan errores controlados con `utils/errors.js` (`notFound`, `conflict`, `badRequest`, `fieldError`).
-3. **Server:** un único middleware global, `src/middlewares/errorHandler.js`, convierte cualquier error en la respuesta. Los controladores lo capturan con `try/catch` y se lo pasan con `next(error)`.
+3. **Server:** un único middleware global, `src/middlewares/errorHandler.js`, convierte cualquier error en la respuesta. Los controladores no llevan `try/catch`: Express 5 le pasa solo cualquier error de una función `async`.
 
 Todas las respuestas de error tienen el mismo formato:
 
@@ -882,7 +883,7 @@ sequenceDiagram
 | Contraseñas | `utils/passwd.js` | `hashPassword` y `verifyPassword` con Argon2id, para cuando el admin crea un usuario o le pone contraseña desde el panel |
 | Configuración | `config/auth.js` | `AUTH_JWKS_URL`, `JWT_ISSUER` y `JWT_AUDIENCE`, y el JWKS remoto de `jose` (caché de 10 min; si llega un `kid` nuevo, lo vuelve a pedir como mucho cada 30 s) |
 | Token | `utils/jwt.js` | `verifyToken`: solo RS256, con el emisor y la audiencia de auth, 30 s de margen de reloj. Caducado, 401 `TOKEN_EXPIRED`; firma, clave o claims malos, 401 `TOKEN_INVALID`; el JWKS no responde, 503 |
-| Cookie de sesión | `utils/session-cookie.js` | `sessionCookieName` y `readCookie` (sin `cookie-parser`). La API no pone ni borra cookies |
+| Cookie de sesión | `config/cookies.js` | `sessionCookieName` y `readCookie` (sin `cookie-parser`). La API no pone ni borra cookies |
 | Autenticación | `middlewares/authenticate.js` | Lee el token de la cabecera o, si no viene, de la cookie, lo verifica, mira la lista negra y comprueba que el usuario existe, está activo y conserva su `tokenVersion`. Deja `req.user = { id, email, role, name }`, con el rol leído de la base de datos, no del token |
 | RBAC | `middlewares/authorize.js` | `authorizeRoles(...roles)`, `isAdmin`, `adminOnly`, `hostOrAdmin` y `authorizeOwnership(load, check)` |
 | ABAC | `utils/access.js` | Funciones puras: `isOwnerOrAdmin`, `canAccessUserResource`, `canModifyHost`, `canModifyExperience`, `canModifyDeparture` y `canModifyImageOwner`. Los services cargan la cadena de dueños y lanzan `forbidden()` |
@@ -1093,7 +1094,7 @@ Por ejemplo, `reviews`. Cada paso copia el patrón de una colección que ya exis
 2. **Esquemas de Zod** en `schemas/review.schema.js`, con `z.strictObject` y los límites que exporta el modelo (`REVIEW_LIMITS`). En el PATCH, `cannotChange()` para los campos fijos y `clearable()` para los opcionales que se pueden vaciar.
 3. **Repositorio**, **service** y **controlador**, uno por archivo y con las mismas funciones que los de `routes`. Si el modelo tiene relaciones, el repositorio añade `findPlainById` (sin `populate`) y su `updateById` usa `toUpdate(data)`. En el service: `findCurrent` antes de escribir, `getById` para responder, `assertReference` para las referencias, `assertNoDependents` para los dependientes y `assertNotTaken` para los valores únicos (`services/references.js`).
 4. **Rutas** en `routes/review.routes.js`. Las fijas (`/actives`, `/inactives`, `/deleted`, `/slug/:slug`) van antes de `/:id`. **Permisos:** `adminOnly` en `/inactives`, `/deleted` y las escrituras de admin; si un usuario puede tocar las suyas, `authenticate` o `hostOrAdmin` en la ruta y, en el service, la comprobación de propiedad con un helper de `utils/access.js` (las escrituras reciben el `actor`, `req.user`).
-5. **Registro** en `server.js`: `app.use("/api/reviews", reviewRoutes)`, antes de `notFoundHandler`.
+5. **Registro** en `app.js` (`createApp`): `app.use("/api/reviews", reviewRoutes)`, antes de `notFoundHandler`.
 6. **Documentación:** una entrada más en `RESOURCES`, en `docs/openapi.js`, con su `access` (quién lee y quién escribe). Los endpoints, los cuerpos, los candados y los 401/403 se generan solos, y `docs.test.js` comprueba que coinciden con las rutas.
 7. **Imágenes:** si tiene, `review: Review` en `IMAGE_OWNERS`, y la cascada en su service (`imageService.removeByOwner` y `restoreByOwner`).
 8. Si el panel va a llamar con métodos nuevos, revisa `methods` en `config/cors.js`.

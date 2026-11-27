@@ -33,9 +33,9 @@ function readRoutes(file, prefix) {
   }));
 }
 
-/** Las de la API: cada archivo de routes/ con el prefijo con el que lo monta server.js. */
+/** Las de la API: cada archivo de routes/ con el prefijo con el que lo monta app.js. */
 function apiRoutes() {
-  const server = readFileSync(path.join(API, "server.js"), "utf8");
+  const server = readFileSync(path.join(API, "app.js"), "utf8");
   const files = Object.fromEntries(
     [...server.matchAll(/import (\w+) from "\.\/routes\/([\w.]+)"/g)].map(([, name, file]) => [name, file]),
   );

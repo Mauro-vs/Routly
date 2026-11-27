@@ -31,14 +31,10 @@ export const hostOrAdmin = [authenticate, authorizeRoles(ROLES.HOST, ROLES.ADMIN
  */
 export function authorizeOwnership(loadResource, check, resource = "Resource") {
   return async (req, res, next) => {
-    try {
-      if (!req.user) throw unauthorized();
-      const document = await loadResource(req);
-      if (!document) throw notFound(resource);
-      if (!check(req.user, document)) throw forbidden();
-      next();
-    } catch (error) {
-      next(error);
-    }
+    if (!req.user) throw unauthorized();
+    const document = await loadResource(req);
+    if (!document) throw notFound(resource);
+    if (!check(req.user, document)) throw forbidden();
+    next();
   };
 }

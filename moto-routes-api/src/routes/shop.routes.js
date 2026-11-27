@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { shopController } from "../controllers/shop.controller.js";
+import { reviewController } from "../controllers/review.controller.js";
 import { authenticate } from "../middlewares/authenticate.js";
 import { validate } from "../middlewares/validate.js";
 import { shopReviewsQuery } from "../schemas/review.schema.js";
@@ -23,13 +24,14 @@ router.get("/experiences/:slug/departures", validate({ params: slugParamSchema }
 // La ficha de un anfitrión (guía): sus dos notas y sus experiencias
 router.get("/hosts/:slug", validate({ params: slugParamSchema }), shopController.host);
 
-// Las opiniones de una experiencia y de un anfitrión: leerlas es público; las mías, con sesión
+// Las opiniones de una experiencia y de un anfitrión: leerlas es público; las mías, con sesión.
+// La URL es de la tienda, pero las atiende reviewController: todo lo de opiniones en un controller
 // (authenticate va escrito en cada ruta: el test de políticas de la gateway lo busca ahí)
 const reviewsQuery = validate({ params: slugParamSchema, query: shopReviewsQuery });
 const bySlug = validate({ params: slugParamSchema });
-router.get("/experiences/:slug/reviews", reviewsQuery, shopController.reviews("experience"));
-router.get("/experiences/:slug/reviews/mine", authenticate, bySlug, shopController.myReview("experience"));
-router.get("/hosts/:slug/reviews", reviewsQuery, shopController.reviews("host"));
-router.get("/hosts/:slug/reviews/mine", authenticate, bySlug, shopController.myReview("host"));
+router.get("/experiences/:slug/reviews", reviewsQuery, reviewController.listForTarget("experience"));
+router.get("/experiences/:slug/reviews/mine", authenticate, bySlug, reviewController.mine("experience"));
+router.get("/hosts/:slug/reviews", reviewsQuery, reviewController.listForTarget("host"));
+router.get("/hosts/:slug/reviews/mine", authenticate, bySlug, reviewController.mine("host"));
 
 export default router;

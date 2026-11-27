@@ -1,84 +1,18 @@
 import "dotenv/config";
-import express from "express";
-import swaggerUi from "swagger-ui-express";
+import { createApp } from "./app.js";
 import { loadAuthConfig } from "./config/auth.js";
 import { loadCookieConfig } from "./config/cookies.js";
-import { corsMiddleware } from "./config/cors.js";
 import { connectDB } from "./config/db.js";
 import { Route } from "./models/route.model.js";
-import { helmetMiddleware } from "./config/helmet.js";
-import { morganMiddleware } from "./config/morgan.js";
-import { applyTrustProxy } from "./config/proxy.js";
-import { swaggerSpec } from "./config/swagger.js";
-import { serveUploads } from "./config/uploads.js";
-import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
-import bikeRoutes from "./routes/bike.routes.js";
-import shopRoutes from "./routes/shop.routes.js";
-import categoryRoutes from "./routes/category.routes.js";
-import departureRoutes from "./routes/departure.routes.js";
-import experienceRoutes from "./routes/experience.routes.js";
-import hostRoutes from "./routes/host.routes.js";
-import imageRoutes from "./routes/image.routes.js";
-import locationRoutes from "./routes/location.routes.js";
-import profileRoutes from "./routes/profile.routes.js";
-import reviewRoutes from "./routes/review.routes.js";
-import roleRoutes from "./routes/role.routes.js";
-import routeRoutes from "./routes/route.routes.js";
-import userRoutes from "./routes/user.routes.js";
 import { ratingService } from "./services/rating.service.js";
-import { visibilityCache } from "./services/visibility.js";
 
 // Sin una AUTH_JWKS_URL válida (la clave pública del servicio de auth), o con la cookie mal
 // configurada, no se arranca: mejor fallar aquí que en la primera petición
 loadAuthConfig();
 loadCookieConfig();
 
-const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Detrás de un proxy (TRUST_PROXY): la IP, el protocolo y el host del cliente, no los suyos
-applyTrustProxy(app);
-
-app.use(helmetMiddleware);
-app.use(corsMiddleware);
-app.use(morganMiddleware);
-// El body más grande es una experiencia con su descripción (unos 3 kB): 50 kB da margen
-// y corta peticiones desmedidas con un 413
-app.use(express.json({ limit: "50kb" }));
-// Lo oculto se calcula como mucho una vez por petición (services/visibility.js)
-app.use(visibilityCache);
-
-app.get("/health", (req, res) => {
-  res.json({ ok: true });
-});
-
-// Las fotos de las opiniones (público): /api/uploads/reviews/<archivo>
-serveUploads(app);
-
-// persistAuthorization: el token de Authorize no se pierde al recargar la página
-app.use(
-  "/api/docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, { swaggerOptions: { persistAuthorization: true } })
-);
-app.use("/api/profile", profileRoutes);
-app.use("/api/roles", roleRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/hosts", hostRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/locations", locationRoutes);
-app.use("/api/routes", routeRoutes);
-app.use("/api/experiences", experienceRoutes);
-app.use("/api/departures", departureRoutes);
-app.use("/api/images", imageRoutes);
-app.use("/api/bikes", bikeRoutes);
-// Las opiniones de las experiencias y los anfitriones (las públicas se leen en /api/shop)
-app.use("/api/reviews", reviewRoutes);
-// La tienda pública: el Home, el Shop y el detalle de una experiencia
-app.use("/api/shop", shopRoutes);
-
-app.use(notFoundHandler);
-app.use(errorHandler);
+const app = createApp();
 
 connectDB()
   // Las rutas de antes de existir difficultyLevel: una sola vez, luego no cambia nada

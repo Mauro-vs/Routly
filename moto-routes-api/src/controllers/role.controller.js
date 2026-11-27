@@ -1,97 +1,52 @@
 import { roleService } from "../services/role.service.js";
 import { sendList } from "../utils/listQuery.js";
 
-// Cada método lee la petición, llama al service y responde. Los errores (de Zod, del
-// service o de Mongoose) se pasan con next() al errorHandler global, que responde
-// siempre con el mismo formato.
+// Cada método lee la petición, llama al service y responde. No hace falta try/catch: Express 5
+// manda solo al errorHandler global (con el mismo formato) cualquier error de un async.
 export const roleController = {
-  async list(req, res, next) {
-    try {
-      sendList(res, await roleService.search(req.query));
-    } catch (error) {
-      next(error);
-    }
+  async list(req, res) {
+    sendList(res, await roleService.search(req.query));
   },
 
-  async listActives(req, res, next) {
-    try {
-      res.json(await roleService.listByActive(true));
-    } catch (error) {
-      next(error);
-    }
+  async listActives(req, res) {
+    res.json(await roleService.listByActive(true));
   },
 
-  async listInactives(req, res, next) {
-    try {
-      res.json(await roleService.listByActive(false));
-    } catch (error) {
-      next(error);
-    }
+  async listInactives(req, res) {
+    res.json(await roleService.listByActive(false));
   },
 
-  async listDeleted(req, res, next) {
-    try {
-      res.json(await roleService.listDeleted());
-    } catch (error) {
-      next(error);
-    }
+  async listDeleted(req, res) {
+    res.json(await roleService.listDeleted());
   },
 
-  async getById(req, res, next) {
-    try {
-      res.json(await roleService.getById(req.params.id));
-    } catch (error) {
-      next(error);
-    }
+  async getById(req, res) {
+    res.json(await roleService.getById(req.params.id));
   },
 
-  async getBySlug(req, res, next) {
-    try {
-      res.json(await roleService.getBySlug(req.params.slug));
-    } catch (error) {
-      next(error);
-    }
+  async getBySlug(req, res) {
+    res.json(await roleService.getBySlug(req.params.slug));
   },
 
-  async create(req, res, next) {
-    try {
-      const role = await roleService.create(req.body);
-      res.status(201).json(role);
-    } catch (error) {
-      next(error);
-    }
+  async create(req, res) {
+    const role = await roleService.create(req.body);
+    res.status(201).json(role);
   },
 
-  async update(req, res, next) {
-    try {
-      res.json(await roleService.update(req.params.id, req.body));
-    } catch (error) {
-      next(error);
-    }
+  async update(req, res) {
+    res.json(await roleService.update(req.params.id, req.body));
   },
 
-  async setActive(req, res, next) {
-    try {
-      res.json(await roleService.setActive(req.params.id, req.body.isActive));
-    } catch (error) {
-      next(error);
-    }
+  async setActive(req, res) {
+    res.json(await roleService.setActive(req.params.id, req.body.isActive));
   },
 
-  async remove(req, res, next) {
-    try {
-      await roleService.remove(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      next(error);
-    }
+  async remove(req, res) {
+    await roleService.remove(req.params.id);
+    res.status(204).send();
   },
 
-  async restore(req, res, next) {
-    try {
-      res.json(await roleService.restore(req.params.id, req.body.isActive));
-    } catch (error) {
-      next(error);
-    }
+  async restore(req, res) {
+    res.json(await roleService.restore(req.params.id, req.body.isActive));
   },
 };

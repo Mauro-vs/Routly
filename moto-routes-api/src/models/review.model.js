@@ -1,9 +1,18 @@
 import mongoose from "mongoose";
 import { softDeletePlugin } from "./plugins/softDelete.plugin.js";
 import { statusPlugin } from "./plugins/status.plugin.js";
-import { REVIEW_TARGET_TYPES } from "./reviewTargets.js";
 import { TEXT_INDEX } from "./textIndex.js";
 import { integer } from "./validators.js";
+
+// Lo que se puede valorar con una opinión (targetType). Las rutas no: su nota es la de las
+// experiencias que la usan (services/rating.service.js). Es el único sitio donde se definen: los
+// usan este modelo, el esquema de Zod y los services.
+export const REVIEW_TARGETS = Object.freeze({
+  EXPERIENCE: "experience",
+  HOST: "host",
+});
+
+export const REVIEW_TARGET_TYPES = Object.freeze(Object.values(REVIEW_TARGETS));
 
 // Límites de los campos: los usan este modelo y el esquema de Zod (schemas/review.schema.js).
 // Con lowRatingMax estrellas o menos, el comentario es obligatorio y de lowRatingCommentMin

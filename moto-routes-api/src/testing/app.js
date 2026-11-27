@@ -1,28 +1,11 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import express from "express";
 import mongoose from "mongoose";
-import { applyTrustProxy } from "../config/proxy.js";
-import { serveUploads } from "../config/uploads.js";
-import { errorHandler, notFoundHandler } from "../middlewares/errorHandler.js";
-import bikeRoutes from "../routes/bike.routes.js";
-import categoryRoutes from "../routes/category.routes.js";
-import departureRoutes from "../routes/departure.routes.js";
-import experienceRoutes from "../routes/experience.routes.js";
-import hostRoutes from "../routes/host.routes.js";
-import imageRoutes from "../routes/image.routes.js";
-import locationRoutes from "../routes/location.routes.js";
-import profileRoutes from "../routes/profile.routes.js";
-import reviewRoutes from "../routes/review.routes.js";
-import roleRoutes from "../routes/role.routes.js";
-import routeRoutes from "../routes/route.routes.js";
-import shopRoutes from "../routes/shop.routes.js";
-import userRoutes from "../routes/user.routes.js";
+import { createApp } from "../app.js";
 import { User } from "../models/user.model.js";
 import { roleService } from "../services/role.service.js";
 import { userService } from "../services/user.service.js";
-import { visibilityCache } from "../services/visibility.js";
 import { signTestToken, useTestKeys } from "./tokens.js";
 
 process.env.NODE_ENV ??= "test";
@@ -40,7 +23,8 @@ export const TEST_PASSWORD = "clave1234";
 /**
  * Entorno de los tests de integración: la API real (routers, services, modelos y
  * errorHandler) sobre una base de datos temporal del MongoDB local, que se borra al
- * terminar. No usa server.js, que conecta con MONGODB_URI y se queda escuchando.
+ * terminar. Usa createApp() (src/app.js), la misma app que server.js, pero sin conectar
+ * con MONGODB_URI.
  *
  * El servidor se toma de MONGODB_TEST_URI (por defecto mongodb://localhost:27017):
  * hace falta tener MongoDB en marcha.
@@ -77,31 +61,8 @@ export async function startApi(name) {
     throw error;
   }
 
-  // Los mismos routers, el mismo límite de body y el mismo TRUST_PROXY que server.js
-  const app = express();
-  applyTrustProxy(app);
-  app.use(express.json({ limit: "50kb" }));
-  app.use(visibilityCache);
-  serveUploads(app);
-  const routers = {
-    profile: profileRoutes,
-    roles: roleRoutes,
-    users: userRoutes,
-    hosts: hostRoutes,
-    categories: categoryRoutes,
-    locations: locationRoutes,
-    routes: routeRoutes,
-    shop: shopRoutes,
-    experiences: experienceRoutes,
-    departures: departureRoutes,
-    images: imageRoutes,
-    bikes: bikeRoutes,
-    reviews: reviewRoutes,
-  };
-  for (const [path, router] of Object.entries(routers)) app.use(`/api/${path}`, router);
-  app.use(notFoundHandler);
-  app.use(errorHandler);
-
+  // La misma app que arranca server.js (src/app.js), escuchando en un puerto libre
+  const app = createApp();
   const server = await new Promise((resolve) => {
     const listening = app.listen(0, () => resolve(listening));
   });

@@ -1,9 +1,9 @@
+import { readCookie, sessionCookieName } from "../config/cookies.js";
 import { isAllowedOrigin } from "../config/cors.js";
 import { revokedTokenRepository } from "../repositories/revokedToken.repository.js";
 import { userRepository } from "../repositories/user.repository.js";
 import { createError, unauthorized } from "../utils/errors.js";
 import { verifyToken } from "../utils/jwt.js";
-import { readCookie, sessionCookieName } from "../utils/session-cookie.js";
 
 // Las tres partes de un JWT en base64url, separadas por puntos
 const JWT = String.raw`[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*`;
@@ -42,19 +42,22 @@ function readCredentials(req) {
  * desactivado), anónimo: una cookie vieja no debe romper las páginas públicas. La cookie la
  * renueva o la borra el servicio de auth, no la API.
  */
-export function optionalAuth(req, res, next) {
+export async function optionalAuth(req, res, next) {
   if (req.headers.authorization) return authenticate(req, res, next);
   if (!usesCookie(req)) return next();
 
-  return authenticate(req, res, (error) => {
-    if (error?.status === 401) return next();
-    next(error);
-  });
+  // Una cookie que ya no sirve (401) no es un error aquí: se sigue como anónimo
+  try {
+    await authenticate(req, res, next);
+  } catch (error) {
+    if (error?.status !== 401) throw error;
+    next();
+  }
 }
 
 /**
  * Exige sesión. Lee el token de Authorization: Bearer <token> o, si no viene, de la cookie
- * de sesión (utils/session-cookie.js). Comprueba la firma RS256 con el JWKS del servicio de
+ * de sesión (config/cookies.js). Comprueba la firma RS256 con el JWKS del servicio de
  * auth, iss, aud y caducidad (verifyToken), que el token no se haya cerrado con un logout
  * (lista negra, la escribe el servicio de auth) y que el usuario siga existiendo: no eliminado,
  * activo, con un rol activo y el mismo tokenVersion. Así desactivar a alguien o cambiarle la
@@ -70,27 +73,23 @@ export function optionalAuth(req, res, next) {
  * Cualquier fallo de la sesión es el mismo 401 "Authentication required" (utils/errors.js).
  */
 export async function authenticate(req, res, next) {
-  try {
-    const credentials = readCredentials(req);
-    if (!credentials) throw unauthorized();
+  const credentials = readCredentials(req);
+  if (!credentials) throw unauthorized();
 
-    if (credentials.fromCookie && !SAFE_METHODS.has(req.method) && !isAllowedOrigin(req)) {
-      throw createError("Request origin not allowed", 403);
-    }
-
-    const payload = await verifyToken(credentials.token);
-    const [user, revoked] = await Promise.all([
-      userRepository.findAuthById(payload.sub),
-      revokedTokenRepository.isRevoked(payload.jti),
-    ]);
-
-    if (revoked || !user || !user.isActive || !user.role?.isActive || user.tokenVersion !== payload.tv) {
-      throw unauthorized("TOKEN_INVALID");
-    }
-
-    req.user = { id: String(user._id), email: user.email, role: user.role.name, name: user.name };
-    next();
-  } catch (error) {
-    next(error);
+  if (credentials.fromCookie && !SAFE_METHODS.has(req.method) && !isAllowedOrigin(req)) {
+    throw createError("Request origin not allowed", 403);
   }
+
+  const payload = await verifyToken(credentials.token);
+  const [user, revoked] = await Promise.all([
+    userRepository.findAuthById(payload.sub),
+    revokedTokenRepository.isRevoked(payload.jti),
+  ]);
+
+  if (revoked || !user || !user.isActive || !user.role?.isActive || user.tokenVersion !== payload.tv) {
+    throw unauthorized("TOKEN_INVALID");
+  }
+
+  req.user = { id: String(user._id), email: user.email, role: user.role.name, name: user.name };
+  next();
 }

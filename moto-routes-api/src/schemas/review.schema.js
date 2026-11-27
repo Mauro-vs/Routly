@@ -1,6 +1,10 @@
 import { z } from "zod";
-import { LOW_RATING_MESSAGE, REVIEW_LIMITS as LIMITS, missingLowRatingComment } from "../models/review.model.js";
-import { REVIEW_TARGET_TYPES } from "../models/reviewTargets.js";
+import {
+  LOW_RATING_MESSAGE,
+  REVIEW_LIMITS as LIMITS,
+  REVIEW_TARGET_TYPES,
+  missingLowRatingComment,
+} from "../models/review.model.js";
 import { defineListQuery, equals, queryBoolean, queryNumber } from "../utils/listQuery.js";
 import { cannotChange, objectIdSchema } from "./common.schema.js";
 

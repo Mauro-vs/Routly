@@ -20,7 +20,7 @@ export function trustProxyFrom(env = process.env) {
   return Number(raw);
 }
 
-/** Configura Express para que confíe en esos proxies. La usan server.js y los tests. */
+/** Configura Express para que confíe en esos proxies. La usa createApp() (app.js), en server.js y en los tests. */
 export function applyTrustProxy(app, env = process.env) {
   const hops = trustProxyFrom(env);
   app.set("trust proxy", hops === 0 ? false : hops);

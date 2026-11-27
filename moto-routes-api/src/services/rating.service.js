@@ -1,5 +1,5 @@
 import { RATING_VALUES, emptyRating } from "../models/rating.js";
-import { REVIEW_TARGETS } from "../models/reviewTargets.js";
+import { REVIEW_TARGETS } from "../models/review.model.js";
 import { experienceRepository } from "../repositories/experience.repository.js";
 import { hostRepository } from "../repositories/host.repository.js";
 import { reviewRepository } from "../repositories/review.repository.js";
