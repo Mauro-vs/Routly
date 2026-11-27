@@ -46,6 +46,10 @@ Responden los errores con el formato de la API (`{ statusCode, error, message, c
 Una sesión responde `{ tokenType, expiresIn, refreshExpiresIn, user }` (`refreshExpiresIn`: los segundos que se puede renovar con `/auth/refresh`) y deja dos cookies. El token de acceso va también
 en el body (`token`) fuera de producción, para Swagger y Postman (`TOKEN_IN_BODY`).
 
+## Cómo sigue una petición
+
+Como en la API: `routes/auth.routes.js` (URL, límites, `authenticate` y validación con Zod) → `controllers/auth.controller.js` (lee la petición, pone o borra las cookies y responde) → `services/auth.service.js` y `token.service.js` (la lógica) → `repositories/` (MongoDB). `app.js` lo crea todo con lo que recibe, así los tests usan repositorios en memoria.
+
 ## Cómo funcionan los tokens
 
 **Token de acceso**: JWT **RS256** de 15 min, en la cookie httpOnly `routly_session` con `Path=/`

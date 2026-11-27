@@ -8,6 +8,9 @@ import { createPhotonClient } from "./clients/photon.js";
 import { createRoutlyClient } from "./clients/routly.js";
 import { createWeatherClient } from "./clients/weather.js";
 import { helmetMiddleware } from "./config/helmet.js";
+import { createChatController } from "./controllers/chat.controller.js";
+import { createExperiencesController } from "./controllers/experiences.controller.js";
+import { createReviewsController } from "./controllers/reviews.controller.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { chatRouter } from "./routes/chat.routes.js";
 import { experiencesRouter } from "./routes/experiences.routes.js";
@@ -28,6 +31,11 @@ import { createWeatherService } from "./services/weather.service.js";
  *
  * Todo lo de fuera llega por parámetro: la configuración (config/env.js) y fetch. En los tests,
  * fetch es uno falso que contesta como la API, OpenRouter u Open-Meteo, sin red.
+ *
+ * Cómo sigue una petición (igual que en la API): routes/x.routes.js (URL, límite y validación) →
+ * controllers/x.controller.js (lee req y responde) → services/x.service.js (la lógica) →
+ * clients/ (las llamadas a la API de Routly, OpenRouter, Open-Meteo...). Aquí abajo se crea todo
+ * una vez, en este orden: clients → services → controllers → routers.
  */
 export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   const isProduction = config.env === "production";
@@ -84,9 +92,9 @@ export function createApp({ config, fetch: fetchImpl = globalThis.fetch }) {
   const ai = express.Router();
   app.use("/ai", ai);
   // El resumen de opiniones, antes que /experiences: sus rutas no pasan por el límite de ese router
-  ai.use(reviewsRouter(services));
-  ai.use("/experiences", experiencesRouter(services));
-  ai.use("/chat", chatRouter(services));
+  ai.use(reviewsRouter(createReviewsController(services)));
+  ai.use("/experiences", experiencesRouter(createExperiencesController(services)));
+  ai.use("/chat", chatRouter(createChatController(services)));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

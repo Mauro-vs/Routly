@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
+import { createAuthController } from "./controllers/auth.controller.js";
 import { buildOpenApi } from "./docs/openapi.js";
 import { createAuthenticate } from "./middlewares/authenticate.js";
 import { createCheckOrigin } from "./middlewares/checkOrigin.js";
@@ -78,7 +79,7 @@ export function createApp({ config, keys, repositories, now = Date.now }) {
     res.set("Cache-Control", "no-store");
     next();
   });
-  router.use(authRouter({ auth, tokens, authenticate, limiters, config }));
+  router.use(authRouter({ controller: createAuthController({ auth, tokens, config }), authenticate, limiters }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

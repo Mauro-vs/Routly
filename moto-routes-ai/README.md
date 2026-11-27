@@ -78,6 +78,8 @@ Límites por IP: 20 mensajes cada 10 minutos en el chat y 60 peticiones cada 15 
 
 ## Estructura
 
+Una petición sigue el mismo camino que en la API: `routes/` → `controllers/` → `services/` → `clients/`. `app.js` lo crea todo una vez en ese orden (clients, services, controllers y routers), y así los tests usan un fetch falso.
+
 ```
 src/
   server.js            solo arranca: lee la configuración y escucha
@@ -104,7 +106,8 @@ src/
     chat.service.js    el bucle del agente del chatbot
   tools/               las herramientas del chatbot
   prompts/             las instrucciones de la IA (textos del detalle y chatbot)
-  routes/              los endpoints de /ai
+  routes/              los endpoints de /ai: URL, límite y validación (una línea por endpoint)
+  controllers/         lo que hace cada endpoint: lee la petición, llama al service y responde
   schemas/             los esquemas de Zod de las peticiones
   middlewares/         errores (mismo formato que la API), validación y límites por IP
   utils/               errores HTTP, peticiones JSON con tiempo máximo, distancias, el JSON de la IA y el streaming (SSE)

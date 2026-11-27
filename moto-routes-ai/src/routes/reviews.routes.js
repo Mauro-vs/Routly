@@ -9,21 +9,16 @@ import { slugParamSchema } from "../schemas/common.schema.js";
  *
  * Va en su propio router (el agente de resumen de opiniones), montado en /ai con las rutas enteras.
  * El límite va en cada ruta y no con router.use: así no cuenta las peticiones de los demás routers
- * que pasan por aquí.
+ * que pasan por aquí. Lo que hace: controllers/reviews.controller.js
  */
-export function reviewsRouter({ reviewsSummary }) {
+export function reviewsRouter(controller) {
   const router = Router();
   // Como los textos del detalle: unas pocas por visita y casi siempre de la caché
   const limiter = createLimiter({ limit: 60, windowMs: 15 * 60 * 1000 });
   const bySlug = validate({ params: slugParamSchema });
 
-  router.get("/experiences/:slug/reviews-summary", limiter, bySlug, async (req, res) => {
-    res.json({ data: await reviewsSummary.forTarget("experience", req.params.slug) });
-  });
-
-  router.get("/hosts/:slug/reviews-summary", limiter, bySlug, async (req, res) => {
-    res.json({ data: await reviewsSummary.forTarget("host", req.params.slug) });
-  });
+  router.get("/experiences/:slug/reviews-summary", limiter, bySlug, controller.summary("experience"));
+  router.get("/hosts/:slug/reviews-summary", limiter, bySlug, controller.summary("host"));
 
   return router;
 }

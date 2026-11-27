@@ -30,13 +30,9 @@ export function readAccessToken(req, cookieConfig) {
  */
 export function createAuthenticate({ tokens, auth, cookies }) {
   return async function authenticate(req, res, next) {
-    try {
-      const payload = await tokens.verifyAccess(readAccessToken(req, cookies));
-      req.user = await auth.authenticate(payload);
-      req.auth = payload;
-      next();
-    } catch (error) {
-      next(error);
-    }
+    const payload = await tokens.verifyAccess(readAccessToken(req, cookies));
+    req.user = await auth.authenticate(payload);
+    req.auth = payload;
+    next();
   };
 }
