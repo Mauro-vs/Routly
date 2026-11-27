@@ -53,33 +53,8 @@ function createAccountForm() {
   selector: 'app-account-form',
   imports: [ReactiveFormsModule, FormFieldComponent, IconComponent, InputDirective, ProfileFieldsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form id="profile-form" class="card panel form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
-      <h2>Tus datos</h2>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-      <div class="form-row">
-        <ui-form-field label="Nombre" [error]="errorOf('name')">
-          <input uiInput type="text" name="name" formControlName="name" autocomplete="name" />
-        </ui-form-field>
-        <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
-          <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
-        </ui-form-field>
-      </div>
-      <ui-profile-fields [group]="form.controls.profile" [submitted]="submitted()" />
-    </form>
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-
-    .form-grid h2 {
-      font-size: var(--text-base);
-      font-weight: 750;
-    }
-  `,
+  templateUrl: './account-form.component.html',
+  styleUrl: './account-form.component.css',
 })
 export class AccountFormComponent {
   private readonly profile = inject(ProfileService);

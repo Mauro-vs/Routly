@@ -12,7 +12,7 @@ import { Router } from '@angular/router';
 import { IMAGE_OWNERS, Image, imageOwnerPath } from '../../../../core/models/image.model';
 import { BreadcrumbService } from '../../../../core/services/breadcrumb.service';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
-import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
+import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImagesStore } from '../../services/images.store';
 
@@ -24,47 +24,8 @@ import { ImagesStore } from '../../services/images.store';
   selector: 'app-image-detail',
   imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-detail-page
-      [title]="title()"
-      [subtitle]="record()?.isCover ? 'Imagen principal' : ''"
-      [labels]="store.labels"
-      [record]="record()"
-      [failed]="loadFailed()"
-      [editPath]="editPath()"
-      [busy]="busy()"
-      (activeChange)="setActive($event)"
-      (remove)="remove()"
-      (retry)="open()"
-    >
-      @if (record(); as image) {
-        <section class="card preview" aria-label="Vista previa">
-          <img [src]="image.url" [alt]="image.alt ?? ''" width="960" height="600" />
-        </section>
-      }
-      <ui-detail-section heading="Datos">
-        <ui-field-list [items]="data()" />
-      </ui-detail-section>
-      <ui-detail-section heading="Dueño y orden" description="El orden y la principal se cambian desde la galería del dueño.">
-        <ui-field-list [columns]="2" [items]="owner()" />
-      </ui-detail-section>
-    </ui-detail-page>
-  `,
-  styles: `
-    .preview {
-      overflow: hidden;
-      padding: 8px;
-    }
-
-    .preview img {
-      display: block;
-      width: 100%;
-      max-height: 420px;
-      border-radius: var(--radius-md);
-      object-fit: contain;
-      background: var(--color-surface-2);
-    }
-  `,
+  templateUrl: './image-detail.component.html',
+  styleUrl: './image-detail.component.css',
 })
 export class ImageDetailComponent {
   /** `id` de la URL. */

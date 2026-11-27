@@ -31,66 +31,8 @@ const TIP_SPACE_ABOVE = 72;
 @Component({
   selector: 'ui-tip',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ng-content />
-    @if (text(); as text) {
-      <span
-        class="tip"
-        role="tooltip"
-        [id]="id"
-        [class.is-open]="open()"
-        [class.is-below]="below()"
-        [style.left.px]="x()"
-        [style.top.px]="y()"
-        >{{ text }}</span
-      >
-    }
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-    }
-
-    .tip {
-      position: fixed;
-      z-index: var(--z-tooltip);
-      width: max-content;
-      /* el doble de TIP_HALF_WIDTH, menos un margen */
-      max-width: 240px;
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      background: var(--color-text);
-      color: var(--color-surface);
-      font-size: var(--text-xs);
-      font-weight: 500;
-      line-height: 1.4;
-      text-align: left;
-      white-space: normal;
-      pointer-events: none;
-      opacity: 0;
-      visibility: hidden;
-      transform: translate(-50%, calc(-100% - 4px));
-      transition:
-        opacity var(--motion-fast) var(--motion-ease),
-        transform var(--motion-fast) var(--motion-ease),
-        visibility 0s var(--motion-fast);
-    }
-
-    .tip.is-open {
-      opacity: 1;
-      visibility: visible;
-      transform: translate(-50%, calc(-100% - 8px));
-      transition-delay: 0s;
-    }
-
-    .tip.is-below {
-      transform: translate(-50%, 4px);
-    }
-
-    .tip.is-below.is-open {
-      transform: translate(-50%, 8px);
-    }
-  `,
+  templateUrl: './tip.component.html',
+  styleUrl: './tip.component.css',
   host: {
     '(mouseenter)': 'show()',
     '(focusin)': 'show()',

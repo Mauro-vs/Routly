@@ -1,0 +1,33 @@
+<form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  @if (formError(); as message) {
+    <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
+  }
+
+  @if (record(); as image) {
+    <div class="preview">
+      <img [src]="image.url" [alt]="image.alt ?? ''" width="320" height="200" />
+      <ui-readonly-field label="Dueño" hint="El dueño de una imagen no se puede cambiar.">
+        {{ owners[image.ownerType].label }} · <span translate="no">{{ image.ownerId }}</span>
+      </ui-readonly-field>
+    </div>
+  }
+
+  <ui-form-field
+    label="Dirección de la imagen"
+    hint="Una URL que empiece por https://."
+    [counter]="counter('url', limits.url)"
+    [error]="errorOf('url')"
+  >
+    <input uiInput type="url" name="url" formControlName="url" autocomplete="off" spellcheck="false" />
+  </ui-form-field>
+
+  <ui-form-field
+    label="Texto alternativo"
+    [optional]="true"
+    hint="Lo que se ve en la foto, para quien no puede verla."
+    [counter]="counter('alt', limits.alt)"
+    [error]="errorOf('alt')"
+  >
+    <input uiInput type="text" name="alt" formControlName="alt" autocomplete="off" />
+  </ui-form-field>
+</form>

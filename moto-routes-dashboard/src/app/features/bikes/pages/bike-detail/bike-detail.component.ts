@@ -6,7 +6,7 @@ import {
   MODIFICATION_TYPE_LABELS,
 } from '../../../../core/models/bike.model';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
-import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
+import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
@@ -18,83 +18,8 @@ import { BikesStore } from '../../services/bikes.store';
   selector: 'app-bike-detail',
   imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-detail-page
-      [title]="title()"
-      [subtitle]="subtitle()"
-      [thumbnail]="record()?.coverImage?.url ?? null"
-      [labels]="store.labels"
-      [record]="record()"
-      [failed]="loadFailed()"
-      [identifier]="identifier()"
-      [editPath]="editPath()"
-      [busy]="busy()"
-      (activeChange)="setActive($event)"
-      (remove)="remove()"
-      (retry)="retry()"
-    >
-      <ui-detail-section heading="Identidad">
-        <ui-field-list [columns]="2" [items]="identity()" />
-      </ui-detail-section>
-      <ui-detail-section heading="Ficha técnica">
-        <ui-field-list [columns]="2" [items]="specs()" />
-      </ui-detail-section>
-      <ui-detail-section heading="Modificaciones">
-        @if (record()?.modifications?.length) {
-          <ul class="mods">
-            @for (modification of record()?.modifications; track $index) {
-              <li>
-                <b>{{ modification.title }}</b>
-                <small>
-                  {{ modificationLabels[modification.type] }}
-                  @if (modification.date; as date) {
-                    · {{ date_(date) }}
-                  }
-                </small>
-                @if (modification.description; as description) {
-                  <p>{{ description }}</p>
-                }
-              </li>
-            }
-          </ul>
-        } @else {
-          <p class="muted">Sin modificaciones.</p>
-        }
-      </ui-detail-section>
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="bike"
-          [ownerId]="owner._id"
-          [ownerLabel]="title()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-detail-page>
-  `,
-  styles: `
-    .mods {
-      display: grid;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .mods li {
-      display: grid;
-      padding: var(--space-2) 0;
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    small {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-
-    p {
-      margin-top: 2px;
-      font-size: var(--text-sm);
-    }
-  `,
+  templateUrl: './bike-detail.component.html',
+  styleUrl: './bike-detail.component.css',
 })
 export class BikeDetailComponent extends EntityDetailPage<Bike> {
   protected readonly store = inject(BikesStore);

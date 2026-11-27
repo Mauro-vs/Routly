@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="switch"
+  role="switch"
+  [attr.aria-checked]="value()"
+  [attr.aria-label]="label() || null"
+  [attr.aria-labelledby]="labelledBy() || null"
+  [attr.aria-describedby]="describedBy()"
+  [attr.aria-disabled]="locked() || null"
+  [class.is-locked]="locked()"
+  [disabled]="isDisabled()"
+  (click)="toggle()"
+  (blur)="onTouched()"
+>
+  <span class="switch__thumb"></span>
+</button>

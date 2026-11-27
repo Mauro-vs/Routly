@@ -51,86 +51,8 @@ type LocationControls = ReturnType<typeof createLocationForm>['controls'];
   selector: 'app-location-form',
   imports: [ReactiveFormsModule, FormFieldComponent, InputDirective, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      <ui-form-field
-        label="Ciudad"
-        hint="Se usa para generar su dirección."
-        [counter]="counter('city', limits.city)"
-        [error]="errorOf('city')"
-      >
-        <input uiInput type="text" name="city" formControlName="city" autocomplete="off" />
-      </ui-form-field>
-
-      <div class="form-row">
-        <ui-form-field label="Región" [optional]="true" [error]="errorOf('region')">
-          <input uiInput type="text" name="region" formControlName="region" autocomplete="off" />
-        </ui-form-field>
-        <ui-form-field label="País" [error]="errorOf('country')">
-          <input uiInput type="text" name="country" formControlName="country" autocomplete="off" />
-        </ui-form-field>
-      </div>
-
-      <fieldset class="coordinates" [attr.aria-describedby]="coordinatesError() ? 'coordinates-error' : 'coordinates-hint'">
-        <legend>Coordenadas <span class="optional">(opcional)</span></legend>
-        <div class="form-row">
-          <ui-form-field label="Latitud" [error]="errorOf('latitude')">
-            <input uiInput type="number" name="latitude" inputmode="decimal" step="any" min="-90" max="90" formControlName="latitude" />
-          </ui-form-field>
-          <ui-form-field label="Longitud" [error]="errorOf('longitude')">
-            <input uiInput type="number" name="longitude" inputmode="decimal" step="any" min="-180" max="180" formControlName="longitude" />
-          </ui-form-field>
-        </div>
-        @if (coordinatesError(); as message) {
-          <p class="coordinates__error" id="coordinates-error"><ui-icon name="warning-circle" />{{ message }}</p>
-        } @else {
-          <p class="coordinates__hint" id="coordinates-hint">
-            En grados decimales, por ejemplo 39.5696 y 2.6502. Las dos o ninguna.
-          </p>
-        }
-      </fieldset>
-    </form>
-  `,
-  styles: `
-    .coordinates {
-      display: grid;
-      gap: var(--space-2);
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }
-
-    legend {
-      margin-bottom: var(--space-2);
-      padding: 0;
-      font-size: var(--text-sm);
-      font-weight: 600;
-    }
-
-    .optional {
-      font-weight: 400;
-      color: var(--color-text-muted);
-    }
-
-    .coordinates__hint,
-    .coordinates__error {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-
-    .coordinates__error {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 500;
-      color: var(--color-danger);
-    }
-  `,
+  templateUrl: './location-form.component.html',
+  styleUrl: './location-form.component.css',
 })
 export class LocationFormComponent extends EntityForm<Location, LocationPayload, LocationControls> {
   protected readonly limits = LOCATION_LIMITS;

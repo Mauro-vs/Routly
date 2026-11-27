@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { IconComponent } from '../icon/icon.component';
+import { IconComponent } from '../../icon/icon.component';
 
 let nextId = 0;
 
@@ -15,38 +15,8 @@ let nextId = 0;
   selector: 'ui-readonly-field',
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <span class="label" [id]="labelId">{{ label() }}</span>
-    <p class="readonly-value" [attr.aria-labelledby]="labelId" [attr.aria-describedby]="hint() ? hintId : null">
-      <ui-icon name="lock-simple" /><span class="value"><ng-content /></span>
-    </p>
-    @if (hint()) {
-      <p class="hint" [id]="hintId">{{ hint() }}</p>
-    }
-  `,
-  styles: `
-    :host {
-      display: grid;
-      align-content: start;
-      gap: 6px;
-      min-width: 0;
-    }
-
-    .label {
-      font-size: var(--text-sm);
-      font-weight: 600;
-    }
-
-    .value {
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
-    .hint {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-  `,
+  templateUrl: './readonly-field.component.html',
+  styleUrl: './readonly-field.component.css',
 })
 export class ReadonlyFieldComponent {
   readonly label = input.required<string>();

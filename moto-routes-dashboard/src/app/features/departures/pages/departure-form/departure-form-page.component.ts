@@ -19,30 +19,7 @@ import { DeparturesStore } from '../../services/departures.store';
   selector: 'app-departure-form-page',
   imports: [FormPageComponent, DepartureFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-departure-form
-        [record]="record()"
-        [experiences]="store.experienceOptions.items()"
-        [experiencesLoading]="store.experienceOptions.loading()"
-        [guideBikes]="store.guideBikes.items()"
-        [guideBikesLoading]="store.guideBikes.loading()"
-        (experienceChange)="store.loadGuideBikes($event)"
-        (save)="save($event)"
-      />
-    </ui-form-page>
-  `,
+  templateUrl: './departure-form-page.component.html',
 })
 export class DepartureFormPageComponent extends EntityFormPage<Departure, DeparturePayload> {
   protected readonly store = inject(DeparturesStore);

@@ -1,0 +1,53 @@
+<ui-detail-page
+  [title]="title()"
+  [subtitle]="subtitle()"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [busy]="busy()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="open()"
+>
+  @if (record(); as review) {
+    <section class="card text" aria-label="Lo que ha escrito">
+      <p class="stars"><ui-rating-stars [value]="review.rating" /> <strong>{{ review.rating }} de 5</strong></p>
+      @if (review.title) {
+        <h2>{{ review.title }}</h2>
+      }
+      @if (review.comment) {
+        <p class="comment">{{ review.comment }}</p>
+      } @else {
+        <p class="muted">Solo ha puntuado, sin comentario.</p>
+      }
+      @if (!review.isActive) {
+        <p class="hidden-note"><ui-icon name="eye-slash" /> Oculta: no sale en la web ni cuenta para la nota.</p>
+      }
+    </section>
+
+    <ui-detail-section
+      heading="Fotos"
+      [description]="review.photos.length ? 'Quitar una foto la borra para siempre: no pasa por la papelera.' : ''"
+    >
+      @if (review.photos.length > 0) {
+        <ul class="photos">
+          @for (photo of review.photos; track photo._id; let i = $index) {
+            <li>
+              <a [href]="photo.url" target="_blank" rel="noopener" [attr.aria-label]="'Abrir la foto ' + (i + 1) + ' en otra pestaña'">
+                <img [src]="photo.url" alt="" [width]="photo.width" [height]="photo.height" loading="lazy" decoding="async" />
+              </a>
+              <button type="button" class="btn btn--danger btn--sm" (click)="removePhoto(photo)" [attr.aria-label]="'Quitar la foto ' + (i + 1)">
+                <ui-icon name="trash" /> Quitar
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">Sin fotos.</p>
+      }
+    </ui-detail-section>
+  }
+  <ui-detail-section heading="Datos">
+    <ui-field-list [columns]="2" [items]="data()" />
+  </ui-detail-section>
+</ui-detail-page>

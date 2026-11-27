@@ -28,7 +28,7 @@ import {
 import { Experience } from '../../../../core/models/experience.model';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field.component';
+import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field/readonly-field.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm } from '../../../../shared/forms/entity-form';
 import { SelectOption, withCurrent } from '../../../../shared/forms/select-options';
@@ -91,92 +91,8 @@ type DepartureControls = ReturnType<typeof createDepartureForm>['controls'];
     ReadonlyFieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      @if (record(); as departure) {
-        <div class="form-row">
-          <ui-readonly-field label="Experiencia" hint="La experiencia de una salida no se puede cambiar.">
-            {{ departure.experience?.title ?? 'Experiencia eliminada' }}
-          </ui-readonly-field>
-          <ui-readonly-field label="SKU" hint="Lo genera la API y no cambia nunca.">
-            <span class="mono" translate="no">{{ departure.sku }}</span>
-          </ui-readonly-field>
-        </div>
-      } @else {
-        <ui-form-field
-          label="Experiencia"
-          [hint]="experiencesLoading() ? 'Cargando experiencias…' : ''"
-          [error]="errorOf('experienceId')"
-        >
-          <select uiInput class="select" name="experienceId" formControlName="experienceId" (change)="experienceChanged($event)">
-            <option value="" disabled>Elige una experiencia</option>
-            @for (option of experienceOptions(); track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-        </ui-form-field>
-      }
-
-      <ui-form-field label="Moto del guía" [optional]="true" [hint]="guideHint()" [error]="errorOf('guideBikeId')">
-        <select uiInput class="select" name="guideBikeId" formControlName="guideBikeId">
-          <option value="">La de la experiencia</option>
-          @for (option of guideOptions(); track option.value) {
-            <option [value]="option.value">{{ option.label }}</option>
-          }
-        </select>
-      </ui-form-field>
-
-      <div class="form-row">
-        <ui-form-field
-          label="Inicio"
-          [hint]="isEdit() ? 'En tu hora local.' : 'En tu hora local. Tiene que ser una fecha futura.'"
-          [error]="errorOf('startAt')"
-        >
-          <input uiInput type="datetime-local" name="startAt" formControlName="startAt" />
-        </ui-form-field>
-        <ui-form-field label="Fin" [error]="errorOf('endAt') ?? datesError()">
-          <input uiInput type="datetime-local" name="endAt" formControlName="endAt" />
-        </ui-form-field>
-      </div>
-
-      <div class="form-row">
-        <ui-form-field label="Plazas" [hint]="capacityHint()" [error]="errorOf('capacity')">
-          <input uiInput type="number" name="capacity" inputmode="numeric" min="1" step="1" formControlName="capacity" />
-        </ui-form-field>
-        <ui-form-field label="Precio por persona" [error]="errorOf('price')">
-          <div class="affix">
-            <input uiInput type="number" name="price" inputmode="decimal" min="0" [max]="limits.price" step="0.01" formControlName="price" />
-            <span aria-hidden="true">€</span>
-          </div>
-        </ui-form-field>
-      </div>
-
-      @if (stateLocked()) {
-        <ui-readonly-field label="Estado de la salida" [hint]="cancelledReason">
-          {{ stateLabels.cancelled }}
-        </ui-readonly-field>
-      } @else {
-        <ui-form-field label="Estado de la salida" [hint]="stateHint()" [error]="errorOf('state')">
-          <select uiInput class="select" name="state" formControlName="state">
-            @for (option of states; track option.value) {
-              <option [value]="option.value" [disabled]="option.value === 'completed' && !finished()">
-                {{ option.label }}
-              </option>
-            }
-          </select>
-        </ui-form-field>
-      }
-    </form>
-  `,
-  styles: `
-    .mono {
-      font-family: var(--font-mono);
-    }
-  `,
+  templateUrl: './departure-form.component.html',
+  styleUrl: './departure-form.component.css',
 })
 export class DepartureFormComponent extends EntityForm<
   Departure,

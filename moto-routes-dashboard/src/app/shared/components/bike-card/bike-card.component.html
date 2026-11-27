@@ -1,0 +1,30 @@
+<div class="media">
+  @if (bike().coverImage; as cover) {
+    <img [src]="cover.url" alt="" loading="lazy" decoding="async" />
+  } @else {
+    <ui-icon name="motorcycle" />
+  }
+</div>
+<div class="body">
+  <h3>
+    @if (link(); as link) {
+      <a class="link" [routerLink]="link">{{ name() }}</a>
+    } @else {
+      {{ name() }}
+    }
+  </h3>
+  <p class="type">{{ type() }}</p>
+  <dl class="specs">
+    @if (bike().cc; as cc) {
+      <div><dt>Cilindrada</dt><dd class="slanted">{{ cc }}<small>cc</small></dd></div>
+    }
+    @if (bike().hp; as hp) {
+      <div><dt>Potencia</dt><dd class="slanted">{{ hp }}<small>cv</small></dd></div>
+    }
+    <div><dt>Carnet</dt><dd class="slanted">{{ bike().license }}</dd></div>
+  </dl>
+  @if (note()) {
+    <p class="note">{{ note() }}</p>
+  }
+  <div class="extra"><ng-content /></div>
+</div>

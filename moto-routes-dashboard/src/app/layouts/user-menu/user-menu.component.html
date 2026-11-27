@@ -1,0 +1,51 @@
+<button
+  #trigger
+  type="button"
+  class="trigger"
+  id="user-menu-button"
+  aria-haspopup="menu"
+  aria-controls="user-menu"
+  [attr.aria-expanded]="open()"
+  (click)="toggle()"
+  (keydown.arrowDown)="openAndFocus($event)"
+>
+  <span class="avatar" aria-hidden="true">
+    @if (photo(); as photo) {
+      <img [src]="photo" alt="" width="32" height="32" />
+    } @else {
+      {{ letters() }}
+    }
+  </span>
+  <span class="who">
+    <b>{{ user()?.name }}</b>
+    <small>{{ user()?.role?.label }}</small>
+  </span>
+  <span class="sr-only">, abrir el menú de la cuenta</span>
+  <ui-icon class="caret" name="caret-right" />
+</button>
+
+@if (open()) {
+  <div
+    #panel
+    class="menu"
+    id="user-menu"
+    role="menu"
+    aria-labelledby="user-menu-button"
+    (keydown.arrowDown)="move($event, 1)"
+    (keydown.arrowUp)="move($event, -1)"
+    (keydown.home)="moveTo($event, 0)"
+    (keydown.end)="moveTo($event, -1)"
+    (keydown.tab)="close()"
+  >
+    <a role="menuitem" routerLink="/profile" (click)="close()"><ui-icon name="user-circle" />Mi perfil</a>
+    <button type="button" role="menuitem" (click)="theme.toggle()">
+      <ui-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+      {{ theme.theme() === 'dark' ? 'Tema claro' : 'Tema oscuro' }}
+    </button>
+    <hr />
+    <button type="button" role="menuitem" (click)="logout()"><ui-icon name="sign-out" />Cerrar sesión</button>
+    <button type="button" role="menuitem" (click)="logoutEverywhere()">
+      <ui-icon name="sign-out" />Cerrar sesión en todos los dispositivos
+    </button>
+  </div>
+}

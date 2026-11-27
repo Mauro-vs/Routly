@@ -9,7 +9,7 @@ import {
 } from '../../../../core/models/image.model';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field.component';
+import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field/readonly-field.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm, editedText } from '../../../../shared/forms/entity-form';
 import { httpsUrl, notBlank } from '../../../../shared/utils/validators';
@@ -45,64 +45,8 @@ type ImageControls = ReturnType<typeof createImageForm>['controls'];
     ReadonlyFieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      @if (record(); as image) {
-        <div class="preview">
-          <img [src]="image.url" [alt]="image.alt ?? ''" width="320" height="200" />
-          <ui-readonly-field label="Dueño" hint="El dueño de una imagen no se puede cambiar.">
-            {{ owners[image.ownerType].label }} · <span translate="no">{{ image.ownerId }}</span>
-          </ui-readonly-field>
-        </div>
-      }
-
-      <ui-form-field
-        label="Dirección de la imagen"
-        hint="Una URL que empiece por https://."
-        [counter]="counter('url', limits.url)"
-        [error]="errorOf('url')"
-      >
-        <input uiInput type="url" name="url" formControlName="url" autocomplete="off" spellcheck="false" />
-      </ui-form-field>
-
-      <ui-form-field
-        label="Texto alternativo"
-        [optional]="true"
-        hint="Lo que se ve en la foto, para quien no puede verla."
-        [counter]="counter('alt', limits.alt)"
-        [error]="errorOf('alt')"
-      >
-        <input uiInput type="text" name="alt" formControlName="alt" autocomplete="off" />
-      </ui-form-field>
-    </form>
-  `,
-  styles: `
-    .preview {
-      display: grid;
-      grid-template-columns: 200px minmax(0, 1fr);
-      align-items: start;
-      gap: var(--space-4);
-    }
-
-    .preview img {
-      width: 100%;
-      height: auto;
-      aspect-ratio: 16 / 10;
-      border-radius: var(--radius-md);
-      object-fit: cover;
-      background: var(--color-surface-2);
-    }
-
-    @media (max-width: 560px) {
-      .preview {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-  `,
+  templateUrl: './image-form.component.html',
+  styleUrl: './image-form.component.css',
 })
 export class ImageFormComponent extends EntityForm<Image, ImagePayload, ImageControls> {
   protected readonly limits = IMAGE_LIMITS;

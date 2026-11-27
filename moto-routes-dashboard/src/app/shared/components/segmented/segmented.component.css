@@ -1,0 +1,67 @@
+:host {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.seg {
+  display: inline-flex;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease;
+}
+
+button:hover {
+  color: var(--color-text);
+}
+
+/* la opción elegida se subraya en el color de las barras */
+button[aria-pressed='true'] {
+  color: var(--color-text);
+  font-weight: 650;
+  box-shadow: inset 0 -3px 0 var(--color-primary);
+}
+
+ui-icon {
+  font-size: 17px;
+}
+
+/* el contador va en el mismo color que la etiqueta: aclararlo bajaba el contraste de AA */
+b {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+@media (pointer: coarse) {
+  button {
+    height: 38px;
+  }
+}
+
+/* En móvil ocupa todo el ancho y las opciones se lo reparten. */
+@media (max-width: 560px) {
+  :host(.is-stretch),
+  :host(.is-stretch) .seg {
+    display: flex;
+    width: 100%;
+  }
+
+  :host(.is-stretch) button {
+    flex: 1;
+    justify-content: center;
+  }
+}

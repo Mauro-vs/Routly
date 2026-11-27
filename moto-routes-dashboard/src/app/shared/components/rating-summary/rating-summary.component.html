@@ -1,0 +1,19 @@
+<div class="rating">
+  @if (label()) {
+    <span class="label">{{ label() }}</span>
+  }
+  @if (count() > 0) {
+    <span class="value">
+      <strong class="average">{{ average() }}</strong>
+      <ui-rating-stars [value]="rating()?.average ?? 0" />
+      <span class="muted">{{ count() }} {{ count() === 1 ? 'opinión' : 'opiniones' }}</span>
+    </span>
+  } @else {
+    <span class="muted">Sin opiniones todavía</span>
+  }
+  @if (targetId(); as id) {
+    @if (count() > 0) {
+      <a class="link" routerLink="/reviews" [queryParams]="{ sobre: id }">Ver sus opiniones</a>
+    }
+  }
+</div>

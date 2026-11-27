@@ -1,0 +1,24 @@
+<ui-detail-page
+  [title]="title()"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Datos">
+    <ui-field-list [items]="fields()" />
+  </ui-detail-section>
+  @if (record(); as owner) {
+    <app-image-gallery
+      ownerType="category"
+      [ownerId]="owner._id"
+      [ownerLabel]="title()"
+      (coverChange)="refreshCover()"
+    />
+  }
+</ui-detail-page>

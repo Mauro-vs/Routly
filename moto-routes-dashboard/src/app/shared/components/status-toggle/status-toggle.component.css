@@ -1,0 +1,21 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.state {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.state--off {
+  color: var(--color-text-muted);
+}
+
+.lock {
+  margin-left: -4px;
+  font-size: 15px;
+  color: var(--color-text-muted);
+}

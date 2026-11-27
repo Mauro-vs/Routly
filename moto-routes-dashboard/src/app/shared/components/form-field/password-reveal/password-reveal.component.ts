@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 
-import { IconComponent } from '../icon/icon.component';
+import { IconComponent } from '../../icon/icon.component';
 
 /**
  * Campo de contraseña con el botón de verla mientras se escribe. El `input` se proyecta dentro,
@@ -21,40 +21,8 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'ui-password-reveal',
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ng-content />
-    <button
-      type="button"
-      class="icon-btn"
-      [attr.aria-label]="label()"
-      [attr.aria-pressed]="visible()"
-      [title]="label()"
-      (click)="toggle()"
-    >
-      <ui-icon [name]="visible() ? 'eye-slash' : 'eye'" />
-    </button>
-  `,
-  styles: `
-    :host {
-      position: relative;
-      display: block;
-    }
-
-    :host ::ng-deep input {
-      padding-right: 44px;
-    }
-
-    button {
-      position: absolute;
-      top: 50%;
-      right: 2px;
-      transform: translateY(-50%);
-    }
-
-    button:active {
-      transform: translateY(-50%) scale(0.94);
-    }
-  `,
+  templateUrl: './password-reveal.component.html',
+  styleUrl: './password-reveal.component.css',
 })
 export class PasswordRevealComponent {
   private readonly field = contentChild.required<ElementRef<HTMLInputElement>>('field');

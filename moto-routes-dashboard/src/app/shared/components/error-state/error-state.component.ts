@@ -65,18 +65,7 @@ function viewFor(error: ApiError | null): ErrorView {
   selector: 'ui-error-state',
   imports: [RouterLink, EmptyStateComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-empty-state tone="danger" [icon]="view().icon" [title]="title()" [description]="view().description">
-      @if (view().canSignIn) {
-        <a class="btn btn--primary" [routerLink]="loginPath" [queryParams]="loginParams()">Iniciar sesión</a>
-      }
-      @if (view().canRetry) {
-        <button type="button" class="btn btn--secondary" (click)="retry.emit()">
-          <ui-icon name="arrows-clockwise" />Reintentar
-        </button>
-      }
-    </ui-empty-state>
-  `,
+  templateUrl: './error-state.component.html',
   host: { role: 'alert' },
 })
 export class ErrorStateComponent {

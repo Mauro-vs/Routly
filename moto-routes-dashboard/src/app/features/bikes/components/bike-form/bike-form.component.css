@@ -1,0 +1,67 @@
+h2 {
+  padding-top: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 750;
+}
+
+h2:first-of-type {
+  padding-top: 0;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 32px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-4);
+}
+
+.mods-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mods {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mods:empty {
+  display: none;
+}
+
+.mod {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mod .form-row {
+  width: 100%;
+}
+
+.add {
+  justify-self: start;
+}

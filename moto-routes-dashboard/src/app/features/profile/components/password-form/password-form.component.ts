@@ -23,7 +23,7 @@ import { ErrorHandlerService } from '../../../../core/services/error-handler.ser
 import { NotificationService } from '../../../../core/services/notification.service';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal.component';
+import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal/password-reveal.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { applyServerErrors, controlErrorMessage } from '../../../../shared/utils/form-errors';
 import { letterAndNumber } from '../../../../shared/utils/validators';
@@ -60,52 +60,8 @@ function createPasswordForm() {
   selector: 'app-password-form',
   imports: [ReactiveFormsModule, FormFieldComponent, IconComponent, InputDirective, PasswordRevealComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form class="card panel form-grid" [formGroup]="form" (ngSubmit)="changePassword()" novalidate>
-      <h2>Contraseña</h2>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-      <ui-form-field label="Contraseña actual" [error]="errorOf('currentPassword')">
-        <ui-password-reveal>
-          <input #field uiInput type="password" name="currentPassword" formControlName="currentPassword" autocomplete="current-password" />
-        </ui-password-reveal>
-      </ui-form-field>
-      <ui-form-field
-        label="Contraseña nueva"
-        [hint]="'Entre ' + limits.passwordMin + ' y ' + limits.passwordMax + ' caracteres, con una letra y un número.'"
-        [error]="errorOf('newPassword')"
-      >
-        <ui-password-reveal>
-          <input #field uiInput type="password" name="newPassword" formControlName="newPassword" autocomplete="new-password" />
-        </ui-password-reveal>
-      </ui-form-field>
-      <ui-form-field label="Repite la contraseña nueva" [error]="repeatError()">
-        <ui-password-reveal>
-          <input #field uiInput type="password" name="repeat" formControlName="repeat" autocomplete="new-password" />
-        </ui-password-reveal>
-      </ui-form-field>
-      <button type="submit" class="btn btn--secondary" [disabled]="changing()">
-        {{ changing() ? 'Cambiando…' : 'Cambiar la contraseña' }}
-      </button>
-      <p class="note">Se cerrará la sesión en tus otros dispositivos.</p>
-    </form>
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-
-    .form-grid h2 {
-      font-size: var(--text-base);
-      font-weight: 750;
-    }
-
-    .note {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-  `,
+  templateUrl: './password-form.component.html',
+  styleUrl: './password-form.component.css',
 })
 export class PasswordFormComponent {
   private readonly profile = inject(ProfileService);

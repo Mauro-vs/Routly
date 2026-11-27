@@ -1,0 +1,29 @@
+:host {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+/* va con el icono, no solo con el color */
+.blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 280px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-align: left;
+  white-space: normal;
+  color: var(--color-warning);
+}
+
+.blocked ui-icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+  :host {
+    justify-items: start;
+  }
+}

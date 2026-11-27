@@ -11,54 +11,8 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'ui-pagination',
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <p aria-live="polite">
-      @if (total() > 0) {
-        Mostrando <span class="num">{{ from() }} a {{ to() }}</span> de
-        <span class="num">{{ total() }}</span>
-      }
-    </p>
-    @if (pageCount() > 1) {
-      <div class="pager__nav">
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Página anterior"
-          [disabled]="page() <= 1"
-          (click)="page.set(page() - 1)"
-        >
-          <ui-icon name="caret-left" />
-        </button>
-        <span class="num">Página {{ page() }} de {{ pageCount() }}</span>
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Página siguiente"
-          [disabled]="page() >= pageCount()"
-          (click)="page.set(page() + 1)"
-        >
-          <ui-icon name="caret-right" />
-        </button>
-      </div>
-    }
-  `,
-  styles: `
-    :host {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-4);
-      min-height: 36px;
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-    }
-
-    .pager__nav {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
-  `,
+  templateUrl: './pagination.component.html',
+  styleUrl: './pagination.component.css',
 })
 export class PaginationComponent {
   /** Página actual, empezando en 1. */

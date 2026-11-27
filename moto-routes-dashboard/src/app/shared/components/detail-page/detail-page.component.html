@@ -1,0 +1,96 @@
+@if (failed()) {
+  <div class="card">
+    <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
+  </div>
+} @else if (record(); as record) {
+  <header class="head on-band band">
+    @if (thumbnail(); as thumbnail) {
+      <img class="head__thumb" [src]="thumbnail" alt="" width="56" height="56" />
+    }
+    <div class="head__text">
+      <h1>{{ title() }}</h1>
+      <div class="head__meta">
+        <ui-status-badge [status]="record.status" [gender]="labels().gender" />
+        @if (subtitle()) {
+          <span>{{ subtitle() }}</span>
+        }
+      </div>
+    </div>
+    @if (editPath(); as editPath) {
+      <div class="head__actions">
+        <a class="btn btn--primary" [routerLink]="editPath">
+          <ui-icon name="pencil-simple" />Editar
+        </a>
+      </div>
+    }
+  </header>
+
+  <div class="layout">
+    <div class="layout__main">
+      <ng-content />
+    </div>
+
+    <aside class="layout__aside" [attr.aria-label]="'Estado y datos ' + ofThe()">
+      <section class="card panel" aria-labelledby="detail-state">
+        <h2 id="detail-state">Estado</h2>
+        <ui-status-toggle
+          [active]="record.isActive"
+          [label]="title()"
+          [labels]="labels()"
+          [busy]="busy()"
+          [lockedReason]="toggleLockedReason()"
+          (activeChange)="activeChange.emit($event)"
+        />
+        @if (toggleLockedReason(); as reason) {
+          <p class="note"><ui-icon name="lock-simple" />{{ reason }}</p>
+        } @else {
+          <p class="hint">El cambio se guarda al momento.</p>
+        }
+      </section>
+
+      <ng-content select="[detailAside]" />
+
+      <section class="card panel" aria-labelledby="detail-record">
+        <h2 id="detail-record">Registro</h2>
+        <ui-field-list [items]="metaItems()" />
+      </section>
+
+      <section class="card panel danger" aria-labelledby="detail-delete">
+        <h2 id="detail-delete">Eliminar</h2>
+        <p class="hint">{{ deleteHint() }}</p>
+        <ui-tip #tip [text]="deleteLockedReason()">
+          <button
+            type="button"
+            class="btn btn--danger"
+            [attr.aria-disabled]="deleteLockedReason() ? true : null"
+            [attr.aria-describedby]="tip.describedBy()"
+            [disabled]="busy()"
+            (click)="onRemove()"
+          >
+            <ui-icon name="trash" />Eliminar {{ labels().singular }}
+          </button>
+        </ui-tip>
+        @if (deleteLockedReason(); as reason) {
+          <p class="note"><ui-icon name="lock-simple" />{{ reason }}</p>
+        }
+      </section>
+    </aside>
+  </div>
+} @else {
+  <div class="head" aria-busy="true" [attr.aria-label]="'Cargando ' + ofThe()">
+    <div class="head__text">
+      <ui-skeleton width="320px" height="30px" />
+      <ui-skeleton class="skeleton-gap" width="140px" height="22px" radius="999px" />
+    </div>
+  </div>
+  <div class="layout" aria-hidden="true">
+    <div class="layout__main">
+      <div class="card panel"><ui-skeleton height="18px" width="40%" /><ui-skeleton class="skeleton-gap" height="64px" /></div>
+      <div class="card panel"><ui-skeleton height="18px" width="30%" /><ui-skeleton class="skeleton-gap" height="96px" /></div>
+    </div>
+    <div class="layout__aside">
+      <div class="card panel"><ui-skeleton height="18px" width="50%" /><ui-skeleton class="skeleton-gap" height="40px" /></div>
+      <div class="card panel"><ui-skeleton height="18px" width="50%" /><ui-skeleton class="skeleton-gap" height="120px" /></div>
+    </div>
+  </div>
+}

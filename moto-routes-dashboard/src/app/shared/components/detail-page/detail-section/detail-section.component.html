@@ -1,0 +1,9 @@
+<section class="card section" [attr.aria-labelledby]="headingId">
+  <header class="section__head">
+    <h2 [id]="headingId">{{ heading() }}</h2>
+    @if (description()) {
+      <p>{{ description() }}</p>
+    }
+  </header>
+  <ng-content />
+</section>

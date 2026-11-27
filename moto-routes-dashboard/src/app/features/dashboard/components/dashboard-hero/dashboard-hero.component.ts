@@ -11,28 +11,7 @@ import { daysUntil, seats, shortDate } from '../../dashboard-format';
   selector: 'app-dashboard-hero',
   imports: [RouterLink, RouteGlyphComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <section class="hero" aria-labelledby="next-departure">
-      @if (departure(); as departure) {
-        <p class="hero__count">
-          <span class="hero__number slanted">{{ days() }}</span>
-          <span>{{ days() === 1 ? 'día' : 'días' }} para la próxima salida</span>
-        </p>
-        <ui-route-glyph />
-        <div class="hero__text">
-          <h2 id="next-departure">
-            <a class="link" [routerLink]="['/departures', departure.slug]">
-              {{ departure.experience?.title ?? 'Salida' }}
-            </a>
-          </h2>
-          <p>{{ date(departure.startAt) }} · {{ seats(departure.capacity) }} · {{ money(departure.price) }}</p>
-        </div>
-      } @else {
-        <h2 id="next-departure">No hay salidas programadas</h2>
-        <p class="quiet">Cuando programes una, aquí verás cuánto falta.</p>
-      }
-    </section>
-  `,
+  templateUrl: './dashboard-hero.component.html',
   styleUrls: ['../dashboard-sheet.css', './dashboard-hero.component.css'],
 })
 export class DashboardHeroComponent {

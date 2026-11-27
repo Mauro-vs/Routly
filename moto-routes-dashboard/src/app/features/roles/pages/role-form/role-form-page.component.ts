@@ -11,23 +11,7 @@ import { RolesStore } from '../../services/roles.store';
   selector: 'app-role-form-page',
   imports: [FormPageComponent, RoleFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      [lockedReason]="lockedReason()"
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-role-form [record]="record()" (save)="save($event)" />
-    </ui-form-page>
-  `,
+  templateUrl: './role-form-page.component.html',
 })
 export class RoleFormPageComponent extends EntityFormPage<Role, RolePayload> {
   protected readonly store = inject(RolesStore);

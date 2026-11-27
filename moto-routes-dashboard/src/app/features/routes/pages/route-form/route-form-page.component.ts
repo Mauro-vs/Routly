@@ -12,37 +12,7 @@ import { RoutesStore } from '../../services/routes.store';
   selector: 'app-route-form-page',
   imports: [FormPageComponent, RouteFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-route-form
-        [record]="record()"
-        [categories]="store.categoryOptions.items()"
-        [locations]="store.locationOptions.items()"
-        [optionsLoading]="optionsLoading()"
-        (save)="save($event)"
-      />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="route"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './route-form-page.component.html',
 })
 export class RouteFormPageComponent extends EntityFormPage<Route, RoutePayload> {
   protected readonly store = inject(RoutesStore);

@@ -8,7 +8,7 @@ import {
   TableColumn,
 } from '../../../../shared/components/data-table/data-table.component';
 import { ListPageComponent } from '../../../../shared/components/list-page/list-page.component';
-import { RatingStarsComponent } from '../../../../shared/components/rating-summary/rating-stars.component';
+import { RatingStarsComponent } from '../../../../shared/components/rating-summary/rating-stars/rating-stars.component';
 import { RowActionsComponent } from '../../../../shared/components/row-actions/row-actions.component';
 import { StatusToggleComponent } from '../../../../shared/components/status-toggle/status-toggle.component';
 import { EntityListPage } from '../../../../shared/pages/entity-list-page';
@@ -46,126 +46,8 @@ const THUMBS = 3;
     StatusToggleComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-list-page
-      title="Opiniones"
-      icon="chat-circle-text"
-      trashPath="/reviews/trash"
-      emptyDescription="Las escriben los riders en la web, en las experiencias y en las fichas de los guías."
-      [labels]="store.labels"
-      [loaded]="listLoaded()"
-      [refreshing]="refreshing()"
-      [filters]="listFilters"
-      [filterValues]="filterValues()"
-      (filterChange)="setFilter($event)"
-      (clearFilters)="clearFilters()"
-      [failed]="loadFailed()"
-      [counts]="counts()"
-      [total]="store.pageTotal()"
-      [pageSize]="pageSize"
-      [trashCount]="store.deletedCount()"
-      [status]="store.status()"
-      [(query)]="query"
-      [sorts]="sorts"
-      [(sort)]="sort"
-      (statusChange)="setStatus($event)"
-      [(page)]="page"
-      (retry)="reload()"
-    >
-      <ui-data-table
-        caption="Opiniones"
-        [columns]="columns"
-        [rows]="rows()"
-        [rowKey]="rowKey"
-        [mutedWhen]="isInactive"
-        [loading]="showSkeleton()"
-      >
-        <ng-template uiCell="review" [uiCellOf]="rows()" let-review>
-          <span class="review">
-            <ui-rating-stars [value]="review.rating" />
-            <a class="link cell-title" [routerLink]="['/reviews', review._id]" [title]="name(review)">{{ name(review) }}</a>
-            @if (review.comment) {
-              <span class="cell-sub snippet">{{ review.comment }}</span>
-            }
-            <!-- Sin título, el nombre ya dice de quién es -->
-            @if (review.title) {
-              <span class="cell-sub">{{ review.user?.name ?? 'Usuario eliminado' }}</span>
-            }
-          </span>
-        </ng-template>
-        <ng-template uiCell="target" [uiCellOf]="rows()" let-review>
-          @if (review.target; as target) {
-            <a class="link" [routerLink]="[targets[review.targetType].path, target.slug]">{{ target.name }}</a>
-          } @else {
-            <span class="muted">Eliminado</span>
-          }
-          <span class="cell-sub">{{ targets[review.targetType].label }}</span>
-        </ng-template>
-        <ng-template uiCell="photos" [uiCellOf]="rows()" let-review>
-          @if (review.photos.length > 0) {
-            <a class="thumbs" [routerLink]="['/reviews', review._id]" [attr.aria-label]="review.photos.length + ' fotos de ' + name(review)">
-              @for (photo of review.photos.slice(0, thumbs); track photo._id) {
-                <span class="thumb" aria-hidden="true">
-                  <img [src]="photo.url" alt="" loading="lazy" decoding="async" width="40" height="40" />
-                </span>
-              }
-              @if (review.photos.length > thumbs) {
-                <span class="more" aria-hidden="true">+{{ review.photos.length - thumbs }}</span>
-              }
-            </a>
-          } @else {
-            <span class="muted">—</span>
-          }
-        </ng-template>
-        <ng-template uiCell="date" [uiCellOf]="rows()" let-review>
-          <time class="nowrap" [attr.datetime]="review.createdAt">{{ ago(review.createdAt) }}</time>
-        </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="rows()" let-review>
-          <ui-status-toggle
-            [active]="review.isActive"
-            [label]="name(review)"
-            [labels]="store.labels"
-            [busy]="store.isBusy(review._id)"
-            (activeChange)="setActive(review, $event)"
-          />
-        </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="rows()" let-review>
-          <ui-row-actions
-            [label]="name(review)"
-            [detailPath]="['/reviews', review._id]"
-            [busy]="store.isBusy(review._id)"
-            (remove)="remove(review)"
-          />
-        </ng-template>
-      </ui-data-table>
-    </ui-list-page>
-  `,
-  styles: `
-    .review {
-      display: grid;
-      gap: 2px;
-      max-width: 42ch;
-    }
-
-    .snippet {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      white-space: normal;
-    }
-
-    .thumbs {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .more {
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-  `,
+  templateUrl: './reviews-list.component.html',
+  styleUrl: './reviews-list.component.css',
 })
 export class ReviewsListComponent extends EntityListPage<Review> {
   protected readonly store = inject(ReviewsStore);

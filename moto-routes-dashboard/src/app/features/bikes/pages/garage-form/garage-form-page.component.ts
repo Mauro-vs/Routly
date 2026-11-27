@@ -15,31 +15,7 @@ import { GarageStore } from '../../services/bikes.store';
   selector: 'app-garage-form-page',
   imports: [FormPageComponent, BikeFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-bike-form [record]="record()" (save)="save($event)" />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="bike"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './garage-form-page.component.html',
 })
 export class GarageFormPageComponent extends EntityFormPage<Bike, BikePayload> {
   protected readonly store = inject(GarageStore);

@@ -25,85 +25,8 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   providers: [
     { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => ToggleComponent), multi: true },
   ],
-  template: `
-    <button
-      type="button"
-      class="switch"
-      role="switch"
-      [attr.aria-checked]="value()"
-      [attr.aria-label]="label() || null"
-      [attr.aria-labelledby]="labelledBy() || null"
-      [attr.aria-describedby]="describedBy()"
-      [attr.aria-disabled]="locked() || null"
-      [class.is-locked]="locked()"
-      [disabled]="isDisabled()"
-      (click)="toggle()"
-      (blur)="onTouched()"
-    >
-      <span class="switch__thumb"></span>
-    </button>
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-    }
-
-    .switch {
-      position: relative;
-      flex: none;
-      width: 38px;
-      height: 22px;
-      padding: 0;
-      border: 0;
-      border-radius: var(--radius-pill);
-      background: var(--color-border-strong);
-      cursor: pointer;
-      transition: background var(--motion-base) ease;
-    }
-
-    /* amplía la zona pulsable sin cambiar el tamaño visible */
-    .switch::after {
-      content: '';
-      position: absolute;
-      inset: -11px;
-    }
-
-    .switch__thumb {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--color-on-primary);
-      box-shadow: var(--shadow-1);
-      transition:
-        transform var(--motion-base) var(--motion-ease),
-        width var(--motion-fast) var(--motion-ease);
-    }
-
-    .switch[aria-checked='true'] {
-      background: var(--color-primary);
-    }
-
-    .switch[aria-checked='true'] .switch__thumb {
-      transform: translateX(16px);
-    }
-
-    .switch:active:not(:disabled, .is-locked) .switch__thumb {
-      width: 21px;
-    }
-
-    .switch[aria-checked='true']:active:not(:disabled, .is-locked) .switch__thumb {
-      transform: translateX(13px);
-    }
-
-    .switch:disabled,
-    .switch.is-locked {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  `,
+  templateUrl: './toggle.component.html',
+  styleUrl: './toggle.component.css',
 })
 export class ToggleComponent implements ControlValueAccessor {
   readonly checked = input(false);

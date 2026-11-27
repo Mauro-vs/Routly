@@ -1,0 +1,108 @@
+<ui-page-header [title]="title()" [subtitle]="subtitleText()">
+  @if (trashPath(); as trashPath) {
+    <a class="btn btn--secondary" [routerLink]="trashPath">
+      <ui-icon name="trash" />Papelera
+      @if (trashCount(); as count) {
+        <span class="trash-count num">{{ count }}</span>
+        <span class="sr-only">{{ count === 1 ? deletedOne() : deletedMany() }}</span>
+      }
+    </a>
+  }
+</ui-page-header>
+
+<div class="toolbar">
+  <ui-segmented
+    stretch
+    label="Filtrar por estado"
+    [options]="statusOptions()"
+    [value]="status()"
+    (valueChange)="status.set($event)"
+  />
+  @for (filter of filters(); track filter.param) {
+    <label class="filter">
+      <span class="sr-only">{{ filter.label }}</span>
+      <select
+        class="select"
+        [name]="filter.param"
+        [class.filter--on]="!!filterValues()[filter.param]"
+        (change)="filterChange.emit({ param: filter.param, value: $any($event.target).value })"
+      >
+        <option value="" [selected]="!filterValues()[filter.param]">{{ filter.allLabel }}</option>
+        @for (option of filter.options(); track option.value) {
+          <option [value]="option.value" [selected]="option.value === filterValues()[filter.param]">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+  }
+  <ng-content select="[listToolbar]" />
+  <div class="toolbar__end">
+    <label class="search">
+      <span class="sr-only">Buscar {{ labels().plural }}</span>
+      <ui-icon name="magnifying-glass" />
+      <input
+        class="input"
+        type="search"
+        name="q"
+        autocomplete="off"
+        [placeholder]="'Buscar ' + labels().plural"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+    </label>
+    @if (sorts().length > 1) {
+      <label class="sort">
+        <span>Ordenar</span>
+        <select class="select" name="orden" [value]="sort()" (change)="sort.set($any($event.target).value)">
+          @for (option of sorts(); track option.value) {
+            <option [value]="option.value" [selected]="option.value === sort()">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+    }
+  </div>
+</div>
+
+@if (failed()) {
+  <div class="card">
+    <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
+  </div>
+} @else if (loaded() && counts().all === 0) {
+  <div class="card">
+    <ui-empty-state [icon]="icon()" [title]="'Todavía no hay ' + labels().plural" [description]="emptyText()">
+      @if (createPath(); as createPath) {
+        <a class="btn btn--primary" [routerLink]="createPath">
+          <ui-icon name="plus" />{{ createLabel() }}
+        </a>
+      }
+    </ui-empty-state>
+  </div>
+} @else if (loaded() && total() === 0 && query().trim()) {
+  <div class="card">
+    <ui-empty-state icon="magnifying-glass" [title]="'Nada para «' + query().trim() + '»'" description="Prueba con otra palabra o quita la búsqueda.">
+      <button type="button" class="btn btn--secondary" (click)="query.set('')">Quitar la búsqueda</button>
+    </ui-empty-state>
+  </div>
+} @else if (loaded() && total() === 0 && hasFilters()) {
+  <div class="card">
+    <ui-empty-state icon="eye-slash" [title]="filtersEmptyTitle()" description="Cambia los filtros o quítalos para ver el resto.">
+      <button type="button" class="btn btn--secondary" (click)="clearFilters.emit()">Quitar los filtros</button>
+    </ui-empty-state>
+  </div>
+} @else if (loaded() && total() === 0) {
+  <div class="card">
+    <ui-empty-state icon="eye-slash" [title]="filteredEmptyTitle()" description="Cambia el filtro para ver el resto.">
+      <button type="button" class="btn btn--secondary" (click)="status.set('all')">
+        Ver {{ statusLabels().all.toLowerCase() }}
+      </button>
+    </ui-empty-state>
+  </div>
+} @else {
+  <!-- Mientras llega otra página se sigue viendo la que había, atenuada -->
+  <div class="list-body" [class.list-body--refreshing]="refreshing()" [attr.aria-busy]="refreshing() || null">
+    <span class="list-bar" aria-hidden="true"></span>
+    <div class="list-rows"><ng-content /></div>
+  </div>
+  @if (loaded()) {
+    <ui-pagination class="pager" [(page)]="page" [pageSize]="pageSize()" [total]="total()" />
+  }
+}

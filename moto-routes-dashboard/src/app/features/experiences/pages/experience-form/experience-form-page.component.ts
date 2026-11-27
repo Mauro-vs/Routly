@@ -20,40 +20,7 @@ import { ExperiencesStore } from '../../services/experiences.store';
   selector: 'app-experience-form-page',
   imports: [FormPageComponent, ExperienceFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-experience-form
-        [record]="record()"
-        [hosts]="store.hostOptions.items()"
-        [routes]="store.routeOptions.items()"
-        [optionsLoading]="optionsLoading()"
-        [guideBikes]="store.guideBikes.items()"
-        [guideBikesLoading]="store.guideBikes.loading()"
-        (hostChange)="store.loadGuideBikes($event)"
-        (save)="save($event)"
-      />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="experience"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './experience-form-page.component.html',
 })
 export class ExperienceFormPageComponent extends EntityFormPage<Experience, ExperiencePayload> {
   protected readonly store = inject(ExperiencesStore);

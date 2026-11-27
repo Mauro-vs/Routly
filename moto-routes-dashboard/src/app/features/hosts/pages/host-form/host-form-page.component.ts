@@ -12,36 +12,7 @@ import { HostsStore } from '../../services/hosts.store';
   selector: 'app-host-form-page',
   imports: [FormPageComponent, HostFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-host-form
-        [record]="record()"
-        [users]="store.userOptions.items()"
-        [usersLoading]="store.userOptions.loading()"
-        (save)="save($event)"
-      />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="host"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './host-form-page.component.html',
 })
 export class HostFormPageComponent extends EntityFormPage<Host, HostPayload> {
   protected readonly store = inject(HostsStore);

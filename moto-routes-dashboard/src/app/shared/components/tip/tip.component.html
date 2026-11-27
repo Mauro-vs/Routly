@@ -1,0 +1,13 @@
+<ng-content />
+@if (text(); as text) {
+  <span
+    class="tip"
+    role="tooltip"
+    [id]="id"
+    [class.is-open]="open()"
+    [class.is-below]="below()"
+    [style.left.px]="x()"
+    [style.top.px]="y()"
+    >{{ text }}</span
+  >
+}

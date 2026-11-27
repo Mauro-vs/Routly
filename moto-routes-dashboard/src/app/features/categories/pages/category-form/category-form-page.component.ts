@@ -12,31 +12,7 @@ import { CategoriesStore } from '../../services/categories.store';
   selector: 'app-category-form-page',
   imports: [FormPageComponent, CategoryFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-category-form [record]="record()" (save)="save($event)" />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="category"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './category-form-page.component.html',
 })
 export class CategoryFormPageComponent extends EntityFormPage<Category, CategoryPayload> {
   protected readonly store = inject(CategoriesStore);

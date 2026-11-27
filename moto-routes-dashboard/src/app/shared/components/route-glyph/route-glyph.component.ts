@@ -15,26 +15,8 @@ const PATHS: Record<RouteDifficulty, string> = {
 @Component({
   selector: 'ui-route-glyph',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <svg viewBox="0 0 44 44" focusable="false">
-      <circle cx="22" cy="40" r="3" fill="currentColor" />
-      <path [attr.d]="path()" fill="none" stroke="currentColor" stroke-width="3" />
-    </svg>
-  `,
-  styles: `
-    :host {
-      display: block;
-      flex: none;
-      width: var(--glyph-size, 34px);
-      height: var(--glyph-size, 34px);
-    }
-
-    svg {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-  `,
+  templateUrl: './route-glyph.component.html',
+  styleUrl: './route-glyph.component.css',
   host: { 'aria-hidden': 'true' },
 })
 export class RouteGlyphComponent {

@@ -18,28 +18,8 @@ import { IconName } from '../icon/icons.generated';
   selector: 'ui-message-page',
   imports: [RouterLink, EmptyStateComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <h1 class="sr-only">{{ heading() }}</h1>
-    <div class="card">
-      <ui-empty-state
-        [icon]="icon() ?? 'compass'"
-        [title]="heading()"
-        [description]="description() ?? ''"
-      >
-        @if (actionPath(); as path) {
-          <a class="btn btn--secondary" [routerLink]="path">
-            {{ actionLabel() ?? 'Volver al resumen' }}
-          </a>
-        }
-      </ui-empty-state>
-    </div>
-  `,
-  styles: `
-    :host {
-      display: block;
-      padding-top: var(--space-5);
-    }
-  `,
+  templateUrl: './message-page.component.html',
+  styleUrl: './message-page.component.css',
 })
 export class MessagePageComponent {
   readonly heading = input.required<string>();

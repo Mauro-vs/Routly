@@ -1,0 +1,134 @@
+.auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+/* ---------- la marca ---------- */
+.brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-5);
+  min-height: 100%;
+  padding: var(--space-6);
+  overflow: hidden;
+}
+
+.brand__top {
+  position: relative;
+}
+
+.brand__logo {
+  --brand-height: clamp(72px, 9vw, 118px);
+}
+
+.brand__line {
+  position: relative;
+  max-width: 11em;
+  font-size: clamp(1.75rem, 3vw, 2.625rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  transform: skewX(var(--slant-text));
+  transform-origin: left bottom;
+  text-wrap: balance;
+}
+
+.road {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.road__asphalt {
+  stroke: var(--color-accent);
+}
+
+.road__edge {
+  stroke: var(--color-band);
+}
+
+.road__fill {
+  stroke: var(--color-sidebar-raised);
+}
+
+.road__line {
+  stroke: var(--color-accent);
+}
+
+/* la carretera se dibuja una vez, de abajo arriba */
+.road__draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: road-draw 1100ms var(--motion-ease) both;
+}
+
+@keyframes road-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* ---------- el formulario ---------- */
+.form {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6) var(--space-5);
+}
+
+.form__theme {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
+.form__inner {
+  display: grid;
+  gap: var(--space-4);
+  width: min(100%, 380px);
+}
+
+@media (max-width: 900px) {
+  .auth {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+
+  /* en móvil la marca se queda en una banda, con el logo y su carretera */
+  .brand {
+    min-height: 164px;
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .brand__logo {
+    --brand-height: 56px;
+  }
+
+  .brand__line {
+    display: none;
+  }
+
+  /* a la derecha del logo: por detrás lo cruzaría */
+  .road {
+    left: 62%;
+    width: 60%;
+  }
+
+  .form {
+    place-items: start center;
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .form__theme {
+    --color-text-muted: var(--color-on-band);
+    --color-text: var(--color-on-band);
+    --color-surface-2: rgb(255 255 255 / 0.12);
+    top: -156px;
+    right: var(--space-2);
+    z-index: 1;
+  }
+}

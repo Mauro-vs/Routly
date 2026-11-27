@@ -6,38 +6,8 @@ import { DIFFICULTIES, DIFFICULTY_LABELS, RouteDifficulty } from '../../../core/
 @Component({
   selector: 'ui-level-meter',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <span class="segments" aria-hidden="true">
-      @for (step of steps; track step) {
-        <i [class.is-on]="step <= level()"></i>
-      }
-    </span>
-    {{ label() }}
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-2);
-      font-size: var(--text-sm);
-      white-space: nowrap;
-    }
-
-    .segments {
-      display: inline-flex;
-      gap: 2px;
-    }
-
-    i {
-      width: 13px;
-      height: 8px;
-      background: var(--color-meter-track);
-    }
-
-    i.is-on {
-      background: var(--color-meter);
-    }
-  `,
+  templateUrl: './level-meter.component.html',
+  styleUrl: './level-meter.component.css',
 })
 export class LevelMeterComponent {
   readonly difficulty = input.required<RouteDifficulty>();

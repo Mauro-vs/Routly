@@ -1,0 +1,12 @@
+:host {
+  display: block;
+  flex: none;
+  width: var(--glyph-size, 34px);
+  height: var(--glyph-size, 34px);
+}
+
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

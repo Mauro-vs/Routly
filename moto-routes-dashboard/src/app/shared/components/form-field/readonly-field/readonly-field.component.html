@@ -1,0 +1,7 @@
+<span class="label" [id]="labelId">{{ label() }}</span>
+<p class="readonly-value" [attr.aria-labelledby]="labelId" [attr.aria-describedby]="hint() ? hintId : null">
+  <ui-icon name="lock-simple" /><span class="value"><ng-content /></span>
+</p>
+@if (hint()) {
+  <p class="hint" [id]="hintId">{{ hint() }}</p>
+}

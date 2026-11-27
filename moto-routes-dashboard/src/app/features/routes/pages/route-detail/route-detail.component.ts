@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 
 import { DIFFICULTY_LABELS, Route, routeTrip } from '../../../../core/models/route.model';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
-import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
+import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { RatingSummaryComponent } from '../../../../shared/components/rating-summary/rating-summary.component';
@@ -14,40 +14,7 @@ import { RoutesStore } from '../../services/routes.store';
   selector: 'app-route-detail',
   imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent, ImageGalleryComponent, RatingSummaryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-detail-page
-      [title]="title()"
-      [subtitle]="subtitle()"
-      [thumbnail]="record()?.coverImage?.url ?? null"
-      [labels]="store.labels"
-      [record]="record()"
-      [failed]="loadFailed()"
-      [identifier]="identifier()"
-      [editPath]="editPath()"
-      [busy]="busy()"
-      (activeChange)="setActive($event)"
-      (remove)="remove()"
-      (retry)="retry()"
-    >
-      <ui-detail-section heading="Opiniones" description="Las rutas no se comentan: es la media de las opiniones de las experiencias que la usan.">
-        <ui-rating-summary [rating]="record()?.rating" />
-      </ui-detail-section>
-      <ui-detail-section heading="Recorrido">
-        <ui-field-list [columns]="2" [items]="trip()" />
-      </ui-detail-section>
-      <ui-detail-section heading="Datos">
-        <ui-field-list [columns]="2" [items]="data()" />
-      </ui-detail-section>
-      @if (record(); as route) {
-        <app-image-gallery
-          ownerType="route"
-          [ownerId]="route._id"
-          [ownerLabel]="title()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-detail-page>
-  `,
+  templateUrl: './route-detail.component.html',
 })
 export class RouteDetailComponent extends EntityDetailPage<Route> {
   protected readonly store = inject(RoutesStore);

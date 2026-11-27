@@ -1,0 +1,133 @@
+:host {
+  display: block;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: 20px;
+}
+
+.head__thumb {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--color-surface-2);
+}
+
+/* si la imagen principal no carga, el título se queda con su sitio */
+.head__thumb.is-broken {
+  display: none;
+}
+
+.head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+h1 {
+  overflow-wrap: anywhere;
+}
+
+.head__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  margin-top: 6px;
+  color: var(--color-text-muted);
+}
+
+/* un email o un lugar sin espacios se parte en vez de ensanchar la página */
+.head__meta > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.head__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.layout__main,
+.layout__aside {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.panel > h2 {
+  margin-bottom: var(--space-3);
+}
+
+.hint {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.danger .hint {
+  margin: 0 0 var(--space-3);
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.note ui-icon {
+  flex: none;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.skeleton-gap {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* En móvil el título se queda con todo el ancho y "Editar" baja a su propia fila. */
+@media (max-width: 560px) {
+  .head {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .head__thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .head__text {
+    flex-basis: calc(100% - 48px - var(--space-4));
+  }
+
+  .head__actions {
+    flex-basis: 100%;
+  }
+
+  .head__actions .btn {
+    flex: 1;
+  }
+}

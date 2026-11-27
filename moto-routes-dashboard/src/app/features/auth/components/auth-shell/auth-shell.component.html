@@ -1,0 +1,28 @@
+<main class="auth">
+  <section class="brand on-band" aria-label="Routly">
+    <svg class="road" viewBox="0 0 720 1000" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+      <defs>
+        <mask id="road-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="720" height="1000">
+          <path class="road__draw" pathLength="1" [attr.d]="roadPath" fill="none" stroke="#fff" stroke-width="150" />
+        </mask>
+      </defs>
+      <g mask="url(#road-reveal)" fill="none">
+        <path [attr.d]="roadPath" class="road__asphalt" stroke-width="96" />
+        <path [attr.d]="roadPath" class="road__edge" stroke-width="84" />
+        <path [attr.d]="roadPath" class="road__fill" stroke-width="80" />
+        <path [attr.d]="roadPath" class="road__line" stroke-width="4" stroke-dasharray="26 20" />
+      </g>
+    </svg>
+    <div class="brand__top">
+      <ui-brand-mark class="brand__logo" />
+    </div>
+    <p class="brand__line">Rutas, salidas y motos, a punto para salir.</p>
+  </section>
+
+  <section class="form">
+    <ui-theme-toggle class="form__theme" />
+    <div class="form__inner">
+      <ng-content />
+    </div>
+  </section>
+</main>

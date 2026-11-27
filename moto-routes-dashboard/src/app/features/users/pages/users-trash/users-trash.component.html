@@ -1,0 +1,40 @@
+<ui-trash-page
+  backPath="/users"
+  [labels]="store.labels"
+  [loaded]="store.deletedLoaded()"
+  [failed]="loadFailed()"
+  [total]="store.deletedCount()"
+  [(restoreAs)]="restoreAs"
+  (retry)="reload()"
+>
+  <ui-data-table
+    caption="Usuarios eliminados"
+    [columns]="columns"
+    [rows]="store.deleted()"
+    [rowKey]="rowKey"
+    [loading]="showSkeleton()"
+    [skeletonRows]="3"
+  >
+    <ng-template uiCell="name" [uiCellOf]="store.deleted()" let-user>
+      <span class="cell-title" [title]="user.name">{{ user.name }}</span>
+      <span class="cell-sub" translate="no">{{ user.email }}</span>
+    </ng-template>
+    <ng-template uiCell="role" [uiCellOf]="store.deleted()" let-user>
+      <ui-relation-link [label]="user.role?.label ?? null" />
+    </ng-template>
+    <ng-template uiCell="was" [uiCellOf]="store.deleted()" let-user>
+      <ui-status-badge [status]="user.status" [gender]="store.labels.gender" />
+    </ng-template>
+    <ng-template uiCell="deleted" [uiCellOf]="store.deleted()" let-user>
+      <time class="nowrap" [attr.datetime]="user.deletedAt">{{ deletedAgo(user) }}</time>
+    </ng-template>
+    <ng-template uiCell="actions" [uiCellOf]="store.deleted()" let-user>
+      <ui-restore-button
+        [label]="user.name"
+        [busy]="store.isBusy(user._id)"
+        [blockedReason]="blockedReason(user)"
+        (restore)="restore(user)"
+      />
+    </ng-template>
+  </ui-data-table>
+</ui-trash-page>

@@ -38,78 +38,8 @@ const COLUMNS: readonly TableColumn[] = [
     StatusToggleComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-list-page
-      title="Roles"
-      icon="shield-check"
-      createPath="/roles/new"
-      trashPath="/roles/trash"
-      [labels]="store.labels"
-      [loaded]="listLoaded()"
-      [refreshing]="refreshing()"
-      [failed]="loadFailed()"
-      [counts]="counts()"
-      [total]="store.pageTotal()"
-      [pageSize]="pageSize"
-      [trashCount]="store.deletedCount()"
-      [status]="store.status()"
-      [(query)]="query"
-      [sorts]="sorts"
-      [(sort)]="sort"
-      (statusChange)="setStatus($event)"
-      [(page)]="page"
-      (retry)="reload()"
-    >
-      <ui-data-table
-        caption="Roles"
-        [columns]="columns"
-        [rows]="rows()"
-        [rowKey]="rowKey"
-        [mutedWhen]="isInactive"
-        [loading]="showSkeleton()"
-      >
-        <ng-template uiCell="label" [uiCellOf]="rows()" let-role>
-          <a class="link cell-title" [routerLink]="['/roles', role.slug]" [title]="role.label">{{ role.label }}</a>
-          <span class="cell-sub mono" translate="no">{{ role.name }}</span>
-        </ng-template>
-        <ng-template uiCell="description" [uiCellOf]="rows()" let-role>
-          <span class="cell-text">{{ role.description || 'Sin descripción' }}</span>
-        </ng-template>
-        <ng-template uiCell="type" [uiCellOf]="rows()" let-role>
-          @if (role.isSystem) {
-            <span class="badge badge--icon badge--neutral"><ui-icon name="lock-simple" />Base</span>
-          } @else {
-            <span class="muted">Personalizado</span>
-          }
-        </ng-template>
-        <ng-template uiCell="status" [uiCellOf]="rows()" let-role>
-          <ui-status-toggle
-            [active]="role.isActive"
-            [label]="role.label"
-            [labels]="store.labels"
-            [busy]="store.isBusy(role._id)"
-            [lockedReason]="store.toggleLockedReason(role)"
-            (activeChange)="setActive(role, $event)"
-          />
-        </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="rows()" let-role>
-          <ui-row-actions
-            [label]="role.label"
-            [detailPath]="['/roles', role.slug]"
-            [editPath]="['/roles', role.slug, 'edit']"
-            [busy]="store.isBusy(role._id)"
-            [deleteLockedReason]="store.deleteLockedReason(role)"
-            (remove)="remove(role)"
-          />
-        </ng-template>
-      </ui-data-table>
-    </ui-list-page>
-  `,
-  styles: `
-    .mono {
-      font-family: var(--font-mono);
-    }
-  `,
+  templateUrl: './roles-list.component.html',
+  styleUrl: './roles-list.component.css',
 })
 export class RolesListComponent extends EntityListPage<Role> {
   protected readonly store = inject(RolesStore);

@@ -26,7 +26,7 @@ import { USER_LIMITS } from '../../../../core/models/user.model';
 import { toApiError } from '../../../../core/utils/api-error.mapper';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal.component';
+import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal/password-reveal.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { applyServerErrors, controlErrorMessage } from '../../../../shared/utils/form-errors';
 import { email, letterAndNumber, minTrimmed, notBlank } from '../../../../shared/utils/validators';
@@ -81,95 +81,8 @@ type RegisterControl = keyof ReturnType<typeof createRegisterForm>['controls'];
     PasswordRevealComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-auth-shell>
-      <h1 class="slanted">Crea tu cuenta</h1>
-
-      @if (error(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <ui-form-field label="Nombre" [error]="errorOf('name')">
-          <input uiInput type="text" name="name" formControlName="name" autocomplete="name" />
-        </ui-form-field>
-        <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
-          <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
-        </ui-form-field>
-        <ui-form-field label="Contraseña" [error]="errorOf('password')">
-          <ui-password-reveal>
-            <input #field uiInput type="password" name="password" formControlName="password" autocomplete="new-password" />
-          </ui-password-reveal>
-        </ui-form-field>
-        <ul class="rules" aria-label="Requisitos de la contraseña">
-          @for (rule of rules(); track rule.label) {
-            <li [class.is-met]="rule.met">
-              <ui-icon [name]="rule.met ? 'check-circle' : 'x-circle'" />
-              {{ rule.label }}
-              <span class="sr-only">{{ rule.met ? '(cumplido)' : '(pendiente)' }}</span>
-            </li>
-          }
-        </ul>
-        <ui-form-field label="Repite la contraseña" [error]="repeatError()">
-          <ui-password-reveal>
-            <input #field uiInput type="password" name="repeat" formControlName="repeat" autocomplete="new-password" />
-          </ui-password-reveal>
-        </ui-form-field>
-        <button type="submit" class="btn btn--primary" [disabled]="submitting()">
-          @if (submitting()) {
-            <span class="spinner" aria-hidden="true"></span>Creando la cuenta…
-          } @else {
-            Crear cuenta
-          }
-        </button>
-      </form>
-
-      <p class="switch">
-        ¿Ya tienes cuenta?
-        <a routerLink="/login" [queryParams]="loginParams()">Entra</a>
-      </p>
-    </app-auth-shell>
-  `,
-  styles: `
-    .btn {
-      width: 100%;
-      height: 44px;
-    }
-
-    .rules {
-      display: grid;
-      gap: 2px;
-      margin: -8px 0 0;
-      padding: 0;
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-      list-style: none;
-    }
-
-    .rules li {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .rules li.is-met {
-      color: var(--color-success);
-    }
-
-    .rules ui-icon {
-      font-size: 14px;
-    }
-
-    .switch {
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-    }
-
-    .switch a {
-      font-weight: 650;
-      color: var(--color-primary);
-    }
-  `,
+  templateUrl: './register.component.html',
+  styleUrl: './register.component.css',
 })
 export class RegisterComponent {
   /** Adónde ir después. Llega como `?returnUrl=` y se valida antes de usarlo. */

@@ -1,0 +1,63 @@
+<ui-page-header [title]="heading()" [subtitle]="subtitleText()">
+  <a class="btn btn--secondary" [routerLink]="cancelPath()">Cancelar</a>
+  <button
+    type="submit"
+    class="btn btn--primary"
+    [attr.form]="formId"
+    [disabled]="saving() || loading() || !!failed()"
+  >
+    @if (saving()) {
+      <span class="spinner" aria-hidden="true"></span>Guardando…
+    } @else {
+      <ui-icon name="check" />{{ submitLabel() }}
+    }
+  </button>
+</ui-page-header>
+
+@if (failed()) {
+  <div class="card">
+    <ui-error-state [title]="errorTitle()" [error]="loadError()" (retry)="retry.emit()" />
+  </div>
+} @else if (loading()) {
+  <div class="layout" aria-busy="true" [attr.aria-label]="'Cargando ' + ofThe()">
+    <div class="card panel skeleton-fields">
+      @for (field of skeletonFields; track $index) {
+        <div class="skeleton-field">
+          <ui-skeleton [width]="field" height="14px" />
+          <ui-skeleton height="38px" radius="var(--radius-md)" />
+        </div>
+      }
+    </div>
+    <div class="card panel"><ui-skeleton width="70%" height="22px" /></div>
+  </div>
+}
+
+<!-- El formulario se queda creado mientras carga: así no pierde su estado. -->
+<div class="layout" [hidden]="loading() || !!failed()">
+  <div class="layout__main"><ng-content /></div>
+
+  <div class="stack">
+    <div class="card panel toggle-row">
+      <div>
+        <strong id="form-active-label">{{ activeLabel() }}</strong>
+        <span class="muted">{{ activeHint() }}</span>
+      </div>
+      <ui-tip #tip [text]="lockedReason()">
+        <ui-toggle
+          labelledBy="form-active-label"
+          [checked]="active()"
+          [locked]="!!lockedReason()"
+          [describedBy]="tip.describedBy()"
+          (checkedChange)="activeChange.emit($event)"
+        />
+      </ui-tip>
+    </div>
+    @if (ownsImages() && !isEdit()) {
+      <p class="card panel images-note">
+        <ui-icon name="images" />
+        <span>{{ imagesNote() }}</span>
+      </p>
+    }
+    <ng-content select="[formAside]" />
+  </div>
+</div>

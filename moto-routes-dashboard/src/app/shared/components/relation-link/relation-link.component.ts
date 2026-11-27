@@ -16,37 +16,8 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'ui-relation-link',
   imports: [RouterLink, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (label(); as label) {
-      @if (path(); as path) {
-        <a class="link" [routerLink]="path">{{ label }}</a>
-      } @else {
-        <span>{{ label }}</span>
-      }
-    } @else {
-      <span class="gone"><ui-icon name="trash" />{{ deletedText() }}</span>
-    }
-  `,
-  styles: `
-    :host {
-      min-width: 0;
-    }
-
-    .gone {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-      /* Una palabra corta: no se parte aunque la columna se estreche. */
-      white-space: nowrap;
-      overflow-wrap: normal;
-    }
-
-    .gone ui-icon {
-      font-size: 14px;
-    }
-  `,
+  templateUrl: './relation-link.component.html',
+  styleUrl: './relation-link.component.css',
 })
 export class RelationLinkComponent {
   /** Nombre del registro relacionado. null: se ha eliminado. */

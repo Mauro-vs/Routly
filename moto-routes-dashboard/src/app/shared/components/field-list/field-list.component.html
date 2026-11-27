@@ -1,0 +1,40 @@
+<dl [class.is-split]="columns() === 2">
+  @for (item of items(); track item.label) {
+    <div class="field" [class.field--wide]="item.wide">
+      <dt>{{ item.label }}</dt>
+      <dd>
+        @if (item.status; as status) {
+          <ui-status-badge [status]="status" [gender]="item.gender ?? 'm'" />
+        } @else if (item.relation) {
+          <ui-relation-link
+            [label]="text(item)"
+            [path]="item.link ?? null"
+            [gender]="item.gender ?? 'm'"
+          />
+        } @else if (text(item); as value) {
+          @if (isDate(item)) {
+            <time [attr.datetime]="item.value">{{ value }}</time>
+          } @else if (item.link; as link) {
+            <a class="link" [routerLink]="link">{{ value }}</a>
+          } @else if (item.href; as href) {
+            <a class="link external" [href]="href" target="_blank" rel="noopener">
+              <span>{{ value }}</span>
+              <span class="sr-only">(se abre en una pestaña nueva)</span>
+              <ui-icon name="arrow-up-right" />
+            </a>
+          } @else {
+            <span
+              [class.mono]="item.format === 'mono'"
+              [class.multiline]="item.format === 'multiline'"
+              [class.num]="item.format === 'number' || item.format === 'money'"
+              [attr.translate]="item.format === 'mono' ? 'no' : null"
+              >{{ value }}</span
+            >
+          }
+        } @else {
+          <span class="empty">{{ item.empty ?? 'Sin datos' }}</span>
+        }
+      </dd>
+    </div>
+  }
+</dl>

@@ -1,0 +1,21 @@
+<a class="icon-btn" [routerLink]="detailPath()" [attr.aria-label]="'Ver ' + label()">
+  <ui-icon name="eye" />
+</a>
+@if (editPath(); as editPath) {
+  <a class="icon-btn" [routerLink]="editPath" [attr.aria-label]="'Editar ' + label()">
+    <ui-icon name="pencil-simple" />
+  </a>
+}
+<ui-tip #tip [text]="deleteLockedReason()">
+  <button
+    type="button"
+    class="icon-btn icon-btn--danger"
+    [attr.aria-label]="'Eliminar ' + label()"
+    [attr.aria-disabled]="deleteLockedReason() ? true : null"
+    [attr.aria-describedby]="tip.describedBy()"
+    [disabled]="busy()"
+    (click)="onRemove()"
+  >
+    <ui-icon name="trash" />
+  </button>
+</ui-tip>

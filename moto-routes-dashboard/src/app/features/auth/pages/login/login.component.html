@@ -1,0 +1,30 @@
+<app-auth-shell>
+  <h1 class="slanted">Entra en Routly</h1>
+
+  @if (error(); as message) {
+    <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
+  }
+
+  <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
+      <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
+    </ui-form-field>
+    <ui-form-field label="Contraseña" [error]="errorOf('password')">
+      <ui-password-reveal>
+        <input #field uiInput type="password" name="password" formControlName="password" autocomplete="current-password" />
+      </ui-password-reveal>
+    </ui-form-field>
+    <button type="submit" class="btn btn--primary" [disabled]="submitting()">
+      @if (submitting()) {
+        <span class="spinner" aria-hidden="true"></span>Entrando…
+      } @else {
+        Entrar
+      }
+    </button>
+  </form>
+
+  <p class="switch">
+    ¿Aún no tienes cuenta?
+    <a routerLink="/register" [queryParams]="registerParams()">Crea una</a>
+  </p>
+</app-auth-shell>

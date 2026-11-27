@@ -1,0 +1,19 @@
+<dl class="strip">
+  @for (item of items(); track item.label) {
+    <div class="stat">
+      <dt>{{ item.label }}</dt>
+      <dd>
+        <span class="value">{{ item.value }}</span>
+        @if (item.unit) {
+          <span class="unit">{{ item.unit }}</span>
+        }
+      </dd>
+      @if (item.note) {
+        <dd class="note">{{ item.note }}</dd>
+      }
+      @if (item.share !== undefined) {
+        <dd class="meter" aria-hidden="true"><i [style.width.%]="item.share * 100"></i></dd>
+      }
+    </div>
+  }
+</dl>

@@ -12,37 +12,7 @@ import { UsersStore } from '../../services/users.store';
   selector: 'app-user-form-page',
   imports: [FormPageComponent, UserFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-user-form
-        [record]="record()"
-        [roles]="store.roleOptions.items()"
-        [rolesLoading]="store.roleOptions.loading()"
-        [self]="isSelf()"
-        (save)="save($event)"
-      />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="user"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './user-form-page.component.html',
 })
 export class UserFormPageComponent extends EntityFormPage<User, UserPayload> {
   protected readonly store = inject(UsersStore);

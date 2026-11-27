@@ -175,6 +175,8 @@ Reglas:
 - `core` son servicios únicos (singletons).
 - `shared` no sabe nada del negocio de una colección concreta.
 - Una feature no importa de otra. Lo que comparten va a `core/models` o a `shared`; las opciones de un select (por ejemplo, los roles de un usuario) las pide el servicio de la propia feature.
+- **El flujo es siempre el mismo: página → store → servicio → `ApiService`.** Un componente nunca pide nada a la API.
+- **Cada componente tiene su carpeta con tres archivos:** `x.component.ts` (la lógica), `x.component.html` (la plantilla) y `x.component.css` (sus estilos, si los tiene). Nada de plantillas ni estilos dentro del `.ts`. Un componente que solo vive dentro de otro va en una subcarpeta del suyo (`form-field/password-reveal/`).
 
 ### Pantallas
 
@@ -187,7 +189,7 @@ Cada colección tiene las mismas cinco páginas:
 | `/<colección>/:slug` | Detalle: datos por secciones, relaciones enlazadas, estado, registro, eliminar y galería |
 | `/<colección>/:slug/edit` | Editar, con la galería debajo del formulario |
 | `/<colección>/trash` | Papelera: restaurar activo o inactivo |
-| `/<colección>/id/:id` | Lleva al detalle de un registro del que solo se sabe el `_id` (relaciones sin slug) |
+| `/<colección>/id/:id` | Lleva al detalle de un registro del que solo se sabe el `_id` (relaciones sin slug). No tiene página: lo hace `recordByIdGuard` |
 
 Las imágenes no tienen slug ni página de crear: su detalle es `/images/:id` y se añaden desde la galería de su dueño. El Dashboard (`/`) abre con los días que faltan para la próxima salida. Debajo, la agenda (las próximas salidas y las últimas rutas modificadas) y el catálogo: km, rutas activas, plazas ofertadas y precio medio, las rutas por dificultad y por categoría, y las salidas de los próximos seis meses. Las gráficas son componentes propios en CSS (`ui-stat-strip`, `ui-bar-list`, `ui-level-meter`), sin librerías y con su texto para el lector de pantalla.
 

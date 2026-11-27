@@ -1,0 +1,32 @@
+<ui-detail-page
+  [title]="title()"
+  [subtitle]="subtitle()"
+  [thumbnail]="record()?.coverImage?.url ?? null"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Opiniones" description="Las rutas no se comentan: es la media de las opiniones de las experiencias que la usan.">
+    <ui-rating-summary [rating]="record()?.rating" />
+  </ui-detail-section>
+  <ui-detail-section heading="Recorrido">
+    <ui-field-list [columns]="2" [items]="trip()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Datos">
+    <ui-field-list [columns]="2" [items]="data()" />
+  </ui-detail-section>
+  @if (record(); as route) {
+    <app-image-gallery
+      ownerType="route"
+      [ownerId]="route._id"
+      [ownerLabel]="title()"
+      (coverChange)="refreshCover()"
+    />
+  }
+</ui-detail-page>

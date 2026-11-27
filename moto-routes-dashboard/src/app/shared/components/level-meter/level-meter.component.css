@@ -1,0 +1,22 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.segments {
+  display: inline-flex;
+  gap: 2px;
+}
+
+i {
+  width: 13px;
+  height: 8px;
+  background: var(--color-meter-track);
+}
+
+i.is-on {
+  background: var(--color-meter);
+}

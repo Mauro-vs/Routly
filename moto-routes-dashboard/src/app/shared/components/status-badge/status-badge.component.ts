@@ -46,16 +46,8 @@ export function statusBadge(status: BadgeStatus, gender: Gender): StatusBadgeVie
   selector: 'ui-status-badge',
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <span class="badge badge--icon" [class]="view().tone">
-      <ui-icon [name]="view().icon" />{{ view().label }}
-    </span>
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-    }
-  `,
+  templateUrl: './status-badge.component.html',
+  styleUrl: './status-badge.component.css',
 })
 export class StatusBadgeComponent {
   readonly status = input.required<BadgeStatus>();

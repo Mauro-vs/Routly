@@ -19,61 +19,8 @@ import { PasswordFormComponent } from '../../components/password-form/password-f
   selector: 'app-profile',
   imports: [AccountFormComponent, IconComponent, ImageGalleryComponent, PageHeaderComponent, PasswordFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (user(); as user) {
-      <ui-page-header [title]="user.name" [subtitle]="subtitle()">
-        <button type="submit" form="profile-form" class="btn btn--primary" [disabled]="saving()">
-          @if (saving()) {
-            <span class="spinner" aria-hidden="true"></span>Guardando…
-          } @else {
-            <ui-icon name="check" />Guardar cambios
-          }
-        </button>
-      </ui-page-header>
-
-      <div class="layout">
-        <div class="layout__main">
-          <app-account-form [user]="user" />
-          <app-image-gallery
-            ownerType="user"
-            [ownerId]="user._id"
-            [ownerLabel]="user.name"
-            (coverChange)="refreshAvatar()"
-          />
-        </div>
-
-        <aside class="layout__aside">
-          <app-password-form />
-        </aside>
-      </div>
-    } @else {
-      <div class="pending card panel" role="status">No se ha podido confirmar tu sesión. Comprueba la conexión con la API.</div>
-    }
-  `,
-  styles: `
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 320px;
-      align-items: start;
-      gap: var(--space-4);
-    }
-
-    .layout__main {
-      display: grid;
-      gap: var(--space-4);
-      min-width: 0;
-    }
-
-    .pending {
-      margin-top: var(--space-5);
-    }
-
-    @media (max-width: 1080px) {
-      .layout {
-        grid-template-columns: minmax(0, 1fr);
-      }
-    }
-  `,
+  templateUrl: './profile.component.html',
+  styleUrl: './profile.component.css',
 })
 export class ProfileComponent implements HasUnsavedChanges {
   private readonly store = inject(AuthStore);

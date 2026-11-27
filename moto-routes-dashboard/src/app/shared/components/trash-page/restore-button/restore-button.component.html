@@ -1,0 +1,13 @@
+<button
+  type="button"
+  class="btn btn--secondary btn--sm"
+  [attr.aria-label]="'Restaurar ' + label()"
+  [attr.aria-describedby]="blockedReason() ? reasonId : null"
+  [disabled]="busy() || !!blockedReason()"
+  (click)="restore.emit()"
+>
+  <ui-icon name="arrow-counter-clockwise" />Restaurar
+</button>
+@if (blockedReason(); as reason) {
+  <p class="blocked" [id]="reasonId"><ui-icon name="warning-circle" />{{ reason }}</p>
+}

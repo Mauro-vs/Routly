@@ -1,0 +1,102 @@
+<form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  @if (formError(); as message) {
+    <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
+  }
+
+  <ui-form-field
+    label="Título"
+    hint="Se usa para generar su dirección."
+    [counter]="counter('title', limits.title)"
+    [error]="errorOf('title')"
+  >
+    <input uiInput type="text" name="title" formControlName="title" autocomplete="off" />
+  </ui-form-field>
+
+  <div class="form-row">
+    <ui-form-field
+      label="Ruta"
+      [hint]="optionsLoading() ? 'Cargando rutas…' : ''"
+      [error]="errorOf('routeId')"
+    >
+      <select uiInput class="select" name="routeId" formControlName="routeId">
+        <option value="" disabled>Elige una ruta</option>
+        @for (option of routeOptions(); track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </ui-form-field>
+    <ui-form-field
+      label="Anfitrión"
+      [hint]="optionsLoading() ? 'Cargando anfitriones…' : ''"
+      [error]="errorOf('hostId')"
+    >
+      <select uiInput class="select" name="hostId" formControlName="hostId" (change)="hostChanged($event)">
+        <option value="" disabled>Elige un anfitrión</option>
+        @for (option of hostOptions(); track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </ui-form-field>
+  </div>
+
+  <ui-form-field label="Moto del guía" [optional]="true" [hint]="guideHint()" [error]="errorOf('guideBikeId')">
+    <select uiInput class="select" name="guideBikeId" formControlName="guideBikeId">
+      <option value="">Sin moto</option>
+      @for (option of guideOptions(); track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </ui-form-field>
+
+  <ui-form-field
+    label="Descripción"
+    [optional]="true"
+    [counter]="counter('description', limits.description)"
+    [error]="errorOf('description')"
+  >
+    <textarea uiInput rows="4" name="description" formControlName="description"></textarea>
+  </ui-form-field>
+
+  <ui-form-field
+    label="Punto de encuentro"
+    [optional]="true"
+    hint="Dónde se queda antes de salir."
+    [counter]="counter('meetingPoint', limits.meetingPoint)"
+    [error]="errorOf('meetingPoint')"
+  >
+    <input uiInput type="text" name="meetingPoint" formControlName="meetingPoint" autocomplete="off" />
+  </ui-form-field>
+
+  <div class="form-row">
+    <ui-form-field label="Idioma" [error]="errorOf('language')">
+      <select uiInput class="select" name="language" formControlName="language">
+        @for (option of languageOptions(); track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </ui-form-field>
+    <ui-form-field
+      label="Duración"
+      [hint]="'Horas en total, con las paradas. Hasta ' + limits.duration + '.'"
+      [error]="errorOf('duration')"
+    >
+      <div class="affix">
+        <input uiInput type="number" name="duration" inputmode="decimal" min="0" [max]="limits.duration" step="any" formControlName="duration" />
+        <span aria-hidden="true">h</span>
+      </div>
+    </ui-form-field>
+  </div>
+
+  <div class="form-row">
+    <ui-form-field label="Mínimo de participantes" [error]="errorOf('minParticipants')">
+      <input uiInput type="number" name="minParticipants" inputmode="numeric" min="1" step="1" formControlName="minParticipants" />
+    </ui-form-field>
+    <ui-form-field
+      label="Máximo de participantes"
+      [hint]="'Hasta ' + limits.maxParticipants + '. Las salidas no pueden tener más plazas.'"
+      [error]="errorOf('maxParticipants') ?? participantsError()"
+    >
+      <input uiInput type="number" name="maxParticipants" inputmode="numeric" min="1" [max]="limits.maxParticipants" step="1" formControlName="maxParticipants" />
+    </ui-form-field>
+  </div>
+</form>

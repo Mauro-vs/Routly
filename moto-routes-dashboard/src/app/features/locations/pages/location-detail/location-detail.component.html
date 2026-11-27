@@ -1,0 +1,28 @@
+<ui-detail-page
+  [title]="title()"
+  [subtitle]="subtitle()"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Lugar">
+    <ui-field-list [columns]="2" [items]="place()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Coordenadas" description="En grados decimales.">
+    <ui-field-list [columns]="2" [items]="coordinates()" />
+  </ui-detail-section>
+  @if (record(); as owner) {
+    <app-image-gallery
+      ownerType="location"
+      [ownerId]="owner._id"
+      [ownerLabel]="title()"
+      (coverChange)="refreshCover()"
+    />
+  }
+</ui-detail-page>

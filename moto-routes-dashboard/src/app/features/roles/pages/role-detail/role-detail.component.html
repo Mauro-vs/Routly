@@ -1,0 +1,19 @@
+<ui-detail-page
+  [title]="title()"
+  [subtitle]="record()?.isSystem ? 'Rol base' : 'Rol personalizado'"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  [toggleLockedReason]="toggleLockedReason()"
+  [deleteLockedReason]="deleteLockedReason()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Datos">
+    <ui-field-list [columns]="2" [items]="fields()" />
+  </ui-detail-section>
+</ui-detail-page>

@@ -8,16 +8,8 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'ui-theme-toggle',
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <button type="button" class="icon-btn" [attr.aria-label]="label()" [title]="label()" (click)="theme.toggle()">
-      <ui-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
-    </button>
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-    }
-  `,
+  templateUrl: './theme-toggle.component.html',
+  styleUrl: './theme-toggle.component.css',
 })
 export class ThemeToggleComponent {
   protected readonly theme = inject(ThemeService);

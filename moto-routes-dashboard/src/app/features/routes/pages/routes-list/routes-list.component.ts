@@ -45,42 +45,7 @@ const COLUMNS: readonly TableColumn[] = [
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './routes-list.component.html',
-  styles: `
-    /* la marca de hoja de ruta: el kilómetro delante */
-    .mark {
-      display: grid;
-      gap: 2px;
-      white-space: nowrap;
-    }
-
-    .mark b {
-      font-size: 1.375rem;
-      line-height: 1;
-    }
-
-    .mark span {
-      font-size: 11.5px;
-      color: var(--color-text-muted);
-    }
-
-    .route {
-      display: grid;
-      min-width: 0;
-    }
-
-    .trip {
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0 6px;
-      font-size: var(--text-xs);
-      color: var(--color-text-muted);
-    }
-
-    .trip ui-icon {
-      font-size: 12px;
-    }
-  `,
+  styleUrl: './routes-list.component.css',
 })
 export class RoutesListComponent extends EntityListPage<Route> implements OnInit {
   protected readonly store = inject(RoutesStore);

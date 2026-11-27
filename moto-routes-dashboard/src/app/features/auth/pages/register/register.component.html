@@ -1,0 +1,47 @@
+<app-auth-shell>
+  <h1 class="slanted">Crea tu cuenta</h1>
+
+  @if (error(); as message) {
+    <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
+  }
+
+  <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <ui-form-field label="Nombre" [error]="errorOf('name')">
+      <input uiInput type="text" name="name" formControlName="name" autocomplete="name" />
+    </ui-form-field>
+    <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
+      <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
+    </ui-form-field>
+    <ui-form-field label="Contraseña" [error]="errorOf('password')">
+      <ui-password-reveal>
+        <input #field uiInput type="password" name="password" formControlName="password" autocomplete="new-password" />
+      </ui-password-reveal>
+    </ui-form-field>
+    <ul class="rules" aria-label="Requisitos de la contraseña">
+      @for (rule of rules(); track rule.label) {
+        <li [class.is-met]="rule.met">
+          <ui-icon [name]="rule.met ? 'check-circle' : 'x-circle'" />
+          {{ rule.label }}
+          <span class="sr-only">{{ rule.met ? '(cumplido)' : '(pendiente)' }}</span>
+        </li>
+      }
+    </ul>
+    <ui-form-field label="Repite la contraseña" [error]="repeatError()">
+      <ui-password-reveal>
+        <input #field uiInput type="password" name="repeat" formControlName="repeat" autocomplete="new-password" />
+      </ui-password-reveal>
+    </ui-form-field>
+    <button type="submit" class="btn btn--primary" [disabled]="submitting()">
+      @if (submitting()) {
+        <span class="spinner" aria-hidden="true"></span>Creando la cuenta…
+      } @else {
+        Crear cuenta
+      }
+    </button>
+  </form>
+
+  <p class="switch">
+    ¿Ya tienes cuenta?
+    <a routerLink="/login" [queryParams]="loginParams()">Entra</a>
+  </p>
+</app-auth-shell>

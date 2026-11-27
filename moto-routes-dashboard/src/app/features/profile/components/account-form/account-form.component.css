@@ -1,0 +1,8 @@
+:host {
+  display: block;
+}
+
+.form-grid h2 {
+  font-size: var(--text-base);
+  font-weight: 750;
+}

@@ -1,0 +1,14 @@
+<h1 class="sr-only">{{ heading() }}</h1>
+<div class="card">
+  <ui-empty-state
+    [icon]="icon() ?? 'compass'"
+    [title]="heading()"
+    [description]="description() ?? ''"
+  >
+    @if (actionPath(); as path) {
+      <a class="btn btn--secondary" [routerLink]="path">
+        {{ actionLabel() ?? 'Volver al resumen' }}
+      </a>
+    }
+  </ui-empty-state>
+</div>

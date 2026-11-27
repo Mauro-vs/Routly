@@ -27,22 +27,7 @@ import { ImagesStore } from '../../services/images.store';
   selector: 'app-image-form-page',
   imports: [FormPageComponent, ImageFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="true"
-      [loading]="!record()"
-      [failed]="loadFailed()"
-      [saving]="store.saving()"
-      [cancelPath]="detailPath()"
-      [active]="record()?.isActive ?? true"
-      (activeChange)="setActive($event)"
-      (retry)="open()"
-    >
-      <app-image-form [record]="record()" (save)="save($event)" />
-    </ui-form-page>
-  `,
+  templateUrl: './image-form-page.component.html',
 })
 export class ImageFormPageComponent implements HasUnsavedChanges {
   /** `id` de la URL. */

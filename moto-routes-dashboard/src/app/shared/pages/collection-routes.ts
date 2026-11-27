@@ -1,6 +1,7 @@
 import { Type } from '@angular/core';
 import { Routes } from '@angular/router';
 
+import { recordByIdGuard } from '../../core/guards/record-by-id.guard';
 import { unsavedChangesGuard } from '../../core/guards/unsaved-changes.guard';
 import { CollectionLabels, agree, capitalize } from '../utils/labels';
 
@@ -57,12 +58,7 @@ export function collectionRoutes(pages: CollectionPages): Routes {
 
   // Para las relaciones que llegan sin slug: /<colección>/id/:id lleva a su detalle.
   if (param === 'slug') {
-    routes.push({
-      path: 'id/:id',
-      title: single,
-      loadComponent: () =>
-        import('./record-redirect.component').then((m) => m.RecordRedirectComponent),
-    });
+    routes.push({ path: 'id/:id', title: single, canActivate: [recordByIdGuard], children: [] });
   }
 
   routes.push({ path: `:${param}`, title: single, data: { crumb: single }, loadComponent: pages.detail });

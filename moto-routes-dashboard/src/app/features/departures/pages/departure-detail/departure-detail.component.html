@@ -1,0 +1,34 @@
+<ui-detail-page
+  [title]="title()"
+  [subtitle]="record()?.sku ?? ''"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Experiencia">
+    <ui-field-list [columns]="2" [items]="experience()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Moto del guía">
+    @if (record()?.guideBike; as bike) {
+      <ui-bike-card
+        [bike]="bike"
+        [link]="['/bikes', bike.slug]"
+        [note]="record()?.guideBikeId ? '' : 'Moto de la experiencia'"
+      />
+    } @else {
+      <p class="muted">Sin moto asignada.</p>
+    }
+  </ui-detail-section>
+  <ui-detail-section heading="Fechas" description="En tu hora local.">
+    <ui-field-list [columns]="2" [items]="dates()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Plazas y precio">
+    <ui-field-list [columns]="2" [items]="sale()" />
+  </ui-detail-section>
+</ui-detail-page>

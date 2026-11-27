@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+.section {
+  padding: 20px;
+}
+
+.section__head {
+  margin-bottom: var(--space-4);
+}
+
+h2 {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+p {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

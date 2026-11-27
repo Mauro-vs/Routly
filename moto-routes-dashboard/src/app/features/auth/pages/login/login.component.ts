@@ -17,7 +17,7 @@ import { returnUrlParams, safeReturnUrl } from '../../../../auth/return-url';
 import { toApiError } from '../../../../core/utils/api-error.mapper';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal.component';
+import { PasswordRevealComponent } from '../../../../shared/components/form-field/password-reveal/password-reveal.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { controlErrorMessage } from '../../../../shared/utils/form-errors';
 import { email, notBlank } from '../../../../shared/utils/validators';
@@ -48,54 +48,8 @@ type LoginControl = keyof ReturnType<typeof createLoginForm>['controls'];
     PasswordRevealComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-auth-shell>
-      <h1 class="slanted">Entra en Routly</h1>
-
-      @if (error(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      <form class="form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <ui-form-field label="Correo electrónico" [error]="errorOf('email')">
-          <input uiInput type="email" name="email" formControlName="email" autocomplete="email" spellcheck="false" />
-        </ui-form-field>
-        <ui-form-field label="Contraseña" [error]="errorOf('password')">
-          <ui-password-reveal>
-            <input #field uiInput type="password" name="password" formControlName="password" autocomplete="current-password" />
-          </ui-password-reveal>
-        </ui-form-field>
-        <button type="submit" class="btn btn--primary" [disabled]="submitting()">
-          @if (submitting()) {
-            <span class="spinner" aria-hidden="true"></span>Entrando…
-          } @else {
-            Entrar
-          }
-        </button>
-      </form>
-
-      <p class="switch">
-        ¿Aún no tienes cuenta?
-        <a routerLink="/register" [queryParams]="registerParams()">Crea una</a>
-      </p>
-    </app-auth-shell>
-  `,
-  styles: `
-    .btn {
-      width: 100%;
-      height: 44px;
-    }
-
-    .switch {
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-    }
-
-    .switch a {
-      font-weight: 650;
-      color: var(--color-primary);
-    }
-  `,
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.css',
 })
 export class LoginComponent {
   /** Adónde volver. Llega como `?returnUrl=` y se valida antes de usarlo. */

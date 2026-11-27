@@ -1,0 +1,9 @@
+@if (label(); as label) {
+  @if (path(); as path) {
+    <a class="link" [routerLink]="path">{{ label }}</a>
+  } @else {
+    <span>{{ label }}</span>
+  }
+} @else {
+  <span class="gone"><ui-icon name="trash" />{{ deletedText() }}</span>
+}

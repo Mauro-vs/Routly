@@ -20,45 +20,8 @@ import { ToggleComponent } from '../toggle/toggle.component';
   selector: 'ui-status-toggle',
   imports: [IconComponent, TipComponent, ToggleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-tip #tip [text]="lockedReason()">
-      <ui-toggle
-        [checked]="active()"
-        [label]="toggleLabel()"
-        [disabled]="busy()"
-        [locked]="!!lockedReason()"
-        [describedBy]="tip.describedBy()"
-        (checkedChange)="activeChange.emit($event)"
-      />
-    </ui-tip>
-    <span class="state" [class.state--off]="!active()" aria-hidden="true">{{ word() }}</span>
-    @if (lockedReason()) {
-      <ui-icon class="lock" name="lock-simple" />
-    }
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      white-space: nowrap;
-    }
-
-    .state {
-      font-size: var(--text-sm);
-      font-weight: 500;
-    }
-
-    .state--off {
-      color: var(--color-text-muted);
-    }
-
-    .lock {
-      margin-left: -4px;
-      font-size: 15px;
-      color: var(--color-text-muted);
-    }
-  `,
+  templateUrl: './status-toggle.component.html',
+  styleUrl: './status-toggle.component.css',
 })
 export class StatusToggleComponent {
   readonly active = input.required<boolean>();

@@ -1,0 +1,11 @@
+:host {
+  display: block;
+  flex: none;
+  color: var(--color-accent);
+}
+
+svg {
+  display: block;
+  width: auto;
+  height: var(--brand-height, 32px);
+}

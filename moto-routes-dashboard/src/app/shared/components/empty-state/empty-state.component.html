@@ -1,0 +1,8 @@
+<span class="empty__icon" [class.empty__icon--danger]="tone() === 'danger'">
+  <ui-icon [name]="icon()" />
+</span>
+<h2 class="empty__title">{{ title() }}</h2>
+@if (description()) {
+  <p class="empty__text">{{ description() }}</p>
+}
+<div class="empty__actions"><ng-content /></div>

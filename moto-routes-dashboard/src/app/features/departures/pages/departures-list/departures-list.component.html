@@ -1,0 +1,75 @@
+<ui-list-page
+  title="Salidas"
+  icon="calendar-blank"
+  createPath="/departures/new"
+  trashPath="/departures/trash"
+  [labels]="store.labels"
+  [loaded]="listLoaded()"
+  [refreshing]="refreshing()"
+  [filters]="listFilters"
+  [filterValues]="filterValues()"
+  (filterChange)="setFilter($event)"
+  (clearFilters)="clearFilters()"
+  [failed]="loadFailed()"
+  [counts]="counts()"
+  [total]="store.pageTotal()"
+  [pageSize]="pageSize"
+  [trashCount]="store.deletedCount()"
+  [status]="store.status()"
+  [(query)]="query"
+  [sorts]="sorts"
+  [(sort)]="sort"
+  (statusChange)="setStatus($event)"
+  [(page)]="page"
+  (retry)="reload()"
+>
+  <ui-data-table
+    caption="Salidas"
+    [columns]="columns"
+    [rows]="rows()"
+    [rowKey]="rowKey"
+    [mutedWhen]="isInactive"
+    [loading]="showSkeleton()"
+  >
+    <ng-template uiCell="start" [uiCellOf]="rows()" let-departure>
+      <a class="link cell-title nowrap" [routerLink]="['/departures', departure.slug]">
+        <time [attr.datetime]="departure.startAt">{{ dateTime(departure.startAt) }}</time>
+      </a>
+      <span class="cell-sub" translate="no">{{ departure.sku }}</span>
+    </ng-template>
+    <ng-template uiCell="experience" [uiCellOf]="rows()" let-departure>
+      <ui-relation-link
+        gender="f"
+        [label]="departure.experience?.title ?? null"
+        [path]="departure.experience ? ['/experiences', departure.experience.slug] : null"
+      />
+    </ng-template>
+    <ng-template uiCell="capacity" [uiCellOf]="rows()" let-departure>
+      {{ departure.capacity }}
+    </ng-template>
+    <ng-template uiCell="price" [uiCellOf]="rows()" let-departure>
+      {{ money(departure.price) }}
+    </ng-template>
+    <ng-template uiCell="state" [uiCellOf]="rows()" let-departure>
+      <ui-status-badge gender="f" [status]="departure.state" />
+    </ng-template>
+    <ng-template uiCell="status" [uiCellOf]="rows()" let-departure>
+      <ui-status-toggle
+        [active]="departure.isActive"
+        [label]="name(departure)"
+        [labels]="store.labels"
+        [busy]="store.isBusy(departure._id)"
+        (activeChange)="setActive(departure, $event)"
+      />
+    </ng-template>
+    <ng-template uiCell="actions" [uiCellOf]="rows()" let-departure>
+      <ui-row-actions
+        [label]="name(departure)"
+        [detailPath]="['/departures', departure.slug]"
+        [editPath]="['/departures', departure.slug, 'edit']"
+        [busy]="store.isBusy(departure._id)"
+        (remove)="remove(departure)"
+      />
+    </ng-template>
+  </ui-data-table>
+</ui-list-page>

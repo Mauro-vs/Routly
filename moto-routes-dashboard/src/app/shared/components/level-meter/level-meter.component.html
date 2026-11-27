@@ -1,0 +1,6 @@
+<span class="segments" aria-hidden="true">
+  @for (step of steps; track step) {
+    <i [class.is-on]="step <= level()"></i>
+  }
+</span>
+{{ label() }}

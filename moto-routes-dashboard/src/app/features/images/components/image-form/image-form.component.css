@@ -1,0 +1,21 @@
+.preview {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.preview img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  background: var(--color-surface-2);
+}
+
+@media (max-width: 560px) {
+  .preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

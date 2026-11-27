@@ -1,0 +1,13 @@
+<ol class="bars" [attr.aria-label]="label()">
+  @for (item of rows(); track item.label) {
+    <li class="bar" [attr.aria-label]="item.label + ': ' + item.value + ' ' + unit()">
+      <span class="name" [title]="item.label">{{ item.label }}</span>
+      <span class="track" aria-hidden="true">
+        <span class="fill" [style.width.%]="item.share"></span>
+      </span>
+      <span class="value" aria-hidden="true">{{ item.value }}</span>
+    </li>
+  } @empty {
+    <li class="empty">{{ emptyText() }}</li>
+  }
+</ol>

@@ -1,0 +1,41 @@
+<ui-detail-page
+  [title]="title()"
+  [thumbnail]="record()?.coverImage?.url ?? null"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Opiniones" description="Las que hablan de él como anfitrión y, aparte, la media de las de sus experiencias.">
+    <div class="ratings">
+      <ui-rating-summary label="Como anfitrión" [rating]="record()?.rating" [targetId]="record()?._id ?? null" />
+      <ui-rating-summary label="En sus experiencias" [rating]="record()?.experiencesRating" />
+    </div>
+  </ui-detail-section>
+  <ui-detail-section heading="Perfil público">
+    <ui-field-list [items]="profile()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Cuenta" description="El usuario con el que entra en la plataforma.">
+    <ui-field-list [columns]="2" [items]="account()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Sus motos">
+    @for (bike of record()?.bikes; track bike._id) {
+      <ui-bike-card class="bike" [bike]="bike" [link]="['/bikes', bike.slug]" />
+    } @empty {
+      <p class="muted">Todavía no tiene motos en su garaje.</p>
+    }
+  </ui-detail-section>
+  @if (record(); as owner) {
+    <app-image-gallery
+      ownerType="host"
+      [ownerId]="owner._id"
+      [ownerLabel]="title()"
+      (coverChange)="refreshCover()"
+    />
+  }
+</ui-detail-page>

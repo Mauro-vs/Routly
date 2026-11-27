@@ -1,0 +1,3 @@
+<button type="button" class="icon-btn" [attr.aria-label]="label()" [title]="label()" (click)="theme.toggle()">
+  <ui-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+</button>

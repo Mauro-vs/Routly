@@ -6,7 +6,7 @@ import { HOST_LIMITS, Host, HostPayload } from '../../../../core/models/host.mod
 import { User } from '../../../../core/models/user.model';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field.component';
+import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field/readonly-field.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm, editedText, optionalText } from '../../../../shared/forms/entity-form';
 import { SelectOption } from '../../../../shared/forms/select-options';
@@ -44,50 +44,7 @@ type HostControls = ReturnType<typeof createHostForm>['controls'];
     ReadonlyFieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      @if (isEdit()) {
-        <ui-readonly-field label="Usuario" hint="El usuario de un anfitrión no se puede cambiar.">
-          {{ currentUser() }}
-        </ui-readonly-field>
-      } @else {
-        <ui-form-field
-          label="Usuario"
-          [hint]="usersLoading() ? 'Cargando usuarios…' : 'Tiene que tener el rol de anfitrión y no tener ya un perfil.'"
-          [error]="errorOf('userId')"
-        >
-          <select uiInput class="select" name="userId" formControlName="userId">
-            <option value="" disabled>Elige un usuario</option>
-            @for (option of userOptions(); track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
-            }
-          </select>
-        </ui-form-field>
-      }
-
-      <ui-form-field
-        label="Nombre público"
-        hint="El que ven los clientes. Se usa para generar su dirección."
-        [counter]="counter('name', limits.name)"
-        [error]="errorOf('name')"
-      >
-        <input uiInput type="text" name="name" formControlName="name" autocomplete="off" />
-      </ui-form-field>
-
-      <ui-form-field
-        label="Biografía"
-        [optional]="true"
-        [counter]="counter('biography', limits.biography)"
-        [error]="errorOf('biography')"
-      >
-        <textarea uiInput rows="5" name="biography" formControlName="biography"></textarea>
-      </ui-form-field>
-    </form>
-  `,
+  templateUrl: './host-form.component.html',
 })
 export class HostFormComponent extends EntityForm<Host, HostPayload, HostControls> {
   readonly users = input<readonly User[]>([]);

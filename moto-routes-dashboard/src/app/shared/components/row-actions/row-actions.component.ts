@@ -20,37 +20,8 @@ import { TipComponent } from '../tip/tip.component';
   selector: 'ui-row-actions',
   imports: [RouterLink, IconComponent, TipComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <a class="icon-btn" [routerLink]="detailPath()" [attr.aria-label]="'Ver ' + label()">
-      <ui-icon name="eye" />
-    </a>
-    @if (editPath(); as editPath) {
-      <a class="icon-btn" [routerLink]="editPath" [attr.aria-label]="'Editar ' + label()">
-        <ui-icon name="pencil-simple" />
-      </a>
-    }
-    <ui-tip #tip [text]="deleteLockedReason()">
-      <button
-        type="button"
-        class="icon-btn icon-btn--danger"
-        [attr.aria-label]="'Eliminar ' + label()"
-        [attr.aria-disabled]="deleteLockedReason() ? true : null"
-        [attr.aria-describedby]="tip.describedBy()"
-        [disabled]="busy()"
-        (click)="onRemove()"
-      >
-        <ui-icon name="trash" />
-      </button>
-    </ui-tip>
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 2px;
-    }
-  `,
+  templateUrl: './row-actions.component.html',
+  styleUrl: './row-actions.component.css',
 })
 export class RowActionsComponent {
   /** Nombre del registro, para los nombres accesibles de los botones. */

@@ -1,0 +1,41 @@
+<ui-detail-page
+  [title]="title()"
+  [subtitle]="record()?.email ?? ''"
+  [thumbnail]="record()?.coverImage?.url ?? null"
+  [labels]="store.labels"
+  [record]="record()"
+  [failed]="loadFailed()"
+  [identifier]="identifier()"
+  [editPath]="editPath()"
+  [busy]="busy()"
+  [toggleLockedReason]="lockedToggle()"
+  [deleteLockedReason]="lockedDelete()"
+  (activeChange)="setActive($event)"
+  (remove)="remove()"
+  (retry)="retry()"
+>
+  <ui-detail-section heading="Perfil">
+    <ui-field-list [columns]="2" [items]="profile()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Contacto de emergencia">
+    <ui-field-list [columns]="2" [items]="emergency()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Acceso" description="El rol decide lo que puede hacer en la plataforma.">
+    <ui-field-list [columns]="2" [items]="access()" />
+  </ui-detail-section>
+  <ui-detail-section heading="Garaje">
+    @for (bike of store.bikes.items(); track bike._id) {
+      <ui-bike-card class="bike" [bike]="bike" [link]="['/bikes', bike.slug]" />
+    } @empty {
+      <p class="muted">{{ store.bikes.loading() ? 'Cargando sus motos…' : 'No tiene motos en su garaje.' }}</p>
+    }
+  </ui-detail-section>
+  @if (record(); as owner) {
+    <app-image-gallery
+      ownerType="user"
+      [ownerId]="owner._id"
+      [ownerLabel]="title()"
+      (coverChange)="refreshCover()"
+    />
+  }
+</ui-detail-page>

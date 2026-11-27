@@ -34,71 +34,8 @@ export type RestoreAs = 'previous' | 'inactive' | 'active';
     SegmentedComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-page-header title="Papelera" [subtitle]="subtitle()">
-      <a class="btn btn--secondary" [routerLink]="backPath()">
-        <ui-icon name="arrow-left" />Volver a {{ labels().plural }}
-      </a>
-    </ui-page-header>
-
-    @if (failed()) {
-      <div class="card">
-        <ui-error-state title="No se ha podido cargar la papelera" [error]="loadError()" (retry)="retry.emit()" />
-      </div>
-    } @else if (loaded() && total() === 0) {
-      <div class="card">
-        <ui-empty-state icon="trash" title="La papelera está vacía" [description]="emptyText()">
-          <a class="btn btn--secondary" [routerLink]="backPath()">Ir a {{ labels().plural }}</a>
-        </ui-empty-state>
-      </div>
-    } @else {
-      <div class="toolbar">
-        <ng-content select="[trashToolbar]" />
-        <div class="toolbar__end">
-          <span class="toolbar__label" aria-hidden="true">Al restaurar, {{ leaveAs() }}</span>
-          <ui-segmented
-            [label]="restoreLabel()"
-            [options]="restoreOptions()"
-            [value]="restoreAs()"
-            (valueChange)="restoreAs.set($event)"
-          />
-        </div>
-      </div>
-      <ng-content />
-    }
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-
-    .toolbar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: var(--space-4);
-    }
-
-    .toolbar__end {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-left: auto;
-    }
-
-    .toolbar__label {
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-    }
-
-    @media (max-width: 900px) {
-      .toolbar__end {
-        margin-left: 0;
-      }
-    }
-  `,
+  templateUrl: './trash-page.component.html',
+  styleUrl: './trash-page.component.css',
 })
 export class TrashPageComponent {
   readonly labels = input.required<CollectionLabels>();

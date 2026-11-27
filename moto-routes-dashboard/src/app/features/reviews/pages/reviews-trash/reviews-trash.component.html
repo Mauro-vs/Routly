@@ -1,0 +1,37 @@
+<ui-trash-page
+  backPath="/reviews"
+  [labels]="store.labels"
+  [loaded]="store.deletedLoaded()"
+  [failed]="loadFailed()"
+  [total]="store.deletedCount()"
+  [(restoreAs)]="restoreAs"
+  (retry)="reload()"
+>
+  <ui-data-table
+    caption="Opiniones eliminadas"
+    [columns]="columns"
+    [rows]="store.deleted()"
+    [rowKey]="rowKey"
+    [loading]="showSkeleton()"
+    [skeletonRows]="3"
+  >
+    <ng-template uiCell="review" [uiCellOf]="store.deleted()" let-review>
+      <ui-rating-stars [value]="review.rating" />
+      <span class="cell-title" [title]="name(review)">{{ name(review) }}</span>
+      <span class="cell-sub">{{ review.user?.name ?? 'Usuario eliminado' }}</span>
+    </ng-template>
+    <ng-template uiCell="target" [uiCellOf]="store.deleted()" let-review>
+      {{ review.target?.name ?? 'Eliminado' }}
+      <span class="cell-sub">{{ targets[review.targetType].label }}</span>
+    </ng-template>
+    <ng-template uiCell="was" [uiCellOf]="store.deleted()" let-review>
+      <ui-status-badge [status]="review.status" [gender]="store.labels.gender" />
+    </ng-template>
+    <ng-template uiCell="deleted" [uiCellOf]="store.deleted()" let-review>
+      <time class="nowrap" [attr.datetime]="review.deletedAt">{{ deletedAgo(review) }}</time>
+    </ng-template>
+    <ng-template uiCell="actions" [uiCellOf]="store.deleted()" let-review>
+      <ui-restore-button [label]="name(review)" [busy]="store.isBusy(review._id)" (restore)="restore(review)" />
+    </ng-template>
+  </ui-data-table>
+</ui-trash-page>

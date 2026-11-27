@@ -1,0 +1,29 @@
+@if (user(); as user) {
+  <ui-page-header [title]="user.name" [subtitle]="subtitle()">
+    <button type="submit" form="profile-form" class="btn btn--primary" [disabled]="saving()">
+      @if (saving()) {
+        <span class="spinner" aria-hidden="true"></span>Guardando…
+      } @else {
+        <ui-icon name="check" />Guardar cambios
+      }
+    </button>
+  </ui-page-header>
+
+  <div class="layout">
+    <div class="layout__main">
+      <app-account-form [user]="user" />
+      <app-image-gallery
+        ownerType="user"
+        [ownerId]="user._id"
+        [ownerLabel]="user.name"
+        (coverChange)="refreshAvatar()"
+      />
+    </div>
+
+    <aside class="layout__aside">
+      <app-password-form />
+    </aside>
+  </div>
+} @else {
+  <div class="pending card panel" role="status">No se ha podido confirmar tu sesión. Comprueba la conexión con la API.</div>
+}

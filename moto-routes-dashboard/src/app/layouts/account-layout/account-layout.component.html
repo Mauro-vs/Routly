@@ -1,0 +1,20 @@
+<header class="bar on-band">
+  <a routerLink="/profile" aria-label="Routly, ir a mi perfil"><ui-brand-mark /></a>
+  <nav aria-label="Mi cuenta">
+    <a
+      class="link"
+      routerLink="/profile"
+      routerLinkActive="is-active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      ariaCurrentWhenActive="page"
+    >Mi perfil</a>
+    <a class="link" routerLink="/profile/garage" routerLinkActive="is-active" ariaCurrentWhenActive="page">Mi garaje</a>
+    @if (store.isAdmin()) {
+      <a class="link" routerLink="/">Panel</a>
+    }
+  </nav>
+  <app-user-menu />
+</header>
+<main class="content">
+  <router-outlet />
+</main>

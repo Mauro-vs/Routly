@@ -5,7 +5,7 @@ import { ApiError } from '../../../../core/models/api-error.model';
 import { ROLE_LIMITS, Role, RolePayload } from '../../../../core/models/role.model';
 import { FormFieldComponent } from '../../../../shared/components/form-field/form-field.component';
 import { InputDirective } from '../../../../shared/components/form-field/input.directive';
-import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field.component';
+import { ReadonlyFieldComponent } from '../../../../shared/components/form-field/readonly-field/readonly-field.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { EntityForm, editedText, optionalText } from '../../../../shared/forms/entity-form';
 import { minTrimmed, notBlank } from '../../../../shared/utils/validators';
@@ -54,48 +54,7 @@ type RoleControls = ReturnType<typeof createRoleForm>['controls'];
     ReadonlyFieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      <div class="form-row">
-        <ui-form-field
-          label="Nombre visible"
-          hint="El que se ve en el panel, por ejemplo Editor."
-          [counter]="counter('label', limits.label)"
-          [error]="errorOf('label')"
-        >
-          <input uiInput type="text" name="label" formControlName="label" autocomplete="off" />
-        </ui-form-field>
-
-        @if (isSystem()) {
-          <ui-readonly-field label="Nombre interno" [hint]="renameReason">
-            <span translate="no">{{ record()?.name }}</span>
-          </ui-readonly-field>
-        } @else {
-          <ui-form-field
-            label="Nombre interno"
-            hint="Minúsculas, números y guiones: content-editor."
-            [counter]="counter('name', limits.name)"
-            [error]="errorOf('name')"
-          >
-            <input uiInput type="text" name="name" formControlName="name" autocomplete="off" spellcheck="false" />
-          </ui-form-field>
-        }
-      </div>
-
-      <ui-form-field
-        label="Descripción"
-        [optional]="true"
-        [counter]="counter('description', limits.description)"
-        [error]="errorOf('description')"
-      >
-        <textarea uiInput rows="3" name="description" formControlName="description"></textarea>
-      </ui-form-field>
-    </form>
-  `,
+  templateUrl: './role-form.component.html',
 })
 export class RoleFormComponent extends EntityForm<Role, RolePayload, RoleControls> {
   protected readonly limits = ROLE_LIMITS;

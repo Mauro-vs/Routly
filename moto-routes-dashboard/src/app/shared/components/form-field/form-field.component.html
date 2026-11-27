@@ -1,0 +1,19 @@
+<label class="field__label" [attr.for]="controlId">
+  {{ label() }}
+  @if (optional()) {
+    <span class="field__optional">(opcional)</span>
+  }
+</label>
+<ng-content />
+<div class="field__message" aria-live="polite">
+  @if (error(); as message) {
+    <p class="field__error" [id]="messageId"><ui-icon name="warning-circle" />{{ message }}</p>
+  } @else if (hint() || counter()) {
+    <p class="field__hint" [id]="messageId">
+      <span>{{ hint() }}</span>
+      @if (counter()) {
+        <span class="num">{{ counter() }}</span>
+      }
+    </p>
+  }
+</div>

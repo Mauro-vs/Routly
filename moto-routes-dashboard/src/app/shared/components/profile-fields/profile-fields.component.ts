@@ -106,67 +106,8 @@ const MESSAGES: Record<string, ErrorMessage> = {
   selector: 'ui-profile-fields',
   imports: [ReactiveFormsModule, FormFieldComponent, InputDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="form-grid" [formGroup]="group()">
-      <ui-form-field label="Sobre ti" [optional]="true" [counter]="bioCounter()" [error]="errorOf('bio')">
-        <textarea uiInput rows="3" name="bio" formControlName="bio"></textarea>
-      </ui-form-field>
-
-      <div class="form-row">
-        <ui-form-field label="Ciudad" [optional]="true" [error]="errorOf('city')">
-          <input uiInput type="text" name="city" formControlName="city" autocomplete="address-level2" />
-        </ui-form-field>
-        <ui-form-field label="Teléfono" [optional]="true" [error]="errorOf('phone')">
-          <input uiInput type="tel" name="phone" formControlName="phone" autocomplete="tel" placeholder="+34600111222" />
-        </ui-form-field>
-      </div>
-
-      <div class="form-row">
-        <ui-form-field label="Fecha de nacimiento" [optional]="true" [error]="errorOf('birthDate')">
-          <input uiInput type="date" name="birthDate" formControlName="birthDate" autocomplete="bday" />
-        </ui-form-field>
-        <ui-form-field label="Experiencia en moto" [optional]="true">
-          <select uiInput class="select" name="experienceLevel" formControlName="experienceLevel">
-            <option value="">Sin indicar</option>
-            @for (level of levels; track level.value) {
-              <option [value]="level.value">{{ level.label }}</option>
-            }
-          </select>
-        </ui-form-field>
-      </div>
-
-      <fieldset>
-        <legend>Contacto de emergencia</legend>
-        <div class="form-row">
-          <ui-form-field label="Nombre" [optional]="true" [error]="errorOf('contactName') ?? contactError()">
-            <input uiInput type="text" name="contactName" formControlName="contactName" autocomplete="off" />
-          </ui-form-field>
-          <ui-form-field label="Teléfono" [optional]="true" [error]="errorOf('contactPhone')">
-            <input uiInput type="tel" name="contactPhone" formControlName="contactPhone" autocomplete="off" placeholder="+34600111222" />
-          </ui-form-field>
-        </div>
-      </fieldset>
-    </div>
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-
-    fieldset {
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }
-
-    legend {
-      margin-bottom: var(--space-3);
-      padding: 0;
-      font-size: var(--text-sm);
-      font-weight: 750;
-    }
-  `,
+  templateUrl: './profile-fields.component.html',
+  styleUrl: './profile-fields.component.css',
 })
 export class ProfileFieldsComponent {
   readonly group = input.required<ProfileGroup>();

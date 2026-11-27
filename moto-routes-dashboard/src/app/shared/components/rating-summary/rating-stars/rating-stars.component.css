@@ -1,0 +1,20 @@
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.stars {
+  position: relative;
+  display: inline-block;
+  color: var(--color-border-strong);
+  letter-spacing: 1px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  color: var(--color-warning);
+}

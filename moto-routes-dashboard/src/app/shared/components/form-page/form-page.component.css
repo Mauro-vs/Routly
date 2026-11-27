@@ -1,0 +1,65 @@
+:host {
+  display: block;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: var(--space-4);
+}
+
+/* el formulario y, al editar, la galería de imágenes */
+.layout__main {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.images-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.images-note ui-icon {
+  flex: none;
+  margin-top: 2px;
+  font-size: 18px;
+  color: var(--color-primary);
+}
+
+.stack,
+.skeleton-fields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.skeleton-field {
+  display: grid;
+  gap: 8px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.toggle-row strong {
+  display: block;
+  font-weight: 600;
+}
+
+.toggle-row span {
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

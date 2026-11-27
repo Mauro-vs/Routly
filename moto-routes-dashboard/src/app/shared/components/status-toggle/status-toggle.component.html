@@ -1,0 +1,14 @@
+<ui-tip #tip [text]="lockedReason()">
+  <ui-toggle
+    [checked]="active()"
+    [label]="toggleLabel()"
+    [disabled]="busy()"
+    [locked]="!!lockedReason()"
+    [describedBy]="tip.describedBy()"
+    (checkedChange)="activeChange.emit($event)"
+  />
+</ui-tip>
+<span class="state" [class.state--off]="!active()" aria-hidden="true">{{ word() }}</span>
+@if (lockedReason()) {
+  <ui-icon class="lock" name="lock-simple" />
+}

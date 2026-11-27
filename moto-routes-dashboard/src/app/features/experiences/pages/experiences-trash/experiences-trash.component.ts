@@ -8,7 +8,7 @@ import {
 } from '../../../../shared/components/data-table/data-table.component';
 import { RelationLinkComponent } from '../../../../shared/components/relation-link/relation-link.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
-import { RestoreButtonComponent } from '../../../../shared/components/trash-page/restore-button.component';
+import { RestoreButtonComponent } from '../../../../shared/components/trash-page/restore-button/restore-button.component';
 import { TrashPageComponent } from '../../../../shared/components/trash-page/trash-page.component';
 import { EntityTrashPage } from '../../../../shared/pages/entity-trash-page';
 import { ExperiencesStore } from '../../services/experiences.store';
@@ -34,50 +34,7 @@ const COLUMNS: readonly TableColumn[] = [
     TrashPageComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-trash-page
-      backPath="/experiences"
-      [labels]="store.labels"
-      [loaded]="store.deletedLoaded()"
-      [failed]="loadFailed()"
-      [total]="store.deletedCount()"
-      [(restoreAs)]="restoreAs"
-      (retry)="reload()"
-    >
-      <ui-data-table
-        caption="Experiencias eliminadas"
-        [columns]="columns"
-        [rows]="store.deleted()"
-        [rowKey]="rowKey"
-        [loading]="showSkeleton()"
-        [skeletonRows]="3"
-      >
-        <ng-template uiCell="title" [uiCellOf]="store.deleted()" let-experience>
-          <span class="cell-title" [title]="experience.title">{{ experience.title }}</span>
-        </ng-template>
-        <ng-template uiCell="route" [uiCellOf]="store.deleted()" let-experience>
-          <ui-relation-link gender="f" [label]="experience.route?.title ?? null" />
-        </ng-template>
-        <ng-template uiCell="host" [uiCellOf]="store.deleted()" let-experience>
-          <ui-relation-link [label]="experience.host?.name ?? null" />
-        </ng-template>
-        <ng-template uiCell="was" [uiCellOf]="store.deleted()" let-experience>
-          <ui-status-badge [status]="experience.status" [gender]="store.labels.gender" />
-        </ng-template>
-        <ng-template uiCell="deleted" [uiCellOf]="store.deleted()" let-experience>
-          <time class="nowrap" [attr.datetime]="experience.deletedAt">{{ deletedAgo(experience) }}</time>
-        </ng-template>
-        <ng-template uiCell="actions" [uiCellOf]="store.deleted()" let-experience>
-          <ui-restore-button
-            [label]="experience.title"
-            [busy]="store.isBusy(experience._id)"
-            [blockedReason]="blockedReason(experience)"
-            (restore)="restore(experience)"
-          />
-        </ng-template>
-      </ui-data-table>
-    </ui-trash-page>
-  `,
+  templateUrl: './experiences-trash.component.html',
 })
 export class ExperiencesTrashComponent extends EntityTrashPage<Experience> {
   protected readonly store = inject(ExperiencesStore);

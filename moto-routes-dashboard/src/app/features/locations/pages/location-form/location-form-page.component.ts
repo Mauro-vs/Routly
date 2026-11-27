@@ -12,31 +12,7 @@ import { LocationsStore } from '../../services/locations.store';
   selector: 'app-location-form-page',
   imports: [FormPageComponent, LocationFormComponent, ImageGalleryComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-form-page
-      [heading]="heading()"
-      [labels]="store.labels"
-      [isEdit]="isEdit()"
-      [loading]="loading()"
-      [failed]="loadFailed()"
-      [saving]="saving()"
-      [cancelPath]="cancelPath()"
-      [active]="isActive()"
-      ownsImages
-      (activeChange)="setActive($event)"
-      (retry)="retry()"
-    >
-      <app-location-form [record]="record()" (save)="save($event)" />
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="location"
-          [ownerId]="owner._id"
-          [ownerLabel]="heading()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-form-page>
-  `,
+  templateUrl: './location-form-page.component.html',
 })
 export class LocationFormPageComponent extends EntityFormPage<Location, LocationPayload> {
   protected readonly store = inject(LocationsStore);

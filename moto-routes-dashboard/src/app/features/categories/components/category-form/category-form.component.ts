@@ -34,31 +34,7 @@ type CategoryControls = ReturnType<typeof createCategoryForm>['controls'];
   selector: 'app-category-form',
   imports: [ReactiveFormsModule, FormFieldComponent, InputDirective, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <form [id]="formId" class="card panel form-grid" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      @if (formError(); as message) {
-        <p class="form-error" role="alert"><ui-icon name="warning-circle" />{{ message }}</p>
-      }
-
-      <ui-form-field
-        label="Nombre"
-        hint="Por ejemplo, Montaña o Costa. Se usa para generar su dirección."
-        [counter]="counter('name', limits.name)"
-        [error]="errorOf('name')"
-      >
-        <input uiInput type="text" name="name" formControlName="name" autocomplete="off" />
-      </ui-form-field>
-
-      <ui-form-field
-        label="Descripción"
-        [optional]="true"
-        [counter]="counter('description', limits.description)"
-        [error]="errorOf('description')"
-      >
-        <textarea uiInput rows="3" name="description" formControlName="description"></textarea>
-      </ui-form-field>
-    </form>
-  `,
+  templateUrl: './category-form.component.html',
 })
 export class CategoryFormComponent extends EntityForm<Category, CategoryPayload, CategoryControls> {
   protected readonly limits = CATEGORY_LIMITS;

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 
 import { Role } from '../../../../core/models/role.model';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
-import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
+import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { EntityDetailPage } from '../../../../shared/pages/entity-detail-page';
 import { RolesStore } from '../../services/roles.store';
@@ -12,27 +12,7 @@ import { RolesStore } from '../../services/roles.store';
   selector: 'app-role-detail',
   imports: [DetailPageComponent, DetailSectionComponent, FieldListComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-detail-page
-      [title]="title()"
-      [subtitle]="record()?.isSystem ? 'Rol base' : 'Rol personalizado'"
-      [labels]="store.labels"
-      [record]="record()"
-      [failed]="loadFailed()"
-      [identifier]="identifier()"
-      [editPath]="editPath()"
-      [busy]="busy()"
-      [toggleLockedReason]="toggleLockedReason()"
-      [deleteLockedReason]="deleteLockedReason()"
-      (activeChange)="setActive($event)"
-      (remove)="remove()"
-      (retry)="retry()"
-    >
-      <ui-detail-section heading="Datos">
-        <ui-field-list [columns]="2" [items]="fields()" />
-      </ui-detail-section>
-    </ui-detail-page>
-  `,
+  templateUrl: './role-detail.component.html',
 })
 export class RoleDetailComponent extends EntityDetailPage<Role> {
   protected readonly store = inject(RolesStore);

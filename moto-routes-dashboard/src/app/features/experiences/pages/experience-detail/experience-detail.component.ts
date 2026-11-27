@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { Experience, languageName } from '../../../../core/models/experience.model';
 import { BikeCardComponent } from '../../../../shared/components/bike-card/bike-card.component';
 import { DetailPageComponent } from '../../../../shared/components/detail-page/detail-page.component';
-import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section.component';
+import { DetailSectionComponent } from '../../../../shared/components/detail-page/detail-section/detail-section.component';
 import { FieldItem, FieldListComponent } from '../../../../shared/components/field-list/field-list.component';
 import { ImageGalleryComponent } from '../../../../shared/components/image-gallery/image-gallery.component';
 import { RatingSummaryComponent } from '../../../../shared/components/rating-summary/rating-summary.component';
@@ -25,49 +25,7 @@ import { ExperiencesStore } from '../../services/experiences.store';
     RatingSummaryComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <ui-detail-page
-      [title]="title()"
-      [subtitle]="subtitle()"
-      [labels]="store.labels"
-      [record]="record()"
-      [failed]="loadFailed()"
-      [identifier]="identifier()"
-      [editPath]="editPath()"
-      [busy]="busy()"
-      (activeChange)="setActive($event)"
-      (remove)="remove()"
-      (retry)="retry()"
-    >
-      <ui-detail-section heading="Opiniones" description="La media de sus opiniones visibles en la web.">
-        <ui-rating-summary [rating]="record()?.rating" [targetId]="record()?._id ?? null" />
-      </ui-detail-section>
-      <ui-detail-section heading="Ruta y anfitrión">
-        <ui-field-list [columns]="2" [items]="relations()" />
-      </ui-detail-section>
-      <ui-detail-section heading="Moto del guía">
-        @if (record()?.guideBike; as bike) {
-          <ui-bike-card [bike]="bike" [link]="['/bikes', bike.slug]" />
-        } @else {
-          <p class="muted">Sin moto asignada.</p>
-        }
-      </ui-detail-section>
-      <ui-detail-section heading="Grupo">
-        <ui-field-list [columns]="2" [items]="group()" />
-      </ui-detail-section>
-      <ui-detail-section heading="Descripción">
-        <ui-field-list [items]="about()" />
-      </ui-detail-section>
-      @if (record(); as owner) {
-        <app-image-gallery
-          ownerType="experience"
-          [ownerId]="owner._id"
-          [ownerLabel]="title()"
-          (coverChange)="refreshCover()"
-        />
-      }
-    </ui-detail-page>
-  `,
+  templateUrl: './experience-detail.component.html',
 })
 export class ExperienceDetailComponent extends EntityDetailPage<Experience> {
   protected readonly store = inject(ExperiencesStore);
