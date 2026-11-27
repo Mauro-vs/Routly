@@ -1,0 +1,18 @@
+<div class="head">
+  <h2 [id]="headingId()">{{ title() }}</h2>
+  <a routerLink="/experiencias">{{ allLabel() }}</a>
+</div>
+<ui-carousel [label]="title()">
+  @for (item of items(); track item.id) {
+    <app-place-card
+      [name]="item.name"
+      [count]="item.count"
+      [photo]="item.photo"
+      [seed]="item.seed"
+      [scene]="item.scene ?? null"
+      [kind]="kind()"
+      [queryParams]="item.queryParams"
+      [link]="item.link ?? null"
+    />
+  }
+</ui-carousel>

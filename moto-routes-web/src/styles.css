@@ -6,5 +6,4 @@
 @import './styles/tokens.css';
 @import './styles/base.css';
 @import './styles/primitives.css';
-@import './styles/account.css';
-@import './styles/reviews.css';
+@import './styles/forms.css';

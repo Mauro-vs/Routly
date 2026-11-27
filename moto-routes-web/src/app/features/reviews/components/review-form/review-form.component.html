@@ -1,0 +1,77 @@
+<form (submit)="$event.preventDefault(); save()" novalidate [attr.aria-busy]="saving()">
+  <fieldset class="stars">
+    <legend>Tu nota <span class="req">(obligatoria)</span></legend>
+    <div class="picker" (mouseleave)="hover.set(0)">
+      @for (star of five; track star) {
+        <label [class.on]="star <= (hover() || rating())" (mouseenter)="hover.set(star)">
+          <input type="radio" name="rating" [value]="star" [checked]="rating() === star" (change)="rating.set(star)" [disabled]="saving()" />
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polygon [attr.points]="points" /></svg>
+          <span class="sr-only">{{ star }} {{ star === 1 ? 'estrella' : 'estrellas' }}: {{ labels[star] }}</span>
+        </label>
+      }
+      <span class="word" aria-hidden="true">{{ labels[hover() || rating()] }}</span>
+    </div>
+  </fieldset>
+
+  <label class="field">
+    Título <small>(opcional)</small>
+    <input type="text" [value]="title()" (input)="title.set(value($event))" [attr.maxlength]="limits.titleMax" [disabled]="saving()" />
+  </label>
+
+  <label class="field">
+    <span>Comentario @if (rule().required) {<span class="req">(obligatorio)</span>} @else {<small>(opcional)</small>}</span>
+    @if (rule().required) {
+      <small id="comentario-ayuda">Cuéntanos qué ha fallado para que otros riders y el guía puedan entenderlo.</small>
+    }
+    <textarea
+      [value]="comment()"
+      (input)="comment.set(value($event))"
+      [attr.maxlength]="limits.commentMax"
+      [attr.aria-invalid]="commentError() !== null"
+      [attr.aria-describedby]="'comentario-contador' + (rule().required ? ' comentario-ayuda' : '')"
+      [disabled]="saving()"
+    ></textarea>
+    <small id="comentario-contador" class="num" [class.field-error]="commentError() !== null" aria-live="polite">
+      {{ commentLength() }} / {{ limits.commentMax }}@if (commentError(); as error) { · {{ error }}}
+    </small>
+  </label>
+
+  <div class="photos">
+    <p class="photos-title">Fotos <small>(hasta {{ limits.photosMax }})</small></p>
+    <ul>
+      @for (photo of keptPhotos(); track photo._id) {
+        <li>
+          <img [src]="photo.url" alt="Foto de tu opinión" />
+          <button type="button" class="remove" (click)="removeExisting(photo._id)" [disabled]="saving()" aria-label="Quitar esta foto"><ui-icon name="x" /></button>
+        </li>
+      }
+      @for (photo of newPhotos(); track photo.key; let i = $index) {
+        <li [class.failed]="photo.state === 'error'">
+          <img [src]="photo.preview" [alt]="'Foto nueva ' + (i + 1)" />
+          @if (photo.state === 'resizing' || photo.state === 'uploading') {<span class="badge">{{ photo.state === 'resizing' ? 'Preparando…' : 'Subiendo…' }}</span>}
+          @if (photo.state === 'done') {<span class="badge ok"><ui-icon name="check" /> Subida</span>}
+          @if (photo.error; as error) {<span class="badge bad" role="alert">{{ error }}</span>}
+          @if (photo.state !== 'done') {
+            <button type="button" class="remove" (click)="removeNew(photo.key)" [disabled]="saving()" [attr.aria-label]="'Quitar la foto nueva ' + (i + 1)"><ui-icon name="x" /></button>
+          }
+        </li>
+      }
+    </ul>
+    @if (slotsLeft() > 0) {
+      <label class="btn-ghost add" [class.disabled]="saving()">
+        <ui-icon name="camera" /> Añadir fotos
+        <input type="file" class="sr-only" accept="image/jpeg,image/png,image/webp" multiple (change)="pick($event)" [disabled]="saving()" />
+      </label>
+    }
+  </div>
+
+  @if (error(); as error) {<p class="form-error" role="alert">{{ error }}</p>}
+  @if (progress(); as progress) {<p class="progress" aria-live="polite">{{ progress }}</p>}
+
+  <div class="buttons">
+    <button type="button" class="btn-ghost" (click)="finish()" [disabled]="saving()">{{ photosFailed() ? 'Terminar sin esas fotos' : 'Cancelar' }}</button>
+    <button type="submit" class="btn-primary" [disabled]="!canSubmit()">
+      {{ saving() ? 'Guardando…' : photosFailed() ? 'Reintentar las fotos' : review() ? 'Guardar los cambios' : 'Publicar mi opinión' }}
+    </button>
+  </div>
+</form>

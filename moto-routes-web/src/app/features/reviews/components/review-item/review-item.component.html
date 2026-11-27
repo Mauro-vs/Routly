@@ -1,0 +1,36 @@
+<article [attr.aria-labelledby]="'opinion-' + review()._id">
+  <header>
+    <ui-stars [value]="review().rating" />
+    <h3 [id]="'opinion-' + review()._id">{{ review().title || defaultTitle() }}</h3>
+  </header>
+  @if (review().comment; as comment) {
+    <p class="comment">{{ expanded() || !isLong() ? comment : comment.slice(0, cut) + '…' }}</p>
+    @if (isLong()) {
+      <button type="button" class="link-button" [attr.aria-expanded]="expanded()" (click)="expanded.set(!expanded())">
+        {{ expanded() ? 'Leer menos' : 'Leer más' }}
+      </button>
+    }
+  }
+  @if (review().photos.length > 0) {
+    <ul class="thumbs" aria-label="Fotos de la opinión">
+      @for (photo of review().photos; track photo._id; let i = $index) {
+        <li>
+          <button type="button" (click)="openPhoto.emit(i)" [attr.aria-label]="'Ver la foto ' + (i + 1) + ' de ' + review().photos.length + ' en grande'">
+            <img [src]="photo.url" alt="" loading="lazy" decoding="async" width="72" height="72" />
+          </button>
+        </li>
+      }
+    </ul>
+  }
+  <footer>
+    <span class="author">{{ mine() ? 'Tu opinión' : (review().user?.name ?? 'Un rider') }}</span>
+    <time [attr.datetime]="review().createdAt" [title]="longDate()">{{ when() }}</time>
+    @if (edited()) {<span class="edited">(editada)</span>}
+    @if (mine()) {
+      <span class="actions">
+        <button type="button" class="link-button" (click)="edit.emit()">Editar</button>
+        <button type="button" class="link-button danger" (click)="remove.emit()">Borrar</button>
+      </span>
+    }
+  </footer>
+</article>

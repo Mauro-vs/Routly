@@ -2,10 +2,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { Router, convertToParamMap, provideRouter } from '@angular/router';
 
-import { DEFAULT_REVIEWS_QUERY } from './reviews-query';
-import { ReviewsStore } from './reviews.store';
+import { DEFAULT_REVIEWS_QUERY, ReviewsStore, parseReviewsQuery, toReviewsApiParams, toReviewsUrl } from './reviews.store';
 import { page, review } from './testing/reviews.fixtures';
 
 const BASE = '/api/shop/experiences/calas-1/reviews';
@@ -105,5 +104,77 @@ describe('ReviewsStore', () => {
     http.expectOne(`${BASE}/mine`).flush(null, { status: 401, statusText: 'Unauthorized' });
     await mine;
     expect(store.mine()).toBeNull();
+  });
+});
+
+describe('ReviewsStore: el resumen IA', () => {
+  let store: ReviewsStore;
+  let http: HttpTestingController;
+  const AI = '/ai/experiences/calas-1/reviews-summary';
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), provideRouter([]), provideHttpClient(), provideHttpClientTesting(), ReviewsStore],
+    });
+    store = TestBed.inject(ReviewsStore);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => http.verify());
+
+  async function loadWith(total: number): Promise<void> {
+    const done = store.load('experience', 'calas-1', DEFAULT_REVIEWS_QUERY);
+    http.match((request) => request.url === BASE).forEach((request) => request.flush(page([review('a')], { total })));
+    await done;
+  }
+
+  it('con 3 opiniones o más lo pide una vez por objetivo', async () => {
+    await loadWith(12);
+    const first = store.loadAiSummary();
+    expect(store.aiLoading()).toBeTrue();
+    void store.loadAiSummary();
+    http.expectOne(AI).flush({ data: { summary: 'Gustan las calas', pros: [], cons: [], topics: [], basedOn: 12 } });
+    await first;
+
+    expect(store.aiLoading()).toBeFalse();
+    expect(store.aiSummary()?.summary).toBe('Gustan las calas');
+  });
+
+  it('con menos de 3 ni se pide', async () => {
+    await loadWith(2);
+    await store.loadAiSummary();
+    http.expectNone(AI);
+    expect(store.aiSummary()).toBeNull();
+  });
+
+  it('si la IA no está (503), no hay resumen', async () => {
+    await loadWith(5);
+    const done = store.loadAiSummary();
+    http.expectOne(AI).flush(null, { status: 503, statusText: 'Service Unavailable' });
+    await done;
+    expect(store.aiSummary()).toBeNull();
+    expect(store.aiLoading()).toBeFalse();
+  });
+});
+
+describe('las opiniones en la URL', () => {
+  const parse = (params: Record<string, string>) => parseReviewsQuery(convertToParamMap(params));
+
+  it('sin nada en la URL: las más recientes, sin filtros', () => {
+    expect(parse({})).toEqual(DEFAULT_REVIEWS_QUERY);
+    expect(toReviewsApiParams(DEFAULT_REVIEWS_QUERY, 1)).toEqual({ sort: 'recent', rating: null, withPhotos: null, page: 1, limit: 10 });
+  });
+
+  it('el orden, las estrellas y "con fotos" van en español en la URL y en inglés a la API', () => {
+    const query = parse({ opiniones: 'peores', estrellas: '2', 'con-fotos': 'si' });
+    expect(query).toEqual({ sort: 'peores', stars: 2, withPhotos: true });
+    expect(toReviewsApiParams(query, 3)).toEqual({ sort: 'worst', rating: 2, withPhotos: true, page: 3, limit: 10 });
+    expect(toReviewsUrl(query)).toEqual({ opiniones: 'peores', estrellas: '2', 'con-fotos': 'si' });
+  });
+
+  it('lo que no vale se ignora, y lo que está por defecto no se escribe', () => {
+    expect(parse({ opiniones: 'al-azar', estrellas: '7', 'con-fotos': 'quizas' })).toEqual(DEFAULT_REVIEWS_QUERY);
+    expect(parse({ estrellas: '2.5' }).stars).toBeNull();
+    expect(toReviewsUrl(DEFAULT_REVIEWS_QUERY)).toEqual({ opiniones: null, estrellas: null, 'con-fotos': null });
   });
 });

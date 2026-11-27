@@ -1,0 +1,29 @@
+@if (totalPages() > 1) {
+  <nav [attr.aria-label]="label()">
+    @if (page() > 1) {
+      <a class="step" [routerLink]="[]" [queryParams]="paramsFor(page() - 1)" queryParamsHandling="merge" aria-label="Página anterior">
+        <ui-icon name="caret-left" />
+      </a>
+    } @else {
+      <span class="step" aria-label="Página anterior" aria-disabled="true"><ui-icon name="caret-left" /></span>
+    }
+
+    @for (item of items(); track $index) {
+      @if (item === null) {
+        <span class="gap" aria-hidden="true">…</span>
+      } @else if (item === page()) {
+        <span class="num current" aria-current="page">{{ item }}</span>
+      } @else {
+        <a class="num" [routerLink]="[]" [queryParams]="paramsFor(item)" queryParamsHandling="merge">{{ item }}</a>
+      }
+    }
+
+    @if (page() < totalPages()) {
+      <a class="step" [routerLink]="[]" [queryParams]="paramsFor(page() + 1)" queryParamsHandling="merge" aria-label="Página siguiente">
+        <ui-icon name="caret-right" />
+      </a>
+    } @else {
+      <span class="step" aria-label="Página siguiente" aria-disabled="true"><ui-icon name="caret-right" /></span>
+    }
+  </nav>
+}

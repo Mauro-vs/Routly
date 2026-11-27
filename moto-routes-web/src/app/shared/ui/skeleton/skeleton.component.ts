@@ -10,31 +10,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: 'ui-skeleton',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: '',
-  styles: `
-    :host {
-      position: relative;
-      display: block;
-      height: 1em;
-      overflow: hidden;
-      border-radius: var(--radius-sm);
-      background: var(--color-surface-2);
-    }
-
-    :host::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      transform: translateX(-100%);
-      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-surface) 70%, transparent), transparent);
-      animation: shimmer 1.6s ease-in-out infinite;
-    }
-
-    @keyframes shimmer {
-      to {
-        transform: translateX(100%);
-      }
-    }
-  `,
+  styleUrl: './skeleton.component.css',
   host: {
     'aria-hidden': 'true',
     '[style.width]': 'width()',

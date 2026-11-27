@@ -1,0 +1,68 @@
+@switch (store.status()) {
+  @case ('notFound') {
+    <section class="on-band">
+      <div class="wrap lost">
+        <h1>No hemos encontrado a este guía</h1>
+        <p>Puede que ya no esté en Routly o que la dirección haya cambiado.</p>
+        <a class="btn-primary" routerLink="/experiencias">Ver las experiencias</a>
+      </div>
+    </section>
+  }
+  @case ('error') {
+    <section class="on-band">
+      <div class="wrap lost" role="alert">
+        <h1>No se ha podido cargar la ficha</h1>
+        <p>{{ store.error() }}</p>
+        <button type="button" class="btn-primary" (click)="store.load(slug())"><ui-icon name="arrows-clockwise" /> Reintentar</button>
+      </div>
+    </section>
+  }
+  @default {
+    <section class="on-band head" [attr.aria-busy]="store.status() === 'loading'">
+      <div class="wrap">
+        @if (guide(); as guide) {
+          <ui-photo class="portrait" [src]="guide.coverImage?.url ?? null" [seed]="guide.slug" alt="" />
+          <div class="intro">
+            <p class="kicker">Guía de Routly</p>
+            <h1>{{ guide.name }}</h1>
+            <ul class="scores">
+              @for (score of scores(); track score.label) {
+                <li>
+                  @if (score.count > 0) {
+                    <strong class="num">{{ score.average }}</strong> <ui-stars [value]="score.value" />
+                    <span>{{ score.label }} · {{ score.countLabel }}</span>
+                  } @else {
+                    <span>{{ score.label }}: aún sin opiniones</span>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        } @else {
+          <ui-skeleton width="min(480px, 80%)" height="120px" />
+        }
+      </div>
+    </section>
+
+    @if (guide(); as guide) {
+      <div class="wrap body">
+        <p class="bio">{{ guide.biography || 'Aún no ha contado nada sobre sí mismo.' }}</p>
+
+        <section aria-labelledby="salidas-guia">
+          <h2 id="salidas-guia">Sus experiencias</h2>
+          @if (guide.experiences.length > 0) {
+            <ul class="cards">
+              @for (experience of guide.experiences; track experience._id) {
+                <li><app-experience-card [experience]="experience" /></li>
+              }
+            </ul>
+          } @else {
+            <p class="muted">Ahora mismo no tiene experiencias publicadas.</p>
+          }
+        </section>
+
+        <app-reviews-section type="host" [slug]="guide.slug" [targetId]="guide._id" [name]="guide.name" (changed)="store.load(slug(), { quiet: true })" />
+      </div>
+    }
+  }
+}

@@ -2,7 +2,13 @@
  * Lo que devuelve /api/shop (el contrato está en "La parte pública" del README de la API).
  * Solo los campos que usa la web: la API manda más (status, createdAt...) y se ignoran.
  */
-import { Rating } from '../reviews/reviews.models';
+
+/** Una nota guardada: la media, cuántas y cuántas de cada estrella ("1" a "5"). */
+export interface Rating {
+  average: number;
+  count: number;
+  distribution: Record<string, number>;
+}
 
 export interface ShopImage {
   _id: string;

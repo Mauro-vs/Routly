@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+.block {
+  display: grid;
+  gap: var(--space-3);
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.small {
+  font-size: var(--text-sm);
+}
+
+h4 {
+  font-size: var(--text-base);
+  font-weight: 750;
+}
+
+.point {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.stop-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+}
+
+.stop-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 750;
+}
+
+.stops {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.stops li {
+  display: grid;
+}
+
+a {
+  color: var(--color-primary);
+  font-weight: 650;
+}

@@ -117,11 +117,11 @@ Organización por features, con las mismas reglas que el panel.
 ```
 src/app/
 ├── core/                   Lo que existe una sola vez en la aplicación
-│   ├── api/                ShopApiService (con AbortSignal), los modelos de /api/shop y ApiError
+│   ├── api/                ApiService (todas las peticiones, con AbortSignal), los modelos de /api/shop y ApiError
 │   ├── booking/            BookingService: la reserva, preparada (solo la interfaz)
 │   ├── interceptors/       El tiempo de espera de las peticiones
 │   └── services/           El tema y el título y la descripción de cada página (SEO)
-├── layout/                 La cabecera (transparente sobre la foto del Home) y el pie
+├── layout/                 La cabecera (transparente sobre la foto del Home), el pie y el chat (ChatStore)
 ├── shared/                 Piezas reutilizables, sin lógica de negocio
 │   ├── ui/                 Carrusel, búsqueda, filtros, filtros puestos, paginación, foto,
 │   │                       dificultad, icono, marca y esqueleto
@@ -130,7 +130,11 @@ src/app/
 │   ├── home/               HomeStore, el panel de orientación y los carriles (lista + tarjeta)
 │   ├── shop/               ShopStore, la URL (shop-query.ts), el pórtico de filtros, la hoja
 │   │                       de filtros del móvil y la lista de experiencias (lista + tarjeta)
-│   ├── experience/         ExperienceStore, la galería, el cartel de la ruta y la elección de salida
+│   ├── experience/         ExperienceStore, la galería, el cartel de la ruta, la elección de salida
+│   │                       y el bloque Routly IA (AiInsightsStore)
+│   ├── reviews/            ReviewsStore (lista, la mía, escribir, fotos y resumen IA) y sus piezas
+│   ├── guide/              GuideStore y la ficha del guía
+│   ├── account/            Entrar, crear cuenta y Mi cuenta (account.css: la tarjeta que comparten)
 │   └── not-found/          La página 404
 ├── app.routes.ts           Una ruta por pantalla, cada una cargada al entrar en ella
 ├── app.config.ts
@@ -141,7 +145,9 @@ Reglas:
 
 - `core` son servicios únicos (singletons).
 - `shared` no sabe nada de experiencias: sus componentes reciben datos y emiten eventos.
-- Una feature no importa de otra. Cada pantalla tiene su store, que vive con la página (se provee en ella) y cancela lo pendiente al salir.
+- Una feature no importa de otra (salvo `reviews`, que es una sección que usan el detalle y la ficha del guía). Cada pantalla tiene su store, que vive con la página (se provee en ella) y cancela lo pendiente al salir.
+- **El flujo es siempre el mismo: componente → store → `ApiService`.** Un componente nunca pide nada a la API: llama a su store, que pide, guarda el resultado en signals y traduce los errores.
+- **Cada componente tiene su carpeta con tres archivos:** `x.component.ts` (la lógica), `x.component.html` (la plantilla) y `x.component.css` (sus estilos). Nada de plantillas ni estilos dentro del `.ts`. Solo va en `styles/` lo que comparten varios componentes.
 
 ### Pantallas
 
@@ -173,7 +179,7 @@ flowchart LR
     U["URL<br/>?categoria=&pagina="] -->|"queryParamMap"| ST["Store<br/>signals"]
     P["Página<br/>(componente)"] -->|"filtrar, buscar,<br/>ordenar"| R["Router"]
     R -->|"escribe"| U
-    ST -->|"un AbortController<br/>por petición"| SV["ShopApiService<br/>promesas"]
+    ST -->|"un AbortController<br/>por petición"| SV["ApiService<br/>promesas"]
     SV --> I["timeoutInterceptor"] --> B["/api/shop"]
     ST -.->|"signals"| P
     classDef node fill:#0c2419,stroke:#c6f04d,color:#e8f3ec,stroke-width:2px
@@ -190,9 +196,9 @@ La página nunca llama a la API ni cambia el estado directamente:
 
 Así, recargar, compartir el enlace o ir atrás enseñan exactamente lo mismo.
 
-- **`ShopApiService`** es la única puerta hacia la API: `get(path, params, signal)` devuelve una promesa y acepta un `AbortSignal`. Los parámetros vacíos no viajan.
+- **`ApiService`** es la única puerta hacia la API, la IA y las opiniones: `get(url, params, { signal })` devuelve una promesa y acepta un `AbortSignal`; `post`, `patch` y `delete` para escribir, y `stream` para el chat. Los parámetros vacíos no viajan.
 - **`timeoutInterceptor`** corta la petición a los `apiTimeout` milisegundos.
-- **Cada store** (`HomeStore`, `ShopStore`, `ExperienceStore`) guarda su estado con signals: lo que ha llegado, si está cargando, el error y lo que se ha elegido.
+- **Cada store** (`HomeStore`, `ShopStore`, `ExperienceStore`, `GuideStore`, `ReviewsStore`, `AiInsightsStore`, `ChatStore`) guarda su estado con signals: lo que ha llegado, si está cargando, el error y lo que se ha elegido.
 
 ### La URL es la fuente de verdad
 
@@ -220,7 +226,7 @@ Los parámetros del Shop van en español y `shop-query.ts` los traduce a los de 
 El enunciado pide evitar que una respuesta vieja pise a una nueva, con **`AbortController`** y **`debounce`**. Los dos están a la vista en el código, no escondidos en una librería:
 
 - **Un `AbortController` por petición.** Cada store guarda el de su última petición; al pedir otra, hace `abort()` de la anterior. Al salir de la página, aborta lo pendiente.
-- **La señal llega a la petición.** HttpClient no admite un `AbortSignal`, así que `ShopApiService` cancela la suscripción al abortar; con `withFetch()` eso aborta el `fetch` de verdad (en el navegador sale como `net::ERR_ABORTED`). Se pasa por HttpClient, y no por `fetch` directamente, para que siga valiendo el interceptor del tiempo de espera.
+- **La señal llega a la petición.** HttpClient no admite un `AbortSignal`, así que `ApiService` cancela la suscripción al abortar; con `withFetch()` eso aborta el `fetch` de verdad (en el navegador sale como `net::ERR_ABORTED`). Se pasa por HttpClient, y no por `fetch` directamente, para que siga valiendo el interceptor del tiempo de espera.
 - **Lo abortado no es un error.** La promesa se rechaza con un `AbortError` (`isAbortError()`), que el store descarta: ni aviso ni estado de error.
 - **Una sola espera, de 300 ms**, en el componente de búsqueda (`SEARCH_DEBOUNCE_MS`). El store no espera: cinco teclas seguidas hacen una sola petición. Enter busca al momento.
 - **Sin parpadeos.** Mientras llega la página nueva, la anterior se sigue viendo, atenuada. La primera vez, esqueletos con la forma de las tarjetas.
@@ -443,6 +449,9 @@ La misma marca que el panel, llevada a otra escena. El panel se lee como la inst
 | `styles/tokens.css` | Los tokens del panel (colores, tipografía, espacios, radios, sombras, duraciones) y, al final, los de la web: el verde de las señales, las placas, el margen lateral y el ancho del contenido |
 | `styles/base.css` | Estilos de partida, foco visible y movimiento reducido |
 | `styles/primitives.css` | El contenedor, la banda y los botones |
+| `styles/forms.css` | Los campos de formulario (`.field`) y el aviso de error: los usan las páginas de cuenta, el formulario de opiniones y el buscador |
+
+El resto de estilos va con su componente, en su `.css`.
 
 ![accent](https://img.shields.io/badge/accent-%23c6f04d-c6f04d?style=for-the-badge&labelColor=c6f04d) ![sign](https://img.shields.io/badge/sign-%2314663f-14663f?style=for-the-badge&labelColor=14663f) ![band](https://img.shields.io/badge/band-%230c2419-0c2419?style=for-the-badge&labelColor=0c2419) ![plate](https://img.shields.io/badge/plate-%23ffffff-ffffff?style=for-the-badge&labelColor=ffffff) ![ink](https://img.shields.io/badge/ink-%230f1a15-0f1a15?style=for-the-badge&labelColor=0f1a15)
 
@@ -496,7 +505,7 @@ npx ng test --watch=false --browsers=ChromeHeadless
 
 | Spec | Qué prueba |
 |---|---|
-| `shop-api.service.spec.ts` | Los parámetros que viajan, el `ApiError`, y que abortar cancela la petición y rechaza con un `AbortError` |
+| `api.service.spec.ts` | Los parámetros que viajan, el error tal cual, que abortar cancela la petición y rechaza con un `AbortError`, escribir y el streaming del chat |
 | `shop-query.spec.ts` | La URL en español a los parámetros de la API (también el precio), cada orden, la relevancia al buscar y lo que se ignora |
 | `shop.store.spec.ts` | La URL manda; al cambiarla antes de la respuesta, la anterior se aborta y solo se pinta la última; lo anterior sigue a la vista; errores y reintentar; la página fuera de rango; los filtros puestos y "no encontrado" |
 | `shop-page.component.spec.ts` | Esqueletos, el recuento anunciado, las tarjetas, el vacío, el error y la paginación |

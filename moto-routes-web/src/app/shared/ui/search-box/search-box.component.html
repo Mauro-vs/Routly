@@ -1,0 +1,24 @@
+<label [for]="id" class="sr-only">{{ label() }}</label>
+<div class="field">
+  <ui-icon name="magnifying-glass" class="lens" />
+  <input
+    #field
+    [id]="id"
+    type="search"
+    enterkeyhint="search"
+    autocomplete="off"
+    [placeholder]="placeholder()"
+    [value]="text()"
+    [attr.aria-describedby]="hint() ? id + '-hint' : null"
+    (input)="onInput(field.value)"
+    (keydown.enter)="flush($event)"
+  />
+  @if (text()) {
+    <button type="button" class="clear" aria-label="Borrar la búsqueda" (click)="clearField()">
+      <ui-icon name="x" />
+    </button>
+  }
+</div>
+@if (hint()) {
+  <p class="hint" [id]="id + '-hint'">{{ hint() }}</p>
+}

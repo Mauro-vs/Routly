@@ -1,4 +1,4 @@
-import { Review, ReviewsPage } from '../../../core/reviews/reviews.models';
+import { Review, ReviewsPage } from '../reviews.models';
 
 /** Opiniones de ejemplo para los specs, con la forma de /api/shop/.../reviews. */
 

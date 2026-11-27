@@ -1,0 +1,21 @@
+<div class="inner">
+  <p class="name">{{ route().title }}</p>
+  <div class="towns">
+    <span class="town">{{ route().startLocation?.city }}</span>
+    @if (loop()) {
+      <span class="loop">ida y vuelta</span>
+    } @else {
+      <ui-icon name="arrow-right" class="arrow" />
+      <span class="sr-only">hasta</span>
+      <span class="town">{{ route().endLocation?.city }}</span>
+    }
+  </div>
+  <dl class="facts">
+    <div><dt>Distancia</dt><dd class="num"><strong>{{ km() }}</strong> km</dd></div>
+    <div><dt>Conducción</dt><dd class="num">{{ hours() }}</dd></div>
+    <div><dt>Dificultad</dt><dd><ui-difficulty [value]="route().difficulty" /></dd></div>
+    @if (route().category; as category) {
+      <div><dt>Carretera</dt><dd>{{ category.name }}</dd></div>
+    }
+  </dl>
+</div>

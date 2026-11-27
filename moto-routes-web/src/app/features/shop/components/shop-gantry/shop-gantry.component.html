@@ -1,0 +1,23 @@
+<div class="gantry" role="group" aria-label="Filtros">
+  @for (plate of plates(); track plate.key) {
+    <details #plateEl class="plate" (keydown.escape)="close(plateEl)">
+      <summary>
+        <span class="label">{{ plate.label }}</span>
+        <span class="value">{{ selected(plate) }}</span>
+        <ui-icon name="caret-down" class="caret" />
+      </summary>
+      <div class="panel">
+        <ui-filter-group
+          [legend]="plate.label"
+          [allLabel]="plate.allLabel"
+          [options]="plate.options"
+          [value]="plate.value"
+          (valueChange)="choose(plateEl, plate.key, $event)"
+        />
+      </div>
+    </details>
+  }
+  <div class="plate plate--search">
+    <ui-search-box label="Buscar experiencias" placeholder="costa, pirineo, viñedos…" [value]="search()" (search)="searchChange.emit($event)" />
+  </div>
+</div>

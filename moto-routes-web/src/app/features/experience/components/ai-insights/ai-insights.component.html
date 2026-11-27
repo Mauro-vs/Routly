@@ -1,0 +1,85 @@
+<div class="ai">
+  <!-- 1. Resumen y para quién es (IA) -->
+  @switch (store.insights().status) {
+    @case ('loading') {
+      <section class="block" aria-labelledby="ia-resumen" aria-busy="true">
+        <h2 id="ia-resumen">En pocas palabras</h2>
+        <ui-skeleton height="18px" width="90%" />
+        <ui-skeleton height="18px" width="70%" />
+        <p class="muted small">Preparando el resumen…</p>
+      </section>
+    }
+    @case ('ready') {
+      @if (store.insights().data; as data) {
+        <section class="block" aria-labelledby="ia-resumen">
+          <h2 id="ia-resumen">En pocas palabras <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
+          <p class="summary">{{ data.summary }}</p>
+          <ul class="highlights">
+            @for (highlight of data.highlights; track $index) {
+              <li><ui-icon name="check" /> {{ highlight }}</li>
+            }
+          </ul>
+          <dl class="ideal">
+            <div><dt>Nivel</dt><dd>{{ data.idealFor.level }}</dd></div>
+            <div><dt>Para quién</dt><dd>{{ data.idealFor.rider }}</dd></div>
+            <div><dt>Moto y carnet</dt><dd>{{ data.idealFor.bike }}</dd></div>
+          </dl>
+        </section>
+      }
+    }
+    @case ('error') {
+      <p class="muted small" role="status">
+        No hemos podido preparar el resumen.
+        <button type="button" class="link" (click)="store.reloadInsights()">Reintentar</button>
+      </p>
+    }
+  }
+
+  <!-- 2. El recorrido en el mapa, con dónde comer, miradores y gasolineras (OSRM y OpenStreetMap) -->
+  <app-ai-route-map [piece]="store.routeMap()" />
+
+  <!-- 3. El tiempo en las fechas de salida (Open-Meteo) -->
+  <app-ai-weather [piece]="store.weather()" />
+
+  <!-- 4. Paradas en la salida y la llegada (OpenStreetMap) -->
+  <app-ai-stops [piece]="store.stops()" />
+
+  @if (store.insights().data; as data) {
+    <!-- 5. Qué llevar (IA) -->
+    <section class="block" aria-labelledby="ia-llevar">
+      <h2 id="ia-llevar">Qué llevar <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
+      <ul class="packing">
+        @for (item of data.packing; track $index) {
+          <li>{{ item }}</li>
+        }
+      </ul>
+    </section>
+
+    <!-- 5. Preguntas frecuentes (IA) -->
+    <section class="block" aria-labelledby="ia-preguntas">
+      <h2 id="ia-preguntas">Preguntas frecuentes <ui-icon name="sparkle" class="ai-mark" title="Escrito con IA" /><span class="sr-only">(escrito con IA)</span></h2>
+      <div class="faq">
+        @for (item of data.faq; track $index) {
+          <details>
+            <summary>{{ item.question }}</summary>
+            <p>{{ item.answer }}</p>
+          </details>
+        }
+      </div>
+    </section>
+  }
+
+  <footer class="ai-foot">
+    <p class="ask">
+      ¿Te queda alguna duda?
+      <button type="button" class="link" (click)="chat.ask()">Pregúntale al asistente</button>
+      @for (question of questions; track question) {
+        <button type="button" class="chip" (click)="chat.ask(question)">{{ question }}</button>
+      }
+    </p>
+    <p class="muted small">
+      <ui-icon name="sparkle" class="ai-mark" /> Escrito con IA a partir de los datos de la ficha@if (store.insights().data; as data) { ({{ shortDate(data.generatedAt) }})}: si algo no cuadra, mandan los datos de arriba.
+      El tiempo es de Open-Meteo y las paradas, de OpenStreetMap.
+    </p>
+  </footer>
+</div>

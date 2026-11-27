@@ -1,0 +1,36 @@
+<div class="inner">
+  <h1>¿Hacia dónde rodamos?</h1>
+  <p class="lead">Salidas guiadas en moto por carreteras elegidas una a una, con anfitrión, fecha y plazas.</p>
+
+  @if (error()) {
+    <div class="error" role="alert">
+      <p>{{ error() }}</p>
+      <button type="button" class="retry" (click)="retry.emit()">
+        <ui-icon name="arrows-clockwise" /> Reintentar
+      </button>
+    </div>
+  } @else if (loading()) {
+    <div class="rows" aria-hidden="true">
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="row row--skeleton"><ui-skeleton width="45%" height="20px" /></div>
+      }
+    </div>
+  } @else {
+    <nav aria-label="Tipos de carretera" class="rows">
+      @for (category of categories(); track category._id) {
+        <a class="row" [routerLink]="['/experiencias']" [queryParams]="{ categoria: category.slug }">
+          <span class="name">{{ category.name }}</span>
+          <span class="count num">{{ category.experienceCount }} {{ category.experienceCount === 1 ? 'experiencia' : 'experiencias' }}</span>
+          <span class="arrow"><ui-icon name="arrow-up-right" /></span>
+        </a>
+      }
+    </nav>
+  }
+
+  <form class="search" role="search" (submit)="submit($event, query.value)">
+    <label for="home-search" class="sr-only">Buscar experiencias</label>
+    <input id="home-search" #query type="search" enterkeyhint="search" autocomplete="off"
+      placeholder="costa, pirineo, viñedos…" />
+    <button type="submit" class="btn-primary">Buscar</button>
+  </form>
+</div>

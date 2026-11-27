@@ -1,0 +1,31 @@
+<fieldset class="price">
+  <legend class="label"><span class="name">{{ legend() }}</span> <span class="num value">{{ text() }}</span></legend>
+  <div class="track" [style.--from.%]="percent(low())" [style.--to.%]="percent(high())">
+    <input
+      #lowInput
+      type="range"
+      name="precio-min"
+      aria-label="Precio mínimo"
+      [attr.aria-valuetext]="low() + ' €'"
+      [min]="floor()"
+      [max]="ceiling()"
+      [step]="step()"
+      [value]="low()"
+      (input)="moveLow(lowInput)"
+      (change)="commit()"
+    />
+    <input
+      #highInput
+      type="range"
+      name="precio-max"
+      aria-label="Precio máximo"
+      [attr.aria-valuetext]="high() >= ceiling() ? 'sin límite' : high() + ' €'"
+      [min]="floor()"
+      [max]="ceiling()"
+      [step]="step()"
+      [value]="high()"
+      (input)="moveHigh(highInput)"
+      (change)="commit()"
+    />
+  </div>
+</fieldset>

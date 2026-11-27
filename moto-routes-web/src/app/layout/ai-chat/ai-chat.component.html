@@ -1,0 +1,94 @@
+@if (chat.open()) {
+  <section class="panel" role="dialog" aria-modal="false" aria-labelledby="chat-titulo">
+    <header class="panel-head on-band">
+      <div>
+        <h2 id="chat-titulo"><ui-icon name="sparkle" /> Asistente Routly</h2>
+        <p class="context">
+          @if (chat.context(); as context) {
+            Sobre: {{ context.title }}
+          } @else {
+            Te ayuda a elegir salida
+          }
+        </p>
+      </div>
+      <div class="head-actions">
+        @if (chat.messages().length > 0) {
+          <button type="button" class="icon-btn" (click)="chat.reset()" title="Empezar de nuevo" aria-label="Empezar de nuevo">
+            <ui-icon name="arrows-clockwise" />
+          </button>
+        }
+        <button type="button" class="icon-btn" (click)="chat.close()" aria-label="Cerrar el asistente"><ui-icon name="x" /></button>
+      </div>
+    </header>
+
+    <div class="messages" #scroller aria-live="polite">
+      @if (chat.messages().length === 0) {
+        <div class="welcome">
+          <p>Hola. Pregúntame por rutas, fechas, el tiempo o dónde parar. Uso los datos de Routly y no me invento nada.</p>
+          <div class="suggestions">
+            @for (suggestion of chat.suggestions(); track suggestion) {
+              <button type="button" class="chip" (click)="chat.send(suggestion)">{{ suggestion }}</button>
+            }
+          </div>
+        </div>
+      }
+      @for (message of chat.messages(); track $index) {
+        @if (message.role === 'user') {
+          <p class="bubble user">{{ message.content }}</p>
+        } @else {
+          <div class="bubble assistant">
+            @for (block of message.blocks; track $index) {
+              <p [class.item]="block.kind === 'item'">
+                @for (part of block.parts; track $index) {
+                  @switch (part.kind) {
+                    @case ('bold') {<strong>{{ part.text }}</strong>}
+                    @case ('link') {
+                      @if (part.internal) {
+                        <a [routerLink]="part.href">{{ part.text }}</a>
+                      } @else {
+                        <a [href]="part.href" target="_blank" rel="noopener noreferrer nofollow">{{ part.text }}</a>
+                      }
+                    }
+                    @default {<span>{{ part.text }}</span>}
+                  }
+                }
+              </p>
+            }
+          </div>
+        }
+      }
+      @if (chat.status(); as status) {
+        <p class="status" role="status"><span class="dots" aria-hidden="true"></span> {{ status }}</p>
+      }
+      @if (chat.error(); as error) {
+        <p class="error" role="alert">
+          {{ error }}
+          <button type="button" class="link" (click)="chat.retry()">Reintentar</button>
+        </p>
+      }
+    </div>
+
+    <form class="composer" (submit)="$event.preventDefault(); chat.send(input.value); input.value = ''">
+      <label class="sr-only" for="chat-pregunta">Tu pregunta</label>
+      <textarea
+        #input
+        id="chat-pregunta"
+        rows="1"
+        [attr.maxlength]="maxLength"
+        placeholder="Escribe tu pregunta"
+        (keydown.enter)="onEnter($event, input)"
+      ></textarea>
+      @if (chat.streaming()) {
+        <button type="button" class="send" (click)="chat.stop()" aria-label="Parar la respuesta"><ui-icon name="stop-circle" /></button>
+      } @else {
+        <button type="submit" class="send" aria-label="Enviar"><ui-icon name="paper-plane-right" /></button>
+      }
+    </form>
+    <p class="disclaimer">Respuestas generadas con IA: comprueba los datos en la ficha antes de reservar.</p>
+  </section>
+}
+
+<button type="button" class="launcher" [attr.aria-expanded]="chat.open()" (click)="chat.toggle()">
+  <ui-icon [name]="chat.open() ? 'x' : 'chat-circle-dots'" />
+  <span>{{ chat.open() ? 'Cerrar' : 'Pregúntame' }}</span>
+</button>

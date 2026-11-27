@@ -39,20 +39,20 @@ export const routes: Routes = [
     path: 'entrar',
     title: 'Entrar',
     canActivate: [guestGuard],
-    loadComponent: () => import('./features/account/login-page.component').then((m) => m.LoginPageComponent),
+    loadComponent: () => import('./features/account/login-page/login-page.component').then((m) => m.LoginPageComponent),
   },
   {
     path: 'registro',
     title: 'Crear cuenta',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./features/account/register-page.component').then((m) => m.RegisterPageComponent),
+      import('./features/account/register-page/register-page.component').then((m) => m.RegisterPageComponent),
   },
   {
     path: 'mi-cuenta',
     title: 'Mi cuenta',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/account/account-page.component').then((m) => m.AccountPageComponent),
+    loadComponent: () => import('./features/account/account-page/account-page.component').then((m) => m.AccountPageComponent),
   },
   {
     path: '**',

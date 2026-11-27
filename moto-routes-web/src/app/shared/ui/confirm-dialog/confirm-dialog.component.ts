@@ -7,48 +7,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from
 @Component({
   selector: 'ui-confirm-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <dialog #dialog class="sheet" [attr.aria-labelledby]="id + '-title'" (close)="settle(dialog.returnValue === 'ok')">
-      <form method="dialog">
-        <h2 [id]="id + '-title'">{{ title() }}</h2>
-        @if (message()) {<p>{{ message() }}</p>}
-        <div class="buttons">
-          <button type="submit" value="cancel" class="btn-ghost">Cancelar</button>
-          <button type="submit" value="ok" class="btn-primary" [class.danger]="danger()">{{ confirmLabel() }}</button>
-        </div>
-      </form>
-    </dialog>
-  `,
-  styles: `
-    form {
-      display: grid;
-      gap: var(--space-4);
-    }
-
-    h2 {
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    p {
-      color: var(--color-text-muted);
-    }
-
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: var(--space-3);
-    }
-
-    .danger::before {
-      background: var(--color-danger);
-    }
-
-    .danger {
-      color: #ffffff;
-    }
-  `,
+  templateUrl: './confirm-dialog.component.html',
+  styleUrl: './confirm-dialog.component.css',
 })
 export class ConfirmDialogComponent {
   readonly title = input.required<string>();

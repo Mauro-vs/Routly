@@ -1,0 +1,22 @@
+<div class="score">
+  <p class="average num" aria-hidden="true">{{ average() }}</p>
+  <ui-stars [value]="rating().average" />
+  <p class="count">{{ count() }}</p>
+</div>
+<ul class="bars" aria-label="Opiniones por estrellas">
+  @for (bar of bars(); track bar.stars) {
+    <li>
+      <button
+        type="button"
+        [attr.aria-pressed]="activeStars() === bar.stars"
+        [disabled]="bar.count === 0 && activeStars() !== bar.stars"
+        [attr.aria-label]="bar.stars + ' estrellas: ' + bar.count + ' opiniones (' + bar.percent + ' %). Filtrar'"
+        (click)="toggleStars.emit(bar.stars)"
+      >
+        <span class="label num">{{ bar.stars }} ★</span>
+        <span class="track"><span class="fill" [style.width.%]="bar.percent"></span></span>
+        <span class="percent num">{{ bar.percent }} %</span>
+      </button>
+    </li>
+  }
+</ul>

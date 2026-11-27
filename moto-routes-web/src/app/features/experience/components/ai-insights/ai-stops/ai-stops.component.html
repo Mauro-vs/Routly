@@ -1,0 +1,40 @@
+<section class="block" aria-labelledby="ia-paradas">
+  <h2 id="ia-paradas">Paradas en la ruta</h2>
+  @switch (piece().status) {
+    @case ('loading') {
+      <ui-skeleton height="120px" aria-hidden="true" />
+    }
+    @case ('ready') {
+      @if (piece().data; as data) {
+        @for (point of points(data); track point.label) {
+          <div class="point">
+            <h4>{{ point.label }}</h4>
+            <div class="stop-groups">
+              @for (group of point.groups; track group.title) {
+                <div class="stop-group">
+                  <p class="stop-title"><ui-icon [name]="group.icon" /> {{ group.title }}</p>
+                  @if (group.stops.length === 0) {
+                    <p class="muted small">Nada cerca en el mapa.</p>
+                  } @else {
+                    <ul class="stops">
+                      @for (stop of group.stops; track stop.url) {
+                        <li>
+                          <a [href]="stop.url" target="_blank" rel="noopener noreferrer">{{ stop.name ?? group.unnamed }}</a>
+                          <span class="muted small num">{{ number(stop.distanceKm) }} km{{ stopDetail(stop) }}</span>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+        <p class="muted small">Datos de <a [href]="data.source.url" target="_blank" rel="noopener noreferrer">{{ data.source.attribution }}</a>. Las distancias son en línea recta.</p>
+      }
+    }
+    @default {
+      <p class="muted">Las paradas no están disponibles ahora mismo.</p>
+    }
+  }
+</section>

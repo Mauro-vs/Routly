@@ -1,0 +1,43 @@
+/* Un panel modal (<dialog>): el visor de fotos y las confirmaciones */
+dialog.sheet {
+  max-width: min(92vw, 560px);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-3);
+}
+
+dialog.sheet::backdrop {
+  background: rgb(5 12 9 / 0.72);
+}
+
+form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+p {
+  color: var(--color-text-muted);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.danger::before {
+  background: var(--color-danger);
+}
+
+.danger {
+  color: #ffffff;
+}

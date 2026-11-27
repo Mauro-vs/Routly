@@ -1,0 +1,105 @@
+:host {
+  display: block;
+  min-width: 220px;
+}
+
+.price {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2, 8px);
+  width: 100%;
+  padding: 0;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--color-text-muted);
+}
+
+/* Como el título de los demás grupos de filtros (ui-filter-group) */
+.name {
+  font-size: var(--text-xs);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.value {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* La barra: gris, y del color de la marca entre los dos tiradores */
+.track {
+  position: relative;
+  height: 28px;
+}
+
+.track::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 4px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    to right,
+    var(--color-border-strong) var(--from),
+    var(--color-primary) var(--from),
+    var(--color-primary) var(--to),
+    var(--color-border-strong) var(--to)
+  );
+}
+
+/* Las dos barras nativas, una encima de otra; solo los tiradores reciben el ratón */
+input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  appearance: none;
+}
+
+input::-webkit-slider-runnable-track {
+  background: none;
+}
+
+input::-moz-range-track {
+  background: none;
+}
+
+input::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface, #fff);
+  pointer-events: auto;
+  cursor: grab;
+  appearance: none;
+}
+
+input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface, #fff);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

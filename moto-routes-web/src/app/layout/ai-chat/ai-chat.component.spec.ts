@@ -2,26 +2,26 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { AiApiService, AiError } from '../../core/ai/ai-api.service';
-import { AiChatContextService } from '../../core/ai/ai-chat-context.service';
 import { ChatEvent, ChatMessage } from '../../core/ai/ai.models';
+import { ApiService, StreamError } from '../../core/api/api.service';
 import { AiChatComponent } from './ai-chat.component';
+import { ChatStore } from './chat.store';
 
 type ChatCall = { messages: ChatMessage[]; experienceSlug?: string };
 
 describe('AiChatComponent', () => {
-  let api: jasmine.SpyObj<AiApiService>;
+  let api: jasmine.SpyObj<ApiService>;
   let fixture: ComponentFixture<AiChatComponent>;
   let element: HTMLElement;
-  let chat: AiChatContextService;
+  let chat: ChatStore;
 
   beforeEach(async () => {
     sessionStorage.clear();
-    api = jasmine.createSpyObj<AiApiService>('AiApiService', ['chat']);
+    api = jasmine.createSpyObj<ApiService>('ApiService', ['stream']);
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), provideRouter([]), { provide: AiApiService, useValue: api }],
+      providers: [provideZonelessChangeDetection(), provideRouter([]), { provide: ApiService, useValue: api }],
     });
-    chat = TestBed.inject(AiChatContextService);
+    chat = TestBed.inject(ChatStore);
     fixture = TestBed.createComponent(AiChatComponent);
     element = fixture.nativeElement as HTMLElement;
     await fixture.whenStable();
@@ -31,8 +31,8 @@ describe('AiChatComponent', () => {
 
   /** El servidor responde con estos eventos */
   function answer(events: ChatEvent[]): void {
-    api.chat.and.callFake(async (_body, onEvent) => {
-      for (const event of events) onEvent(event);
+    api.stream.and.callFake(async (_url, _body, onEvent) => {
+      for (const event of events) (onEvent as (event: ChatEvent) => void)(event);
     });
   }
 
@@ -75,7 +75,7 @@ describe('AiChatComponent', () => {
 
     await ask('Una ruta fácil');
 
-    const body = api.chat.calls.mostRecent().args[0] as ChatCall;
+    const body = api.stream.calls.mostRecent().args[1] as ChatCall;
     expect(body.messages).toEqual([{ role: 'user', content: 'Una ruta fácil' }]);
     expect(body.experienceSlug).toBeUndefined();
     expect(text('.bubble.user')).toBe('Una ruta fácil');
@@ -85,7 +85,7 @@ describe('AiChatComponent', () => {
   });
 
   it('en el detalle dice de qué experiencia va y la manda al servidor', async () => {
-    chat.set({ slug: 'calas-de-mallorca', title: 'Calas de Mallorca en moto' });
+    chat.setContext({ slug: 'calas-de-mallorca', title: 'Calas de Mallorca en moto' });
     chat.open.set(true);
     await fixture.whenStable();
     answer([{ event: 'delta', data: { text: 'Hará sol.' } }]);
@@ -93,7 +93,7 @@ describe('AiChatComponent', () => {
     expect(text('.context')).toContain('Calas de Mallorca en moto');
     await ask('¿Qué tiempo hará?');
 
-    expect((api.chat.calls.mostRecent().args[0] as ChatCall).experienceSlug).toBe('calas-de-mallorca');
+    expect((api.stream.calls.mostRecent().args[1] as ChatCall).experienceSlug).toBe('calas-de-mallorca');
   });
 
   it('una pregunta pedida desde el detalle se manda al abrir', async () => {
@@ -108,7 +108,7 @@ describe('AiChatComponent', () => {
   it('si falla, enseña el error y se puede reintentar', async () => {
     chat.open.set(true);
     await fixture.whenStable();
-    api.chat.and.rejectWith(new AiError('El asistente no está disponible ahora mismo.', 503));
+    api.stream.and.rejectWith(new StreamError(503));
 
     await ask('Hola');
     expect(text('.error')).toContain('no está disponible');

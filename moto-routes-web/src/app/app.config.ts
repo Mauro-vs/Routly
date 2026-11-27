@@ -30,7 +30,7 @@ export const appConfig: ApplicationConfig = {
       // Arriba al cambiar de página; al volver atrás, a donde estaba (el Shop al volver del detalle)
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
     ),
-    // withFetch: al cancelar una suscripción se aborta el fetch (ShopApiService).
+    // withFetch: HttpClient usa fetch por debajo (ApiService).
     // authInterceptor primero: manda las cookies y, con un 401, renueva la sesión y repite la
     // petición, que vuelve a pasar por el timeout
     provideHttpClient(withFetch(), withInterceptors([authInterceptor, timeoutInterceptor])),

@@ -13,76 +13,8 @@ import { ExperienceCardComponent } from '../experience-card/experience-card.comp
   selector: 'app-experience-list',
   imports: [ExperienceCardComponent, SkeletonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (skeleton()) {
-      <ul class="grid" aria-hidden="true">
-        @for (n of placeholders; track n) {
-          <li class="ghost">
-            <ui-skeleton class="photo" />
-            <ui-skeleton width="80%" height="20px" />
-            <ui-skeleton width="55%" height="14px" />
-            <ui-skeleton width="70%" height="14px" />
-          </li>
-        }
-      </ul>
-    } @else {
-      <ul class="grid" [class.is-stale]="stale()">
-        @for (experience of experiences(); track experience._id) {
-          <li class="enter" [style.--i]="$index"><app-experience-card [experience]="experience" /></li>
-        }
-      </ul>
-    }
-  `,
-  styles: `
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-      gap: var(--space-7) var(--space-5);
-      transition: opacity var(--motion-base) var(--motion-ease);
-    }
-
-    .grid.is-stale {
-      opacity: 0.5;
-    }
-
-    /* Una tarjeta nueva (otra página, otro filtro) entra subiendo un poco, en cascada: se ve que el
-       resultado ha cambiado. Las que ya estaban no se vuelven a animar (track por _id) */
-    .enter {
-      animation: card-in 280ms var(--motion-ease) both;
-      animation-delay: calc(min(var(--i), 8) * 40ms);
-    }
-
-    @keyframes card-in {
-      from {
-        opacity: 0;
-        transform: translateY(14px);
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .enter {
-        animation: card-fade 160ms linear both;
-        animation-delay: 0ms;
-      }
-
-      @keyframes card-fade {
-        from {
-          opacity: 0;
-        }
-      }
-    }
-
-    .ghost {
-      display: grid;
-      gap: var(--space-3);
-    }
-
-    .ghost .photo {
-      height: auto;
-      aspect-ratio: 4 / 3;
-      border-radius: var(--radius-lg);
-    }
-  `,
+  templateUrl: './experience-list.component.html',
+  styleUrl: './experience-list.component.css',
 })
 export class ExperienceListComponent {
   readonly experiences = input.required<ShopExperience[]>();

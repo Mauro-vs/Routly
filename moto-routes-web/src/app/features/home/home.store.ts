@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 
-import { isAbortError, toApiError } from '../../core/api/api-error';
-import { ShopApiService } from '../../core/api/shop-api.service';
+import { toApiError } from '../../core/api/api-error';
+import { ApiService, SHOP_URL } from '../../core/api/api.service';
 import { ShopCategory, ShopExperience, ShopHost, ShopLocation, ShopPage } from '../../core/api/shop.models';
 
 export type HomeStatus = 'loading' | 'ready' | 'error';
@@ -18,7 +18,8 @@ const BOARD_LIMIT = 5;
  */
 @Injectable()
 export class HomeStore {
-  private readonly api = inject(ShopApiService);
+  private readonly api = inject(ApiService);
+  /** El de la última carga: al pedir otra (o salir de la página) se aborta */
   private controller: AbortController | null = null;
 
   readonly status = signal<HomeStatus>('loading');
@@ -44,23 +45,23 @@ export class HomeStore {
     this.controller?.abort();
     const controller = new AbortController();
     this.controller = controller;
-    const { signal: abort } = controller;
     this.status.set('loading');
     this.error.set(null);
 
     try {
       const [categories, hosts, locations, experiences, upcoming] = await Promise.all([
-        this.api.get<{ data: ShopCategory[] }>('/categories', { limit: RAIL_LIMIT }, abort),
-        this.api.get<{ data: ShopHost[] }>('/hosts', { limit: RAIL_LIMIT }, abort),
-        this.api.get<{ data: ShopLocation[] }>('/locations', { limit: RAIL_LIMIT }, abort),
+        this.api.get<{ data: ShopCategory[] }>(`${SHOP_URL}/categories`, { limit: RAIL_LIMIT }, { signal: controller.signal }),
+        this.api.get<{ data: ShopHost[] }>(`${SHOP_URL}/hosts`, { limit: RAIL_LIMIT }, { signal: controller.signal }),
+        this.api.get<{ data: ShopLocation[] }>(`${SHOP_URL}/locations`, { limit: RAIL_LIMIT }, { signal: controller.signal }),
         // Solo el total: una página de una
-        this.api.get<ShopPage<unknown>>('/experiences', { limit: 1 }, abort),
-        this.api.get<ShopPage<ShopExperience>>(
-          '/experiences',
-          { hasDepartures: true, sort: 'nextDepartureAt', limit: BOARD_LIMIT },
-          abort,
-        ),
+        this.api.get<ShopPage<unknown>>(`${SHOP_URL}/experiences`, { limit: 1 }, { signal: controller.signal }),
+        this.api.get<ShopPage<ShopExperience>>(`${SHOP_URL}/experiences`, {
+          hasDepartures: true,
+          sort: 'nextDepartureAt',
+          limit: BOARD_LIMIT,
+        }, { signal: controller.signal }),
       ]);
+      if (controller.signal.aborted) return;
       this.categories.set(categories.data);
       this.hosts.set(hosts.data);
       this.locations.set(locations.data);
@@ -68,8 +69,8 @@ export class HomeStore {
       this.upcoming.set(upcoming.data);
       this.status.set('ready');
     } catch (error) {
-      // Cancelada a propósito (otra carga, o se ha salido de la página): no es un fallo
-      if (isAbortError(error) || controller.signal.aborted) return;
+      // Ya hay otra carga en camino
+      if (controller.signal.aborted) return;
       this.error.set(toApiError(error).message);
       this.status.set('error');
     }

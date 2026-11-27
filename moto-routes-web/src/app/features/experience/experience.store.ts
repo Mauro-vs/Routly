@@ -1,8 +1,8 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { ApiError, isAbortError, toApiError } from '../../core/api/api-error';
-import { ShopApiService } from '../../core/api/shop-api.service';
+import { toApiError } from '../../core/api/api-error';
+import { ApiService, SHOP_URL } from '../../core/api/api.service';
 import { ShopDeparture, ShopExperienceDetail } from '../../core/api/shop.models';
 
 export type ExperienceStatus = 'loading' | 'ready' | 'notFound' | 'error';
@@ -18,8 +18,9 @@ export const DEPARTURE_PARAM = 'salida';
  */
 @Injectable()
 export class ExperienceStore {
-  private readonly api = inject(ShopApiService);
+  private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  /** El de la última carga: al pedir otra (o salir de la página) se aborta */
   private controller: AbortController | null = null;
   private readonly selectedSlug = signal<string | null>(null);
 
@@ -45,17 +46,18 @@ export class ExperienceStore {
     this.error.set(null);
 
     try {
-      const path = `/experiences/${encodeURIComponent(slug)}`;
+      const url = `${SHOP_URL}/experiences/${encodeURIComponent(slug)}`;
       const [detail, departures] = await Promise.all([
-        this.api.get<{ data: ShopExperienceDetail }>(path, {}, controller.signal),
-        this.api.get<{ data: ShopDeparture[] }>(`${path}/departures`, {}, controller.signal),
+        this.api.get<{ data: ShopExperienceDetail }>(url, {}, { signal: controller.signal }),
+        this.api.get<{ data: ShopDeparture[] }>(`${url}/departures`, {}, { signal: controller.signal }),
       ]);
+      if (controller.signal.aborted) return;
       this.experience.set(detail.data);
       this.departures.set(departures.data);
       this.status.set('ready');
     } catch (error) {
-      if (isAbortError(error) || controller.signal.aborted) return;
-      const apiError: ApiError = toApiError(error);
+      if (controller.signal.aborted) return;
+      const apiError = toApiError(error);
       this.experience.set(null);
       this.departures.set([]);
       this.error.set(apiError.message);

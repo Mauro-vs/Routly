@@ -142,3 +142,14 @@
   --plate-ink: #0f1a15;
   --plate-paper: #ffffff;
 }
+
+/* Las estrellas de las opiniones */
+:root {
+  --color-star: #b97700;
+  --color-star-off: #d3ddd6;
+}
+
+:root[data-theme='dark'] {
+  --color-star: #f2c14e;
+  --color-star-off: #2e4239;
+}

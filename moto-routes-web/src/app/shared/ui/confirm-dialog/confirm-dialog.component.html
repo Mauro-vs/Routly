@@ -1,0 +1,10 @@
+<dialog #dialog class="sheet" [attr.aria-labelledby]="id + '-title'" (close)="settle(dialog.returnValue === 'ok')">
+  <form method="dialog">
+    <h2 [id]="id + '-title'">{{ title() }}</h2>
+    @if (message()) {<p>{{ message() }}</p>}
+    <div class="buttons">
+      <button type="submit" value="cancel" class="btn-ghost">Cancelar</button>
+      <button type="submit" value="ok" class="btn-primary" [class.danger]="danger()">{{ confirmLabel() }}</button>
+    </div>
+  </form>
+</dialog>

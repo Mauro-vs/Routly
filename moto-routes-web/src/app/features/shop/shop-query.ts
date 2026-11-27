@@ -1,6 +1,5 @@
 import { ParamMap } from '@angular/router';
 
-import { ShopParams } from '../../core/api/shop-api.service';
 import { Difficulty } from '../../core/api/shop.models';
 
 /*
@@ -111,7 +110,7 @@ export function parseShopQuery(params: ParamMap): ShopQuery {
 }
 
 /** Los parámetros de GET /api/shop/experiences */
-export interface ShopApiParams extends ShopParams {
+export type ShopApiParams = {
   category?: string;
   host?: string;
   location?: string;
@@ -123,7 +122,7 @@ export interface ShopApiParams extends ShopParams {
   sort?: string;
   page: number;
   limit: number;
-}
+};
 
 export function toApiParams(query: ShopQuery): ShopApiParams {
   const params: ShopApiParams = { page: query.page, limit: PAGE_SIZE };

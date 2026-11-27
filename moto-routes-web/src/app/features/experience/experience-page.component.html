@@ -1,0 +1,134 @@
+@switch (store.status()) {
+  @case ('notFound') {
+    <section class="on-band">
+      <div class="wrap lost">
+        <h1>No hemos encontrado esta experiencia</h1>
+        <p>Puede que ya no esté disponible o que la dirección haya cambiado.</p>
+        <a class="btn-primary" routerLink="/experiencias">Ver las experiencias</a>
+      </div>
+    </section>
+  }
+  @case ('error') {
+    <section class="on-band">
+      <div class="wrap lost" role="alert">
+        <h1>No se ha podido cargar la experiencia</h1>
+        <p>{{ store.error() }}</p>
+        <button type="button" class="btn-primary" (click)="store.load(slug())"><ui-icon name="arrows-clockwise" /> Reintentar</button>
+      </div>
+    </section>
+  }
+  @default {
+    <section class="on-band head" [attr.aria-busy]="store.status() === 'loading'">
+      <div class="wrap">
+        <button type="button" class="back" (click)="back()"><ui-icon name="arrow-left" /> Volver a las experiencias</button>
+        @if (experience(); as experience) {
+          <h1 [class.is-long]="experience.title.length > 60">{{ experience.title }}</h1>
+          <p class="sub">
+            @if (experience.route?.category; as category) {<span>{{ category.name }}</span>}
+            @if (experience.host; as host) {<span>con {{ host.name }}</span>}
+            @if (experience.priceFrom !== null) {<span class="num">desde {{ price(experience.priceFrom) }}</span>}
+          </p>
+        } @else {
+          <ui-skeleton class="title-skeleton" width="min(560px, 80%)" height="48px" />
+        }
+      </div>
+    </section>
+
+    @if (experience(); as experience) {
+      <div class="wrap gallery-wrap">
+        <app-gallery [images]="experience.images" [title]="experience.title" [seed]="experience.slug" [scene]="sceneOf(experience.route?.category?.name)" />
+      </div>
+
+      <div class="wrap layout">
+        <div class="main">
+          @if (experience.route; as route) {
+            <app-route-sign class="route-sign" [route]="route" />
+            @if (route.rating?.count; as count) {
+              <p class="route-rating">
+                <ui-stars [value]="route.rating!.average" />
+                Esta ruta: <strong class="num">{{ rating(route.rating!.average) }}</strong> en {{ plural(count, 'opinión', 'opiniones') }} de sus experiencias
+              </p>
+            }
+          }
+
+          @if (experience.description) {
+            <p class="description">{{ experience.description }}</p>
+          }
+
+          <dl class="practical">
+            <div><dt><ui-icon name="map-pin" /> Punto de encuentro</dt><dd>{{ experience.meetingPoint || 'Lo confirma el anfitrión al reservar' }}</dd></div>
+            <div><dt><ui-icon name="clock" /> Duración</dt><dd class="num">{{ hours(experience.duration) }}</dd></div>
+            <div><dt><ui-icon name="translate" /> Idioma</dt><dd>{{ language(experience.language) }}</dd></div>
+            <div><dt><ui-icon name="users" /> Participantes</dt><dd class="num">De {{ experience.minParticipants }} a {{ experience.maxParticipants }}</dd></div>
+            @if (experience.guideBike; as bike) {
+              <div><dt><ui-icon name="motorcycle" /> Moto del guía</dt><dd>{{ bike.brand }} {{ bike.model }}@if (bike.version) { {{ bike.version }}}</dd></div>
+            }
+          </dl>
+
+          <!-- Routly IA: resumen, el tiempo de las salidas, paradas, qué llevar y preguntas -->
+          <app-ai-insights [slug]="experience.slug" />
+
+          @if (experience.host; as host) {
+            <section class="host" aria-labelledby="anfitrion-titulo">
+              <ui-photo class="host-photo" [src]="host.coverImage?.url ?? null" [seed]="host.slug" alt="" />
+              <div>
+                <h2 id="anfitrion-titulo">Tu anfitrión: {{ host.name }}</h2>
+                <p>{{ host.biography || 'Aún no ha contado nada sobre sí mismo.' }}</p>
+                <p class="host-links">
+                  <a [routerLink]="['/guias', host.slug]">Ver la ficha de {{ host.name }}</a>
+                  <a [routerLink]="['/experiencias']" [queryParams]="{ anfitrion: host.slug }">Más salidas con {{ host.name }}</a>
+                </p>
+              </div>
+            </section>
+          }
+
+          <app-reviews-section type="experience" [slug]="experience.slug" [targetId]="experience._id" [name]="experience.title" />
+        </div>
+
+        <aside class="booking" aria-labelledby="salidas-titulo">
+          <header class="booking-head">
+            <h2 id="salidas-titulo">Elige una salida</h2>
+            @if (experience.priceFrom !== null) {
+              <p class="booking-from num">desde <strong>{{ price(experience.priceFrom) }}</strong></p>
+            }
+          </header>
+          @if (store.departures().length > 0) {
+            <app-departure-picker
+              [departures]="store.departures()"
+              [selectedSlug]="store.selected()?.slug ?? null"
+              labelledBy="salidas-titulo"
+              (select)="store.select($event)"
+            />
+            <div class="cta">
+              @if (store.selected(); as selected) {
+                <p class="summary num">{{ shortDate(selected.startAt) }} · {{ plural(selected.seatsLeft, 'plaza libre', 'plazas libres') }} · {{ price(selected.price) }} por persona</p>
+              } @else {
+                <p class="summary muted">Elige una fecha para reservar.</p>
+              }
+              <button type="button" class="btn-primary reserve" [disabled]="!booking.available || !store.selected()" aria-describedby="reserva-motivo">
+                Reservar
+              </button>
+              <p id="reserva-motivo" class="reason">{{ unavailable }}</p>
+            </div>
+          } @else {
+            <p class="no-dates">Aún no hay salidas programadas para esta experiencia. Vuelve pronto o mira otras salidas de {{ experience.host?.name ?? 'su anfitrión' }}.</p>
+          }
+        </aside>
+
+        <!-- En el móvil, la salida elegida y el botón siempre a la vista, abajo -->
+        @if (store.departures().length > 0) {
+          <div class="mobile-bar on-band" aria-hidden="true">
+            <p class="num">
+              @if (store.selected(); as selected) {
+                <strong>{{ shortDate(selected.startAt) }}</strong> · {{ price(selected.price) }}
+              } @else {
+                desde <strong>{{ price(experience.priceFrom ?? 0) }}</strong>
+              }
+            </p>
+            <a class="btn-primary" href="#salidas-titulo" tabindex="-1">{{ store.selected() ? 'Ver la reserva' : 'Elegir fecha' }}</a>
+          </div>
+        }
+      </div>
+    }
+  }
+}

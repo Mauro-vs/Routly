@@ -1,8 +1,8 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { ParamMap, Params, Router } from '@angular/router';
 
-import { isAbortError, toApiError } from '../../core/api/api-error';
-import { ShopApiService } from '../../core/api/shop-api.service';
+import { toApiError } from '../../core/api/api-error';
+import { ApiService, SHOP_URL } from '../../core/api/api.service';
 import { ShopCategory, ShopExperience, ShopHost, ShopLocation, ShopPage } from '../../core/api/shop.models';
 import { ActiveFilter } from '../../shared/ui/active-filters/active-filters.component';
 import { DIFFICULTIES, EMPTY_QUERY, SortKey, ShopQuery, URL_PARAMS, parseShopQuery, toApiParams } from './shop-query';
@@ -26,15 +26,15 @@ const FACETS_LIMIT = 50;
  * cada vez que cambian, y las acciones (filtrar, buscar, ordenar) no tocan el estado: escriben la
  * URL, que vuelve aquí por `sync`. Así recargar, compartir el enlace o ir atrás enseñan lo mismo.
  *
- * Sin carreras: cada petición tiene su AbortController y una nueva aborta la anterior, así una
- * respuesta vieja nunca pisa a la nueva. Mientras llega, se sigue viendo lo anterior.
+ * Sin carreras: cada búsqueda lleva su AbortController y, al llegar otra, se aborta la anterior,
+ * así una respuesta vieja nunca pisa a la nueva. Mientras llega, se sigue viendo lo anterior.
  */
 @Injectable()
 export class ShopStore {
-  private readonly api = inject(ShopApiService);
+  private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  /** El de la última búsqueda: al pedir otra (o salir del Shop) se aborta */
   private controller: AbortController | null = null;
-  private facetsController: AbortController | null = null;
 
   readonly query = signal<ShopQuery>(EMPTY_QUERY);
   readonly status = signal<ShopStatus>('loading');
@@ -70,17 +70,13 @@ export class ShopStore {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.controller?.abort();
-      this.facetsController?.abort();
-    });
+    // Al salir del Shop se cancela lo pendiente: lo que llegue tarde ya no se pinta (ni cambia la URL)
+    inject(DestroyRef).onDestroy(() => this.controller?.abort());
   }
 
   /** Las opciones de los filtros: una vez, al entrar. Si fallan, los filtros se quedan sin opciones. */
   loadFacets(): void {
-    const controller = new AbortController();
-    this.facetsController = controller;
-    const get = <T>(path: string) => this.api.get<{ data: T[] }>(path, { limit: FACETS_LIMIT }, controller.signal);
+    const get = <T>(path: string) => this.api.get<{ data: T[] }>(`${SHOP_URL}${path}`, { limit: FACETS_LIMIT });
     void Promise.all([get<ShopCategory>('/categories'), get<ShopHost>('/hosts'), get<ShopLocation>('/locations')])
       .then(([categories, hosts, locations]) => {
         this.categories.set(categories.data);
@@ -150,7 +146,10 @@ export class ShopStore {
     this.error.set(null);
 
     try {
-      const result = await this.api.get<ShopPage<ShopExperience>>('/experiences', toApiParams(query), controller.signal);
+      const result = await this.api.get<ShopPage<ShopExperience>>(`${SHOP_URL}/experiences`, toApiParams(query), {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
       const { total, totalPages } = result.pagination;
 
       // Una página que ya no existe (se ha quitado algo, o la URL es vieja): a la última, sin
@@ -169,8 +168,8 @@ export class ShopStore {
       this.loadedOnce.set(true);
       this.status.set('ready');
     } catch (error) {
-      // Abortada a propósito: ya hay otra en camino (o se ha salido de la página)
-      if (isAbortError(error) || controller.signal.aborted) return;
+      // Ya hay otra búsqueda en camino (o se ha salido de la página)
+      if (controller.signal.aborted) return;
       this.error.set(toApiError(error).message);
       this.status.set('error');
     }

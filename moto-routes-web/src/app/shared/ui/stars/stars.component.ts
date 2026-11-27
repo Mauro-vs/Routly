@@ -13,50 +13,8 @@ export const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.7
 @Component({
   selector: 'ui-stars',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <span class="row" aria-hidden="true">
-      @for (star of five; track star) {
-        <svg viewBox="0 0 24 24"><polygon [attr.points]="points" /></svg>
-      }
-      <span class="on" [style.width.%]="percent()">
-        @for (star of five; track star) {
-          <svg viewBox="0 0 24 24"><polygon [attr.points]="points" /></svg>
-        }
-      </span>
-    </span>
-    <span class="sr-only">{{ label() }}</span>
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-      vertical-align: -0.125em;
-    }
-
-    .row {
-      position: relative;
-      display: inline-flex;
-      gap: 0.08em;
-    }
-
-    svg {
-      flex: none;
-      width: 1em;
-      height: 1em;
-      fill: var(--color-star-off);
-    }
-
-    .on {
-      position: absolute;
-      inset: 0 auto 0 0;
-      display: inline-flex;
-      gap: 0.08em;
-      overflow: hidden;
-    }
-
-    .on svg {
-      fill: var(--color-star);
-    }
-  `,
+  templateUrl: './stars.component.html',
+  styleUrl: './stars.component.css',
 })
 export class StarsComponent {
   /** La nota, de 0 a 5 */

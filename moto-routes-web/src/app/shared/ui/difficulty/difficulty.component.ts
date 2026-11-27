@@ -12,37 +12,8 @@ const LEVELS: Record<Difficulty, { level: number; label: string }> = {
 @Component({
   selector: 'ui-difficulty',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <span class="tramos" aria-hidden="true">
-      @for (n of [1, 2, 3]; track n) {
-        <i [class.on]="n <= info().level"></i>
-      }
-    </span>
-    {{ info().label }}
-  `,
-  styles: `
-    :host {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .tramos {
-      display: inline-flex;
-      gap: 2px;
-    }
-
-    i {
-      width: 9px;
-      height: 6px;
-      background: var(--color-meter-track);
-      transform: skewX(var(--slant));
-    }
-
-    i.on {
-      background: var(--color-meter);
-    }
-  `,
+  templateUrl: './difficulty.component.html',
+  styleUrl: './difficulty.component.css',
 })
 export class DifficultyComponent {
   readonly value = input.required<Difficulty>();

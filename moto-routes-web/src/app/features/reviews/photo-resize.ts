@@ -1,5 +1,4 @@
-import { PhotoTooLargeError, UnreadablePhotoError } from './review-errors';
-import { REVIEW_LIMITS } from '../../core/reviews/reviews.models';
+import { REVIEW_LIMITS } from './reviews.models';
 
 /** El lado mayor de una foto subida, en píxeles */
 export const PHOTO_MAX_SIDE = 1600;
@@ -47,3 +46,9 @@ export async function resizePhoto(file: Blob, maxBytes: number = REVIEW_LIMITS.p
   }
   throw new PhotoTooLargeError();
 }
+
+/** La foto no baja de 1 MB ni con la calidad más baja. */
+export class PhotoTooLargeError extends Error {}
+
+/** El navegador no ha podido abrir el archivo como imagen. */
+export class UnreadablePhotoError extends Error {}

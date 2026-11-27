@@ -1,0 +1,19 @@
+<div class="wrap bar">
+  <a class="brand" routerLink="/" aria-label="Routly, ir al inicio"><ui-brand-mark /></a>
+  <nav aria-label="Principal">
+    <a routerLink="/" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">Inicio</a>
+    <a routerLink="/experiencias" routerLinkActive="is-active" ariaCurrentWhenActive="page">Experiencias</a>
+  </nav>
+  @if (auth.isLoggedIn()) {
+    <a class="account" routerLink="/mi-cuenta" routerLinkActive="is-active" ariaCurrentWhenActive="page" aria-label="Mi cuenta">
+      <ui-icon name="user-circle" /><span>{{ auth.firstName() }}</span>
+    </a>
+  } @else {
+    <a class="account" routerLink="/entrar" routerLinkActive="is-active" ariaCurrentWhenActive="page" aria-label="Entrar">
+      <ui-icon name="user-circle" /><span>Entrar</span>
+    </a>
+  }
+  <button type="button" class="theme" [attr.aria-label]="themeLabel()" (click)="theme.toggle()">
+    <ui-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" />
+  </button>
+</div>

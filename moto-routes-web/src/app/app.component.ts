@@ -16,42 +16,8 @@ import { SiteHeaderComponent } from './layout/site-header/site-header.component'
   selector: 'app-root',
   imports: [RouterOutlet, SiteHeaderComponent, SiteFooterComponent, AiChatComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <a class="skip" href="#contenido">Saltar al contenido</a>
-    <app-site-header [overlay]="isHome()" />
-    <main id="contenido" tabindex="-1"><router-outlet /></main>
-    <app-site-footer />
-    <app-ai-chat />
-  `,
-  styles: `
-    :host {
-      display: flex;
-      flex-direction: column;
-      min-height: 100dvh;
-    }
-
-    main {
-      flex: 1;
-      outline: none;
-    }
-
-    .skip {
-      position: absolute;
-      top: var(--space-2);
-      left: var(--space-2);
-      z-index: 100;
-      padding: var(--space-2) var(--space-4);
-      border-radius: var(--radius-md);
-      background: var(--color-accent);
-      color: var(--color-on-accent);
-      font-weight: 750;
-      transform: translateY(-200%);
-    }
-
-    .skip:focus {
-      transform: none;
-    }
-  `,
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.css',
 })
 export class AppComponent {
   private readonly router = inject(Router);

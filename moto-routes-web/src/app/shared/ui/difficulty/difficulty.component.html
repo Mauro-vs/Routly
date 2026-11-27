@@ -1,0 +1,6 @@
+<span class="tramos" aria-hidden="true">
+  @for (n of [1, 2, 3]; track n) {
+    <i [class.on]="n <= info().level"></i>
+  }
+</span>
+{{ info().label }}

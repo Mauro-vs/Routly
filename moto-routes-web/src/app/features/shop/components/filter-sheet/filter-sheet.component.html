@@ -1,0 +1,34 @@
+<dialog #dialog aria-labelledby="filter-sheet-title" (click)="closeOnBackdrop($event)">
+  <div class="sheet">
+    <header>
+      <h2 id="filter-sheet-title">Filtros</h2>
+      <button type="button" class="close" aria-label="Cerrar los filtros" (click)="close()"><ui-icon name="x" /></button>
+    </header>
+    <div class="groups">
+      @for (plate of plates(); track plate.key) {
+        <ui-filter-group
+          [legend]="plate.label"
+          [allLabel]="plate.allLabel"
+          [options]="plate.options"
+          [value]="plate.value"
+          (valueChange)="filterChange.emit({ key: plate.key, value: $event })"
+        />
+      }
+      <ui-price-range
+        class="price"
+        [floor]="priceRange.floor"
+        [ceiling]="priceRange.ceiling"
+        [step]="priceRange.step"
+        [value]="price()"
+        (valueChange)="priceChange.emit($event)"
+      />
+      <label class="switch">
+        <input #dates type="checkbox" [checked]="withDates()" (change)="withDatesChange.emit(dates.checked)" />
+        Solo las que tienen fechas
+      </label>
+    </div>
+    <footer>
+      <button type="button" class="btn-primary" (click)="close()">{{ resultsLabel() }}</button>
+    </footer>
+  </div>
+</dialog>

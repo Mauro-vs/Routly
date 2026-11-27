@@ -1,0 +1,20 @@
+<section class="account-page">
+  @if (store.user(); as user) {
+    <div class="account-card">
+      <h1>Hola, {{ store.firstName() }}</h1>
+      <dl>
+        <dt>Nombre</dt>
+        <dd>{{ user.name }}</dd>
+        <dt>Correo</dt>
+        <dd>{{ user.email }}</dd>
+        <dt>Tipo de cuenta</dt>
+        <dd>{{ roleLabel() }}</dd>
+      </dl>
+      <p>Tu sesión se renueva sola mientras uses la web. Si pasas 7 días sin entrar, tendrás que volver a hacerlo.</p>
+      <div class="actions">
+        <button class="btn-primary" type="button" [disabled]="leaving()" (click)="logout(false)">Cerrar sesión</button>
+        <button class="btn-ghost" type="button" [disabled]="leaving()" (click)="logout(true)">Cerrar en todos los dispositivos</button>
+      </div>
+    </div>
+  }
+</section>

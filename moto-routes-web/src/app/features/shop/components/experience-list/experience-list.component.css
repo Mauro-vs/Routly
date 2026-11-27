@@ -1,0 +1,48 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-7) var(--space-5);
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.grid.is-stale {
+  opacity: 0.5;
+}
+
+/* Una tarjeta nueva (otra página, otro filtro) entra subiendo un poco, en cascada: se ve que el
+   resultado ha cambiado. Las que ya estaban no se vuelven a animar (track por _id) */
+.enter {
+  animation: card-in 280ms var(--motion-ease) both;
+  animation-delay: calc(min(var(--i), 8) * 40ms);
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter {
+    animation: card-fade 160ms linear both;
+    animation-delay: 0ms;
+  }
+
+  @keyframes card-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+.ghost {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ghost .photo {
+  height: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+}

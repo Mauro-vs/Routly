@@ -1,0 +1,16 @@
+<dialog #dialog aria-label="Fotos de los clientes" (keydown)="onKey($event)" (close)="index.set(-1)" (click)="onBackdrop($event)">
+  @if (current(); as photo) {
+    <figure>
+      <img [src]="photo.url" [attr.width]="photo.width" [attr.height]="photo.height" alt="Foto de un cliente" />
+      <figcaption>
+        <span class="num">{{ index() + 1 }} de {{ photos().length }}</span>
+        @if (photo.author) {<span>de {{ photo.author }}</span>}
+      </figcaption>
+    </figure>
+    @if (photos().length > 1) {
+      <button type="button" class="nav prev" (click)="step(-1)" aria-label="Foto anterior"><ui-icon name="caret-left" /></button>
+      <button type="button" class="nav next" (click)="step(1)" aria-label="Foto siguiente"><ui-icon name="caret-right" /></button>
+    }
+  }
+  <button type="button" class="close" (click)="close()" aria-label="Cerrar"><ui-icon name="x" /></button>
+</dialog>

@@ -1,0 +1,7 @@
+<a [routerLink]="link() ?? ['/experiencias']" [queryParams]="link() ? null : queryParams()">
+  <ui-photo [src]="photo()" [seed]="seed()" [scene]="scene()" alt="" />
+  <span class="plate" [class]="'plate plate--' + kind()">
+    <span class="name">{{ name() }}</span>
+    <span class="count num">{{ countLabel() }}</span>
+  </span>
+</a>

@@ -1,0 +1,43 @@
+<section class="board" aria-labelledby="salidas-titulo">
+  <header class="head">
+    <h2 id="salidas-titulo">Próximas salidas</h2>
+    <a class="all" routerLink="/experiencias" [queryParams]="{ 'con-fechas': 'si', orden: 'proximas' }">
+      Ver todas <ui-icon name="arrow-right" />
+    </a>
+  </header>
+  <ol class="rows">
+    @for (experience of experiences(); track experience._id; let i = $index) {
+      @if (experience.nextDepartureAt; as next) {
+        <li class="enter" [style.--i]="i">
+          <a class="row" [routerLink]="['/experiencias', experience.slug]">
+            <span class="date num" aria-hidden="true">
+              <span class="weekday">{{ weekday(next) }}</span>
+              <strong>{{ day(next) }}</strong>
+              <span class="month">{{ month(next) }}</span>
+            </span>
+            <span class="what">
+              <span class="title">{{ experience.title }}</span>
+              @if (experience.route; as route) {
+                <span class="trip">
+                  {{ route.startLocation?.city }}
+                  @if (route.endLocation && route.endLocation.city !== route.startLocation?.city) {
+                    <ui-icon name="arrow-right" class="to" />{{ route.endLocation.city }}
+                  }
+                  <span class="sep" aria-hidden="true">·</span>
+                  <span class="num">{{ km(route.distance) }} km</span>
+                  <span class="sep" aria-hidden="true">·</span>
+                  <span class="num">{{ time(next) }}</span>
+                </span>
+              }
+            </span>
+            <span class="sr-only">Sale el {{ weekday(next) }} {{ day(next) }} de {{ month(next) }}.</span>
+            @if (experience.priceFrom !== null) {
+              <span class="price num"><span class="from">desde</span> {{ price(experience.priceFrom) }}</span>
+            }
+            <ui-icon name="arrow-right" class="go" />
+          </a>
+        </li>
+      }
+    }
+  </ol>
+</section>

@@ -10,23 +10,8 @@ import { ICONS, IconName } from './icons.generated';
 @Component({
   selector: 'ui-icon',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
-    <path [attr.d]="path()" />
-  </svg>`,
-  styles: `
-    :host {
-      display: inline-flex;
-      flex: none;
-      width: 1em;
-      height: 1em;
-    }
-
-    svg {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-  `,
+  templateUrl: './icon.component.html',
+  styleUrl: './icon.component.css',
   host: { 'aria-hidden': 'true' },
 })
 export class IconComponent {

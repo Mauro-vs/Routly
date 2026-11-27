@@ -1,0 +1,69 @@
+<section class="block" aria-labelledby="ia-recorrido">
+  <h2 id="ia-recorrido">El recorrido</h2>
+  @switch (piece().status) {
+    @case ('loading') {
+      <ui-skeleton height="360px" aria-hidden="true" />
+    }
+    @case ('ready') {
+      @if (piece().data; as data) {
+        <p class="trip">{{ trip(data) }}@if (length(data); as length) {<span class="muted num"> · {{ length }}</span>}</p>
+        @if (groups().length > 0) {
+          <div class="filters" role="group" aria-label="Qué enseñar en el mapa">
+            @for (group of groups(); track group.kind) {
+              <button
+                type="button"
+                class="chip"
+                [style.--kind]="group.fill"
+                [attr.aria-pressed]="!hidden().has(group.kind)"
+                (click)="toggle(group.kind)"
+              >
+                <span class="badge"><ui-icon [name]="group.icon" /></span>{{ group.title }}<span class="num">{{ group.places.length }}</span>
+              </button>
+            }
+          </div>
+        }
+        <div #map class="map" role="region" aria-label="Mapa del recorrido con dónde comer, miradores y gasolineras"></div>
+        <ul class="legend small muted">
+          <li><span class="dot"></span>Salida@if (!data.end) { y llegada}</li>
+          @if (data.waypoints.length > 0) {
+            <li><span class="dot dot--waypoint"></span>Puntos de paso</li>
+          }
+          @if (data.end) {
+            <li><span class="dot dot--end"></span>Llegada</li>
+          }
+        </ul>
+        @if (!data.routed && data.line) {
+          <p class="small muted">No hemos podido calcular la carretera: la línea une los puntos en recto.</p>
+        }
+        @switch (data.placesStatus) {
+          @case ('loading') {
+            <p class="small muted" role="status">Buscando dónde comer, miradores y gasolineras a lo largo del recorrido…</p>
+          }
+          @case ('unavailable') {
+            <p class="small muted">Los sitios del recorrido no están disponibles ahora mismo.</p>
+          }
+          @default {
+            @if (groups().length === 0) {
+              <p class="small muted">No hay sitios en el mapa cerca del recorrido.</p>
+            } @else {
+              <ol class="cards" aria-label="Sitios en el orden del recorrido">
+                @for (place of shown(); track place.url) {
+                  <li>
+                    <button type="button" class="card" [style.--kind]="kinds[place.kind].fill" (click)="focus(place)">
+                      <span class="badge"><ui-icon [name]="kinds[place.kind].icon" /></span>
+                      <span class="name">{{ place.name ?? kinds[place.kind].unnamed }}</span>
+                      <span class="small muted num">{{ where(place, data) }}</span>
+                    </button>
+                  </li>
+                }
+              </ol>
+            }
+          }
+        }
+      }
+    }
+    @default {
+      <p class="muted">El mapa no está disponible ahora mismo.</p>
+    }
+  }
+</section>

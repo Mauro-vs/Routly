@@ -14,7 +14,7 @@ describe('AppComponent', () => {
       imports: [AppComponent],
       providers: [
         provideZonelessChangeDetection(),
-        // El asistente flotante (AiApiService) usa HttpClient
+        // El asistente flotante (ChatStore) usa HttpClient
         provideHttpClient(),
         provideRouter([
           { path: '', component: PageStubComponent },

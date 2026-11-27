@@ -13,58 +13,8 @@ import { SceneKind } from '../../../../shared/ui/photo/landscape';
   selector: 'app-gallery',
   imports: [CarouselComponent, PhotoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (images().length > 0) {
-      <ui-carousel [label]="'Fotos de ' + title()">
-        @for (image of images(); track image._id; let first = $first; let i = $index) {
-          <figure class="slide" tabindex="0" [attr.aria-label]="'Foto ' + (i + 1) + ' de ' + images().length">
-            <ui-photo [src]="image.url" [alt]="image.alt || title()" [seed]="seed() + i" [scene]="scene()" [priority]="first" />
-          </figure>
-        }
-      </ui-carousel>
-    } @else {
-      <figure class="slide single">
-        <ui-photo [src]="null" [seed]="seed()" [scene]="scene()" [alt]="'Sin fotos de ' + title() + ' todavía'" />
-      </figure>
-    }
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-
-    .slide {
-      width: min(78vw, 860px);
-      margin: 0;
-      border-radius: var(--radius-lg);
-    }
-
-    .slide.single {
-      width: 100%;
-    }
-
-    ui-photo {
-      aspect-ratio: 16 / 9;
-      max-height: min(56vh, 520px);
-      width: 100%;
-      border-radius: var(--radius-lg);
-    }
-
-    .slide:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
-    }
-
-    @media (max-width: 560px) {
-      .slide {
-        width: 86vw;
-      }
-
-      ui-photo {
-        aspect-ratio: 4 / 3;
-      }
-    }
-  `,
+  templateUrl: './gallery.component.html',
+  styleUrl: './gallery.component.css',
 })
 export class GalleryComponent {
   readonly images = input.required<ShopImage[]>();

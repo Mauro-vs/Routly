@@ -6,12 +6,8 @@ import { Title } from '@angular/platform-browser';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
-import { AiApiService } from '../../core/ai/ai-api.service';
-import { ReviewsApiService } from '../../core/reviews/reviews-api.service';
 import { ExperiencePageComponent } from './experience-page.component';
 import { DETAIL, flushDetail } from './testing/experience.fixtures';
-
-const pending = (): Promise<never> => new Promise<never>(() => undefined);
 
 describe('ExperiencePageComponent', () => {
   let http: HttpTestingController;
@@ -24,17 +20,17 @@ describe('ExperiencePageComponent', () => {
         provideRouter([{ path: 'experiencias/:slug', component: ExperiencePageComponent }], withComponentInputBinding()),
         provideHttpClient(),
         provideHttpClientTesting(),
-        // El bloque Routly IA tiene sus propios tests: aquí sus peticiones no acaban nunca
-        { provide: AiApiService, useValue: { insights: pending, weather: pending, stops: pending, reviewsSummary: pending } },
-        // Las opiniones también tienen los suyos (features/reviews)
-        { provide: ReviewsApiService, useValue: { list: pending, mine: pending } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
     harness = await RouterTestingHarness.create();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // Las opiniones y el bloque Routly IA tienen sus propios tests: aquí sus peticiones se tiran
+    http.match((request) => request.url.includes('/reviews') || request.url.startsWith('/ai'));
+    http.verify();
+  });
 
   async function open(url: string, flush: (http: HttpTestingController) => void = flushDetail): Promise<HTMLElement> {
     await harness.navigateByUrl(url);

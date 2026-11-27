@@ -1,0 +1,38 @@
+<section class="hero" [attr.aria-busy]="store.status() === 'loading'">
+  <ui-photo class="backdrop" [src]="store.cover()?.url ?? null" [seed]="store.cover()?.seed ?? 'routly'" scene="pass" alt="" [priority]="true" />
+  <div class="wrap hero-body">
+    <app-sign-panel
+      [categories]="store.categories()"
+      [loading]="store.status() === 'loading'"
+      [error]="store.error()"
+      (search)="search($event)"
+      (retry)="store.load()"
+    />
+    @if (store.total(); as total) {
+      <p class="milestone num" [class.is-wide]="totalLabel().length > 4">
+        <span class="cap" aria-hidden="true">Routly</span>
+        <span class="body"><strong>{{ totalLabel() }}</strong> {{ total === 1 ? 'experiencia' : 'experiencias' }}</span>
+        <span class="post" aria-hidden="true"></span>
+      </p>
+    }
+  </div>
+</section>
+
+@if (store.status() === 'ready') {
+  @if (store.upcoming().length > 0) {
+    <div class="board-band on-band">
+      <app-departures-board class="wrap" [experiences]="store.upcoming()" />
+    </div>
+  }
+  <div class="wrap rails">
+    @if (locations().length > 0) {
+      <app-place-rail id="destinos" headingId="destinos-titulo" title="Destinos" allLabel="Todos los destinos" kind="town" [items]="locations()" />
+    }
+    @if (categories().length > 0) {
+      <app-place-rail id="carreteras" headingId="carreteras-titulo" title="Tipos de carretera" kind="route" [items]="categories()" />
+    }
+    @if (hosts().length > 0) {
+      <app-place-rail id="guias" headingId="guias-titulo" title="Con quién rodar" allLabel="Todos los guías" kind="guide" [items]="hosts()" />
+    }
+  </div>
+}

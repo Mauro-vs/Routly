@@ -90,3 +90,9 @@
   display: inline-block;
   transform: skewX(var(--slant-text));
 }
+
+/* Un botón principal que aún no se puede pulsar (el formulario sin terminar) */
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

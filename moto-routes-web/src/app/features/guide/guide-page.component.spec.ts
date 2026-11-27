@@ -5,12 +5,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
-import { AiApiService } from '../../core/ai/ai-api.service';
 import { ShopHostDetail } from '../../core/api/shop.models';
-import { ReviewsApiService } from '../../core/reviews/reviews-api.service';
 import { GuidePageComponent } from './guide-page.component';
-
-const pending = (): Promise<never> => new Promise<never>(() => undefined);
 
 const GUIDE: ShopHostDetail = {
   _id: 'h1',
@@ -34,15 +30,17 @@ describe('GuidePageComponent', () => {
         provideRouter([{ path: 'guias/:slug', component: GuidePageComponent }], withComponentInputBinding()),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ReviewsApiService, useValue: { list: pending, mine: pending } },
-        { provide: AiApiService, useValue: { reviewsSummary: pending } },
       ],
     });
     http = TestBed.inject(HttpTestingController);
     harness = await RouterTestingHarness.create();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // Las opiniones y el bloque Routly IA tienen sus propios tests: aquí sus peticiones se tiran
+    http.match((request) => request.url.includes('/reviews') || request.url.startsWith('/ai'));
+    http.verify();
+  });
 
   async function open(flush: (http: HttpTestingController) => void): Promise<HTMLElement> {
     await harness.navigateByUrl('/guias/lucia-ferrer-1');

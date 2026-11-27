@@ -1,5 +1,4 @@
-import { PhotoTooLargeError, UnreadablePhotoError } from './review-errors';
-import { fitInside, resizePhoto } from './photo-resize';
+import { PhotoTooLargeError, UnreadablePhotoError, fitInside, resizePhoto } from './photo-resize';
 
 // Una foto de verdad, pintada en un canvas: con ruido para que no se comprima a casi nada
 async function photo(width: number, height: number, type = 'image/png'): Promise<Blob> {

@@ -1,9 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AiApiService, AiError } from '../../../../core/ai/ai-api.service';
-import { AiChatContextService } from '../../../../core/ai/ai-chat-context.service';
 import { AiInsights, AiRouteMap, AiStops, AiWeather } from '../../../../core/ai/ai.models';
+import { ApiService } from '../../../../core/api/api.service';
+import { ChatStore } from '../../../../layout/ai-chat/chat.store';
 import { AiInsightsComponent } from './ai-insights.component';
 
 const PLACE = { city: 'Palma', region: 'Illes Balears', latitude: 39.57, longitude: 2.65 };
@@ -67,13 +68,28 @@ const ROUTE: AiRouteMap = {
   },
 };
 
+/** Un fallo del servidor de IA con ese status (503: no hay IA configurada) */
+const aiError = (status: number): HttpErrorResponse => new HttpErrorResponse({ status, url: '/ai' });
+
 describe('AiInsightsComponent', () => {
-  let api: jasmine.SpyObj<AiApiService>;
+  // Una pieza por endpoint (/ai/experiences/:slug/<pieza>): reciben el slug y devuelven los datos
+  const api = {
+    insights: jasmine.createSpy('insights'),
+    weather: jasmine.createSpy('weather'),
+    stops: jasmine.createSpy('stops'),
+    routeMap: jasmine.createSpy('routeMap'),
+  };
+  const PIECES: Record<string, jasmine.Spy> = { insights: api.insights, weather: api.weather, stops: api.stops, route: api.routeMap };
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<AiApiService>('AiApiService', ['insights', 'weather', 'stops', 'routeMap']);
+    Object.values(api).forEach((spy) => spy.calls.reset());
     api.routeMap.and.resolveTo(ROUTE);
-    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: AiApiService, useValue: api }] });
+    // El store pide por ApiService: aquí se reparte cada URL a su pieza
+    const get = async (url: string) => {
+      const [, slug, piece] = /\/ai\/experiences\/([^/]+)\/(\w+)$/.exec(url) ?? [];
+      return { data: await PIECES[piece](slug) };
+    };
+    TestBed.configureTestingModule({ providers: [provideZonelessChangeDetection(), { provide: ApiService, useValue: { get } }] });
   });
 
   async function render(): Promise<{ fixture: ComponentFixture<AiInsightsComponent>; element: HTMLElement }> {
@@ -93,7 +109,7 @@ describe('AiInsightsComponent', () => {
     api.stops.and.resolveTo(STOPS);
     const { element } = await render();
 
-    expect(api.insights).toHaveBeenCalledWith('calas-de-mallorca', jasmine.any(AbortSignal));
+    expect(api.insights).toHaveBeenCalledWith('calas-de-mallorca');
     expect(text(element)).toContain('Una vuelta por las calas del sur de Mallorca.');
     expect(text(element)).toContain('Quien ya hace curvas con soltura');
     expect(text(element)).toContain('Lluvia débil');
@@ -104,7 +120,7 @@ describe('AiInsightsComponent', () => {
   });
 
   it('sin IA configurada (503) no salen los textos, pero sí el tiempo y las paradas', async () => {
-    api.insights.and.rejectWith(new AiError('AI is not configured', 503));
+    api.insights.and.rejectWith(aiError(503));
     api.weather.and.resolveTo(WEATHER);
     api.stops.and.resolveTo(STOPS);
     const { element } = await render();
@@ -118,7 +134,7 @@ describe('AiInsightsComponent', () => {
   });
 
   it('si falla la IA se puede reintentar', async () => {
-    api.insights.and.rejectWith(new AiError('Bad gateway', 502));
+    api.insights.and.rejectWith(aiError(502));
     api.weather.and.resolveTo(WEATHER);
     api.stops.and.resolveTo(STOPS);
     const { fixture, element } = await render();
@@ -138,7 +154,7 @@ describe('AiInsightsComponent', () => {
     api.weather.and.resolveTo(WEATHER);
     api.stops.and.resolveTo(STOPS);
     const { element } = await render();
-    const chat = TestBed.inject(AiChatContextService);
+    const chat = TestBed.inject(ChatStore);
 
     element.querySelector<HTMLButtonElement>('.ask .chip')?.click();
 
@@ -161,7 +177,7 @@ describe('AiInsightsComponent', () => {
     api.stops.and.resolveTo(STOPS);
     const { fixture, element } = await render();
 
-    expect(api.routeMap).toHaveBeenCalledWith('calas-de-mallorca', jasmine.any(AbortSignal));
+    expect(api.routeMap).toHaveBeenCalledWith('calas-de-mallorca');
     expect(text(element.querySelector('.trip'))).toBe('Palma → Valldemossa → Sóller · 61 km por carretera, unas 1,1 h sin paradas');
     // Un filtro por tipo, con cuántos hay; sin gasolineras, no sale ese filtro
     const chips = Array.from(element.querySelectorAll('.filters .chip'), (chip) => text(chip));
@@ -221,7 +237,7 @@ describe('AiInsightsComponent', () => {
     api.insights.and.resolveTo(INSIGHTS);
     api.weather.and.resolveTo(WEATHER);
     api.stops.and.resolveTo(STOPS);
-    api.routeMap.and.rejectWith(new AiError('Bad gateway', 502));
+    api.routeMap.and.rejectWith(aiError(502));
     const { element } = await render();
 
     expect(text(element)).toContain('El mapa no está disponible ahora mismo.');

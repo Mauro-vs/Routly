@@ -1,0 +1,29 @@
+:host {
+  display: inline-flex;
+  vertical-align: -0.125em;
+}
+
+.row {
+  position: relative;
+  display: inline-flex;
+  gap: 0.08em;
+}
+
+svg {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  fill: var(--color-star-off);
+}
+
+.on {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: inline-flex;
+  gap: 0.08em;
+  overflow: hidden;
+}
+
+.on svg {
+  fill: var(--color-star);
+}

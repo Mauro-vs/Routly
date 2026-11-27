@@ -1,0 +1,76 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+[role='region'] {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.controls {
+  display: flex;
+  justify-content: end;
+  gap: var(--space-2);
+  order: -1;
+}
+
+button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background var(--motion-fast), opacity var(--motion-fast);
+}
+
+button:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.track {
+  display: flex;
+  gap: var(--carousel-gap, var(--space-4));
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--carousel-inset, 0px);
+  padding-inline: var(--carousel-inset, 0px);
+  padding-block: 4px;
+  scrollbar-width: none;
+  cursor: grab;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mientras se arrastra con el ratón, sin imán: el contenido sigue al puntero */
+.track.is-dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+
+.track > ::ng-deep * {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.track.is-dragging > ::ng-deep * {
+  pointer-events: none;
+}

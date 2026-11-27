@@ -1,0 +1,57 @@
+<section class="block" aria-labelledby="ia-tiempo">
+  <h2 id="ia-tiempo">El tiempo en tus fechas</h2>
+  @switch (piece().status) {
+    @case ('loading') {
+      <ui-skeleton height="96px" aria-hidden="true" />
+    }
+    @case ('ready') {
+      @if (piece().data; as data) {
+        @if (data.departures.length === 0) {
+          <p class="muted">Cuando haya salidas programadas, aquí verás el tiempo de cada una.</p>
+        } @else {
+          <p class="muted small">En {{ data.place.city }}, el punto de salida.</p>
+          <ul class="departures">
+            @for (departure of data.departures; track departure.startAt) {
+              <li class="departure">
+                <p class="departure-head">
+                  <strong class="num">{{ weekday(departure.startAt) }}</strong>
+                  @if (departure.kind === 'forecast') {
+                    <span class="tag">Previsión</span>
+                  } @else {
+                    <span class="tag tag-muted" title="Aún no hay previsión para esa fecha">Referencia: así fue en {{ departure.referenceYear }}</span>
+                  }
+                </p>
+                <ul class="days">
+                  @for (day of departure.days; track day.date) {
+                    <li class="day">
+                      <ui-icon class="day-icon" [name]="weatherIcon(day.icon)" />
+                      <span class="day-date num">{{ shortDate(day.date) }}</span>
+                      <span class="day-label">{{ day.label }}</span>
+                      <span class="day-temp num">{{ degrees(day.max) }} / {{ degrees(day.min) }}</span>
+                      <span class="day-meta num">
+                        @if (day.rainChance !== null) {<span><ui-icon name="drop" /> {{ day.rainChance }} %</span>}
+                        @if (day.wind !== null) {<span><ui-icon name="wind" /> {{ number(day.wind) }} km/h</span>}
+                      </span>
+                    </li>
+                  }
+                </ul>
+                @if (warningsOf(departure.days); as warnings) {
+                  @if (warnings.length > 0) {
+                    <ul class="warnings" aria-label="Avisos">
+                      @for (warning of warnings; track warning) {
+                        <li><ui-icon name="warning-circle" /> {{ warningLabel(warning) }}</li>
+                      }
+                    </ul>
+                  }
+                }
+              </li>
+            }
+          </ul>
+        }
+      }
+    }
+    @default {
+      <p class="muted">El tiempo no está disponible ahora mismo.</p>
+    }
+  }
+</section>

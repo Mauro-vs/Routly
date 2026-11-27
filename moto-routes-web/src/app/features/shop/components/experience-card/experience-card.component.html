@@ -1,0 +1,46 @@
+<a [routerLink]="['/experiencias', experience().slug]">
+  <div class="media">
+    <ui-photo [src]="experience().coverImage?.url ?? null" [seed]="experience().slug" [scene]="scene()" alt="" />
+    @if (route()?.category; as category) {
+      <!-- El tipo de carretera, como una placa de señal: verde con su filete blanco -->
+      <span class="plate">{{ category.name }}</span>
+    }
+    @if (route()) {
+      <span class="km num"><span class="cap" aria-hidden="true"></span><strong>{{ km() }}</strong> km</span>
+    }
+  </div>
+  <div class="body">
+    <h3>{{ experience().title }}</h3>
+    @if (experience().rating?.count; as count) {
+      <p class="rating"><ui-stars [value]="experience().rating!.average" /> <span class="num">{{ ratingText(count) }}</span></p>
+    }
+    @if (route(); as route) {
+      <p class="where">
+        <span>{{ route.startLocation?.city }}</span>
+        @if (route.endLocation && route.endLocation.city !== route.startLocation?.city) {
+          <ui-icon name="arrow-right" class="to" /><span class="sr-only"> hasta </span><span>{{ route.endLocation.city }}</span>
+        }
+      </p>
+      <p class="meta">
+        <span class="num">{{ hours() }} de ruta</span>
+        <ui-difficulty [value]="route.difficulty" />
+        @if (experience().host; as host) {
+          <span class="host">con {{ host.name }}</span>
+        }
+      </p>
+    }
+    <div class="bottom">
+      @if (experience().nextDepartureAt; as next) {
+        <p class="next">
+          <span class="label">Próxima salida</span>
+          <strong class="num">{{ date(next) }}</strong>
+        </p>
+      } @else {
+        <p class="next none"><span class="label">Sin fechas por ahora</span></p>
+      }
+      @if (experience().priceFrom !== null) {
+        <p class="price"><span class="label">desde</span> <strong class="num">{{ price() }}</strong></p>
+      }
+    </div>
+  </div>
+</a>

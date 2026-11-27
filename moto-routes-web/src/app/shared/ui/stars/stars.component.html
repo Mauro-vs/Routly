@@ -1,0 +1,11 @@
+<span class="row" aria-hidden="true">
+  @for (star of five; track star) {
+    <svg viewBox="0 0 24 24"><polygon [attr.points]="points" /></svg>
+  }
+  <span class="on" [style.width.%]="percent()">
+    @for (star of five; track star) {
+      <svg viewBox="0 0 24 24"><polygon [attr.points]="points" /></svg>
+    }
+  </span>
+</span>
+<span class="sr-only">{{ label() }}</span>

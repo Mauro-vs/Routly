@@ -1,0 +1,97 @@
+/* Un botón con aspecto de enlace, para acciones pequeñas (editar, borrar, leer más) */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.link-button.danger {
+  color: var(--color-danger);
+}
+
+article {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+header {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 17px;
+}
+
+h3 {
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.comment {
+  max-width: 68ch;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.thumbs button {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  cursor: zoom-in;
+}
+
+.thumbs img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.thumbs button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.author {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.actions {
+  display: inline-flex;
+  gap: var(--space-4);
+  margin-left: auto;
+}

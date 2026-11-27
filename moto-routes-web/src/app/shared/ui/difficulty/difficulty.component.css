@@ -1,0 +1,21 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tramos {
+  display: inline-flex;
+  gap: 2px;
+}
+
+i {
+  width: 9px;
+  height: 6px;
+  background: var(--color-meter-track);
+  transform: skewX(var(--slant));
+}
+
+i.on {
+  background: var(--color-meter);
+}

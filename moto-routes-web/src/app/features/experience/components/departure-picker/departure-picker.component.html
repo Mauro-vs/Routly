@@ -1,0 +1,35 @@
+<div role="radiogroup" [attr.aria-labelledby]="labelledBy()" class="tickets">
+  @for (departure of departures(); track departure._id) {
+    <label class="ticket" [class.is-selected]="departure.slug === selectedSlug()" [class.is-full]="departure.isFull">
+      <input
+        type="radio"
+        class="sr-only"
+        [name]="name"
+        [value]="departure.slug"
+        [checked]="departure.slug === selectedSlug()"
+        [disabled]="departure.isFull"
+        (change)="select.emit(departure.slug)"
+      />
+      <span class="stub num" aria-hidden="true">
+        <span class="weekday">{{ weekday(departure.startAt) }}</span>
+        <strong>{{ day(departure.startAt) }}</strong>
+        <span class="month">{{ month(departure.startAt) }}</span>
+      </span>
+      <span class="body">
+        <span class="sr-only">{{ weekdayDate(departure.startAt) }}, </span>
+        <span class="time num">{{ time(departure.startAt) }} <span class="arrow" aria-hidden="true">→</span> {{ time(departure.endAt) }}</span>
+        <span class="seats num">
+          @if (departure.isFull) {
+            <span class="stamp stamp--full">Completa</span>
+          } @else {
+            {{ plural(departure.seatsLeft, 'plaza libre', 'plazas libres') }}
+          }
+        </span>
+      </span>
+      <span class="price num">{{ price(departure.price) }}<span class="sr-only"> por persona</span></span>
+      @if (departure.slug === selectedSlug()) {
+        <span class="stamp stamp--chosen" aria-hidden="true">Elegida</span>
+      }
+    </label>
+  }
+</div>

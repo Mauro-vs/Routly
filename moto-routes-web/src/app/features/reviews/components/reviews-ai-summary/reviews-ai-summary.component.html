@@ -1,0 +1,49 @@
+@if (store.aiLoading()) {
+  <div class="box" aria-busy="true">
+    <p class="eyebrow"><ui-icon name="sparkle" /> Routly IA está leyendo las opiniones…</p>
+    <ui-skeleton height="16px" width="95%" />
+    <ui-skeleton height="16px" width="80%" />
+    <ui-skeleton height="16px" width="60%" />
+  </div>
+} @else if (store.aiSummary(); as data) {
+  <section class="box" aria-labelledby="ia-opiniones">
+    <h3 id="ia-opiniones" class="eyebrow">
+      <ui-icon name="sparkle" /> Routly IA ha resumido {{ data.basedOn }} {{ data.basedOn === 1 ? 'opinión' : 'opiniones' }}
+    </h3>
+    <p class="summary">{{ data.summary }}</p>
+
+    <div class="columns">
+      <div>
+        <h4>Lo que más gusta</h4>
+        <ul>
+          @for (pro of data.pros; track $index) {
+            <li><ui-icon name="check" class="pro" /> {{ pro }}</li>
+          }
+        </ul>
+      </div>
+      @if (data.cons.length > 0) {
+        <div>
+          <h4>Lo que se puede mejorar</h4>
+          <ul>
+            @for (con of data.cons; track $index) {
+              <li><ui-icon name="warning-circle" class="con" /> {{ con }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+
+    @if (data.topics.length > 0) {
+      <ul class="topics" aria-label="De qué se habla">
+        @for (topic of data.topics; track topic.name) {
+          <li class="topic" [class]="topic.sentiment" [attr.title]="sentimentLabel(topic)">
+            {{ topic.name }} <span class="num">{{ topic.mentions }}</span>
+            <span class="sr-only">({{ sentimentLabel(topic) }}, en {{ topic.mentions }} opiniones)</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="foot">Resumen generado con IA a partir de las opiniones: puede equivocarse, y mandan las opiniones de abajo.</p>
+  </section>
+}

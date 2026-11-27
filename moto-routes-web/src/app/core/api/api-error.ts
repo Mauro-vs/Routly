@@ -45,12 +45,17 @@ export function toApiError(error: unknown): ApiError {
   return new ApiError('server', error.status);
 }
 
-/** Una petición abortada a propósito (AbortController): no es un error que enseñar. */
-export function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError';
+/** La IA no está configurada (503): la web esconde lo de IA sin alarmar. */
+export function isAiUnavailable(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 503;
 }
 
-/** El error que rechaza una petición abortada, igual que el de fetch. */
+/** Lo que rechaza una petición abortada (ApiService.get con su AbortSignal). */
 export function abortError(): DOMException {
   return new DOMException('La petición se ha cancelado', 'AbortError');
+}
+
+/** Una petición abortada a propósito (llega otra, se sale de la página, el chat al parar): no es un error que enseñar. */
+export function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
 }

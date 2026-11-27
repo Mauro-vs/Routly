@@ -1,0 +1,13 @@
+@if (filters().length > 0) {
+  <ul aria-label="Filtros puestos">
+    @for (filter of filters(); track filter.key) {
+      <li>
+        <span>{{ filter.label }}</span>
+        <button type="button" [attr.aria-label]="'Quitar el filtro ' + filter.label" (click)="remove.emit(filter.key)">
+          <ui-icon name="x" />
+        </button>
+      </li>
+    }
+  </ul>
+  <button type="button" class="clear-all" (click)="clear.emit()">Quitar los filtros</button>
+}

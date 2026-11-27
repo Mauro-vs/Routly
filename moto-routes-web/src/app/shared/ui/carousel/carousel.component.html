@@ -1,0 +1,25 @@
+<div role="region" aria-roledescription="carrusel" [attr.aria-label]="label()">
+  @if (scrollable()) {
+    <div class="controls">
+      <button type="button" aria-label="Anteriores" [attr.aria-controls]="trackId" [disabled]="atStart()" (click)="page(-1)">
+        <ui-icon name="arrow-left" />
+      </button>
+      <button type="button" aria-label="Siguientes" [attr.aria-controls]="trackId" [disabled]="atEnd()" (click)="page(1)">
+        <ui-icon name="arrow-right" />
+      </button>
+    </div>
+  }
+  <div
+    #track
+    class="track"
+    role="list"
+    [id]="trackId"
+    [class.is-dragging]="dragging()"
+    (scroll)="update()"
+    (keydown)="onKeydown($event)"
+    (pointerdown)="onPointerDown($event)"
+    (click)="onClick($event)"
+  >
+    <ng-content />
+  </div>
+</div>

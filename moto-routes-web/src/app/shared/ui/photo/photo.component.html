@@ -1,0 +1,41 @@
+<svg viewBox="0 0 1200 800" [attr.data-scene]="landscape().kind" preserveAspectRatio="xMidYMid slice" focusable="false"
+  [attr.role]="showsImage() ? null : 'img'" [attr.aria-label]="showsImage() ? null : alt() || null"
+  [attr.aria-hidden]="showsImage() || !alt() ? 'true' : null">
+    <defs>
+      <linearGradient [attr.id]="gradientId" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" [attr.stop-color]="landscape().sky[0]" />
+        <stop offset="1" [attr.stop-color]="landscape().sky[1]" />
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="800" [attr.fill]="'url(#' + gradientId + ')'" />
+    @if (landscape().sun; as sun) {
+      <circle [attr.cx]="sun.cx" [attr.cy]="sun.cy" [attr.r]="sun.r * 2.2" [attr.fill]="sun.fill" opacity="0.18" />
+      <circle [attr.cx]="sun.cx" [attr.cy]="sun.cy" [attr.r]="sun.r" [attr.fill]="sun.fill" opacity="0.9" />
+    }
+    @for (shape of landscape().shapes; track $index) {
+      <path
+        [attr.d]="shape.d"
+        [attr.fill]="shape.fill ?? 'none'"
+        [attr.stroke]="shape.stroke ?? null"
+        [attr.stroke-width]="shape.width ?? null"
+        [attr.stroke-dasharray]="shape.dash ?? null"
+        [attr.opacity]="shape.opacity ?? null"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    }
+</svg>
+@if (showsImage()) {
+  <img
+    [src]="src()"
+    [alt]="alt()"
+    width="1200"
+    height="800"
+    [class.is-loaded]="loaded()"
+    [attr.loading]="priority() ? 'eager' : 'lazy'"
+    [attr.fetchpriority]="priority() ? 'high' : null"
+    decoding="async"
+    (load)="loaded.set(true)"
+    (error)="failed.set(true)"
+  />
+}

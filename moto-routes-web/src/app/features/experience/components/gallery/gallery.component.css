@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+
+.slide {
+  width: min(78vw, 860px);
+  margin: 0;
+  border-radius: var(--radius-lg);
+}
+
+.slide.single {
+  width: 100%;
+}
+
+ui-photo {
+  aspect-ratio: 16 / 9;
+  max-height: min(56vh, 520px);
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.slide:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .slide {
+    width: 86vw;
+  }
+
+  ui-photo {
+    aspect-ratio: 4 / 3;
+  }
+}

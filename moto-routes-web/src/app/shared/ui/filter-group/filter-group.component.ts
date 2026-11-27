@@ -17,75 +17,8 @@ let nextId = 0;
 @Component({
   selector: 'ui-filter-group',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <fieldset>
-      <legend>{{ legend() }}</legend>
-      <label class="option">
-        <input type="radio" [name]="name" [checked]="value() === null" (change)="value.set(null)" />
-        <span>{{ allLabel() }}</span>
-      </label>
-      @for (option of options(); track option.value) {
-        <label class="option">
-          <input type="radio" [name]="name" [checked]="value() === option.value" (change)="value.set(option.value)" />
-          <span>{{ option.label }}</span>
-          @if (option.count !== undefined) {
-            <span class="count num"><span class="sr-only">, </span>{{ option.count }}</span>
-          }
-        </label>
-      }
-    </fieldset>
-  `,
-  styles: `
-    fieldset {
-      display: grid;
-      gap: 2px;
-      min-width: 0;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }
-
-    legend {
-      margin-bottom: var(--space-2);
-      padding: 0;
-      font-size: var(--text-xs);
-      font-weight: 750;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--color-text-muted);
-    }
-
-    .option {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      min-height: 44px;
-      padding: 0 var(--space-2);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-    }
-
-    .option:hover {
-      background: color-mix(in srgb, var(--color-text) 6%, transparent);
-    }
-
-    input {
-      width: 18px;
-      height: 18px;
-      margin: 0;
-      accent-color: var(--color-primary);
-    }
-
-    .option:has(input:checked) {
-      font-weight: 700;
-    }
-
-    .count {
-      margin-left: auto;
-      font-size: var(--text-sm);
-      color: var(--color-text-muted);
-    }
-  `,
+  templateUrl: './filter-group.component.html',
+  styleUrl: './filter-group.component.css',
 })
 export class FilterGroupComponent {
   readonly legend = input.required<string>();
